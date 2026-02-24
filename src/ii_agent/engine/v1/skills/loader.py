@@ -37,7 +37,7 @@ def load_builtin_skills() -> list[dict]:
 
             # For builtin skills, use a relative URI pattern that can be resolved at runtime
             # This avoids storing absolute paths which don't work in distributed environments
-            storage_uri = f"builtin:{props.name}"
+            storage_uri = f"builtin:{skill_dir.name}"
 
             skills.append(
                 {

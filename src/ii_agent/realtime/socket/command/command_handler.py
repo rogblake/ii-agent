@@ -35,6 +35,14 @@ class UserCommandType(str, Enum):
     PUBLISH_CLOUD_RUN = "publish_cloud_run"
     SAVE_ENV = "save_env"
     START_FORK = "start_fork"
+    SUBMIT_TESTFLIGHT = "submit_testflight"
+    APPLE_AUTH_LOGIN = "apple_auth_login"
+    APPLE_AUTH_2FA = "apple_auth_2fa"
+    APPLE_AUTH_SELECT_TEAM = "apple_auth_select_team"
+    APPLE_APP_SETUP = "apple_app_setup"
+    APPLE_LIST_APPS = "apple_list_apps"
+    APPLE_CHECK_AUTH = "apple_check_auth"
+    SAVE_EXPO_TOKEN = "save_expo_token"
 
 
 class CommandHandler(ABC):

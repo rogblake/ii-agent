@@ -35,3 +35,4 @@ class AgentType(str, Enum):
     DEEP_RESEARCH = "deep_research"
     FAST_RESEARCH = "fast_research"
     RESEARCH_TO_WEBSITE = "research_to_website"
+    MOBILE_APP = "mobile_app"

@@ -31,6 +31,20 @@ from ii_agent.realtime.socket.command.enhance_prompt_handler import (
     EnhancePromptHandler,
 )
 from ii_agent.realtime.socket.command.start_fork_handler import StartForkHandler
+from ii_agent.realtime.socket.command.submit_testflight_handler import (
+    SubmitTestflightHandler,
+)
+from ii_agent.realtime.socket.command.apple_auth_handler import (
+    AppleAuthLoginHandler,
+    AppleAuth2FAHandler,
+    AppleAuthSelectTeamHandler,
+    AppleCheckAuthHandler,
+    SaveExpoTokenHandler,
+)
+from ii_agent.realtime.socket.command.apple_app_setup_handler import (
+    AppleAppSetupHandler,
+    AppleListAppsHandler,
+)
 from ii_agent.realtime.subscribers.database_subscriber import DatabaseSubscriber
 from ii_agent.realtime.subscribers.metrics_subscriber import MetricsSubscriber
 from ii_agent.realtime.subscribers.socketio_subscriber import SocketIOSubscriber
@@ -107,6 +121,38 @@ class CommandHandlerFactory:
                 event_stream=event_stream,
                 container=self._container,
                 query_handler=query_handler,
+            ),
+            UserCommandType.SUBMIT_TESTFLIGHT: SubmitTestflightHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.APPLE_AUTH_LOGIN: AppleAuthLoginHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.APPLE_AUTH_2FA: AppleAuth2FAHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.APPLE_AUTH_SELECT_TEAM: AppleAuthSelectTeamHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.APPLE_APP_SETUP: AppleAppSetupHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.APPLE_LIST_APPS: AppleListAppsHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.APPLE_CHECK_AUTH: AppleCheckAuthHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.SAVE_EXPO_TOKEN: SaveExpoTokenHandler(
+                event_stream=event_stream,
+                container=self._container,
             ),
         }
 

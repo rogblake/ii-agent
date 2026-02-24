@@ -58,6 +58,14 @@ class EventType(str, enum.Enum):
     MILESTONE_UPDATE = "milestone_update"
     PLAN_MODIFICATION_OPTIONS = "plan_modification_options"
     WAITING_FOR_USER_INPUT = "waiting_for_user_input"
+    TESTFLIGHT_LOG = "testflight_log"
+    APPLE_AUTH_STATUS = "apple_auth_status"
+    APPLE_2FA_REQUIRED = "apple_2fa_required"
+    APPLE_TEAM_SELECTION = "apple_team_selection"
+    APPLE_APP_SETUP_STATUS = "apple_app_setup_status"
+    APPLE_APPS_LIST = "apple_apps_list"
+    APPLE_AUTH_CHECK_RESULT = "apple_auth_check_result"
+    EXPO_TOKEN_SAVED = "expo_token_saved"
 
     @staticmethod
     def is_allowed_when_aborted(event_type: "EventType") -> bool:

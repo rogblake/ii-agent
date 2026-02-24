@@ -114,3 +114,14 @@ dev = [
     "mypy>=1.19.1",
     "pytest-asyncio>=1.0.0",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["src/tests"]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "smoke: Smoke tests",
+    "external: Tests that require external services",
+]
+asyncio_mode = "auto"

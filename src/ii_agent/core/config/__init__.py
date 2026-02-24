@@ -12,6 +12,7 @@ The configuration is organized into modular sections:
 - StripeSettings: Billing configuration
 - CreditsSettings: Credits and subscriptions
 - AgentSettings: Agent execution configuration
+- MobileSettings: Mobile and Apple integration configuration
 - EnhancePromptConfig: Enhance prompt configuration
 - Settings: Main settings class (consolidates all above)
 """
@@ -31,6 +32,7 @@ from ii_agent.core.config.mcp import MCPSettings
 from ii_agent.core.config.stripe import StripeSettings
 from ii_agent.core.config.credits import CreditsSettings
 from ii_agent.core.config.agent import AgentSettings
+from ii_agent.core.config.mobile import MobileSettings
 from ii_agent.core.config.enhance_prompt_config import EnhancePromptConfig
 
 # LLMConfig and ResearcherAgentConfig are lazy-loaded to avoid circular imports
@@ -64,6 +66,7 @@ __all__ = [
     "StripeSettings",
     "CreditsSettings",
     "AgentSettings",
+    "MobileSettings",
     "EnhancePromptConfig",
     # Type aliases
     "SandboxProvider",

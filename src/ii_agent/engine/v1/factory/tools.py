@@ -30,7 +30,9 @@ from ii_agent.engine.v1.tools.dev import (
     AddWebDevSecrets,
     AskUserEnvTool,
     RestartServerTool,
-    GetServerStatusTool
+    GetServerStatusTool,
+    MobileAppInitTool,
+    RestartMobileServerTool,
 )
 
 from ii_agent.engine.v1.tools.file_system import (
@@ -124,6 +126,8 @@ TOOL_CLASS_MAP = {
     AddWebDevSecrets.name: AddWebDevSecrets,
     AskUserEnvTool.name: AskUserEnvTool,
     GetServerStatusTool.name: GetServerStatusTool,
+    MobileAppInitTool.name: MobileAppInitTool,
+    RestartMobileServerTool.name: RestartMobileServerTool,
     # Productivity tools
     TodoReadTool.name: TodoReadTool,
     TodoWriteTool.name: TodoWriteTool,
@@ -529,6 +533,51 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         ),
         supports_media=True,
         supports_browser=True,
+    ),
+    AgentType.MOBILE_APP: AgentConfig(
+        agent_type=AgentType.MOBILE_APP,
+        description="Mobile app development specialist using React Native and Expo",
+        tool_config=AgentToolConfig(
+            core_tools=[
+                ShellInit.name,
+                ShellRunCommand.name,
+                ShellView.name,
+                ShellList.name,
+                FileReadTool.name,
+                FileWriteTool.name,
+                FileEditTool.name,
+                SaveCheckpointTool.name,
+                FullStackInitTool.name,
+                MobileAppInitTool.name,
+                RestartMobileServerTool.name,
+                GetDatabaseConnection.name,
+                WebSearchTool.name,
+                WebVisitTool.name,
+                ImageGenerateTool.name,
+                ImageSearchTool.name,
+                TodoWriteTool.name,
+                SendUserFile.name,
+            ],
+            model_exclusions={
+                Provider.OPENAI: [
+                    FileWriteTool.name,
+                    FileEditTool.name,
+                    ShellList.name,
+                ],
+                Provider.ANTHROPIC: [
+                    FileWriteTool.name,
+                    FileEditTool.name,
+                    ShellList.name,
+                ],
+            },
+            model_additions={
+                Provider.OPENAI: [ApplyPatchTool.name],
+                Provider.ANTHROPIC: [StrReplaceEditorTool.name],
+            },
+        ),
+        max_turns=200,
+        supports_media=True,
+        supports_browser=False,
     ),
 }
 

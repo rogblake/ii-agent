@@ -352,6 +352,24 @@ async def get_specialized_instructions(
     """Get specialized instructions for each agent type."""
 
     instructions = {
+        AgentType.MOBILE_APP: """
+<mobile_app_development_specialist>
+You are specialized in building mobile applications using React Native and Expo.
+
+Priorities:
+- Build cross-platform iOS/Android apps with Expo and Expo Router.
+- Keep components reusable and mobile-first.
+- Use Expo-compatible packages (`expo install`) and validate permissions for native features.
+- Prefer performant list/rendering patterns and simple, maintainable state management.
+- Prepare projects for EAS build/deployment (bundle identifiers, app config, environment settings).
+
+When implementing mobile features:
+1. Keep navigation and project structure clean (`app/`, `components/`, `hooks/`, `lib/`).
+2. Add robust loading/error states for network/device operations.
+3. Test behavior for both iOS and Android assumptions.
+4. Optimize UX for touch interactions and small-screen readability.
+</mobile_app_development_specialist>
+""",
         AgentType.MEDIA: """
 <media_generation_specialist>
 You are specialized in video creation and multimedia content generation. Your primary focus areas include:
@@ -966,6 +984,7 @@ def get_agent_description(agent_type: AgentType) -> str:
         AgentType.MEDIA: "video creation specialist focused on multimedia content generation and video production workflows",
         AgentType.SLIDE: "presentation specialist skilled in creating HTML-based slide decks with structured content and visual storytelling",
         AgentType.SLIDE_NANO_BANANA: "AI-generated image slides specialist focused on creating visually stunning, design-quality presentations with maximum visual impact",
+        AgentType.MOBILE_APP: "mobile app development specialist focused on building cross-platform mobile applications using React Native and Expo framework",
     }
 
     desc = descriptions.get(agent_type)
@@ -1013,7 +1032,7 @@ async def get_system_prompt_for_agent_type(
             a2a_agents=a2a_agents,
             task_agent=False, # CLAUDE_CODE agent doesn't use task agent rules
         )
-    elif agent_type in [AgentType.GENERAL, AgentType.WEBSITE_BUILD]:
+    elif agent_type in [AgentType.GENERAL, AgentType.WEBSITE_BUILD, AgentType.MOBILE_APP]:
         return get_system_prompt(
             workspace_path=workspace_path,
             design_document=design_document,

@@ -27,6 +27,7 @@ from ii_agent.core.config.mcp import MCPSettings
 from ii_agent.core.config.stripe import StripeSettings
 from ii_agent.core.config.credits import CreditsSettings
 from ii_agent.core.config.agent import AgentSettings
+from ii_agent.core.config.mobile import MobileSettings
 from ii_agent.core.config.enhance_prompt_config import EnhancePromptConfig
 
 if TYPE_CHECKING:
@@ -75,6 +76,7 @@ class Settings(BaseSettings):
         SANDBOX_E2B_API_KEY=your-api-key
         STORAGE_PROVIDER=gcs
         STORAGE_FILE_UPLOAD_BUCKET_NAME=my-bucket
+        MOBILE_APPLE_WIDGET_KEY=83545bf919730e51dbfba24e7e8a78d2
         STRIPE_SECRET_KEY=sk_test_...
         GOOGLE_CLIENT_ID=your-client-id
     """
@@ -177,6 +179,11 @@ class Settings(BaseSettings):
     agent: AgentSettings = Field(
         default_factory=AgentSettings,
         description="Agent execution configuration",
+    )
+
+    mobile: MobileSettings = Field(
+        default_factory=MobileSettings,
+        description="Mobile app and Apple integration configuration",
     )
 
     enhance_prompt: EnhancePromptConfig = Field(

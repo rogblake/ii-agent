@@ -129,6 +129,12 @@ export const FEATURES = [
         type: AGENT_TYPE.WEBSITE_BUILD
     },
     {
+        icon: 'mobile',
+        name: 'Create a Mobile App',
+        nameKey: 'toolCatalog.features.mobileApp.name',
+        type: AGENT_TYPE.MOBILE_APP
+    },
+    {
         icon: 'presentation-2',
         name: 'Create Slide',
         nameKey: 'toolCatalog.features.createSlide.name',

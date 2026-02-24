@@ -31,7 +31,8 @@
         "preview": "Xem trước",
         "saving": "Đang lưu...",
         "continue": "Tiếp tục",
-        "retry": "Thử lại"
+        "retry": "Thử lại",
+        "optional": "Tùy chọn"
     },
     "auth": {
         "welcomeTitle": "Chào mừng đến với {{appName}}",
@@ -309,6 +310,12 @@
                 "Các ngôn ngữ lập trình thịnh hành nhất năm 2025 là gì?",
                 "Tìm các cập nhật mới nhất về sứ mệnh khám phá Sao Hỏa",
                 "Cho tôi tổng quan nhanh về tình hình áp dụng xe điện hiện tại"
+            ],
+            "mobile_app": [
+                "Tạo ứng dụng di động cho nhà hàng",
+                "Tạo ứng dụng di động theo dõi sức khỏe",
+                "Tạo ứng dụng di động dự báo thời tiết",
+                "Tạo ứng dụng di động đọc tin tức"
             ]
         },
         "sageSuggestions": {
@@ -402,8 +409,8 @@
         }
     },
     "designMode": {
-	        "toolbar": {
-	            "responsive": "Responsive",
+        "toolbar": {
+            "responsive": "Responsive",
             "deviceGroups": {
                 "desktop": "Máy tính / Laptop",
                 "tablet": "Máy tính bảng",
@@ -434,17 +441,17 @@
             "exitMultiSelect": "Thoát chế độ chọn",
             "interactMode": "Tương tác với trang",
             "selectMode": "Chọn phần tử",
-	            "undo": "Hoàn tác",
-	            "redo": "Làm lại"
-	        },
-	        "ai": {
-	            "placeholder": "Mô tả điều bạn muốn thực hiện ...",
-	            "planMode": "Plan Mode"
-	        },
-	        "deleteDialog": {
-	            "title": "Xóa các phần tử",
-	            "warning": "Thao tác này sẽ xóa phần tử đã chọn khỏi trang. Bạn có thể hoàn tác bằng cách khôi phục một phiên bản trước nếu cần."
-	        },
+            "undo": "Hoàn tác",
+            "redo": "Làm lại"
+        },
+        "ai": {
+            "placeholder": "Mô tả điều bạn muốn thực hiện ...",
+            "planMode": "Plan Mode"
+        },
+        "deleteDialog": {
+            "title": "Xóa các phần tử",
+            "warning": "Thao tác này sẽ xóa phần tử đã chọn khỏi trang. Bạn có thể hoàn tác bằng cách khôi phục một phiên bản trước nếu cần."
+        },
         "syncDialog": {
             "title": "Đồng bộ tất cả thay đổi",
             "descriptionEmpty": "Bạn có chắc muốn đồng bộ tất cả thay đổi? Thao tác này sẽ áp dụng các cập nhật mới nhất vào phiên bản hiện tại.",
@@ -799,6 +806,153 @@
                 "saveFailed": "Không thể lưu biến môi trường"
             }
         },
+        "mobileResult": {
+            "testOnPhone": "Kiểm tra trên điện thoại",
+            "scanToTest": "Quét mã QR để kiểm tra",
+            "scanToInstallExpo": "Quét để cài đặt Expo Go",
+            "toTestOnDevice": "Để kiểm tra trên thiết bị:",
+            "installExpoGo": "Cài đặt ứng dụng Expo Go",
+            "openCamera": "Mở ứng dụng Camera",
+            "scanQrCode": "Quét mã QR ở trên",
+            "browserNote": "Bản xem trước trình duyệt thiếu chức năng native và có giao diện khác. Kiểm tra trên thiết bị để có kết quả tốt nhất.",
+            "refresh": "Làm mới"
+        },
+        "mobilePublish": {
+            "storeDialog": {
+                "title": "Xuất bản lên App Store",
+                "description": "Chọn nơi bạn muốn xuất bản ứng dụng di động.",
+                "appStore": "App Store (iOS)",
+                "appStoreDescription": "Gửi lên TestFlight để thử nghiệm beta",
+                "googlePlay": "Google Play",
+                "googlePlayDescription": "Xem hướng dẫn gửi trên tài liệu Expo"
+            },
+            "testflightDialog": {
+                "title": "Gửi lên TestFlight",
+                "description": "Nhập thông tin đăng nhập để gửi ứng dụng lên TestFlight để thử nghiệm beta.",
+                "expoTokenLabel": "Expo Access Token",
+                "expoTokenPlaceholder": "Nhập Expo access token của bạn",
+                "getFromExpo": "Lấy từ expo.dev",
+                "appleIdLabel": "Apple ID",
+                "appleIdPlaceholder": "email@example.com",
+                "appleIdDescription": "Email tài khoản Apple Developer của bạn",
+                "appSpecificPasswordLabel": "Mật khẩu ứng dụng cụ thể",
+                "appSpecificPasswordPlaceholder": "xxxx-xxxx-xxxx-xxxx",
+                "generateAtApple": "Tạo tại appleid.apple.com",
+                "teamIdLabel": "Team ID",
+                "teamIdPlaceholder": "XXXXXXXXXX",
+                "teamIdDescription": "Bắt buộc nếu bạn thuộc nhiều team Apple Developer",
+                "infoTitle": "Quan trọng",
+                "infoDescription": "Việc gửi lên TestFlight có thể mất 10-15 phút. Bạn có thể theo dõi tiến trình trong nguồn cấp hoạt động.",
+                "viewDocs": "Xem tài liệu",
+                "submit": "Gửi lên TestFlight",
+                "submitting": "Đang gửi..."
+            },
+            "testflightWizard": {
+                "title": "Triển khai lên TestFlight",
+                "description": "Hoàn tất các bước dưới đây để triển khai ứng dụng của bạn lên TestFlight",
+                "steps": {
+                    "expo": "Thiết lập Expo",
+                    "appleLogin": "Đăng nhập Apple",
+                    "verification": "Xác minh",
+                    "teamSelection": "Chọn nhóm",
+                    "appSetup": "Thiết lập ứng dụng",
+                    "build": "Build"
+                },
+                "expo": {
+                    "tokenLabel": "Expo Access Token",
+                    "tokenSaved": "Đã lưu Expo token",
+                    "change": "Thay đổi",
+                    "tokenPlaceholder": "Nhập Expo access token của bạn",
+                    "getToken": "Lấy token từ Expo",
+                    "checkingAuth": "Đang kiểm tra trạng thái xác thực...",
+                    "alreadySignedIn": "Đã đăng nhập với {{appleId}}",
+                    "alreadySignedInWithTeam": "Đã đăng nhập với {{appleId}} ({{teamName}})",
+                    "continue": "Tiếp tục",
+                    "continueToAppSetup": "Tiếp tục đến Thiết lập ứng dụng",
+                    "saveAndContinueToAppSetup": "Lưu & tiếp tục đến Thiết lập ứng dụng"
+                },
+                "appleLogin": {
+                    "appleIdLabel": "Apple ID",
+                    "appleIdPlaceholder": "email@example.com",
+                    "passwordLabel": "Mật khẩu",
+                    "passwordPlaceholder": "Nhập mật khẩu Apple ID",
+                    "info": "Thông tin đăng nhập của bạn được truyền bảo mật để xác thực với Apple. Chúng tôi không lưu mật khẩu của bạn.",
+                    "signIn": "Đăng nhập với Apple",
+                    "signingIn": "Đang đăng nhập..."
+                },
+                "twoFactor": {
+                    "title": "Xác thực hai yếu tố",
+                    "description": "Nhập mã 6 chữ số từ thiết bị Apple đáng tin cậy của bạn",
+                    "placeholder": "000000",
+                    "verify": "Xác minh",
+                    "verifying": "Đang xác minh..."
+                },
+                "teamSelection": {
+                    "prompt": "Chọn nhóm Apple Developer để dùng cho ứng dụng này:"
+                },
+                "appSetup": {
+                    "title": "Đang thiết lập ứng dụng...",
+                    "stepOf": "Bước {{current}} / {{total}}",
+                    "selectExisting": "Chọn ứng dụng có sẵn",
+                    "createNew": "Tạo ứng dụng mới",
+                    "noApps": "Không tìm thấy ứng dụng nào trong App Store Connect",
+                    "createInstead": "Tạo ứng dụng mới thay thế",
+                    "useExisting": "Dùng ứng dụng có sẵn",
+                    "loadingApps": "Đang tải danh sách ứng dụng...",
+                    "bundleIdLabel": "Bundle Identifier",
+                    "bundleIdPlaceholder": "com.example.myapp",
+                    "bundleIdHelp": "Dùng chuẩn tên miền ngược (vd: com.yourcompany.appname)",
+                    "appNameLabel": "Tên ứng dụng",
+                    "appNamePlaceholder": "Ứng dụng của tôi",
+                    "appSpecificPasswordLabel": "Mật khẩu ứng dụng cụ thể",
+                    "appSpecificPasswordPlaceholder": "xxxx-xxxx-xxxx-xxxx",
+                    "appSpecificPasswordSaved": "Đã lưu mật khẩu ứng dụng cụ thể",
+                    "change": "Thay đổi",
+                    "appSpecificPasswordHelpPrefix": "Bắt buộc để tự động gửi lên TestFlight.",
+                    "appSpecificPasswordHelpLink": "Tạo tại appleid.apple.com",
+                    "appSpecificPasswordHelpSuffix": "(Bảo mật -> Mật khẩu ứng dụng cụ thể)",
+                    "settingUp": "Đang thiết lập...",
+                    "continueToBuild": "Tiếp tục để Build"
+                },
+                "build": {
+                    "statusRunning": "Đang build và triển khai...",
+                    "statusCompleted": "Triển khai hoàn tất!",
+                    "statusFailed": "Triển khai thất bại",
+                    "detailRunning": "Có thể mất vài phút",
+                    "detailCompleted": "Ứng dụng của bạn đã có trên TestFlight",
+                    "detailFailed": "Xem log bên dưới để biết chi tiết",
+                    "waiting": "Đang chờ bắt đầu build...",
+                    "done": "Xong",
+                    "tryAgain": "Thử lại"
+                },
+                "toasts": {
+                    "startFailed": "Không thể bắt đầu build",
+                    "expoTokenRequired": "Expo token là bắt buộc",
+                    "appleIdPasswordRequired": "Apple ID và mật khẩu là bắt buộc",
+                    "invalidTwoFactor": "Vui lòng nhập mã 6 chữ số hợp lệ",
+                    "loginRequestFailed": "Không thể gửi yêu cầu đăng nhập",
+                    "verificationFailed": "Không thể gửi mã xác minh",
+                    "selectTeamFailed": "Không thể chọn nhóm",
+                    "fetchAppsFailed": "Không thể tải danh sách ứng dụng",
+                    "bundleAndNameRequired": "Bundle ID và tên ứng dụng là bắt buộc",
+                    "passwordRequired": "Vui lòng quay lại và nhập mật khẩu Apple ID",
+                    "setupFailed": "Không thể thiết lập ứng dụng",
+                    "sessionExpired": "Phiên Apple đã hết hạn. Vui lòng đăng nhập lại.",
+                    "nameTaken": "Vui lòng chọn tên ứng dụng khác.",
+                    "bundleIdTaken": "Vui lòng chọn Bundle ID khác.",
+                    "submissionCompleted": "Gửi lên TestFlight hoàn tất!"
+                }
+            },
+            "errors": {
+                "expoTokenRequired": "Expo access token là bắt buộc.",
+                "appleIdRequired": "Apple ID là bắt buộc.",
+                "appSpecificPasswordRequired": "Mật khẩu ứng dụng cụ thể là bắt buộc.",
+                "submissionFailed": "Gửi lên TestFlight thất bại. Vui lòng thử lại."
+            },
+            "toasts": {
+                "submissionStarted": "Đã bắt đầu gửi lên TestFlight. Kiểm tra nguồn cấp hoạt động để theo dõi tiến trình."
+            }
+        },
         "slides": {
             "defaultName": "Bài thuyết trình",
             "slideTitle": "Slide {{number}}",
@@ -871,6 +1025,7 @@
                 "presentationAgent": "Dùng agent thuyết trình",
                 "startingProject": "Khởi động dự án",
                 "restartingDevServers": "Khởi động lại dev servers",
+                "restartingMobileServer": "Khởi động lại server mobile",
                 "checkingServerStatus": "Kiểm tra trạng thái server",
                 "reviewerAgent": "Agent reviewer",
                 "browserClick": "Nhấp phần tử",
@@ -921,7 +1076,9 @@
                 "undoEdit": "Hoàn tác chỉnh sửa",
                 "fileEditor": "Trình chỉnh sửa tệp",
                 "saveCheckpoint": "Lưu checkpoint",
-                "registerStripeWebhook": "Đăng ký Stripe Webhook"
+                "registerStripeWebhook": "Đăng ký Stripe Webhook",
+                "sendUserFiles": "Gửi tệp",
+                "mobileAppInit": "Khởi tạo ứng dụng di động"
             },
             "values": {
                 "codexOperation": "Tác vụ Codex",
@@ -930,7 +1087,8 @@
                 "page": "Trang",
                 "restart": "Khởi động lại",
                 "fieldsCount": "{{count}} trường",
-                "slideNumber": "Slide {{number}}"
+                "slideNumber": "Slide {{number}}",
+                "attachmentsCount": "{{count}} tệp"
             }
         },
         "build": {
@@ -1158,7 +1316,8 @@
         "network": "Lỗi mạng. Vui lòng kiểm tra kết nối của bạn.",
         "unauthorized": "Bạn không được phép thực hiện hành động này.",
         "notFound": "Không tìm thấy tài nguyên yêu cầu.",
-        "serverError": "Lỗi máy chủ. Vui lòng thử lại sau."
+        "serverError": "Lỗi máy chủ. Vui lòng thử lại sau.",
+        "vscodeUrlMissing": "URL VS Code không khả dụng. Vui lòng thử lại."
     },
     "tooltips": {
         "agentSettings": "Cài đặt Agent",
@@ -1180,6 +1339,7 @@
             "generateInfographic": "Đang tạo infographic",
             "generatePoster": "Đang tạo poster",
             "generateStorybook": "Đang tạo sách truyện",
+            "sendUserFiles": "Đang gửi tệp",
             "generic": "Đang dùng {{toolName}}"
         },
         "result": "Kết quả",
@@ -1223,7 +1383,7 @@
             "posterGenerating": "Đang tạo poster...",
             "videoGenerating": "Đang tạo video...",
             "modelGenerating": "Đang tạo bằng mô hình...",
-            "storybookGenerating": "Đang tạo storybook..."
+            "storybookGenerating": "Đang tạo sách truyện..."
         }
     },
     "media": {
@@ -1877,7 +2037,8 @@
         },
         "tabs": {
             "model": "Mô hình",
-            "tools": "Công cụ"
+            "tools": "Công cụ",
+            "skills": "Kỹ năng"
         },
         "addEditModel": {
             "title": {
@@ -2113,6 +2274,9 @@
             },
             "claudeCode": {
                 "name": "Claude Code"
+            },
+            "mobileApp": {
+                "name": "Ứng dụng di động"
             }
         },
         "chatFeatures": {

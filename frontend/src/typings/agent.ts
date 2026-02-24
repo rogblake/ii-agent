@@ -100,6 +100,7 @@ export enum AgentEvent {
     FILE_EDIT = 'file_edit',
     PROMPT_GENERATED = 'prompt_generated',
     AGENT_RESPONSE_INTERRUPTED = 'agent_response_interrupted',
+    AGENT_CONTINUE = 'agent_continue',
     STATUS_UPDATE = 'status_update',
     SANDBOX_STATUS = 'sandbox_status',
     SUB_AGENT_COMPLETE = 'sub_agent_complete',
@@ -108,7 +109,15 @@ export enum AgentEvent {
     MILESTONE_UPDATE = 'milestone_update',
     PLAN_MODIFICATION_OPTIONS = 'plan_modification_options',
     WAITING_FOR_USER_INPUT = 'waiting_for_user_input',
-    AGENT_CONTINUE = 'agent_continue'
+    TESTFLIGHT_LOG = 'testflight_log',
+    // Apple authentication events
+    APPLE_AUTH_STATUS = 'apple_auth_status',
+    APPLE_2FA_REQUIRED = 'apple_2fa_required',
+    APPLE_TEAM_SELECTION = 'apple_team_selection',
+    APPLE_APP_SETUP_STATUS = 'apple_app_setup_status',
+    APPLE_APPS_LIST = 'apple_apps_list',
+    APPLE_AUTH_CHECK_RESULT = 'apple_auth_check_result',
+    EXPO_TOKEN_SAVED = 'expo_token_saved'
 }
 
 export enum TOOL {
@@ -233,7 +242,10 @@ export enum TOOL {
     GITHUB = 'github',
     ADD_WEBDEV_SECRETS = 'add_webdev_secrets',
     STRIPE_WEBHOOK_REGISTER = 'stripe_webhook_register',
-    ASK_USER_ENV = 'ask_user_env'
+    ASK_USER_ENV = 'ask_user_env',
+    SKILL = 'Skill',
+    MOBILE_APP_INIT = 'mobile_app_init',
+    RESTART_MOBILE_SERVER = 'restart_mobile_server'
 }
 
 export type Plan = {
@@ -368,6 +380,7 @@ export type ActionStep = {
             endpoint_url?: string
             secrets?: Array<{ key: string; value: string }>
             attachments?: string[]
+            skill?: string
         }
         result?:
             | string
@@ -502,7 +515,15 @@ export type {
 }
 
 // Video-specific types
-export type VideoDuration = '4s' | '6s' | '8s' | '10s' | '12s' | '18s' | '24s' | '30s'
+export type VideoDuration =
+    | '4s'
+    | '6s'
+    | '8s'
+    | '10s'
+    | '12s'
+    | '18s'
+    | '24s'
+    | '30s'
 export type VideoResolution = '720p' | '1080p'
 export type VideoAspectRatio = '16:9' | '9:16'
 
@@ -653,7 +674,8 @@ export enum AGENT_TYPE {
     CLAUDE_CODE = 'claude_code',
     DEEP_RESEARCH = 'deep_research',
     FAST_RESEARCH = 'fast_research',
-    RESEARCH_TO_WEBSITE = 'research_to_website'
+    RESEARCH_TO_WEBSITE = 'research_to_website',
+    MOBILE_APP = 'mobile_app'
 }
 
 export interface PresentationListResponse {

@@ -11,6 +11,7 @@ import {
 } from '@/state'
 import { TAB, TOOL } from '@/typings/agent'
 import SlidesResult from './slides-result'
+import MobileResult from './mobile-result'
 import { Icon } from '../ui/icon'
 import AwakeMeUpScreen from './awake-me-up-screen'
 import { useLocation, useParams } from 'react-router'
@@ -63,7 +64,36 @@ const AgentResult = ({ className }: AgentResultProps) => {
         [messages]
     )
 
+    const hasMobileAppTools = useMemo(
+        () =>
+            messages.some(
+                (message) => message.action?.type === TOOL.MOBILE_APP_INIT
+            ),
+        [messages]
+    )
+
     const resultUrl = useMemo(() => {
+        // Check mobile app result first
+        const mobileAppToolResult = [...messages]
+            .reverse()
+            .find(
+                (message) =>
+                    (message.action?.type === TOOL.MOBILE_APP_INIT ||
+                        message.action?.type === TOOL.RESTART_MOBILE_SERVER) &&
+                    message.action?.data?.result
+            )
+
+        const mobileAppResult = mobileAppToolResult?.action?.data?.result
+        if (mobileAppResult && typeof mobileAppResult === 'object') {
+            const webPreviewUrl = (
+                mobileAppResult as { web_preview_url?: string }
+            ).web_preview_url
+            if (webPreviewUrl) {
+                return webPreviewUrl
+            }
+        }
+
+        // Check fullstack result second
         const fullstackResult = [...messages]
             .reverse()
             .find(
@@ -128,6 +158,34 @@ const AgentResult = ({ className }: AgentResultProps) => {
             )
         return <Icon name="device-desktop" className="size-5 fill-black" />
     }
+    const restartMobileServerCount = useMemo(
+        () =>
+            messages.filter(
+                (message) => message.action?.type === TOOL.RESTART_MOBILE_SERVER
+            ).length,
+        [messages]
+    )
+
+    const mobileAppUrl = useMemo(() => {
+        const mobileAppToolResult = [...messages]
+            .reverse()
+            .find(
+                (message) =>
+                    (message.action?.type === TOOL.MOBILE_APP_INIT ||
+                        message.action?.type === TOOL.RESTART_MOBILE_SERVER) &&
+                    message.action?.data?.result
+            )
+
+        const mobileAppResult = mobileAppToolResult?.action?.data?.result
+        if (mobileAppResult && typeof mobileAppResult === 'object') {
+            const mobileAppUrl = (mobileAppResult as { qr_code_value?: string })
+                .qr_code_value
+            if (mobileAppUrl) {
+                return mobileAppUrl
+            }
+        }
+        return ''
+    }, [messages])
 
     // sandbox_status is requested by the parent agent.tsx for both CODE and RESULT tabs
 
@@ -280,7 +338,7 @@ const AgentResult = ({ className }: AgentResultProps) => {
         )
     }
 
-    if (!resultUrl) return null
+    if (!resultUrl && !mobileAppUrl) return null
 
     if (shouldShowAwakeScreen)
         return (
@@ -289,6 +347,17 @@ const AgentResult = ({ className }: AgentResultProps) => {
                 onAwakeClick={handleAwakeClick}
             />
         )
+
+    if (hasMobileAppTools && activeTab === TAB.RESULT) {
+        return (
+            <MobileResult
+                resultUrl={resultUrl}
+                mobileAppUrl={mobileAppUrl}
+                refreshKey={restartMobileServerCount}
+                className={className}
+            />
+        )
+    }
 
     return (
         <div

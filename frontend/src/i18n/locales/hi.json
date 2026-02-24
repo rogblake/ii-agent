@@ -31,7 +31,8 @@
         "preview": "पूर्वावलोकन",
         "saving": "सहेजा जा रहा है...",
         "continue": "जारी रखें",
-        "retry": "पुनः प्रयास करें"
+        "retry": "पुनः प्रयास करें",
+        "optional": "वैकल्पिक"
     },
     "auth": {
         "welcomeTitle": "{{appName}} में आपका स्वागत है",
@@ -149,8 +150,9 @@
             "tryNow": "अभी आज़माएं",
             "imageAlt": "AI द्वारा बनाई गई रंगीन तोता"
         },
-    "disclaimer": "{{appName}} के आउटपुट में त्रुटियाँ या चूक हो सकती हैं। Intelligent Internet आपके workspace डेटा पर अपने मॉडल प्रशिक्षित नहीं करता।"},
-      "dashboard": {
+        "disclaimer": "{{appName}} के आउटपुट में त्रुटियाँ या चूक हो सकती हैं। Intelligent Internet आपके workspace डेटा पर अपने मॉडल प्रशिक्षित नहीं करता।"
+    },
+    "dashboard": {
         "title": "डैशबोर्ड",
         "tabs": {
             "all": "सभी",
@@ -308,9 +310,15 @@
                 "2025 में सबसे लोकप्रिय प्रोग्रामिंग भाषाएं कौन सी हैं?",
                 "मंगल ग्रह अन्वेषण मिशनों के नवीनतम अपडेट खोजें",
                 "इलेक्ट्रिक वाहन अपनाने की वर्तमान स्थिति का त्वरित अवलोकन दें"
+            ],
+            "mobile_app": [
+                "रेस्तरां के लिए मोबाइल ऐप बनाएं",
+                "फिटनेस ट्रैकर के लिए मोबाइल ऐप बनाएं",
+                "मौसम पूर्वानुमान के लिए मोबाइल ऐप बनाएं",
+                "न्यूज़ रीडर के लिए मोबाइल ऐप बनाएं"
             ]
         },
-    "sageSuggestions": {
+        "sageSuggestions": {
             "general": [
                 "मानवाकार रोबोटों के श्रमबल पर प्रभाव पर नीतिगत सलाह दें",
                 "टिकाऊ रेगिस्तानी अवसंरचना के लिए आर्थिक प्रोत्साहनों पर शोध करें",
@@ -352,7 +360,8 @@
                 "प्रमुख महानगरीय क्षेत्रों में स्मार्ट सिटी पायलट कार्यक्रमों के अपडेट खोजें",
                 "वर्तमान सरकारी डिजिटल परिवर्तन पहलों का त्वरित अवलोकन दें"
             ]
-        }},
+        }
+    },
     "codeEditor": {
         "files": "फ़ाइलें"
     },
@@ -400,8 +409,8 @@
         }
     },
     "designMode": {
-	        "toolbar": {
-	            "responsive": "रिस्पॉन्सिव",
+        "toolbar": {
+            "responsive": "रिस्पॉन्सिव",
             "deviceGroups": {
                 "desktop": "डेस्कटॉप / लैपटॉप",
                 "tablet": "टैबलेट",
@@ -432,17 +441,17 @@
             "exitMultiSelect": "चयन मोड से बाहर निकलें",
             "interactMode": "पृष्ठ के साथ इंटरैक्ट करें",
             "selectMode": "तत्व चुनें",
-	            "undo": "पूर्ववत",
-	            "redo": "फिर से करें"
-	        },
-	        "ai": {
-	            "placeholder": "आप क्या हासिल करना चाहते हैं, उसका वर्णन करें ...",
-	            "planMode": "Plan Mode"
-	        },
-	        "deleteDialog": {
-	            "title": "तत्व हटाएँ",
-	            "warning": "यह चयनित तत्व को पेज से हटा देगा। ज़रूरत होने पर आप पहले के संस्करण को पुनर्स्थापित करके इसे पूर्ववत कर सकते हैं।"
-	        },
+            "undo": "पूर्ववत",
+            "redo": "फिर से करें"
+        },
+        "ai": {
+            "placeholder": "आप क्या हासिल करना चाहते हैं, उसका वर्णन करें ...",
+            "planMode": "Plan Mode"
+        },
+        "deleteDialog": {
+            "title": "तत्व हटाएँ",
+            "warning": "यह चयनित तत्व को पेज से हटा देगा। ज़रूरत होने पर आप पहले के संस्करण को पुनर्स्थापित करके इसे पूर्ववत कर सकते हैं।"
+        },
         "syncDialog": {
             "title": "सभी बदलाव सिंक करें",
             "descriptionEmpty": "क्या आप वाकई सभी बदलावों को सिंक करना चाहते हैं? यह आपके नवीनतम अपडेट को वर्तमान संस्करण पर लागू करेगा।",
@@ -797,6 +806,153 @@
                 "saveFailed": "पर्यावरण चर सहेजने में विफल"
             }
         },
+        "mobileResult": {
+            "testOnPhone": "अपने फोन पर टेस्ट करें",
+            "scanToTest": "टेस्ट करने के लिए QR कोड स्कैन करें",
+            "scanToInstallExpo": "Expo Go इंस्टॉल करने के लिए स्कैन करें",
+            "toTestOnDevice": "अपने डिवाइस पर टेस्ट करने के लिए:",
+            "installExpoGo": "Expo Go ऐप इंस्टॉल करें",
+            "openCamera": "कैमरा ऐप खोलें",
+            "scanQrCode": "ऊपर दिए गए QR कोड को स्कैन करें",
+            "browserNote": "ब्राउज़र प्रीव्यू में नेटिव फंक्शन नहीं हैं और यह अलग दिखता है। सर्वोत्तम परिणामों के लिए डिवाइस पर टेस्ट करें।",
+            "refresh": "रीफ्रेश"
+        },
+        "mobilePublish": {
+            "storeDialog": {
+                "title": "App Store पर प्रकाशित करें",
+                "description": "चुनें कि आप अपना मोबाइल ऐप कहां प्रकाशित करना चाहते हैं।",
+                "appStore": "App Store (iOS)",
+                "appStoreDescription": "बीटा टेस्टिंग के लिए TestFlight पर सबमिट करें",
+                "googlePlay": "Google Play",
+                "googlePlayDescription": "Expo docs पर सबमिशन गाइड देखें"
+            },
+            "testflightDialog": {
+                "title": "TestFlight पर सबमिट करें",
+                "description": "बीटा टेस्टिंग के लिए अपने ऐप को TestFlight पर सबमिट करने के लिए अपनी क्रेडेंशियल्स दर्ज करें।",
+                "expoTokenLabel": "Expo एक्सेस टोकन",
+                "expoTokenPlaceholder": "अपना Expo एक्सेस टोकन दर्ज करें",
+                "getFromExpo": "expo.dev से प्राप्त करें",
+                "appleIdLabel": "Apple ID",
+                "appleIdPlaceholder": "your@email.com",
+                "appleIdDescription": "आपका Apple Developer अकाउंट ईमेल",
+                "appSpecificPasswordLabel": "ऐप-विशिष्ट पासवर्ड",
+                "appSpecificPasswordPlaceholder": "xxxx-xxxx-xxxx-xxxx",
+                "generateAtApple": "appleid.apple.com पर जेनरेट करें",
+                "teamIdLabel": "टीम ID",
+                "teamIdPlaceholder": "XXXXXXXXXX",
+                "teamIdDescription": "यदि आप कई Apple Developer टीमों से जुड़े हैं तो आवश्यक",
+                "infoTitle": "महत्वपूर्ण",
+                "infoDescription": "TestFlight सबमिशन में 10-15 मिनट लग सकते हैं। आप एक्टिविटी फीड में प्रगति देख सकते हैं।",
+                "viewDocs": "Docs देखें",
+                "submit": "TestFlight पर सबमिट करें",
+                "submitting": "सबमिट हो रहा है..."
+            },
+            "testflightWizard": {
+                "title": "TestFlight पर डिप्लॉय करें",
+                "description": "अपने ऐप को TestFlight पर डिप्लॉय करने के लिए नीचे दिए गए चरण पूरे करें",
+                "steps": {
+                    "expo": "Expo सेटअप",
+                    "appleLogin": "Apple लॉगिन",
+                    "verification": "सत्यापन",
+                    "teamSelection": "टीम चुनें",
+                    "appSetup": "ऐप सेटअप",
+                    "build": "बिल्ड"
+                },
+                "expo": {
+                    "tokenLabel": "Expo एक्सेस टोकन",
+                    "tokenSaved": "Expo टोकन सहेजा गया",
+                    "change": "बदलें",
+                    "tokenPlaceholder": "अपना Expo एक्सेस टोकन दर्ज करें",
+                    "getToken": "Expo से टोकन लें",
+                    "checkingAuth": "प्रमाणीकरण स्थिति जांची जा रही है...",
+                    "alreadySignedIn": "पहले से {{appleId}} के रूप में साइन इन है",
+                    "alreadySignedInWithTeam": "पहले से {{appleId}} के रूप में साइन इन है ({{teamName}})",
+                    "continue": "जारी रखें",
+                    "continueToAppSetup": "ऐप सेटअप पर जाएं",
+                    "saveAndContinueToAppSetup": "सेव करें और ऐप सेटअप पर जाएं"
+                },
+                "appleLogin": {
+                    "appleIdLabel": "Apple ID",
+                    "appleIdPlaceholder": "your@email.com",
+                    "passwordLabel": "पासवर्ड",
+                    "passwordPlaceholder": "अपना Apple ID पासवर्ड दर्ज करें",
+                    "info": "आपकी क्रेडेंशियल्स सुरक्षित रूप से Apple के साथ प्रमाणीकरण के लिए भेजी जाती हैं। हम आपका पासवर्ड संग्रहीत नहीं करते।",
+                    "signIn": "Apple से साइन इन करें",
+                    "signingIn": "साइन इन हो रहा है..."
+                },
+                "twoFactor": {
+                    "title": "दो-कारक प्रमाणीकरण",
+                    "description": "अपने भरोसेमंद Apple डिवाइस से 6-अंकों का कोड दर्ज करें",
+                    "placeholder": "000000",
+                    "verify": "सत्यापित करें",
+                    "verifying": "सत्यापित किया जा रहा है..."
+                },
+                "teamSelection": {
+                    "prompt": "इस ऐप के लिए उपयोग करने हेतु Apple Developer टीम चुनें:"
+                },
+                "appSetup": {
+                    "title": "आपका ऐप सेटअप किया जा रहा है...",
+                    "stepOf": "चरण {{current}} / {{total}}",
+                    "selectExisting": "मौजूदा ऐप चुनें",
+                    "createNew": "नया ऐप बनाएं",
+                    "noApps": "App Store Connect में कोई ऐप नहीं मिला",
+                    "createInstead": "इसके बजाय नया ऐप बनाएं",
+                    "useExisting": "मौजूदा ऐप उपयोग करें",
+                    "loadingApps": "ऐप्स लोड हो रहे हैं...",
+                    "bundleIdLabel": "Bundle Identifier",
+                    "bundleIdPlaceholder": "com.example.myapp",
+                    "bundleIdHelp": "रिवर्स डोमेन नोटेशन का उपयोग करें (जैसे, com.yourcompany.appname)",
+                    "appNameLabel": "ऐप नाम",
+                    "appNamePlaceholder": "मेरा ऐप",
+                    "appSpecificPasswordLabel": "ऐप-विशिष्ट पासवर्ड",
+                    "appSpecificPasswordPlaceholder": "xxxx-xxxx-xxxx-xxxx",
+                    "appSpecificPasswordSaved": "ऐप-विशिष्ट पासवर्ड सहेजा गया",
+                    "change": "बदलें",
+                    "appSpecificPasswordHelpPrefix": "TestFlight पर ऑटो-सबमिट के लिए आवश्यक।",
+                    "appSpecificPasswordHelpLink": "appleid.apple.com पर जेनरेट करें",
+                    "appSpecificPasswordHelpSuffix": "(Security -> App-Specific Passwords)",
+                    "settingUp": "सेटअप हो रहा है...",
+                    "continueToBuild": "बिल्ड जारी रखें"
+                },
+                "build": {
+                    "statusRunning": "बिल्ड और डिप्लॉय हो रहा है...",
+                    "statusCompleted": "डिप्लॉयमेंट पूर्ण!",
+                    "statusFailed": "डिप्लॉयमेंट विफल",
+                    "detailRunning": "इसमें कुछ मिनट लग सकते हैं",
+                    "detailCompleted": "आपका ऐप अब TestFlight पर है",
+                    "detailFailed": "विवरण के लिए नीचे लॉग देखें",
+                    "waiting": "बिल्ड शुरू होने की प्रतीक्षा...",
+                    "done": "हो गया",
+                    "tryAgain": "फिर से कोशिश करें"
+                },
+                "toasts": {
+                    "startFailed": "बिल्ड शुरू नहीं हो सका",
+                    "expoTokenRequired": "Expo टोकन आवश्यक है",
+                    "appleIdPasswordRequired": "Apple ID और पासवर्ड आवश्यक हैं",
+                    "invalidTwoFactor": "कृपया वैध 6-अंकों का कोड दर्ज करें",
+                    "loginRequestFailed": "लॉगिन अनुरोध भेजने में विफल",
+                    "verificationFailed": "सत्यापन कोड भेजने में विफल",
+                    "selectTeamFailed": "टीम चुनने में विफल",
+                    "fetchAppsFailed": "मौजूदा ऐप्स लोड करने में विफल",
+                    "bundleAndNameRequired": "Bundle ID और ऐप नाम आवश्यक हैं",
+                    "passwordRequired": "कृपया वापस जाकर अपना Apple ID पासवर्ड दर्ज करें",
+                    "setupFailed": "ऐप सेटअप करने में विफल",
+                    "sessionExpired": "आपका Apple सत्र समाप्त हो गया है। कृपया फिर से लॉग इन करें।",
+                    "nameTaken": "कृपया अलग ऐप नाम चुनें।",
+                    "bundleIdTaken": "कृपया अलग Bundle ID चुनें।",
+                    "submissionCompleted": "TestFlight सबमिशन पूरा हुआ!"
+                }
+            },
+            "errors": {
+                "expoTokenRequired": "Expo एक्सेस टोकन आवश्यक है।",
+                "appleIdRequired": "Apple ID आवश्यक है।",
+                "appSpecificPasswordRequired": "ऐप-विशिष्ट पासवर्ड आवश्यक है।",
+                "submissionFailed": "TestFlight पर सबमिट करने में विफल। कृपया पुनः प्रयास करें।"
+            },
+            "toasts": {
+                "submissionStarted": "TestFlight सबमिशन शुरू हो गया। प्रगति के लिए एक्टिविटी फीड देखें।"
+            }
+        },
         "slides": {
             "defaultName": "प्रेजेंटेशन",
             "slideTitle": "स्लाइड {{number}}",
@@ -869,6 +1025,7 @@
                 "presentationAgent": "प्रेज़ेंटेशन एजेंट का उपयोग",
                 "startingProject": "प्रोजेक्ट शुरू कर रहा है",
                 "restartingDevServers": "डेव सर्वर रीस्टार्ट कर रहा है",
+                "restartingMobileServer": "मोबाइल सर्वर रीस्टार्ट कर रहा है",
                 "checkingServerStatus": "सर्वर स्थिति जांच रहा है",
                 "reviewerAgent": "रिव्यूअर एजेंट",
                 "browserClick": "एलिमेंट पर क्लिक कर रहा है",
@@ -919,7 +1076,9 @@
                 "undoEdit": "संपादन पूर्ववत कर रहा है",
                 "fileEditor": "फ़ाइल एडिटर",
                 "saveCheckpoint": "चेकपॉइंट सहेज रहा है",
-                "registerStripeWebhook": "Stripe वेबहुक रजिस्टर कर रहा है"
+                "registerStripeWebhook": "Stripe वेबहुक रजिस्टर कर रहा है",
+                "sendUserFiles": "फ़ाइलें भेज रहा है",
+                "mobileAppInit": "मोबाइल ऐप प्रारंभ कर रहा है"
             },
             "values": {
                 "codexOperation": "Codex ऑपरेशन",
@@ -928,7 +1087,8 @@
                 "page": "पेज",
                 "restart": "रीस्टार्ट",
                 "fieldsCount": "{{count}} फ़ील्ड",
-                "slideNumber": "स्लाइड {{number}}"
+                "slideNumber": "स्लाइड {{number}}",
+                "attachmentsCount": "{{count}} फ़ाइल(एं)"
             }
         },
         "build": {
@@ -1156,7 +1316,8 @@
         "network": "नेटवर्क त्रुटि। कृपया अपना कनेक्शन जांचें।",
         "unauthorized": "आप यह क्रिया करने के लिए अधिकृत नहीं हैं।",
         "notFound": "अनुरोधित संसाधन नहीं मिला।",
-        "serverError": "सर्वर त्रुटि। कृपया बाद में पुनः प्रयास करें।"
+        "serverError": "सर्वर त्रुटि। कृपया बाद में पुनः प्रयास करें।",
+        "vscodeUrlMissing": "VS Code URL उपलब्ध नहीं है। कृपया पुनः प्रयास करें।"
     },
     "tooltips": {
         "agentSettings": "एजेंट सेटिंग्स",
@@ -1178,6 +1339,7 @@
             "generateInfographic": "इन्फोग्राफिक बना रहे हैं",
             "generatePoster": "पोस्टर बना रहे हैं",
             "generateStorybook": "स्टोरीबुक बना रहे हैं",
+            "sendUserFiles": "फ़ाइलें भेज रहे हैं",
             "generic": "{{toolName}} का उपयोग कर रहे हैं"
         },
         "result": "परिणाम",
@@ -1875,7 +2037,8 @@
         },
         "tabs": {
             "model": "मॉडल",
-            "tools": "टूल्स"
+            "tools": "टूल्स",
+            "skills": "स्किल्स"
         },
         "addEditModel": {
             "title": {
@@ -2111,6 +2274,9 @@
             },
             "claudeCode": {
                 "name": "Claude Code"
+            },
+            "mobileApp": {
+                "name": "मोबाइल ऐप"
             }
         },
         "chatFeatures": {

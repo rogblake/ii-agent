@@ -50,6 +50,7 @@ import {
     selectWorkspaceInfo,
     setBrowserUrl,
     setCurrentQuestion,
+    setMobileAppUrl,
     setVscodeUrl,
     setWorkspaceInfo
 } from '@/state/slice/workspace'
@@ -78,7 +79,9 @@ export function useAppEvents() {
     const dispatch = useAppDispatch()
     const messages = useAppSelector(selectMessages)
     const workspaceInfo = useAppSelector(selectWorkspaceInfo)
-    const planModificationOptions = useAppSelector(selectPlanModificationOptions)
+    const planModificationOptions = useAppSelector(
+        selectPlanModificationOptions
+    )
     const messagesRef = useRef(messages)
     const workspaceInfoRef = useRef(workspaceInfo)
     const planModificationOptionsRef = useRef(planModificationOptions)
@@ -220,7 +223,9 @@ export function useAppEvents() {
             ignoreClickAction?: boolean
         ) => {
             // Reconcile run_status from BE — single dispatch, selectors derive isCompleted/isStopped/isWaitingForInput
-            const runStatus = data.run_status ?? (data.content?.run_status as string | undefined)
+            const runStatus =
+                data.run_status ??
+                (data.content?.run_status as string | undefined)
             if (runStatus && !ignoreClickAction) {
                 dispatch(setRunStatus(runStatus))
                 if (isTerminalRunStatus(runStatus)) {
@@ -235,25 +240,47 @@ export function useAppEvents() {
 
             /** Get the AgentContext for the agent currently at the top of the stack. */
             const getActiveAgent = (): AgentContext | undefined => {
-                const id = agentStackRef.current[agentStackRef.current.length - 1] || mainAgentId.current
+                const id =
+                    agentStackRef.current[agentStackRef.current.length - 1] ||
+                    mainAgentId.current
                 return activeAgentsRef.current.get(id)
             }
 
             /** Search for a non-completed subagent to finalize (complete/fail).
              *  Priority: preferred → stack (newest first) → any running → any non-completed. */
-            const findSubagentToComplete = (preferred?: AgentContext): AgentContext | undefined => {
-                if (preferred?.agentType === 'subagent' && preferred.status !== 'completed') return preferred
+            const findSubagentToComplete = (
+                preferred?: AgentContext
+            ): AgentContext | undefined => {
+                if (
+                    preferred?.agentType === 'subagent' &&
+                    preferred.status !== 'completed'
+                )
+                    return preferred
 
                 for (let i = agentStackRef.current.length - 1; i >= 0; i--) {
-                    const ctx = activeAgentsRef.current.get(agentStackRef.current[i])
-                    if (ctx?.agentType === 'subagent' && ctx.status !== 'completed') return ctx
+                    const ctx = activeAgentsRef.current.get(
+                        agentStackRef.current[i]
+                    )
+                    if (
+                        ctx?.agentType === 'subagent' &&
+                        ctx.status !== 'completed'
+                    )
+                        return ctx
                 }
 
                 for (const [, ctx] of activeAgentsRef.current.entries()) {
-                    if (ctx.agentType === 'subagent' && ctx.status === 'running') return ctx
+                    if (
+                        ctx.agentType === 'subagent' &&
+                        ctx.status === 'running'
+                    )
+                        return ctx
                 }
                 for (const [, ctx] of activeAgentsRef.current.entries()) {
-                    if (ctx.agentType === 'subagent' && ctx.status !== 'completed') return ctx
+                    if (
+                        ctx.agentType === 'subagent' &&
+                        ctx.status !== 'completed'
+                    )
+                        return ctx
                 }
                 return undefined
             }
@@ -263,7 +290,11 @@ export function useAppEvents() {
                 subagent: AgentContext,
                 status: 'completed' | 'failed'
             ): AgentContext => {
-                const updated: AgentContext = { ...subagent, status, endTime: Date.now() }
+                const updated: AgentContext = {
+                    ...subagent,
+                    status,
+                    endTime: Date.now()
+                }
                 activeAgentsRef.current.set(subagent.agentId, updated)
 
                 const updatedMessages = messagesRef.current.map((msg) =>
@@ -284,20 +315,33 @@ export function useAppEvents() {
                 const msgs = [...messagesRef.current]
                 let changed = false
 
-                for (const [agentId, ctx] of activeAgentsRef.current.entries()) {
-                    if (ctx.agentType !== 'subagent' || ctx.status !== 'running') continue
-                    const failed: AgentContext = { ...ctx, status: 'failed', endTime: Date.now() }
+                for (const [
+                    agentId,
+                    ctx
+                ] of activeAgentsRef.current.entries()) {
+                    if (
+                        ctx.agentType !== 'subagent' ||
+                        ctx.status !== 'running'
+                    )
+                        continue
+                    const failed: AgentContext = {
+                        ...ctx,
+                        status: 'failed',
+                        endTime: Date.now()
+                    }
                     activeAgentsRef.current.set(agentId, failed)
                     for (let i = 0; i < msgs.length; i++) {
                         if (msgs[i].agentContext?.agentId === agentId) {
-                            msgs[i] = { ...msgs[i], agentContext: { ...failed } }
+                            msgs[i] = {
+                                ...msgs[i],
+                                agentContext: { ...failed }
+                            }
                             changed = true
                         }
                     }
                 }
                 if (changed) safeDispatch(setMessages(msgs))
             }
-
 
             /** Append a delta chunk to an existing streaming message, or create one.
              *  Works for both thinking and response streams. */
@@ -313,28 +357,34 @@ export function useAppEvents() {
                 const existingId = map.get(agentId)
 
                 if (existingId) {
-                    const existing = messagesRef.current.find((m) => m.id === existingId)
+                    const existing = messagesRef.current.find(
+                        (m) => m.id === existingId
+                    )
                     if (existing) {
-                        safeDispatch(updateMessage({
-                            ...existing,
-                            content: `${existing.content || ''}${deltaText}`,
-                            ...(isThinkMessage && { isThinkMessage: true }),
-                            agentContext
-                        }))
+                        safeDispatch(
+                            updateMessage({
+                                ...existing,
+                                content: `${existing.content || ''}${deltaText}`,
+                                ...(isThinkMessage && { isThinkMessage: true }),
+                                agentContext
+                            })
+                        )
                         return
                     }
                     map.delete(agentId)
                 }
 
                 map.set(agentId, dataId)
-                safeDispatch(addMessage({
-                    id: dataId,
-                    role: 'assistant',
-                    content: deltaText,
-                    timestamp: Date.now(),
-                    ...(isThinkMessage && { isThinkMessage: true }),
-                    agentContext
-                }))
+                safeDispatch(
+                    addMessage({
+                        id: dataId,
+                        role: 'assistant',
+                        content: deltaText,
+                        timestamp: Date.now(),
+                        ...(isThinkMessage && { isThinkMessage: true }),
+                        agentContext
+                    })
+                )
             }
 
             /** Finalize a stream with the full text. Returns true if an existing message was updated. */
@@ -349,15 +399,19 @@ export function useAppEvents() {
                 const streamingId = map.get(agentId)
 
                 if (streamingId) {
-                    const existing = messagesRef.current.find((m) => m.id === streamingId)
+                    const existing = messagesRef.current.find(
+                        (m) => m.id === streamingId
+                    )
                     if (existing) {
                         map.delete(agentId)
-                        safeDispatch(updateMessage({
-                            ...existing,
-                            content: fullText,
-                            ...(isThinkMessage && { isThinkMessage: true }),
-                            agentContext
-                        }))
+                        safeDispatch(
+                            updateMessage({
+                                ...existing,
+                                content: fullText,
+                                ...(isThinkMessage && { isThinkMessage: true }),
+                                agentContext
+                            })
+                        )
                         return true
                     }
                     map.delete(agentId)
@@ -399,7 +453,10 @@ export function useAppEvents() {
                     if (isSubAgentInterrupt) {
                         // Only fail the specific interrupted subagent
                         const sub = findSubagentToComplete(getActiveAgent())
-                        if (sub?.agentType === 'subagent' && sub.status !== 'completed') {
+                        if (
+                            sub?.agentType === 'subagent' &&
+                            sub.status !== 'completed'
+                        ) {
                             finalizeSubagent(sub, 'failed')
                         }
                     } else {
@@ -526,7 +583,7 @@ export function useAppEvents() {
                             dispatch(setPublished(deploymentUrl))
                             toast.success(
                                 (data.content.message as string) ||
-                                `Deployment live at ${deploymentUrl}`
+                                    `Deployment live at ${deploymentUrl}`
                             )
                             break
                         }
@@ -540,7 +597,7 @@ export function useAppEvents() {
                             dispatch(setPublished(deploymentUrl))
                             toast.success(
                                 (data.content.message as string) ||
-                                `Deployment live at ${deploymentUrl}`
+                                    `Deployment live at ${deploymentUrl}`
                             )
                             break
                         }
@@ -573,11 +630,11 @@ export function useAppEvents() {
                         // Extract file metadata if available
                         const filesMetadata = data.content.files_metadata as
                             | Array<{
-                                id: string
-                                file_name: string
-                                file_size: number
-                                content_type: string
-                            }>
+                                  id: string
+                                  file_name: string
+                                  file_size: number
+                                  content_type: string
+                              }>
                             | undefined
 
                         // Build files array for display
@@ -616,7 +673,10 @@ export function useAppEvents() {
                 case AgentEvent.PROCESSING: {
                     // Transient event — setCancelling handled by run_status reconciliation above.
                     // Only share/replay mode needs explicit loading since it lacks the normal submit flow.
-                    if (!ignoreClickAction && location.pathname?.includes('/share/')) {
+                    if (
+                        !ignoreClickAction &&
+                        location.pathname?.includes('/share/')
+                    ) {
                         dispatch(setLoading(true))
                     }
                     break
@@ -628,15 +688,24 @@ export function useAppEvents() {
                     const thinkingText = (data.content.text as string) || ''
                     const agentContext = getActiveAgent()
 
-                    if (!finalizeStream('thinking', thinkingText, agentContext, true)) {
-                        safeDispatch(addMessage({
-                            id: data.id,
-                            role: 'assistant',
-                            content: thinkingText,
-                            timestamp: Date.now(),
-                            isThinkMessage: true,
-                            agentContext
-                        }))
+                    if (
+                        !finalizeStream(
+                            'thinking',
+                            thinkingText,
+                            agentContext,
+                            true
+                        )
+                    ) {
+                        safeDispatch(
+                            addMessage({
+                                id: data.id,
+                                role: 'assistant',
+                                content: thinkingText,
+                                timestamp: Date.now(),
+                                isThinkMessage: true,
+                                agentContext
+                            })
+                        )
                     }
                     break
                 }
@@ -644,7 +713,13 @@ export function useAppEvents() {
                 case AgentEvent.AGENT_THINKING_DELTA: {
                     const deltaText = data.content.text as string
                     if (!deltaText) break
-                    handleStreamingDelta('thinking', data.id, deltaText, getActiveAgent(), true)
+                    handleStreamingDelta(
+                        'thinking',
+                        data.id,
+                        deltaText,
+                        getActiveAgent(),
+                        true
+                    )
                     break
                 }
 
@@ -652,7 +727,7 @@ export function useAppEvents() {
                     // Determine current agent context
                     const currentAgentId =
                         agentStackRef.current[
-                        agentStackRef.current.length - 1
+                            agentStackRef.current.length - 1
                         ] || mainAgentId.current
                     let agentContext =
                         activeAgentsRef.current.get(currentAgentId)
@@ -781,7 +856,7 @@ export function useAppEvents() {
                         data.content.tool_name === TOOL.MESSAGE_USER ||
                         data.content.tool_name === TOOL.SUBMIT_PLAN ||
                         data.content.tool_name ===
-                        TOOL.SUBMIT_PLAN_MODIFICATION_SUGGESTIONS
+                            TOOL.SUBMIT_PLAN_MODIFICATION_SUGGESTIONS
                     ) {
                         // These tools emit their own events (PLAN_GENERATED, PLAN_MODIFICATION_OPTIONS)
                         // Don't show tool call in chatbox
@@ -820,22 +895,29 @@ export function useAppEvents() {
 
                 case AgentEvent.TOOL_CONFIRMATION: {
                     // Human-in-the-Loop: run_id/session_id from event top-level, fallback to content
-                    const runId = data.run_id ?? (data.content as { run_id?: string }).run_id
-                    const sessionId = data.session_id ?? (data.content as { session_id?: string }).session_id
+                    const runId =
+                        data.run_id ??
+                        (data.content as { run_id?: string }).run_id
+                    const sessionId =
+                        data.session_id ??
+                        (data.content as { session_id?: string }).session_id
 
-                    safeDispatch(addMessage({
-                        id: data.id,
-                        role: 'assistant',
-                        content: '',
-                        timestamp: Date.now(),
-                        agentContext: getActiveAgent(),
-                        toolConfirmation: {
-                            run_id: runId as string,
-                            session_id: sessionId as string,
-                            message: data.content.message as string,
-                            active_requirements: data.content.active_requirements as ToolConfirmationData['active_requirements']
-                        }
-                    }))
+                    safeDispatch(
+                        addMessage({
+                            id: data.id,
+                            role: 'assistant',
+                            content: '',
+                            timestamp: Date.now(),
+                            agentContext: getActiveAgent(),
+                            toolConfirmation: {
+                                run_id: runId as string,
+                                session_id: sessionId as string,
+                                message: data.content.message as string,
+                                active_requirements: data.content
+                                    .active_requirements as ToolConfirmationData['active_requirements']
+                            }
+                        })
+                    )
                     // isWaitingForInput / setLoading handled by run_status reconciliation above
                     break
                 }
@@ -847,48 +929,131 @@ export function useAppEvents() {
                     // ── Tool-specific side effects ──
 
                     if (toolName === TOOL.FULLSTACK_PROJECT_INIT) {
-                        const projectId = extractProjectIdFromResult(data.content.result)
+                        const projectId = extractProjectIdFromResult(
+                            data.content.result
+                        )
                         if (projectId) dispatch(setProjectId(projectId))
                         dispatch(setFullstackProjectInitialized(true))
-                        dispatch(setBrowserUrl(
-                            (data.content.result as { preview_url?: string })?.preview_url || ''
-                        ))
+                        dispatch(
+                            setBrowserUrl(
+                                (
+                                    data.content.result as {
+                                        preview_url?: string
+                                    }
+                                )?.preview_url || ''
+                            )
+                        )
+                        dispatch(
+                            setMobileAppUrl(
+                                (
+                                    data.content.result as {
+                                        mobile_app_url?: string
+                                    }
+                                )?.mobile_app_url || ''
+                            )
+                        )
                         dispatch(setActiveTab(TAB.RESULT))
                     }
 
-                    if (toolName === TOOL.RESTART_FULLSTACK_SERVERS) {
-                        const previewUrl = (data.content.result as { preview_url?: string })?.preview_url
-                        if (previewUrl) dispatch(setBrowserUrl(previewUrl))
+                    if (data.content.tool_name === TOOL.MOBILE_APP_INIT) {
+                        const web_preview_url = (
+                            data.content.result as {
+                                web_preview_url?: string
+                            }
+                        )?.web_preview_url
+                        if (web_preview_url) {
+                            dispatch(setBrowserUrl(web_preview_url))
+                            dispatch(setActiveTab(TAB.RESULT))
+                        }
+                    }
+
+                    if (data.content.tool_name === TOOL.RESTART_MOBILE_SERVER) {
+                        const result = data.content.result as {
+                            web_preview_url?: string
+                            qr_code_value?: string
+                        }
+                        if (result?.web_preview_url) {
+                            dispatch(setBrowserUrl(result.web_preview_url))
+                        }
+                        if (result?.qr_code_value) {
+                            dispatch(setMobileAppUrl(result.qr_code_value))
+                        }
+                    }
+
+                    if (
+                        data.content.tool_name ===
+                        TOOL.RESTART_FULLSTACK_SERVERS
+                    ) {
+                        const previewUrl = (
+                            data.content.result as {
+                                preview_url?: string
+                            }
+                        )?.preview_url
+                        if (previewUrl) {
+                            dispatch(setBrowserUrl(previewUrl))
+                        }
                     }
 
                     if (toolName === TOOL.ASK_USER_ENV) {
                         // Clear toolConfirmation to hide SecretsInput
-                        for (let i = messagesRef.current.length - 1; i >= 0; i--) {
+                        for (
+                            let i = messagesRef.current.length - 1;
+                            i >= 0;
+                            i--
+                        ) {
                             const msg = messagesRef.current[i]
-                            if (msg.toolConfirmation?.active_requirements?.[0]?.tool_execution?.tool_name === TOOL.ASK_USER_ENV) {
-                                safeDispatch(updateMessage({ ...msg, toolConfirmation: undefined }))
+                            if (
+                                msg.toolConfirmation?.active_requirements?.[0]
+                                    ?.tool_execution?.tool_name ===
+                                TOOL.ASK_USER_ENV
+                            ) {
+                                safeDispatch(
+                                    updateMessage({
+                                        ...msg,
+                                        toolConfirmation: undefined
+                                    })
+                                )
                                 break
                             }
                         }
                     }
 
                     if (toolName === TOOL.SAVE_CHECKPOINT) {
-                        const result = data.content.result as { project_directory?: string; revision?: string } | null
-                        if (result && typeof result.project_directory === 'string' && typeof result.revision === 'string') {
-                            dispatch(setLatestCheckpoint({
-                                projectDirectory: result.project_directory,
-                                revision: result.revision
-                            }))
+                        const result = data.content.result as {
+                            project_directory?: string
+                            revision?: string
+                        } | null
+                        if (
+                            result &&
+                            typeof result.project_directory === 'string' &&
+                            typeof result.revision === 'string'
+                        ) {
+                            dispatch(
+                                setLatestCheckpoint({
+                                    projectDirectory: result.project_directory,
+                                    revision: result.revision
+                                })
+                            )
                         }
                     }
 
                     // ── Message handling by tool type ──
 
                     if (toolName === TOOL.MESSAGE_USER) {
-                        const resultPayload = data.content.result as { action?: Record<string, unknown> } | undefined
-                        const action = (resultPayload?.action || {}) as Record<string, unknown>
-                        const messageText = typeof action.text === 'string' ? action.text : ''
-                        const attachments = (Array.isArray(action.attachments) ? action.attachments as unknown[] : [])
+                        const resultPayload = data.content.result as
+                            | { action?: Record<string, unknown> }
+                            | undefined
+                        const action = (resultPayload?.action || {}) as Record<
+                            string,
+                            unknown
+                        >
+                        const messageText =
+                            typeof action.text === 'string' ? action.text : ''
+                        const attachments = (
+                            Array.isArray(action.attachments)
+                                ? (action.attachments as unknown[])
+                                : []
+                        )
                             .map((item) => normalizeAttachment(item))
                             .filter(Boolean) as AttachmentMeta[]
 
@@ -899,37 +1064,68 @@ export function useAppEvents() {
                             agentContext
                         }
                         if (messageText) message.content = messageText
-                        if (attachments.length > 0) message.attachments = attachments
+                        if (attachments.length > 0)
+                            message.attachments = attachments
                         safeDispatch(addMessage(message))
                     } else if (toolName === TOOL.SEND_USER_FILES) {
-                        const resultPayload = data.content.result as { action?: Record<string, unknown> } | undefined
-                        const action = (resultPayload?.action || {}) as Record<string, unknown>
-                        const messageText = typeof action.text === 'string' ? action.text : ''
-                        const attachments = (Array.isArray(action.attachments) ? action.attachments as unknown[] : [])
+                        const resultPayload = data.content.result as
+                            | { action?: Record<string, unknown> }
+                            | undefined
+                        const action = (resultPayload?.action || {}) as Record<
+                            string,
+                            unknown
+                        >
+                        const messageText =
+                            typeof action.text === 'string' ? action.text : ''
+                        const attachments = (
+                            Array.isArray(action.attachments)
+                                ? (action.attachments as unknown[])
+                                : []
+                        )
                             .map((item) => normalizeAttachment(item))
                             .filter(Boolean) as AttachmentMeta[]
 
                         // Find and update the matching TOOL_CALL message
-                        for (let i = messagesRef.current.length - 1; i >= 0; i--) {
+                        for (
+                            let i = messagesRef.current.length - 1;
+                            i >= 0;
+                            i--
+                        ) {
                             const msg = messagesRef.current[i]
-                            if (msg.action?.type === TOOL.SEND_USER_FILES && !msg.action?.data?.isResult) {
-                                safeDispatch(updateMessage({
-                                    ...msg,
-                                    content: messageText || undefined,
-                                    attachments: attachments.length > 0 ? attachments : undefined,
-                                    action: { ...msg.action, data: { ...msg.action.data, isResult: true } }
-                                }))
+                            if (
+                                msg.action?.type === TOOL.SEND_USER_FILES &&
+                                !msg.action?.data?.isResult
+                            ) {
+                                safeDispatch(
+                                    updateMessage({
+                                        ...msg,
+                                        content: messageText || undefined,
+                                        attachments:
+                                            attachments.length > 0
+                                                ? attachments
+                                                : undefined,
+                                        action: {
+                                            ...msg.action,
+                                            data: {
+                                                ...msg.action.data,
+                                                isResult: true
+                                            }
+                                        }
+                                    })
+                                )
                                 break
                             }
                         }
                     } else if (toolName === TOOL.BROWSER_USE) {
-                        safeDispatch(addMessage({
-                            id: data.id,
-                            role: 'assistant',
-                            content: data.content.result as string,
-                            timestamp: Date.now(),
-                            agentContext
-                        }))
+                        safeDispatch(
+                            addMessage({
+                                id: data.id,
+                                role: 'assistant',
+                                content: data.content.result as string,
+                                timestamp: Date.now(),
+                                agentContext
+                            })
+                        )
                     } else if (
                         toolName !== TOOL.SEQUENTIAL_THINKING &&
                         toolName !== TOOL.PRESENTATION &&
@@ -941,7 +1137,10 @@ export function useAppEvents() {
                         const messages = messagesRef.current
                         let matchIdx = -1
                         for (let i = messages.length - 1; i >= 0; i--) {
-                            if (messages[i].action?.type === toolName && !messages[i].action?.data?.isResult) {
+                            if (
+                                messages[i].action?.type === toolName &&
+                                !messages[i].action?.data?.isResult
+                            ) {
                                 matchIdx = i
                                 break
                             }
@@ -950,7 +1149,8 @@ export function useAppEvents() {
                         if (matchIdx !== -1) {
                             const toolCallMsg = cloneDeep(messages[matchIdx])
                             if (toolCallMsg?.action) {
-                                toolCallMsg.action.data.result = data.content.result as string | Record<string, unknown>
+                                toolCallMsg.action.data.result = data.content
+                                    .result as string | Record<string, unknown>
                                 toolCallMsg.action.data.isResult = true
 
                                 // Subagent finalization: rely on is_sub_agent_event flag from converter,
@@ -962,33 +1162,54 @@ export function useAppEvents() {
                                     toolName === TOOL.DESIGN_DOCUMENT_AGENT ||
                                     toolName === TOOL.TASK ||
                                     toolName === TOOL.CODEX_AGENT ||
-                                    toolName.startsWith(TOOL.SUB_AGENT.toString())
+                                    toolName.startsWith(
+                                        TOOL.SUB_AGENT.toString()
+                                    )
                                 const hasSubAgentFlag =
                                     data.content.is_sub_agent_event ||
                                     agentContext?.agentType === 'subagent' ||
-                                    toolCallMsg.agentContext?.agentType === 'subagent'
+                                    toolCallMsg.agentContext?.agentType ===
+                                        'subagent'
 
                                 if (isSubagentTool && hasSubAgentFlag) {
-                                    const sub = findSubagentToComplete(agentContext)
+                                    const sub =
+                                        findSubagentToComplete(agentContext)
                                     if (sub) {
                                         finalizeSubagent(sub, 'completed')
                                         // Update message context to parent
                                         const parent = getActiveAgent()
-                                        if (parent && toolCallMsg.agentContext?.agentId === sub.agentId) {
+                                        if (
+                                            parent &&
+                                            toolCallMsg.agentContext
+                                                ?.agentId === sub.agentId
+                                        ) {
                                             toolCallMsg.agentContext = parent
                                         }
                                     }
                                 }
 
                                 if (!ignoreClickAction) {
-                                    setTimeout(() => handleClickAction(toolCallMsg.action), 50)
+                                    setTimeout(
+                                        () =>
+                                            handleClickAction(
+                                                toolCallMsg.action
+                                            ),
+                                        50
+                                    )
                                 }
                                 safeDispatch(updateMessage(toolCallMsg))
                             }
                         } else {
                             // Fallback: no matching tool call found
-                            const lastMessage = cloneDeep(messages[messages.length - 1])
-                            safeDispatch(addMessage({ ...lastMessage, action: data.content as ActionStep }))
+                            const lastMessage = cloneDeep(
+                                messages[messages.length - 1]
+                            )
+                            safeDispatch(
+                                addMessage({
+                                    ...lastMessage,
+                                    action: data.content as ActionStep
+                                })
+                            )
                         }
                     }
                     break
@@ -1001,13 +1222,15 @@ export function useAppEvents() {
                     // Finalize streaming response, or add new message
                     // Note: subagent completion is handled by SUB_AGENT_COMPLETE event (not text matching)
                     if (!finalizeStream('response', text, agentContext)) {
-                        safeDispatch(addMessage({
-                            id: data.id,
-                            role: 'assistant',
-                            content: text,
-                            timestamp: Date.now(),
-                            agentContext
-                        }))
+                        safeDispatch(
+                            addMessage({
+                                id: data.id,
+                                role: 'assistant',
+                                content: text,
+                                timestamp: Date.now(),
+                                agentContext
+                            })
+                        )
                     }
                     break
                 }
@@ -1015,7 +1238,12 @@ export function useAppEvents() {
                 case AgentEvent.AGENT_RESPONSE_DELTA: {
                     const deltaText = data.content.text as string
                     if (!deltaText) break
-                    handleStreamingDelta('response', data.id, deltaText, getActiveAgent())
+                    handleStreamingDelta(
+                        'response',
+                        data.id,
+                        deltaText,
+                        getActiveAgent()
+                    )
                     break
                 }
 
@@ -1030,13 +1258,15 @@ export function useAppEvents() {
                     }
 
                     // Message belongs to the parent agent context
-                    safeDispatch(addMessage({
-                        id: data.id,
-                        role: 'assistant',
-                        content: text,
-                        timestamp: Date.now(),
-                        agentContext: getActiveAgent()
-                    }))
+                    safeDispatch(
+                        addMessage({
+                            id: data.id,
+                            role: 'assistant',
+                            content: text,
+                            timestamp: Date.now(),
+                            agentContext: getActiveAgent()
+                        })
+                    )
                     break
                 }
 
@@ -1050,7 +1280,7 @@ export function useAppEvents() {
                     if (text) {
                         const currentAgentId =
                             agentStackRef.current[
-                            agentStackRef.current.length - 1
+                                agentStackRef.current.length - 1
                             ] || mainAgentId.current
                         const agentContext =
                             activeAgentsRef.current.get(currentAgentId)
@@ -1078,8 +1308,8 @@ export function useAppEvents() {
                     // Skip redirect if we just generated a plan for THIS session - stay on plan view
                     const justGeneratedPlan = sessionId
                         ? (justGeneratedPlanBySessionRef.current.get(
-                            sessionId
-                        ) ?? false)
+                              sessionId
+                          ) ?? false)
                         : false
                     if (!justGeneratedPlan) {
                         setTimeout(() => {
@@ -1239,6 +1469,33 @@ export function useAppEvents() {
                 }
 
                 // Note: raw 'error' === AgentEvent.ERROR, handled above
+
+                case AgentEvent.TESTFLIGHT_LOG: {
+                    const message = data.content.message as string
+                    const status = data.content.status as string
+                    const isError = data.content.is_error as boolean
+
+                    // Display log as a message in the chat
+                    safeDispatch(
+                        addMessage({
+                            id: data.id,
+                            role: 'system',
+                            content: message,
+                            timestamp: Date.now(),
+                            isHidden: false
+                        })
+                    )
+
+                    // Show toast for status changes
+                    if (status === 'completed') {
+                        toast.success('TestFlight submission completed!')
+                    } else if (status === 'failed') {
+                        toast.error(
+                            isError ? message : 'TestFlight submission failed'
+                        )
+                    }
+                    break
+                }
             }
         },
         [
@@ -1252,40 +1509,84 @@ export function useAppEvents() {
 
     /** Tools that set the active file path in addition to showing the build tab. */
     const FILE_TOOLS: ReadonlySet<TOOL> = new Set([
-        TOOL.READ, TOOL.WRITE, TOOL.EDIT, TOOL.MULTI_EDIT, TOOL.APPLY_PATCH,
-        TOOL.CODEX_EXECUTE, TOOL.CODEX_REVIEW,
-        TOOL.MCP_CODEX_EXECUTE, TOOL.MCP_CODEX_REVIEW,
-        TOOL.CODEX_MCP_CODEX_EXECUTE, TOOL.CODEX_MCP_CODEX_REVIEW,
-        TOOL.CLAUDE_CODE, TOOL.STR_REPLACE_BASED_EDIT
+        TOOL.READ,
+        TOOL.WRITE,
+        TOOL.EDIT,
+        TOOL.MULTI_EDIT,
+        TOOL.APPLY_PATCH,
+        TOOL.CODEX_EXECUTE,
+        TOOL.CODEX_REVIEW,
+        TOOL.MCP_CODEX_EXECUTE,
+        TOOL.MCP_CODEX_REVIEW,
+        TOOL.CODEX_MCP_CODEX_EXECUTE,
+        TOOL.CODEX_MCP_CODEX_REVIEW,
+        TOOL.CLAUDE_CODE,
+        TOOL.STR_REPLACE_BASED_EDIT
     ])
 
     /** Tools that show the build step (the vast majority of actionable tools). */
     const BUILD_TOOLS: ReadonlySet<TOOL> = new Set([
         // Search & browse
-        TOOL.WEB_SEARCH, TOOL.WEB_BATCH_SEARCH,
-        TOOL.IMAGE_GENERATE, TOOL.VIDEO_GENERATE, TOOL.READ_REMOTE_IMAGE, TOOL.IMAGE_SEARCH,
-        TOOL.BROWSER_USE, TOOL.VISIT, TOOL.VISIT_COMPRESS,
+        TOOL.WEB_SEARCH,
+        TOOL.WEB_BATCH_SEARCH,
+        TOOL.IMAGE_GENERATE,
+        TOOL.VIDEO_GENERATE,
+        TOOL.READ_REMOTE_IMAGE,
+        TOOL.IMAGE_SEARCH,
+        TOOL.BROWSER_USE,
+        TOOL.VISIT,
+        TOOL.VISIT_COMPRESS,
         // Browser automation
-        TOOL.BROWSER_CLICK, TOOL.BROWSER_CLOSE, TOOL.BROWSER_CONSOLE_MESSAGES,
-        TOOL.BROWSER_DRAG, TOOL.BROWSER_EVALUATE, TOOL.BROWSER_HANDLE_DIALOG,
-        TOOL.BROWSER_HOVER, TOOL.BROWSER_NAVIGATE, TOOL.BROWSER_NETWORK_REQUESTS,
-        TOOL.BROWSER_PRESS_KEY, TOOL.BROWSER_SELECT_OPTION, TOOL.BROWSER_SNAPSHOT,
-        TOOL.BROWSER_TAKE_SCREENSHOT, TOOL.BROWSER_TYPE, TOOL.BROWSER_WAIT_FOR,
-        TOOL.BROWSER_TAB_CLOSE, TOOL.BROWSER_TAB_LIST, TOOL.BROWSER_TAB_NEW,
-        TOOL.BROWSER_TAB_SELECT, TOOL.BROWSER_MOUSE_CLICK_XY, TOOL.BROWSER_MOUSE_DRAG_XY,
-        TOOL.BROWSER_MOUSE_MOVE_XY, TOOL.BROWSER_NAVIGATION, TOOL.BROWSER_WAIT,
-        TOOL.BROWSER_VIEW_INTERACTIVE_ELEMENTS, TOOL.BROWSER_SCROLL_DOWN,
-        TOOL.BROWSER_SCROLL_UP, TOOL.BROWSER_SWITCH_TAB,
-        TOOL.BROWSER_ENTER_TEXT, TOOL.BROWSER_ENTER_MULTI_TEXTS,
+        TOOL.BROWSER_CLICK,
+        TOOL.BROWSER_CLOSE,
+        TOOL.BROWSER_CONSOLE_MESSAGES,
+        TOOL.BROWSER_DRAG,
+        TOOL.BROWSER_EVALUATE,
+        TOOL.BROWSER_HANDLE_DIALOG,
+        TOOL.BROWSER_HOVER,
+        TOOL.BROWSER_NAVIGATE,
+        TOOL.BROWSER_NETWORK_REQUESTS,
+        TOOL.BROWSER_PRESS_KEY,
+        TOOL.BROWSER_SELECT_OPTION,
+        TOOL.BROWSER_SNAPSHOT,
+        TOOL.BROWSER_TAKE_SCREENSHOT,
+        TOOL.BROWSER_TYPE,
+        TOOL.BROWSER_WAIT_FOR,
+        TOOL.BROWSER_TAB_CLOSE,
+        TOOL.BROWSER_TAB_LIST,
+        TOOL.BROWSER_TAB_NEW,
+        TOOL.BROWSER_TAB_SELECT,
+        TOOL.BROWSER_MOUSE_CLICK_XY,
+        TOOL.BROWSER_MOUSE_DRAG_XY,
+        TOOL.BROWSER_MOUSE_MOVE_XY,
+        TOOL.BROWSER_NAVIGATION,
+        TOOL.BROWSER_WAIT,
+        TOOL.BROWSER_VIEW_INTERACTIVE_ELEMENTS,
+        TOOL.BROWSER_SCROLL_DOWN,
+        TOOL.BROWSER_SCROLL_UP,
+        TOOL.BROWSER_SWITCH_TAB,
+        TOOL.BROWSER_ENTER_TEXT,
+        TOOL.BROWSER_ENTER_MULTI_TEXTS,
         // Shell & FS
-        TOOL.LS, TOOL.BASH, TOOL.BASH_INIT, TOOL.BASH_VIEW, TOOL.BASH_STOP,
-        TOOL.BASH_KILL, TOOL.GREP, TOOL.GLOB,
-        TOOL.FULLSTACK_PROJECT_INIT, TOOL.RESTART_FULLSTACK_SERVERS, TOOL.GET_SERVER_STATUS,
+        TOOL.LS,
+        TOOL.BASH,
+        TOOL.BASH_INIT,
+        TOOL.BASH_VIEW,
+        TOOL.BASH_STOP,
+        TOOL.BASH_KILL,
+        TOOL.GREP,
+        TOOL.GLOB,
+        TOOL.FULLSTACK_PROJECT_INIT,
+        TOOL.RESTART_FULLSTACK_SERVERS,
+        TOOL.GET_SERVER_STATUS,
         // File editing (also in FILE_TOOLS)
         ...FILE_TOOLS,
         // Deployment & slides
         TOOL.REGISTER_DEPLOYMENT,
-        TOOL.SLIDE_EDIT, TOOL.SLIDE_WRITE, TOOL.SLIDE_APPLY_PATCH, TOOL.SLIDE_GENERATE,
+        TOOL.SLIDE_EDIT,
+        TOOL.SLIDE_WRITE,
+        TOOL.SLIDE_APPLY_PATCH,
+        TOOL.SLIDE_GENERATE,
         TOOL.GITHUB
     ])
 
@@ -1306,9 +1607,10 @@ export function useAppEvents() {
 
                 // File tools also set the active file path
                 if (FILE_TOOLS.has(data.type)) {
-                    const path = data.data.tool_input?.file_path
-                        || data.data.tool_input?.file
-                        || data.data.tool_input?.path
+                    const path =
+                        data.data.tool_input?.file_path ||
+                        data.data.tool_input?.file ||
+                        data.data.tool_input?.path
                     if (path) dispatch(setActiveFile(path))
                 }
             }

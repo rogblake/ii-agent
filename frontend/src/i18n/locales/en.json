@@ -21,6 +21,7 @@
         "search": "Search",
         "goBack": "Go Back",
         "or": "OR",
+        "optional": "Optional",
         "comingSoon": "Coming soon...",
         "copiedToClipboard": "Copied to clipboard",
         "notAvailable": "Not available",
@@ -351,6 +352,12 @@
                 "What are the top trending programming languages in 2025?",
                 "Find the latest updates on the Mars exploration missions",
                 "Give me a quick overview of the current state of electric vehicle adoption"
+            ],
+            "mobile_app": [
+                "Build a mobile app for a restaurant",
+                "Build a mobile app for a fitness tracker",
+                "Build a mobile app for a weather forecast",
+                "Build a mobile app for a news reader"
             ]
         },
         "sageSuggestions": {
@@ -444,8 +451,8 @@
         }
     },
     "designMode": {
-	        "toolbar": {
-	            "responsive": "Responsive",
+        "toolbar": {
+            "responsive": "Responsive",
             "deviceGroups": {
                 "desktop": "Desktop / Laptop",
                 "tablet": "Tablet",
@@ -476,17 +483,17 @@
             "exitMultiSelect": "Exit selection mode",
             "interactMode": "Interact with page",
             "selectMode": "Select elements",
-	            "undo": "Undo",
-	            "redo": "Redo"
-	        },
-	        "ai": {
-	            "placeholder": "Describe what you want to accomplish ...",
-	            "planMode": "Plan Mode"
-	        },
-	        "deleteDialog": {
-	            "title": "Delete elements",
-	            "warning": "This will remove the selected element from the page. You can undo this by restoring an earlier version if needed."
-	        },
+            "undo": "Undo",
+            "redo": "Redo"
+        },
+        "ai": {
+            "placeholder": "Describe what you want to accomplish ...",
+            "planMode": "Plan Mode"
+        },
+        "deleteDialog": {
+            "title": "Delete elements",
+            "warning": "This will remove the selected element from the page. You can undo this by restoring an earlier version if needed."
+        },
         "syncDialog": {
             "title": "Sync all changes",
             "descriptionEmpty": "Are you sure you want to sync all changes? This will apply your latest updates to the current version.",
@@ -841,6 +848,153 @@
                 "saveFailed": "Failed to save environment variables"
             }
         },
+        "mobileResult": {
+            "testOnPhone": "Test on your phone",
+            "scanToTest": "Scan QR code to test",
+            "scanToInstallExpo": "Scan to install Expo Go",
+            "toTestOnDevice": "To test on your device:",
+            "installExpoGo": "Install Expo Go app",
+            "openCamera": "Open Camera app",
+            "scanQrCode": "Scan the QR code above",
+            "browserNote": "Browser preview lacks native functions & looks different. Test on device for the best results.",
+            "refresh": "Refresh"
+        },
+        "mobilePublish": {
+            "storeDialog": {
+                "title": "Publish to App Store",
+                "description": "Choose where you want to publish your mobile app.",
+                "appStore": "App Store (iOS)",
+                "appStoreDescription": "Submit to TestFlight for beta testing",
+                "googlePlay": "Google Play",
+                "googlePlayDescription": "View submission guide on Expo docs"
+            },
+            "testflightDialog": {
+                "title": "Submit to TestFlight",
+                "description": "Enter your credentials to submit your app to TestFlight for beta testing.",
+                "expoTokenLabel": "Expo Access Token",
+                "expoTokenPlaceholder": "Enter your Expo access token",
+                "getFromExpo": "Get from expo.dev",
+                "appleIdLabel": "Apple ID",
+                "appleIdPlaceholder": "your@email.com",
+                "appleIdDescription": "Your Apple Developer account email",
+                "appSpecificPasswordLabel": "App-Specific Password",
+                "appSpecificPasswordPlaceholder": "xxxx-xxxx-xxxx-xxxx",
+                "generateAtApple": "Generate at appleid.apple.com",
+                "teamIdLabel": "Team ID",
+                "teamIdPlaceholder": "XXXXXXXXXX",
+                "teamIdDescription": "Required if you belong to multiple Apple Developer teams",
+                "infoTitle": "Important",
+                "infoDescription": "TestFlight submission may take 10-15 minutes. You can monitor the progress in the activity feed.",
+                "viewDocs": "View Docs",
+                "submit": "Submit to TestFlight",
+                "submitting": "Submitting..."
+            },
+            "testflightWizard": {
+                "title": "Deploy to TestFlight",
+                "description": "Complete the steps below to deploy your app to TestFlight",
+                "steps": {
+                    "expo": "Expo Setup",
+                    "appleLogin": "Apple Login",
+                    "verification": "Verification",
+                    "teamSelection": "Select Team",
+                    "appSetup": "App Setup",
+                    "build": "Build"
+                },
+                "expo": {
+                    "tokenLabel": "Expo Access Token",
+                    "tokenSaved": "Expo token saved",
+                    "change": "Change",
+                    "tokenPlaceholder": "Enter your Expo access token",
+                    "getToken": "Get your token from Expo",
+                    "checkingAuth": "Checking authentication status...",
+                    "alreadySignedIn": "Already signed in as {{appleId}}",
+                    "alreadySignedInWithTeam": "Already signed in as {{appleId}} ({{teamName}})",
+                    "continue": "Continue",
+                    "continueToAppSetup": "Continue to App Setup",
+                    "saveAndContinueToAppSetup": "Save & Continue to App Setup"
+                },
+                "appleLogin": {
+                    "appleIdLabel": "Apple ID",
+                    "appleIdPlaceholder": "your@email.com",
+                    "passwordLabel": "Password",
+                    "passwordPlaceholder": "Enter your Apple ID password",
+                    "info": "Your credentials are securely transmitted to authenticate with Apple. We never store your password.",
+                    "signIn": "Sign in with Apple",
+                    "signingIn": "Signing in..."
+                },
+                "twoFactor": {
+                    "title": "Two-Factor Authentication",
+                    "description": "Enter the 6-digit code from your trusted Apple device",
+                    "placeholder": "000000",
+                    "verify": "Verify",
+                    "verifying": "Verifying..."
+                },
+                "teamSelection": {
+                    "prompt": "Select the Apple Developer team to use for this app:"
+                },
+                "appSetup": {
+                    "title": "Setting up your app...",
+                    "stepOf": "Step {{current}} of {{total}}",
+                    "selectExisting": "Select an existing app",
+                    "createNew": "Create new app",
+                    "noApps": "No apps found in App Store Connect",
+                    "createInstead": "Create a new app instead",
+                    "useExisting": "Use existing app",
+                    "loadingApps": "Loading apps...",
+                    "bundleIdLabel": "Bundle Identifier",
+                    "bundleIdPlaceholder": "com.example.myapp",
+                    "bundleIdHelp": "Use reverse domain notation (e.g., com.yourcompany.appname)",
+                    "appNameLabel": "App Name",
+                    "appNamePlaceholder": "My App",
+                    "appSpecificPasswordLabel": "App-Specific Password",
+                    "appSpecificPasswordPlaceholder": "xxxx-xxxx-xxxx-xxxx",
+                    "appSpecificPasswordSaved": "App-Specific Password saved",
+                    "change": "Change",
+                    "appSpecificPasswordHelpPrefix": "Required for auto-submit to TestFlight.",
+                    "appSpecificPasswordHelpLink": "Generate at appleid.apple.com",
+                    "appSpecificPasswordHelpSuffix": "(Security -> App-Specific Passwords)",
+                    "settingUp": "Setting up...",
+                    "continueToBuild": "Continue to Build"
+                },
+                "build": {
+                    "statusRunning": "Building and Deploying...",
+                    "statusCompleted": "Deployment Complete!",
+                    "statusFailed": "Deployment Failed",
+                    "detailRunning": "This may take several minutes",
+                    "detailCompleted": "Your app is now on TestFlight",
+                    "detailFailed": "Check the logs below for details",
+                    "waiting": "Waiting for build to start...",
+                    "done": "Done",
+                    "tryAgain": "Try Again"
+                },
+                "toasts": {
+                    "startFailed": "Failed to start build",
+                    "expoTokenRequired": "Expo token is required",
+                    "appleIdPasswordRequired": "Apple ID and password are required",
+                    "invalidTwoFactor": "Please enter a valid 6-digit code",
+                    "loginRequestFailed": "Failed to send login request",
+                    "verificationFailed": "Failed to send verification code",
+                    "selectTeamFailed": "Failed to select team",
+                    "fetchAppsFailed": "Failed to fetch existing apps",
+                    "bundleAndNameRequired": "Bundle ID and app name are required",
+                    "passwordRequired": "Please go back and enter your Apple ID password",
+                    "setupFailed": "Failed to setup app",
+                    "sessionExpired": "Your Apple session has expired. Please log in again.",
+                    "nameTaken": "Please choose a different app name.",
+                    "bundleIdTaken": "Please choose a different bundle ID.",
+                    "submissionCompleted": "TestFlight submission completed!"
+                }
+            },
+            "errors": {
+                "expoTokenRequired": "Expo access token is required.",
+                "appleIdRequired": "Apple ID is required.",
+                "appSpecificPasswordRequired": "App-specific password is required.",
+                "submissionFailed": "Failed to submit to TestFlight. Please try again."
+            },
+            "toasts": {
+                "submissionStarted": "TestFlight submission started. Check the activity feed for progress."
+            }
+        },
         "slides": {
             "defaultName": "Presentation",
             "slideTitle": "Slide {{number}}",
@@ -913,6 +1067,7 @@
                 "presentationAgent": "Using presentation agent",
                 "startingProject": "Starting up project",
                 "restartingDevServers": "Restarting dev servers",
+                "restartingMobileServer": "Restarting mobile server",
                 "checkingServerStatus": "Checking server status",
                 "reviewerAgent": "Reviewer agent",
                 "browserClick": "Clicking Element",
@@ -964,7 +1119,8 @@
                 "fileEditor": "File Editor",
                 "saveCheckpoint": "Saving checkpoint",
                 "registerStripeWebhook": "Registering Stripe Webhook",
-                "sendUserFiles": "Sending Files"
+                "sendUserFiles": "Sending Files",
+                "mobileAppInit": "Initializing Mobile App"
             },
             "values": {
                 "codexOperation": "Codex Operation",
@@ -2100,11 +2256,26 @@
                     "exampleUrls": {
                         "title": "Example Skill URLs",
                         "items": [
-                            { "name": "pdf", "url": "https://github.com/anthropics/skills/tree/main/skills/pdf" },
-                            { "name": "xlsx", "url": "https://github.com/anthropics/skills/tree/main/skills/xlsx" },
-                            { "name": "docx", "url": "https://github.com/anthropics/skills/tree/main/skills/docx" },
-                            { "name": "frontend-design", "url": "https://github.com/anthropics/skills/tree/main/skills/frontend-design" },
-                            { "name": "webapp-testing", "url": "https://github.com/anthropics/skills/tree/main/skills/webapp-testing" }
+                            {
+                                "name": "pdf",
+                                "url": "https://github.com/anthropics/skills/tree/main/skills/pdf"
+                            },
+                            {
+                                "name": "xlsx",
+                                "url": "https://github.com/anthropics/skills/tree/main/skills/xlsx"
+                            },
+                            {
+                                "name": "docx",
+                                "url": "https://github.com/anthropics/skills/tree/main/skills/docx"
+                            },
+                            {
+                                "name": "frontend-design",
+                                "url": "https://github.com/anthropics/skills/tree/main/skills/frontend-design"
+                            },
+                            {
+                                "name": "webapp-testing",
+                                "url": "https://github.com/anthropics/skills/tree/main/skills/webapp-testing"
+                            }
                         ]
                     }
                 }
@@ -2136,12 +2307,30 @@
                 "examples": {
                     "title": "Example Skills",
                     "items": [
-                        { "name": "pdf", "url": "https://github.com/anthropics/skills/tree/main/skills/pdf" },
-                        { "name": "xlsx", "url": "https://github.com/anthropics/skills/tree/main/skills/xlsx" },
-                        { "name": "docx", "url": "https://github.com/anthropics/skills/tree/main/skills/docx" },
-                        { "name": "pptx", "url": "https://github.com/anthropics/skills/tree/main/skills/pptx" },
-                        { "name": "frontend-design", "url": "https://github.com/anthropics/skills/tree/main/skills/frontend-design" },
-                        { "name": "webapp-testing", "url": "https://github.com/anthropics/skills/tree/main/skills/webapp-testing" }
+                        {
+                            "name": "pdf",
+                            "url": "https://github.com/anthropics/skills/tree/main/skills/pdf"
+                        },
+                        {
+                            "name": "xlsx",
+                            "url": "https://github.com/anthropics/skills/tree/main/skills/xlsx"
+                        },
+                        {
+                            "name": "docx",
+                            "url": "https://github.com/anthropics/skills/tree/main/skills/docx"
+                        },
+                        {
+                            "name": "pptx",
+                            "url": "https://github.com/anthropics/skills/tree/main/skills/pptx"
+                        },
+                        {
+                            "name": "frontend-design",
+                            "url": "https://github.com/anthropics/skills/tree/main/skills/frontend-design"
+                        },
+                        {
+                            "name": "webapp-testing",
+                            "url": "https://github.com/anthropics/skills/tree/main/skills/webapp-testing"
+                        }
                     ]
                 },
                 "link": {
@@ -2225,6 +2414,9 @@
             },
             "claudeCode": {
                 "name": "Claude Code"
+            },
+            "mobileApp": {
+                "name": "Mobile App"
             }
         },
         "chatFeatures": {

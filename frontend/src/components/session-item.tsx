@@ -198,7 +198,7 @@ const SessionItem = ({
                 </TooltipTrigger>
                 <TooltipContent
                     align="center"
-                    side="right"
+                    side="top"
                     className="max-w-[200px]"
                 >
                     {session.name}

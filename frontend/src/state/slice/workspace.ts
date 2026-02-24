@@ -4,6 +4,7 @@ interface WorkspaceState {
     workspaceInfo: string
     browserUrl: string
     vscodeUrl: string
+    mobileAppUrl: string
     currentQuestion: string
 }
 
@@ -11,6 +12,7 @@ const initialState: WorkspaceState = {
     workspaceInfo: '',
     browserUrl: '',
     vscodeUrl: '',
+    mobileAppUrl: '',
     currentQuestion: ''
 }
 
@@ -27,17 +29,32 @@ const workspaceSlice = createSlice({
         setVscodeUrl: (state, action: PayloadAction<string>) => {
             state.vscodeUrl = action.payload
         },
+        setMobileAppUrl: (state, action: PayloadAction<string>) => {
+            state.mobileAppUrl = action.payload
+        },
         setCurrentQuestion: (state, action: PayloadAction<string>) => {
             state.currentQuestion = action.payload
         }
     }
 })
 
-export const { setWorkspaceInfo, setBrowserUrl, setVscodeUrl, setCurrentQuestion } = workspaceSlice.actions
+export const {
+    setWorkspaceInfo,
+    setBrowserUrl,
+    setVscodeUrl,
+    setMobileAppUrl,
+    setCurrentQuestion
+} = workspaceSlice.actions
 export const workspaceReducer = workspaceSlice.reducer
 
 // Selectors
-export const selectWorkspaceInfo = (state: { workspace: WorkspaceState }) => state.workspace.workspaceInfo
-export const selectBrowserUrl = (state: { workspace: WorkspaceState }) => state.workspace.browserUrl
-export const selectVscodeUrl = (state: { workspace: WorkspaceState }) => state.workspace.vscodeUrl
-export const selectCurrentQuestion = (state: { workspace: WorkspaceState }) => state.workspace.currentQuestion
+export const selectWorkspaceInfo = (state: { workspace: WorkspaceState }) =>
+    state.workspace.workspaceInfo
+export const selectBrowserUrl = (state: { workspace: WorkspaceState }) =>
+    state.workspace.browserUrl
+export const selectVscodeUrl = (state: { workspace: WorkspaceState }) =>
+    state.workspace.vscodeUrl
+export const selectMobileAppUrl = (state: { workspace: WorkspaceState }) =>
+    state.workspace.mobileAppUrl
+export const selectCurrentQuestion = (state: { workspace: WorkspaceState }) =>
+    state.workspace.currentQuestion

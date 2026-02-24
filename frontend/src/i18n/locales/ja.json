@@ -31,7 +31,8 @@
         "preview": "プレビュー",
         "saving": "保存中...",
         "continue": "続行",
-        "retry": "再試行"
+        "retry": "再試行",
+        "optional": "オプション"
     },
     "auth": {
         "welcomeTitle": "{{appName}}へようこそ",
@@ -309,6 +310,12 @@
                 "2025年にトレンドのプログラミング言語は何ですか？",
                 "火星探査ミッションの最新情報を見つける",
                 "電気自動車普及の現状を簡潔にまとめてください"
+            ],
+            "mobile_app": [
+                "レストラン向けのモバイルアプリを作成",
+                "フィットネストラッカー用のモバイルアプリを作成",
+                "天気予報用のモバイルアプリを作成",
+                "ニュースリーダー用のモバイルアプリを作成"
             ]
         },
         "sageSuggestions": {
@@ -402,8 +409,8 @@
         }
     },
     "designMode": {
-	        "toolbar": {
-	            "responsive": "レスポンシブ",
+        "toolbar": {
+            "responsive": "レスポンシブ",
             "deviceGroups": {
                 "desktop": "デスクトップ / ラップトップ",
                 "tablet": "タブレット",
@@ -434,17 +441,17 @@
             "exitMultiSelect": "選択モードを終了",
             "interactMode": "ページと操作",
             "selectMode": "要素を選択",
-	            "undo": "元に戻す",
-	            "redo": "やり直す"
-	        },
-	        "ai": {
-	            "placeholder": "達成したいことを説明してください ...",
-	            "planMode": "Plan Mode"
-	        },
-	        "deleteDialog": {
-	            "title": "要素を削除",
-	            "warning": "選択した要素をページから削除します。必要に応じて以前のバージョンを復元して元に戻すことができます。"
-	        },
+            "undo": "元に戻す",
+            "redo": "やり直す"
+        },
+        "ai": {
+            "placeholder": "達成したいことを説明してください ...",
+            "planMode": "Plan Mode"
+        },
+        "deleteDialog": {
+            "title": "要素を削除",
+            "warning": "選択した要素をページから削除します。必要に応じて以前のバージョンを復元して元に戻すことができます。"
+        },
         "syncDialog": {
             "title": "すべての変更を同期",
             "descriptionEmpty": "すべての変更を同期してもよろしいですか？最新の更新が現在のバージョンに適用されます。",
@@ -799,6 +806,153 @@
                 "saveFailed": "環境変数の保存に失敗しました"
             }
         },
+        "mobileResult": {
+            "testOnPhone": "スマートフォンでテスト",
+            "scanToTest": "QRコードをスキャンしてテスト",
+            "scanToInstallExpo": "スキャンしてExpo Goをインストール",
+            "toTestOnDevice": "デバイスでテストするには：",
+            "installExpoGo": "Expo Goアプリをインストール",
+            "openCamera": "カメラアプリを開く",
+            "scanQrCode": "上のQRコードをスキャン",
+            "browserNote": "ブラウザプレビューはネイティブ機能がなく、見た目も異なります。最良の結果を得るにはデバイスでテストしてください。",
+            "refresh": "更新"
+        },
+        "mobilePublish": {
+            "storeDialog": {
+                "title": "App Storeに公開",
+                "description": "モバイルアプリを公開する場所を選択してください。",
+                "appStore": "App Store (iOS)",
+                "appStoreDescription": "ベータテスト用にTestFlightに提出",
+                "googlePlay": "Google Play",
+                "googlePlayDescription": "Expoドキュメントで提出ガイドを見る"
+            },
+            "testflightDialog": {
+                "title": "TestFlightに提出",
+                "description": "ベータテスト用にアプリをTestFlightに提出するための認証情報を入力してください。",
+                "expoTokenLabel": "Expoアクセストークン",
+                "expoTokenPlaceholder": "Expoアクセストークンを入力",
+                "getFromExpo": "expo.devから取得",
+                "appleIdLabel": "Apple ID",
+                "appleIdPlaceholder": "your@email.com",
+                "appleIdDescription": "Apple Developerアカウントのメールアドレス",
+                "appSpecificPasswordLabel": "アプリ固有のパスワード",
+                "appSpecificPasswordPlaceholder": "xxxx-xxxx-xxxx-xxxx",
+                "generateAtApple": "appleid.apple.comで生成",
+                "teamIdLabel": "チームID",
+                "teamIdPlaceholder": "XXXXXXXXXX",
+                "teamIdDescription": "複数のApple Developerチームに所属している場合は必須",
+                "infoTitle": "重要",
+                "infoDescription": "TestFlightへの提出には10〜15分かかる場合があります。アクティビティフィードで進行状況を確認できます。",
+                "viewDocs": "ドキュメントを見る",
+                "submit": "TestFlightに提出",
+                "submitting": "提出中..."
+            },
+            "testflightWizard": {
+                "title": "TestFlightにデプロイ",
+                "description": "TestFlightにデプロイするため、以下の手順を完了してください",
+                "steps": {
+                    "expo": "Expoセットアップ",
+                    "appleLogin": "Appleログイン",
+                    "verification": "認証",
+                    "teamSelection": "チーム選択",
+                    "appSetup": "アプリ設定",
+                    "build": "ビルド"
+                },
+                "expo": {
+                    "tokenLabel": "Expoアクセストークン",
+                    "tokenSaved": "Expoトークンを保存しました",
+                    "change": "変更",
+                    "tokenPlaceholder": "Expoアクセストークンを入力",
+                    "getToken": "Expoからトークンを取得",
+                    "checkingAuth": "認証状態を確認しています...",
+                    "alreadySignedIn": "既に{{appleId}}としてサインインしています",
+                    "alreadySignedInWithTeam": "既に{{appleId}}としてサインインしています（{{teamName}}）",
+                    "continue": "続行",
+                    "continueToAppSetup": "アプリ設定へ進む",
+                    "saveAndContinueToAppSetup": "保存してアプリ設定へ進む"
+                },
+                "appleLogin": {
+                    "appleIdLabel": "Apple ID",
+                    "appleIdPlaceholder": "your@email.com",
+                    "passwordLabel": "パスワード",
+                    "passwordPlaceholder": "Apple IDのパスワードを入力",
+                    "info": "認証のためにAppleへ安全に送信されます。パスワードは保存しません。",
+                    "signIn": "Appleでサインイン",
+                    "signingIn": "サインイン中..."
+                },
+                "twoFactor": {
+                    "title": "二要素認証",
+                    "description": "信頼済みのAppleデバイスの6桁コードを入力してください",
+                    "placeholder": "000000",
+                    "verify": "確認",
+                    "verifying": "確認中..."
+                },
+                "teamSelection": {
+                    "prompt": "このアプリに使用するApple Developerチームを選択してください:"
+                },
+                "appSetup": {
+                    "title": "アプリを設定しています...",
+                    "stepOf": "{{current}} / {{total}} ステップ",
+                    "selectExisting": "既存のアプリを選択",
+                    "createNew": "新しいアプリを作成",
+                    "noApps": "App Store Connectにアプリが見つかりません",
+                    "createInstead": "代わりに新しいアプリを作成",
+                    "useExisting": "既存のアプリを使用",
+                    "loadingApps": "アプリを読み込み中...",
+                    "bundleIdLabel": "Bundle Identifier",
+                    "bundleIdPlaceholder": "com.example.myapp",
+                    "bundleIdHelp": "逆ドメイン表記を使用してください（例: com.yourcompany.appname）",
+                    "appNameLabel": "アプリ名",
+                    "appNamePlaceholder": "マイアプリ",
+                    "appSpecificPasswordLabel": "アプリ用パスワード",
+                    "appSpecificPasswordPlaceholder": "xxxx-xxxx-xxxx-xxxx",
+                    "appSpecificPasswordSaved": "アプリ用パスワードを保存しました",
+                    "change": "変更",
+                    "appSpecificPasswordHelpPrefix": "TestFlightへの自動送信に必要です。",
+                    "appSpecificPasswordHelpLink": "appleid.apple.comで生成",
+                    "appSpecificPasswordHelpSuffix": "（Security -> App-Specific Passwords）",
+                    "settingUp": "設定中...",
+                    "continueToBuild": "ビルドへ進む"
+                },
+                "build": {
+                    "statusRunning": "ビルドとデプロイ中...",
+                    "statusCompleted": "デプロイ完了！",
+                    "statusFailed": "デプロイ失敗",
+                    "detailRunning": "数分かかる場合があります",
+                    "detailCompleted": "アプリはTestFlightに公開されました",
+                    "detailFailed": "詳細は下のログをご確認ください",
+                    "waiting": "ビルド開始を待機中...",
+                    "done": "完了",
+                    "tryAgain": "再試行"
+                },
+                "toasts": {
+                    "startFailed": "ビルドを開始できませんでした",
+                    "expoTokenRequired": "Expoトークンが必要です",
+                    "appleIdPasswordRequired": "Apple IDとパスワードが必要です",
+                    "invalidTwoFactor": "有効な6桁コードを入力してください",
+                    "loginRequestFailed": "ログインリクエストの送信に失敗しました",
+                    "verificationFailed": "認証コードの送信に失敗しました",
+                    "selectTeamFailed": "チームの選択に失敗しました",
+                    "fetchAppsFailed": "既存アプリの取得に失敗しました",
+                    "bundleAndNameRequired": "Bundle IDとアプリ名が必要です",
+                    "passwordRequired": "前のステップに戻ってApple IDのパスワードを入力してください",
+                    "setupFailed": "アプリの設定に失敗しました",
+                    "sessionExpired": "Appleのセッションが期限切れです。再度ログインしてください。",
+                    "nameTaken": "別のアプリ名を選択してください。",
+                    "bundleIdTaken": "別のBundle IDを選択してください。",
+                    "submissionCompleted": "TestFlightへの送信が完了しました！"
+                }
+            },
+            "errors": {
+                "expoTokenRequired": "Expoアクセストークンは必須です。",
+                "appleIdRequired": "Apple IDは必須です。",
+                "appSpecificPasswordRequired": "アプリ固有のパスワードは必須です。",
+                "submissionFailed": "TestFlightへの提出に失敗しました。もう一度お試しください。"
+            },
+            "toasts": {
+                "submissionStarted": "TestFlightへの提出を開始しました。アクティビティフィードで進行状況を確認してください。"
+            }
+        },
         "slides": {
             "defaultName": "プレゼンテーション",
             "slideTitle": "スライド {{number}}",
@@ -871,6 +1025,7 @@
                 "presentationAgent": "プレゼンテーションエージェント使用中",
                 "startingProject": "プロジェクト起動中",
                 "restartingDevServers": "開発サーバー再起動中",
+                "restartingMobileServer": "モバイルサーバー再起動中",
                 "checkingServerStatus": "サーバー状態確認中",
                 "reviewerAgent": "レビューエージェント",
                 "browserClick": "要素をクリック中",
@@ -921,7 +1076,9 @@
                 "undoEdit": "編集を元に戻す",
                 "fileEditor": "ファイルエディター",
                 "saveCheckpoint": "チェックポイント保存中",
-                "registerStripeWebhook": "Stripe Webhook 登録中"
+                "registerStripeWebhook": "Stripe Webhook 登録中",
+                "sendUserFiles": "ファイル送信中",
+                "mobileAppInit": "モバイルアプリ初期化中"
             },
             "values": {
                 "codexOperation": "Codex 操作",
@@ -930,7 +1087,8 @@
                 "page": "ページ",
                 "restart": "再起動",
                 "fieldsCount": "{{count}} フィールド",
-                "slideNumber": "スライド {{number}}"
+                "slideNumber": "スライド {{number}}",
+                "attachmentsCount": "{{count}} ファイル"
             }
         },
         "build": {
@@ -1158,7 +1316,8 @@
         "network": "ネットワークエラー。接続を確認してください。",
         "unauthorized": "この操作を実行する権限がありません。",
         "notFound": "リクエストされたリソースが見つかりません。",
-        "serverError": "サーバーエラー。後でもう一度お試しください。"
+        "serverError": "サーバーエラー。後でもう一度お試しください。",
+        "vscodeUrlMissing": "VS Code のURLが利用できません。もう一度お試しください。"
     },
     "tooltips": {
         "agentSettings": "エージェント設定",
@@ -1180,6 +1339,7 @@
             "generateInfographic": "インフォグラフィックを生成中",
             "generatePoster": "ポスターを生成中",
             "generateStorybook": "ストーリーブックを生成中",
+            "sendUserFiles": "ファイルを送信中",
             "generic": "{{toolName}} を使用中"
         },
         "result": "結果",
@@ -1680,7 +1840,7 @@
                 "examples": {
                     "face": "別の表情",
                     "hat": "別の帽子"
-                    }
+                }
             },
             "content": {
                 "placeholder": "テキストを入力...",
@@ -1877,7 +2037,8 @@
         },
         "tabs": {
             "model": "モデル",
-            "tools": "ツール"
+            "tools": "ツール",
+            "skills": "スキル"
         },
         "addEditModel": {
             "title": {
@@ -2113,6 +2274,9 @@
             },
             "claudeCode": {
                 "name": "Claude Code"
+            },
+            "mobileApp": {
+                "name": "モバイルアプリ"
             }
         },
         "chatFeatures": {

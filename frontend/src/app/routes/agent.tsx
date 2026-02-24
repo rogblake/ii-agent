@@ -296,6 +296,7 @@ function AgentPageContent() {
                                     projectId={
                                         projectId ?? sessionData?.project_id
                                     }
+                                    agentType={sessionData?.agent_type}
                                 />
                                 <div className="flex-1 min-w-0 overflow-hidden">
                                     {!isMobile && (

@@ -119,8 +119,10 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
             case TOOL.PRESENTATION:
                 return <Icon name="slide" className={className} />
             case TOOL.FULLSTACK_PROJECT_INIT:
+            case TOOL.MOBILE_APP_INIT:
                 return <Icon name="init-project" className={className} />
             case TOOL.RESTART_FULLSTACK_SERVERS:
+            case TOOL.RESTART_MOBILE_SERVER:
                 return <Icon name="refresh-icon" className={className} />
             case TOOL.GET_SERVER_STATUS:
                 return (
@@ -210,6 +212,17 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
                 )
             case TOOL.SEND_USER_FILES:
                 return <Paperclip className={className} />
+            case TOOL.SKILL:
+                return (
+                    <Icon name="book" className={`fill-white ${className}`} />
+                )
+            case TOOL.GET_DATABASE_CONNECTION:
+                return (
+                    <Icon
+                        name="database"
+                        className={`fill-white ${className}`}
+                    />
+                )
             default:
                 // Fallback to tool_logo if available
                 if (value.tool_logo) {
@@ -320,9 +333,15 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
             case TOOL.VIDEO_GENERATE:
                 return t('agent.action.titles.generateVideo')
             case TOOL.CONCATENATE_VIDEOS:
-                return t('agent.action.titles.concatenateVideos', 'Concatenating Videos')
+                return t(
+                    'agent.action.titles.concatenateVideos',
+                    'Concatenating Videos'
+                )
             case TOOL.EXTRACT_FRAMES:
-                return t('agent.action.titles.extractFrames', 'Extracting Frames')
+                return t(
+                    'agent.action.titles.extractFrames',
+                    'Extracting Frames'
+                )
             case TOOL.LONG_VIDEO_GENERATE:
                 return t('agent.action.titles.generateLongVideoFromText')
             case TOOL.LONG_VIDEO_GENERATE_FROM_IMAGE:
@@ -339,6 +358,8 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
                 return t('agent.action.titles.startingProject')
             case TOOL.RESTART_FULLSTACK_SERVERS:
                 return t('agent.action.titles.restartingDevServers')
+            case TOOL.RESTART_MOBILE_SERVER:
+                return t('agent.action.titles.restartingMobileServer')
             case TOOL.GET_SERVER_STATUS:
                 return t('agent.action.titles.checkingServerStatus')
             case TOOL.REVIEWER_AGENT:
@@ -473,6 +494,8 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
                 return t('agent.action.titles.saveCheckpoint')
             case TOOL.STRIPE_WEBHOOK_REGISTER:
                 return t('agent.action.titles.registerStripeWebhook')
+            case TOOL.MOBILE_APP_INIT:
+                return t('agent.action.titles.mobileAppInit')
             default:
                 // Fallback to tool_display_name if available
                 return value.tool_display_name || type
@@ -599,9 +622,9 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
                 return value.tool_input?.output_filename === workspaceInfo
                     ? workspaceInfo
                     : value.tool_input?.output_filename?.replace(
-                        workspaceInfo,
-                        ''
-                    )
+                          workspaceInfo,
+                          ''
+                      )
             case TOOL.VIDEO_GENERATE:
             case TOOL.CONCATENATE_VIDEOS:
             case TOOL.EXTRACT_FRAMES:
@@ -662,7 +685,9 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
                 return t('agent.action.values.viewElements')
             case TOOL.BROWSER_SCROLL_DOWN:
             case TOOL.BROWSER_SCROLL_UP:
-                return value.tool_input?.element || t('agent.action.values.page')
+                return (
+                    value.tool_input?.element || t('agent.action.values.page')
+                )
             case TOOL.BROWSER_SWITCH_TAB:
             case TOOL.BROWSER_OPEN_NEW_TAB:
                 return value.tool_input?.url
@@ -758,6 +783,11 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
                 }
                 return value.tool_input?.message
             }
+            case TOOL.SKILL:
+                return value.tool_input?.skill
+
+            case TOOL.MOBILE_APP_INIT:
+                return value.tool_input?.project_name
             default:
                 break
         }

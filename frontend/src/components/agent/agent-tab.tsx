@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { PublishButton } from '@/components/agent/publish-button'
+import { MobilePublishButton } from '@/components/agent/mobile-publish-button'
 import {
     selectActiveTab,
     selectVscodeUrl,
@@ -13,14 +14,15 @@ import {
     useAppDispatch,
     useAppSelector
 } from '@/state'
-import { TAB } from '@/typings/agent'
+import { AGENT_TYPE, TAB } from '@/typings/agent'
 
 interface AgentTabsProps {
     sessionId?: string
     projectId?: string | null
+    agentType?: string
 }
 
-const AgentTabs = ({ sessionId, projectId }: AgentTabsProps) => {
+const AgentTabs = ({ sessionId, projectId, agentType }: AgentTabsProps) => {
     const { t } = useTranslation()
     const dispatch = useAppDispatch()
     const location = useLocation()
@@ -117,10 +119,17 @@ const AgentTabs = ({ sessionId, projectId }: AgentTabsProps) => {
                         {t('agentTab.openInVSCode')}
                     </Button>
                 )}
-                <PublishButton
-                    size="sm"
-                    className="bg-sky-blue text-charcoal !h-6"
-                />
+                {agentType === AGENT_TYPE.MOBILE_APP ? (
+                    <MobilePublishButton
+                        size="sm"
+                        className="bg-sky-blue text-charcoal !h-6"
+                    />
+                ) : (
+                    <PublishButton
+                        size="sm"
+                        className="bg-sky-blue text-charcoal !h-6"
+                    />
+                )}
             </div>
         </div>
     )

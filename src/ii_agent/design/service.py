@@ -9,19 +9,16 @@ import time
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, TYPE_CHECKING
 from urllib.parse import urljoin, urlparse
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.llm import get_client
 from ii_agent.chat.schemas import (
-    FinishReason,
     Message,
     MessageRole,
     TextContent,
-    ToolCall,
     ToolResult,
 )
 from ii_agent.chat.tool_service import ChatToolService
@@ -36,6 +33,10 @@ from ii_agent.chat.tools import (
 )
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.config.settings import Settings
+from ii_agent.core.llm.execution_service import (
+    LLMBillingContext,
+    LLMExecutionService,
+)
 from ii_agent.core.logger import logger
 from ii_agent.design.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
@@ -98,6 +99,9 @@ from ii_agent.realtime.events.models import EventType, RealtimeEvent
 from ii_agent.realtime.events.service import EventService
 from ii_agent.settings.llm.service import LLMSettingService, get_system_llm_config
 
+if TYPE_CHECKING:
+    from ii_agent.core.llm.billing_service import LLMBillingService
+
 _E2B_ALLOWED_HOST_SUFFIXES = (".e2b.app", ".e2b.dev")
 _IFRAME_MAX_TOOL_LOOPS = 10
 
@@ -112,12 +116,16 @@ class DesignService:
         sandbox_service: SandboxService,
         event_service: EventService,
         llm_setting_service: LLMSettingService,
+        llm_execution_service: LLMExecutionService,
+        llm_billing_service: LLMBillingService | None,
         config: Settings,
     ) -> None:
         self._repo = repo
         self._sandbox_service = sandbox_service
         self._event_service = event_service
         self._llm_setting_service = llm_setting_service
+        self._llm_execution_service = llm_execution_service
+        self._llm_billing_service = llm_billing_service
         self._config = config
 
     async def _get_session_for_request(
@@ -213,7 +221,7 @@ class DesignService:
             db, session_id=request.session_id, user_id=user_id, session=session
         )
         llm_config.temperature = 0.2
-        client = get_client(llm_config)
+        client = self._llm_execution_service.create_client(llm_config)
 
         prompt = build_design_mode_style_change_prompt(
             tag_name=request.element_info.tagName,
@@ -228,7 +236,7 @@ class DesignService:
         )
         design_mode_ai_change_tool = DesignModeAIChangeTool()
         try:
-            payload = await self._run_tool_loop_until_final(
+            result = await self._llm_execution_service.run_tool_loop_until_final(
                 client=client,
                 session_id=request.session_id,
                 messages=messages,
@@ -238,7 +246,14 @@ class DesignService:
                     design_mode_ai_change_tool.name: design_mode_ai_change_tool,
                 },
                 max_loops=2,
+                billing_context=self._build_billing_context(
+                    db=db,
+                    user_id=user_id,
+                    session_id=request.session_id,
+                    llm_config=llm_config,
+                ),
             )
+            payload = result.final_payload
         except Exception as exc:
             logger.warning("[DesignMode AI Change] LLM call failed: %s", exc)
             fallback_changes, fallback_explanation = self._parse_design_request(
@@ -295,7 +310,7 @@ class DesignService:
         llm_config.temperature = 0.0
         if hasattr(llm_config, "thinking_tokens"):
             llm_config.thinking_tokens = 0
-        client = get_client(llm_config)
+        client = self._llm_execution_service.create_client(llm_config)
 
         snapshot_nodes = request.document_snapshot.nodes or []
         snapshot_desc = self._build_snapshot_desc(snapshot_nodes)
@@ -332,7 +347,7 @@ class DesignService:
         }
 
         try:
-            payload = await self._run_tool_loop_until_final(
+            result = await self._llm_execution_service.run_tool_loop_until_final(
                 client=client,
                 session_id=request.session_id,
                 messages=messages,
@@ -346,7 +361,14 @@ class DesignService:
                 final_tool_name=design_mode_iframe_ai_plan_tool.name,
                 tool_registry=tool_registry,
                 max_loops=_IFRAME_MAX_TOOL_LOOPS,
+                billing_context=self._build_billing_context(
+                    db=db,
+                    user_id=user_id,
+                    session_id=request.session_id,
+                    llm_config=llm_config,
+                ),
             )
+            payload = result.final_payload
         except Exception as exc:
             logger.warning("[DesignMode AI Iframe] LLM call failed: %s", exc)
             return IframeAIPlanResponse(
@@ -1065,131 +1087,30 @@ class DesignService:
 
     def _build_llm_messages(self, *, session_id: str, user_prompt: str) -> list[Message]:
         return [
-            self._new_message(
+            self._llm_execution_service.new_message(
                 role=MessageRole.USER,
                 session_id=session_id,
                 parts=[TextContent(text=user_prompt)],
             )
         ]
 
-    @staticmethod
-    def _new_message(
-        *,
-        role: MessageRole,
-        session_id: str,
-        parts: list[Any],
-    ) -> Message:
-        now = int(time.time() * 1000)
-        return Message(
-            id=uuid.uuid4(),
-            role=role,
-            session_id=session_id,
-            parts=parts,
-            created_at=now,
-            updated_at=now,
-        )
-
-    @staticmethod
-    def _parse_tool_input(raw_input: Any) -> dict[str, Any]:
-        if isinstance(raw_input, dict):
-            return raw_input
-        if isinstance(raw_input, str):
-            text = raw_input.strip()
-            if not text:
-                return {}
-            try:
-                parsed = json.loads(text)
-            except Exception:
-                return {}
-            if isinstance(parsed, dict):
-                return parsed
-        return {}
-
-    async def _run_tool_loop_until_final(
+    def _build_billing_context(
         self,
         *,
-        client: Any,
+        db: AsyncSession,
+        user_id: str,
         session_id: str,
-        messages: list[Message],
-        tools: list[dict[str, Any]],
-        final_tool_name: str,
-        tool_registry: dict[str, Any],
-        max_loops: int,
-    ) -> dict[str, Any]:
-        conversation = list(messages)
-        forced_once = False
-
-        for _step in range(max(1, max_loops)):
-            response = await client.send(messages=conversation, tools=tools)
-            assistant_parts = list(response.content or [])
-            conversation.append(
-                self._new_message(
-                    role=MessageRole.ASSISTANT,
-                    session_id=session_id,
-                    parts=assistant_parts,
-                )
-            )
-
-            tool_calls = [part for part in assistant_parts if isinstance(part, ToolCall)]
-            for call in tool_calls:
-                if call.name == final_tool_name:
-                    return self._parse_tool_input(call.input)
-
-            if not tool_calls:
-                if forced_once:
-                    break
-                forced_once = True
-                conversation.append(
-                    self._new_message(
-                        role=MessageRole.USER,
-                        session_id=session_id,
-                        parts=[
-                            TextContent(
-                                text=(
-                                    "Submit the final tool payload exactly once now. "
-                                    "Do not reply with normal text."
-                                )
-                            )
-                        ],
-                    )
-                )
-                continue
-
-            tool_result_parts: list[ToolResult] = []
-            for call in tool_calls:
-                tool_input = call.input
-                if not isinstance(tool_input, str):
-                    tool_input = json.dumps(
-                        self._parse_tool_input(tool_input),
-                        ensure_ascii=False,
-                        default=str,
-                    )
-
-                tool_result = await ChatToolService.execute_tool(
-                    tool_call_id=call.id,
-                    tool_name=call.name,
-                    tool_input=tool_input,
-                    tool_registry=tool_registry,
-                )
-                tool_result_parts.append(tool_result)
-
-            if tool_result_parts:
-                conversation.append(
-                    self._new_message(
-                        role=MessageRole.TOOL,
-                        session_id=session_id,
-                        parts=tool_result_parts,
-                    )
-                )
-
-            if response.finish_reason not in {
-                FinishReason.TOOL_USE,
-                FinishReason.END_TURN,
-                FinishReason.UNKNOWN,
-            }:
-                break
-
-        return {}
+        llm_config: LLMConfig,
+    ) -> LLMBillingContext | None:
+        if not self._llm_billing_service:
+            return None
+        return LLMBillingContext(
+            db=db,
+            user_id=user_id,
+            session_id=session_id,
+            llm_config=llm_config,
+            model_id=llm_config.model,
+        )
 
     @staticmethod
     def _tool_result_value(tool_result: ToolResult) -> Any:

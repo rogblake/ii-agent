@@ -36,7 +36,7 @@ from ii_agent.content.media.router import tools_router as media_tools_router
 # from ii_agent.integrations.mcp_sse import mcp_wellknown_router, get_mcp_lifespan
 from ii_agent.content.slides import router as slides_router
 from ii_agent.content.slides import template_router as slide_templates_router
-from ii_agent.design import router as design_router
+from ii_agent.design.router import router as design_router
 from ii_agent.billing.credits.router import router as credits_router
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.container import ServiceContainer

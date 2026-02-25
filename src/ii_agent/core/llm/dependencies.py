@@ -9,6 +9,7 @@ from ii_agent.core.dependencies import SettingsDep
 from ii_agent.settings.llm.dependencies import LLMSettingServiceDep
 from ii_agent.core.llm.billing_service import LLMBillingService
 from ii_agent.core.llm.config_resolver import LLMConfigResolver
+from ii_agent.core.llm.execution_service import LLMExecutionService
 
 
 def get_llm_billing_service(
@@ -29,3 +30,16 @@ def get_llm_config_resolver(
 
 LLMBillingServiceDep = Annotated[LLMBillingService, Depends(get_llm_billing_service)]
 LLMConfigResolverDep = Annotated[LLMConfigResolver, Depends(get_llm_config_resolver)]
+
+
+def get_llm_execution_service(
+    llm_billing: LLMBillingServiceDep,
+) -> LLMExecutionService:
+    """Provide LLMExecutionService instance."""
+    return LLMExecutionService(llm_billing=llm_billing)
+
+
+LLMExecutionServiceDep = Annotated[
+    LLMExecutionService,
+    Depends(get_llm_execution_service),
+]

@@ -10,6 +10,10 @@ from ii_agent.content.slides.dependencies import SlideRepositoryDep
 from ii_agent.core.config.settings import get_settings
 from ii_agent.design.repository import DesignRepository
 from ii_agent.design.service import DesignService
+from ii_agent.core.llm.dependencies import (
+    LLMBillingServiceDep,
+    LLMExecutionServiceDep,
+)
 from ii_agent.engine.sandboxes.dependencies import SandboxServiceDep
 from ii_agent.realtime.events.dependencies import EventServiceDep
 from ii_agent.sessions.dependencies import SessionRepositoryDep
@@ -32,6 +36,8 @@ def get_design_service(
     sandbox_service: SandboxServiceDep,
     event_service: EventServiceDep,
     llm_setting_service: LLMSettingServiceDep,
+    llm_billing_service: LLMBillingServiceDep,
+    llm_execution_service: LLMExecutionServiceDep,
 ) -> DesignService:
     """Provide DesignService instance with explicit dependency injection."""
     return DesignService(
@@ -39,6 +45,8 @@ def get_design_service(
         sandbox_service=sandbox_service,
         event_service=event_service,
         llm_setting_service=llm_setting_service,
+        llm_billing_service=llm_billing_service,
+        llm_execution_service=llm_execution_service,
         config=get_settings(),
     )
 

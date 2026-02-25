@@ -6,10 +6,11 @@ from typing import TYPE_CHECKING, Dict, Any, Optional
 
 from pydantic import ValidationError
 
+from ii_agent.core.db.manager import get_db_session_local
+from ii_agent.core.llm.execution_service import LLMBillingContext
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
 from ii_agent.realtime.events.stream import EventStream
 from ii_agent.settings.llm.store import FileSettingsStore
-from ii_agent.chat.llm import get_client
 from ii_agent.realtime.socket.schemas import EnhancePromptContent
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.realtime.socket.command.command_handler import (
@@ -42,8 +43,7 @@ class EnhancePromptHandler(CommandHandler):
         try:
             enhance_content = EnhancePromptContent(**content)
 
-            # Create LLM client
-            user_id: Optional[str] = None  # TODO: Get actual user ID from session
+            user_id: Optional[str] = str(session_info.user_id)
             settings_store = await FileSettingsStore.get_instance(self.container.config, user_id)
             settings = await settings_store.load()
 
@@ -57,14 +57,21 @@ class EnhancePromptHandler(CommandHandler):
                     f"LLM config not found for model: {enhance_content.model_name}"
                 )
 
-            client = get_client(llm_config)
-
             # Enhance the prompt
-            success, message, enhanced_prompt = await enhance_user_prompt(
-                client=client,
-                user_input=enhance_content.text,
-                files=enhance_content.files,
-            )
+            async with get_db_session_local() as db:
+                success, message, enhanced_prompt = await enhance_user_prompt(
+                    llm_execution_service=self.container.llm_execution_service,
+                    llm_config=llm_config,
+                    user_input=enhance_content.text,
+                    files=enhance_content.files,
+                    billing_context=LLMBillingContext(
+                        db=db,
+                        user_id=user_id,
+                        session_id=str(session_info.id),
+                        llm_config=llm_config,
+                        model_id=llm_config.model,
+                    ),
+                )
 
             if success and enhanced_prompt:
                 await self.send_event(

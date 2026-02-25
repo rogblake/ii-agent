@@ -43,6 +43,7 @@ from ii_agent.content.storybook.dependencies import (
 from ii_agent.core.llm.dependencies import (
     get_llm_billing_service,
     get_llm_config_resolver,
+    get_llm_execution_service,
 )
 from ii_agent.engine.agents.dependencies import (
     get_agent_run_service,
@@ -110,6 +111,7 @@ if TYPE_CHECKING:
     from ii_agent.integrations.connectors.service import ConnectorService
     from ii_agent.core.config.settings import Settings
     from ii_agent.core.llm.billing_service import LLMBillingService
+    from ii_agent.core.llm.execution_service import LLMExecutionService
     from ii_agent.core.llm.config_resolver import LLMConfigResolver
     from ii_agent.realtime.events.service import EventService
     from ii_agent.files.service import FileService
@@ -145,6 +147,7 @@ class ServiceContainer:
     config: Settings
     credit_service: CreditService
     llm_billing_service: LLMBillingService
+    llm_execution_service: LLMExecutionService
     llm_config_resolver: LLMConfigResolver
     session_service: SessionService
     session_fork_service: SessionForkService
@@ -235,6 +238,7 @@ class ServiceContainer:
 
         # ── LLM infrastructure & validation ──────────────────────────────────
         llm_billing_svc = get_llm_billing_service(credit_svc, cfg)
+        llm_execution_svc = get_llm_execution_service(llm_billing_svc)
         llm_config_resolver = get_llm_config_resolver(llm_setting_svc, cfg)
         session_validation_svc = get_session_validation_service(
             session_svc, credit_svc
@@ -244,6 +248,7 @@ class ServiceContainer:
             config=cfg,
             credit_service=credit_svc,
             llm_billing_service=llm_billing_svc,
+            llm_execution_service=llm_execution_svc,
             llm_config_resolver=llm_config_resolver,
             session_service=session_svc,
             session_fork_service=session_fork_svc,

@@ -63,6 +63,7 @@ import ProjectList from './project-list'
 import UserProfileDropdown from './user-profile-dropdown'
 import { useIsSageTheme } from '@/hooks/use-is-sage-theme'
 import { useChat } from '@/hooks/use-chat-query'
+import clsx from 'clsx'
 
 interface SidebarButtonProps {
     className?: string
@@ -239,7 +240,10 @@ const Sidebar = ({ className, workspaceInfo }: SidebarButtonProps) => {
             </div>
             <Logo
                 className="hidden md:flex gap-x-3"
-                imageClassName="rounded-sm size-10"
+                imageClassName={clsx(
+                    'rounded-sm',
+                    isSage ? '!h-6 md:!h-10' : 'size-10'
+                )}
                 label="II-Agent"
                 labelClassName="group-data-[collapsible=icon]:hidden text-black dark:text-white text-2xl font-semibold"
                 showBeta={ENABLE_BETA}

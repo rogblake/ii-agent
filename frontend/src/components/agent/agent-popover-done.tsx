@@ -17,9 +17,11 @@ import {
 import { BUILD_MODE } from '@/typings/agent'
 import { Message, TOOL } from '@/typings'
 import { Icon } from '../ui/icon'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const AgentPopoverDone = () => {
     const { t } = useTranslation()
+    const isMobile = useIsMobile()
     const [open, setOpen] = useState(false)
     const messages = useAppSelector(selectMessages)
     const isCompleted = useAppSelector(selectIsCompleted)
@@ -35,7 +37,7 @@ const AgentPopoverDone = () => {
     )
 
     if (buildMode === BUILD_MODE.DESIGN) return null
-    if (!plans || plans.length === 0 || !isCompleted) return null
+    if (!plans || plans.length === 0 || !isCompleted || isMobile) return null
 
     return (
         <Popover open={open} onOpenChange={setOpen}>

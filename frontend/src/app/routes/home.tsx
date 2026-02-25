@@ -274,27 +274,29 @@ function HomePageContent() {
                         />
                         <div className="relative flex-1 py-12 px-3 md:px-10 lg:px-[126px] flex md:items-center justify-center">
                             <div className="w-full max-w-[888px]">
-                                <div className="flex items-end gap-4 -mt-16 mb-16">
-                                    <div className="text-center md:text-left">
-                                        {isSage && (
-                                            <img
-                                                src="/images/sage-3d.svg"
-                                                alt="SAGE"
-                                                className="md:w-[160px] m-auto"
-                                            />
-                                        )}
-                                        <p className="text-[25px] md:text-[32px] font-semibold dark:text-white">
-                                            {t('home.greeting')}
-                                            {user?.first_name
-                                                ? `, ${user?.first_name}`
-                                                : ''}
-                                            !
-                                        </p>
-                                        <p className="text-[20px] md:text-2xl dark:text-white">
-                                            {t('home.whatCanIDo')}
-                                        </p>
+                                <div className='-mt-16 mb-16'>
+                                    {isSage && (
+                                        <img
+                                            src="/images/sage-3d.svg"
+                                            alt="SAGE"
+                                            className="md:w-[160px] m-auto"
+                                        />
+                                    )}
+                                    <div className="flex items-end gap-4">
+                                        <div className="text-center md:text-left">
+                                            <p className="text-[25px] md:text-[32px] font-semibold dark:text-white">
+                                                {t('home.greeting')}
+                                                {user?.first_name
+                                                    ? `, ${user?.first_name}`
+                                                    : ''}
+                                                !
+                                            </p>
+                                            <p className="text-[20px] md:text-2xl dark:text-white">
+                                                {t('home.whatCanIDo')}
+                                            </p>
+                                        </div>
+                                        <LearnMore />
                                     </div>
-                                    <LearnMore />
                                 </div>
 
                                 <QuestionInput
@@ -339,9 +341,7 @@ function HomePageContent() {
                                     onConnectorDropdownOpenChange={
                                         setIsConnectorDropdownOpen
                                     }
-                                    advancedModeSettings={
-                                        advancedModeSettings
-                                    }
+                                    advancedModeSettings={advancedModeSettings}
                                     onAdvancedModeSettingsChange={
                                         setAdvancedModeSettings
                                     }

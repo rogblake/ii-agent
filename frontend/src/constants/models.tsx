@@ -68,6 +68,11 @@ export const PROVIDER_MODELS: { [key: string]: IModel[] } = {
     ],
     gemini: [
         {
+            id: 'gemini-3.1-pro-preview',
+            model: 'gemini-3.1-pro-preview',
+            api_type: 'gemini'
+        },
+        {
             id: 'gemini-3-pro-preview',
             model: 'gemini-3-pro-preview',
             api_type: 'gemini'

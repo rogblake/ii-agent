@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import QRCode from 'react-qr-code'
 import { Icon } from '../ui/icon'
 import dayjs from 'dayjs'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 interface MobileResultProps {
     resultUrl: string
@@ -18,6 +19,7 @@ const MobileResult = ({
     className
 }: MobileResultProps) => {
     const { t } = useTranslation()
+    const isMobile = useIsMobile()
     const [iframeKey, setIframeKey] = useState(0)
 
     useEffect(() => {
@@ -40,6 +42,36 @@ const MobileResult = ({
     )
 
     const isExpoGoQR = !mobileAppUrl
+
+    const mobileAppView = resultUrl ? (
+        <iframe
+            key={iframeKey}
+            src={resultUrl}
+            className="absolute top-[44px] left-0 right-0 bottom-6 w-full border-0 bg-white"
+            style={{
+                height: isMobile ? 'calc(100% - 12px)' : 'calc(100% - 44px)',
+                top: isMobile ? '12px' : '44px'
+            }}
+            title="Mobile App Preview"
+            allow="geolocation; camera; microphone"
+        />
+    ) : (
+        <div
+            className="absolute top-[44px] left-0 right-0 bottom-6 w-full flex items-center justify-center bg-white"
+            style={{ height: 'calc(100% - 44px)' }}
+        >
+            <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-3 border-gray-300 border-t-black" />
+                <span className="text-xs text-gray-500">
+                    {t('common.loading')}
+                </span>
+            </div>
+        </div>
+    )
+
+    if (isMobile) {
+        return mobileAppView
+    }
 
     return (
         <div
@@ -188,29 +220,7 @@ const MobileResult = ({
                                 </div>
                             </div>
 
-                            {/* iframe content - pushed down by safe area */}
-                            {resultUrl ? (
-                                <iframe
-                                    key={iframeKey}
-                                    src={resultUrl}
-                                    className="absolute top-[44px] left-0 right-0 bottom-6 w-full border-0 bg-white"
-                                    style={{ height: 'calc(100% - 44px)' }}
-                                    title="Mobile App Preview"
-                                    allow="geolocation; camera; microphone"
-                                />
-                            ) : (
-                                <div
-                                    className="absolute top-[44px] left-0 right-0 bottom-6 w-full flex items-center justify-center bg-white"
-                                    style={{ height: 'calc(100% - 44px)' }}
-                                >
-                                    <div className="flex flex-col items-center gap-3">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-3 border-gray-300 border-t-black" />
-                                        <span className="text-xs text-gray-500">
-                                            {t('common.loading')}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
+                            {mobileAppView}
                         </div>
                     </div>
                 </div>

@@ -77,9 +77,10 @@ from ii_agent.projects.deployments.dependencies import (
     get_deployments_service,
 )
 from ii_agent.realtime.events.dependencies import (
+    build_event_service,
     get_event_repository,
-    get_event_service,
 )
+from ii_agent.realtime.events.publisher import NoopEventPublisher
 from ii_agent.sessions.dependencies import (
     get_session_fork_service,
     get_session_repository,
@@ -203,7 +204,10 @@ class ServiceContainer:
         # ── Leaf services (depend only on repos / config) ────────────────────
         credit_svc = get_credit_service(user_repo, metrics_repo)
         agent_run_svc = get_agent_run_service(agent_run_repo)
-        event_svc = get_event_service(event_repo)
+        event_svc = build_event_service(
+            event_repo,
+            publisher=NoopEventPublisher(),
+        )
         mcp_setting_svc = get_mcp_setting_service(mcp_setting_repo)
         sandbox_svc = get_sandbox_service(sandbox_repo)
         skill_svc = get_skill_service(skill_repo)

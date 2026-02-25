@@ -1,0 +1,3398 @@
+<script data-design-ignore="true">
+(function() {
+    'use strict';
+
+    // Prevent double initialization
+    if (window.__DESIGN_MODE_RUNTIME__) {
+        console.log('[DesignMode] Runtime already initialized');
+        return;
+    }
+
+    // Tracked CSS properties
+    const TRACKED_PROPERTIES = [
+        'font-family', 'font-size', 'font-weight', 'color',
+        'background-color', 'border-radius', 'padding', 'margin'
+    ];
+
+    // Selectors for editable elements (include SVG so icons can be targeted even when not using lucide classes)
+    const EDITABLE_SELECTORS = 'h1,h2,h3,h4,h5,h6,p,span,a,button,div,section,article,header,footer,nav,main,aside,img,svg,input,textarea,select,ul,ol,li,label,form';
+
+    // Elements to ignore
+    const IGNORE_SELECTORS = '[data-design-ignore], script, style, link, meta, noscript';
+
+		    window.__DESIGN_MODE_RUNTIME__ = {
+		        enabled: false,
+		        idCounter: 0,
+		        _markScheduled: false,
+		        _markTimeout: null,
+		        _mutationObserver: null,
+			        pendingChanges: new Map(),
+	            styleOverrides: {},
+	            iconOverrides: {},
+	            styleOverrideEl: null,
+	            _styleRenderScheduled: false,
+	            _styleRenderHandle: null,
+	            _applyIconOverridesScheduled: false,
+	            _applyIconOverridesTimeout: null,
+	            _isApplyingIconOverrides: false,
+			        selectedElement: null,
+			        hoveredElement: null,
+	        highlightOverlay: null,
+	        selectionOverlay: null,
+	        temporaryHighlightOverlay: null,
+        temporaryHighlightTimeout: null,
+        temporaryHighlightAnimFrame: null,
+        isTemporaryHighlightActive: false,
+        loadingOverlay: null,
+        loadingCard: null,
+        loadingSpinner: null,
+        loadingLabel: null,
+        loadingElement: null,
+        loadingDesignId: null,
+        _spinnerKeyframesInstalled: false,
+        // Drag/swap state
+        dragCandidate: null,
+        dragStartX: 0,
+        dragStartY: 0,
+        isDragging: false,
+        draggingElement: null,
+        dragTarget: null,
+        dragDropMode: null,
+        dragGhost: null,
+        dragGhostOffsetX: 0,
+        dragGhostOffsetY: 0,
+        suppressNextClick: false,
+        // Resize state
+        resizeHandles: null,
+        hoverResizeHandle: null,
+        isResizing: false,
+        resizeHandle: null,
+        resizeStartX: 0,
+        resizeStartY: 0,
+        resizeStartWidth: 0,
+        resizeStartHeight: 0,
+        resizeElement: null,
+
+			        init: function() {
+			            console.log('[DesignMode] Initializing runtime...');
+			            this.createOverlays();
+                this.ensureStyleOverrideSheet();
+			            this.syncIdCounterFromExistingIds();
+			            this.notifyParent('DESIGN_MODE_READY', { ready: true });
+			            console.log('[DesignMode] Runtime ready');
+			        },
+
+	        syncIdCounterFromExistingIds: function() {
+	            // Prevent collisions when the source already contains stable IDs or when we
+	            // backfill `design-el-*` IDs into source.
+	            try {
+	                var max = -1;
+	                var els = document.querySelectorAll('[data-design-id^="design-el-"]');
+	                els.forEach(function(el) {
+	                    var v = el.getAttribute('data-design-id') || '';
+	                    var m = v.match(/^design-el-(\\d+)$/);
+	                    if (m && m[1]) {
+	                        var n = parseInt(m[1], 10);
+	                        if (!isNaN(n) && n > max) max = n;
+	                    }
+	                });
+	                if (max >= 0) {
+	                    this.idCounter = max + 1;
+	                }
+	            } catch (e) {
+	                // ignore
+	            }
+	        },
+
+	        scheduleMarkElements: function() {
+	            var self = this;
+	            if (this._markScheduled) return;
+	            this._markScheduled = true;
+	            if (this._markTimeout) {
+	                clearTimeout(this._markTimeout);
+	            }
+		            this._markTimeout = setTimeout(function() {
+		                self._markScheduled = false;
+		                self._markTimeout = null;
+		                self.markElements();
+		                try { self.revealHiddenMotionElements(); self.revealHiddenAosElements(); } catch (e) {}
+                        try { self.updateOverlayPositions(); } catch (e) {}
+		            }, 200);
+		        },
+
+		        scheduleApplyIconOverrides: function() {
+		            var self = this;
+		            if (this._applyIconOverridesScheduled) return;
+		            this._applyIconOverridesScheduled = true;
+		            if (this._applyIconOverridesTimeout) {
+		                clearTimeout(this._applyIconOverridesTimeout);
+		            }
+		            this._applyIconOverridesTimeout = setTimeout(function() {
+		                self._applyIconOverridesScheduled = false;
+		                self._applyIconOverridesTimeout = null;
+		                self.applyIconOverrides();
+		            }, 80);
+		        },
+
+		        applyIconOverrides: function() {
+		            var self = this;
+		            if (this._isApplyingIconOverrides) return;
+		            var hasAny = false;
+		            try {
+		                if (!this.iconOverrides) this.iconOverrides = {};
+		                for (var k in this.iconOverrides) {
+		                    if (this.iconOverrides.hasOwnProperty(k)) { hasAny = true; break; }
+		                }
+		            } catch (e) { hasAny = false; }
+		            if (!hasAny) return;
+
+		            var computeSigFromRoot = function(root) {
+		                try {
+		                    if (!root || !root.querySelectorAll) return '';
+		                    var shapes = root.querySelectorAll('path,line,polyline,polygon,rect,circle,ellipse');
+		                    if (!shapes || !shapes.length) return '';
+		                    var parts = [];
+		                    var max = Math.min(80, shapes.length);
+		                    for (var i = 0; i < max; i++) {
+		                        var s = shapes[i];
+		                        if (!s || !s.getAttribute) continue;
+		                        var tag = '';
+		                        try { tag = (s.tagName || '').toLowerCase(); } catch (e) { tag = ''; }
+		                        if (!tag) continue;
+		                        var attrs = [];
+		                        if (tag === 'path') {
+		                            attrs.push('d=' + (s.getAttribute('d') || ''));
+		                        } else if (tag === 'line') {
+		                            attrs.push('x1=' + (s.getAttribute('x1') || ''));
+		                            attrs.push('y1=' + (s.getAttribute('y1') || ''));
+		                            attrs.push('x2=' + (s.getAttribute('x2') || ''));
+		                            attrs.push('y2=' + (s.getAttribute('y2') || ''));
+		                        } else if (tag === 'rect') {
+		                            attrs.push('x=' + (s.getAttribute('x') || ''));
+		                            attrs.push('y=' + (s.getAttribute('y') || ''));
+		                            attrs.push('w=' + (s.getAttribute('width') || ''));
+		                            attrs.push('h=' + (s.getAttribute('height') || ''));
+		                            attrs.push('rx=' + (s.getAttribute('rx') || ''));
+		                            attrs.push('ry=' + (s.getAttribute('ry') || ''));
+		                        } else if (tag === 'circle') {
+		                            attrs.push('cx=' + (s.getAttribute('cx') || ''));
+		                            attrs.push('cy=' + (s.getAttribute('cy') || ''));
+		                            attrs.push('r=' + (s.getAttribute('r') || ''));
+		                        } else if (tag === 'ellipse') {
+		                            attrs.push('cx=' + (s.getAttribute('cx') || ''));
+		                            attrs.push('cy=' + (s.getAttribute('cy') || ''));
+		                            attrs.push('rx=' + (s.getAttribute('rx') || ''));
+		                            attrs.push('ry=' + (s.getAttribute('ry') || ''));
+		                        } else if (tag === 'polyline' || tag === 'polygon') {
+		                            attrs.push('points=' + (s.getAttribute('points') || ''));
+		                        }
+		                        parts.push(tag + ':' + attrs.join(','));
+		                    }
+		                    return parts.join('|');
+		                } catch (e) {
+		                    return '';
+		                }
+		            };
+
+		            this._isApplyingIconOverrides = true;
+		            try {
+		                for (var designId in this.iconOverrides) {
+		                    if (!this.iconOverrides.hasOwnProperty(designId)) continue;
+		                    var ov = this.iconOverrides[designId];
+		                    if (!ov) continue;
+		                    var iconName = ov.iconName || ov.icon_name || ov.name || '';
+		                    var svgInner = ov.svgInner || ov.svg_inner || ov.svg || '';
+		                    if (!svgInner) continue;
+
+		                    // Skip only if the current SVG signature matches the expected override signature.
+		                    try {
+		                        var el = document.querySelector('[data-design-id="' + designId + '"]');
+		                        if (!el) continue;
+		                        var svg = null;
+		                        if (el.tagName && String(el.tagName).toLowerCase() === 'svg') {
+		                            svg = el;
+		                        } else {
+		                            svg = el.querySelector('svg.lucide') || el.querySelector('svg');
+		                        }
+		                        if (svg) {
+		                            var expectedSig = ov.sig || '';
+		                            if (!expectedSig) {
+		                                try {
+		                                    var parser = new DOMParser();
+		                                    var doc = parser.parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + svgInner + '</svg>', 'image/svg+xml');
+		                                    var parsedSvg = doc && doc.documentElement ? doc.documentElement : null;
+		                                    expectedSig = computeSigFromRoot(parsedSvg);
+		                                    if (expectedSig) {
+		                                        try { ov.sig = expectedSig; } catch (e) {}
+		                                    }
+		                                } catch (e) {}
+		                            }
+
+		                            var currentSig = computeSigFromRoot(svg);
+		                            if (expectedSig && currentSig && expectedSig === currentSig) {
+		                                continue;
+		                            }
+		                        }
+		                    } catch (e) {}
+
+		                    this.setIcon(designId, iconName, svgInner, true);
+		                }
+		            } catch (e) {
+		                // best-effort; ignore
+		            } finally {
+		                this._isApplyingIconOverrides = false;
+		            }
+		        },
+
+		        startMutationObserver: function() {
+		            var self = this;
+		            if (this._mutationObserver) return;
+		            if (!window.MutationObserver) return;
+		            try {
+		                this._mutationObserver = new MutationObserver(function(mutations) {
+		                    if (self._isApplyingIconOverrides) return;
+		                    for (var i = 0; i < mutations.length; i++) {
+		                        var m = mutations[i];
+		                        if (m.type === 'childList' && ((m.addedNodes && m.addedNodes.length) || (m.removedNodes && m.removedNodes.length))) {
+		                            self.scheduleMarkElements();
+		                            self.scheduleApplyIconOverrides();
+		                            break;
+		                        }
+		                    }
+		                });
+		                this._mutationObserver.observe(document.documentElement || document.body, {
+		                    childList: true,
+	                    subtree: true
+	                });
+	            } catch (e) {
+	                this._mutationObserver = null;
+	            }
+	        },
+
+	        enable: function() {
+	            if (this.enabled) return;
+		            this.enabled = true;
+		            this.attachEventListeners();
+		            document.body.style.cursor = 'pointer';
+		            try { this.markElements(); this.startMutationObserver(); } catch (e) {}
+		            try { this.applyIconOverrides(); } catch (e) {}
+		            try {
+		                var self = this;
+		                setTimeout(function() { self.revealHiddenMotionElements(); self.revealHiddenAosElements(); }, 50);
+		                setTimeout(function() { self.revealHiddenMotionElements(); self.revealHiddenAosElements(); }, 500);
+	            } catch (e) {}
+	            console.log('[DesignMode] Enabled');
+	        },
+
+        disable: function() {
+            if (!this.enabled) return;
+            this.enabled = false;
+            this.detachEventListeners();
+            this.hideHighlight();
+            this.hideSelection();
+            this.hideLoading();
+            document.body.style.cursor = '';
+            this.selectedElement = null;
+            this.hoveredElement = null;
+            this.loadingElement = null;
+            this.loadingDesignId = null;
+            try {
+                if (this._mutationObserver) {
+                    this._mutationObserver.disconnect();
+                    this._mutationObserver = null;
+                }
+            } catch (e) {}
+            console.log('[DesignMode] Disabled');
+        },
+
+        createOverlays: function() {
+            // Highlight overlay (hover)
+            this.highlightOverlay = document.createElement('div');
+            this.highlightOverlay.id = 'design-mode-highlight';
+            this.highlightOverlay.setAttribute('data-design-ignore', 'true');
+            this.highlightOverlay.style.cssText =
+                'position:fixed;pointer-events:none;border:2px dashed #bee6f0;' +
+                'background:rgba(190,230,240,0.12);z-index:999998;display:none;transition:all 0.1s ease;';
+            document.body.appendChild(this.highlightOverlay);
+
+            // Selection overlay (click)
+            this.selectionOverlay = document.createElement('div');
+            this.selectionOverlay.id = 'design-mode-selection';
+            this.selectionOverlay.setAttribute('data-design-ignore', 'true');
+            this.selectionOverlay.style.cssText =
+                'position:fixed;pointer-events:none;border:2px solid #bee6f0;' +
+                'background:rgba(190,230,240,0.14);z-index:999999;display:none;';
+            document.body.appendChild(this.selectionOverlay);
+
+            // Temporary highlight overlay (for viewing changes list)
+            this.temporaryHighlightOverlay = document.createElement('div');
+            this.temporaryHighlightOverlay.id = 'design-mode-temp-highlight';
+            this.temporaryHighlightOverlay.setAttribute('data-design-ignore', 'true');
+            this.temporaryHighlightOverlay.style.cssText =
+                'position:fixed;pointer-events:none;border:3px solid #f59e0b;' +
+                'background:rgba(245,158,11,0.2);z-index:1000000;display:none;' +
+                'box-shadow:0 0 10px rgba(245,158,11,0.5);';
+            document.body.appendChild(this.temporaryHighlightOverlay);
+
+            // Loading overlay (AI apply) - bouncing text animation
+            this.ensureBouncingTextKeyframes();
+            this.loadingOverlay = document.createElement('div');
+            this.loadingOverlay.id = 'design-mode-loading';
+            this.loadingOverlay.setAttribute('data-design-ignore', 'true');
+            this.loadingOverlay.style.cssText =
+                'position:fixed;pointer-events:none;z-index:1000001;display:none;' +
+                'align-items:center;justify-content:center;' +
+                'overflow:hidden;' +
+                'backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);';
+
+            this.loadingCard = document.createElement('div');
+            this.loadingCard.setAttribute('data-design-ignore', 'true');
+            this.loadingCard.style.cssText =
+                'display:flex;align-items:center;justify-content:center;' +
+                'gap:0;padding:0;border-radius:0;' +
+                'background:transparent;border:0;box-shadow:none;';
+
+            // Create bouncing text loading indicator
+            this.loadingTextContainer = document.createElement('div');
+            this.loadingTextContainer.setAttribute('data-design-ignore', 'true');
+            this.loadingTextContainer.style.cssText =
+                'display:flex;align-items:center;gap:4px;' +
+                'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;' +
+                'font-size:14px;font-weight:600;letter-spacing:0.02em;line-height:1;' +
+                'color:#a6ffff;'; // sky-blue-2 matching active tab text
+
+            // Create bouncing text "II-Agent Generating..."
+            var text = 'II-Agent Generating...';
+            for (var i = 0; i < text.length; i++) {
+                var charSpan = document.createElement('span');
+                charSpan.setAttribute('data-design-ignore', 'true');
+                charSpan.textContent = text[i] === ' ' ? '\u00a0' : text[i]; // Use non-breaking space
+                charSpan.style.cssText =
+                    'display:inline-block;' +
+                    'animation:design-mode-bounce 1.4s ease-in-out infinite;' +
+                    'animation-delay:' + (i * 0.05) + 's;';
+                this.loadingTextContainer.appendChild(charSpan);
+            }
+
+            // Create compact spinner for small elements
+            this.loadingSpinner = document.createElement('div');
+            this.loadingSpinner.setAttribute('data-design-ignore', 'true');
+            this.loadingSpinner.style.cssText =
+                'width:16px;height:16px;' +
+                'border-radius:50%;' +
+                'border:2px solid #bfdbfe;' + // blue-200
+                'border-top-color:#2563eb;' + // blue-600
+                'animation:design-mode-spin 0.8s linear infinite;' +
+                'display:none;';
+            this.loadingCard.appendChild(this.loadingTextContainer);
+            this.loadingCard.appendChild(this.loadingSpinner);
+            this.loadingOverlay.appendChild(this.loadingCard);
+            document.body.appendChild(this.loadingOverlay);
+        },
+
+        ensureBouncingTextKeyframes: function() {
+            if (this._bouncingTextKeyframesInstalled) return;
+            this._bouncingTextKeyframesInstalled = true;
+            try {
+                if (document.getElementById('design-mode-bouncing-text-keyframes')) return;
+                var styleEl = document.createElement('style');
+                styleEl.id = 'design-mode-bouncing-text-keyframes';
+                styleEl.setAttribute('data-design-ignore', 'true');
+                styleEl.textContent =
+                    '@keyframes design-mode-shimmer {' +
+                    '0% { background-position: -200% 0; }' +
+                    '100% { background-position: 200% 0; }' +
+                    '}' +
+                    '@keyframes design-mode-bounce {' +
+                    '0%, 60%, 100% { transform: translateY(0); }' +
+                    '30% { transform: translateY(-8px); }' +
+                    '}' +
+                    '@keyframes design-mode-spin {' +
+                    'from { transform: rotate(0deg); }' +
+                    'to { transform: rotate(360deg); }' +
+                    '}';
+                document.head.appendChild(styleEl);
+            } catch (e) {}
+        },
+
+        showLoading: function(element) {
+            if (!element || !this.loadingOverlay) return;
+            try {
+                if (!document.documentElement.contains(element)) {
+                    this.hideLoading();
+                    return;
+                }
+                var rect = element.getBoundingClientRect();
+                this.loadingOverlay.style.display = 'flex';
+                this.loadingOverlay.style.top = rect.top + 'px';
+                this.loadingOverlay.style.left = rect.left + 'px';
+                this.loadingOverlay.style.width = rect.width + 'px';
+                this.loadingOverlay.style.height = rect.height + 'px';
+
+                // Make it feel like it's "attached" to the element.
+                try {
+                    var cs = window.getComputedStyle(element);
+                    if (cs && cs.borderRadius) {
+                        this.loadingOverlay.style.borderRadius = cs.borderRadius;
+                    }
+                } catch (e) {}
+
+                // Switch between text and spinner based on element size
+                var width = rect.width || 0;
+                var height = rect.height || 0;
+
+                // Thresholds: Show text if element is wide enough (200px) AND tall enough (40px)
+                // This ensures we have enough space to fit "II Agent thinking..." text
+                var minWidth = 200;
+                var minHeight = 40;
+                var useText = width >= minWidth && height >= minHeight;
+
+                // Detect dark mode
+                var isDarkMode = false;
+                try {
+                    isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                } catch (e) {}
+
+                if (useText) {
+                    // Show modern shimmer effect with icon and text for larger elements
+                    if (isDarkMode) {
+                        // Dark mode colors
+                        this.loadingOverlay.style.background =
+                            'linear-gradient(90deg, ' +
+                            'rgba(30, 41, 59, 0.85) 0%, ' +      // slate-800
+                            'rgba(51, 65, 85, 0.95) 20%, ' +     // slate-700 shimmer
+                            'rgba(30, 41, 59, 0.85) 40%, ' +     // slate-800
+                            'rgba(30, 41, 59, 0.85) 100%)';
+                    } else {
+                        // Light mode colors
+                        this.loadingOverlay.style.background =
+                            'linear-gradient(90deg, ' +
+                            'rgba(239, 246, 255, 0.85) 0%, ' +   // blue-50
+                            'rgba(219, 234, 254, 0.95) 20%, ' +  // blue-100 shimmer
+                            'rgba(239, 246, 255, 0.85) 40%, ' +  // blue-50
+                            'rgba(239, 246, 255, 0.85) 100%)';
+                    }
+                    this.loadingOverlay.style.backgroundSize = '200% 100%';
+                    this.loadingOverlay.style.animation = 'design-mode-shimmer 1.5s ease-in-out infinite';
+
+                    if (this.loadingSpinner) {
+                        this.loadingSpinner.style.display = 'none';
+                    }
+                    if (this.loadingTextContainer) {
+                        this.loadingTextContainer.style.display = 'flex';
+                        // Update text color for dark mode
+                        if (isDarkMode) {
+                            this.loadingTextContainer.style.color = '#a6ffff'; // sky-blue-2 in sage theme (sandy gold)
+                        } else {
+                            this.loadingTextContainer.style.color = '#a6ffff'; // sky-blue-2 (matching active tab text)
+                        }
+                    }
+                } else {
+                    // Show shimmer background with compact spinner for small elements
+                    if (isDarkMode) {
+                        this.loadingOverlay.style.background =
+                            'linear-gradient(90deg, ' +
+                            'rgba(30, 41, 59, 0.75) 0%, ' +
+                            'rgba(51, 65, 85, 0.9) 50%, ' +
+                            'rgba(30, 41, 59, 0.75) 100%)';
+                    } else {
+                        this.loadingOverlay.style.background =
+                            'linear-gradient(90deg, ' +
+                            'rgba(239, 246, 255, 0.75) 0%, ' +
+                            'rgba(219, 234, 254, 0.9) 50%, ' +
+                            'rgba(239, 246, 255, 0.75) 100%)';
+                    }
+                    this.loadingOverlay.style.backgroundSize = '200% 100%';
+                    this.loadingOverlay.style.animation = 'design-mode-shimmer 1.5s ease-in-out infinite';
+
+                    // Show only spinner for small elements
+                    if (this.loadingTextContainer) {
+                        this.loadingTextContainer.style.display = 'none';
+                    }
+                    if (this.loadingSpinner) {
+                        this.loadingSpinner.style.display = 'flex';
+                        // Update spinner colors for dark mode
+                        if (isDarkMode) {
+                            this.loadingSpinner.style.borderColor = '#334155'; // slate-700
+                            this.loadingSpinner.style.borderTopColor = '#60a5fa'; // blue-400
+                        }
+                    }
+                }
+            } catch (e) {}
+        },
+
+        hideLoading: function() {
+            if (this.loadingOverlay) this.loadingOverlay.style.display = 'none';
+        },
+
+        setElementLoading: function(designId, isLoading, xpath) {
+            try {
+                if (!isLoading) {
+                    this.loadingElement = null;
+                    this.loadingDesignId = null;
+                    this.hideLoading();
+                    return;
+                }
+
+                this.loadingDesignId = designId;
+                var el = null;
+                if (designId) {
+                    el = document.querySelector('[data-design-id="' + designId + '"]');
+                }
+                if (!el && xpath) {
+                    el = this.findByXPath(xpath);
+                    if (el && el.setAttribute && designId) {
+                        try { el.setAttribute('data-design-id', designId); } catch (e) {}
+                    }
+                }
+
+                this.loadingElement = el;
+                if (el) this.showLoading(el);
+                else this.hideLoading();
+            } catch (e) {}
+        },
+
+	        markElements: function() {
+	            var self = this;
+	            var started = Date.now();
+	            var elements = document.querySelectorAll(EDITABLE_SELECTORS);
+	            var marked = 0;
+	            elements.forEach(function(el) {
+	                if (el.closest(IGNORE_SELECTORS)) return;
+	                if (!el.hasAttribute('data-design-id')) {
+	                    // Avoid generating ephemeral IDs inside stable, author-provided design-id scopes.
+	                    // This keeps selection + change tracking anchored to stable IDs so changes can be synced.
+	                    var hasStableAncestor = false;
+	                    try {
+	                        var p = el.parentElement;
+	                        while (p && p !== document.body) {
+	                            if (p.hasAttribute && p.hasAttribute('data-design-id')) {
+	                                var pid = p.getAttribute('data-design-id') || '';
+	                                if (pid && pid.indexOf('design-el-') !== 0) {
+	                                    hasStableAncestor = true;
+	                                    break;
+	                                }
+	                            }
+	                            p = p.parentElement;
+	                        }
+	                    } catch (e) { hasStableAncestor = false; }
+
+	                    if (hasStableAncestor) return;
+
+	                    el.setAttribute('data-design-id', 'design-el-' + (self.idCounter++));
+	                    marked++;
+	                }
+	            });
+	            var elapsed = Date.now() - started;
+	            console.log('[DesignMode] Marked', marked, 'new elements (', self.idCounter, 'total) in', elapsed, 'ms');
+	        },
+
+	        revealHiddenMotionElements: function() {
+	            // Some animation libraries (e.g. Framer Motion) render elements with initial
+	            // `opacity: 0` / transformed styles. If the app doesn't hydrate, those elements
+	            // can remain invisible in Design Mode, making the UI appear "missing".
+	            // Pass 1: walk from design-id elements up to find inline motion styles.
+	            try {
+	                var designEls = document.querySelectorAll('[data-design-id]');
+	                designEls.forEach(function(node) {
+	                    var el = node;
+	                    var depth = 0;
+	                    while (el && depth < 5) {
+	                        var styleAttr = '';
+	                        try { styleAttr = (el.getAttribute && el.getAttribute('style')) ? el.getAttribute('style') : ''; } catch (e) {}
+	                        var hasInlineOpacity = styleAttr && styleAttr.indexOf('opacity') !== -1;
+	                        var hasInlineTransform = styleAttr && styleAttr.indexOf('transform') !== -1;
+	                        if (hasInlineOpacity || hasInlineTransform) {
+	                            try {
+	                                var cs = window.getComputedStyle(el);
+	                                if (cs && cs.opacity === '0' && cs.display !== 'none' && cs.visibility !== 'hidden') {
+	                                    if (hasInlineOpacity) {
+	                                        el.style.setProperty('opacity', '1', 'important');
+	                                    }
+	                                    if (hasInlineTransform && cs.transform && cs.transform !== 'none') {
+	                                        el.style.setProperty('transform', 'none', 'important');
+	                                    }
+	                                }
+	                            } catch (e) {}
+	                            break;
+	                        }
+	                        el = el.parentElement;
+	                        depth++;
+	                    }
+	                });
+	            } catch (e) {}
+
+	            // Pass 2: also scan inline-styled elements directly.
+	            // This catches motion wrappers inside stable `data-design-id` scopes where we intentionally
+	            // avoid auto-generating child IDs until interaction.
+	            try {
+	                var inlineEls = document.querySelectorAll('[style*=\"opacity\"], [style*=\"transform\"]');
+	                for (var i = 0; i < inlineEls.length; i++) {
+	                    var el = inlineEls[i];
+	                    try {
+	                        if (!el || !el.getAttribute) continue;
+	                        if (el.closest && el.closest(IGNORE_SELECTORS)) continue;
+	                        var styleAttr = '';
+	                        try { styleAttr = (el.getAttribute && el.getAttribute('style')) ? el.getAttribute('style') : ''; } catch (e0) {}
+	                        var hasInlineOpacity = styleAttr && styleAttr.indexOf('opacity') !== -1;
+	                        var hasInlineTransform = styleAttr && styleAttr.indexOf('transform') !== -1;
+	                        if (!hasInlineOpacity && !hasInlineTransform) continue;
+	                        var cs = window.getComputedStyle(el);
+	                        if (!cs) continue;
+	                        if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+	                        if (cs.opacity === '0') {
+	                            if (hasInlineOpacity) {
+	                                el.style.setProperty('opacity', '1', 'important');
+	                            }
+	                            if (hasInlineTransform && cs.transform && cs.transform !== 'none') {
+	                                el.style.setProperty('transform', 'none', 'important');
+	                            }
+	                        }
+	                    } catch (e1) {}
+	                }
+	            } catch (e2) {}
+	        },
+
+	        revealHiddenAosElements: function() {
+	            // AOS uses CSS to hide `[data-aos]` elements (opacity/transform) until it adds
+	            // the `aos-animate` class. In Design Mode, the AOS JS may not run, so force
+	            // elements visible.
+	            try {
+	                var aosEls = document.querySelectorAll('[data-aos]');
+	                aosEls.forEach(function(el) {
+	                    try {
+	                        if (!el || !el.classList || !el.style) return;
+	                        el.classList.add('aos-animate');
+	                        var cs = window.getComputedStyle(el);
+	                        if (!cs) return;
+	                        if (cs.opacity === '0' && cs.display !== 'none') {
+	                            el.style.setProperty('opacity', '1', 'important');
+	                            if (cs.transform && cs.transform !== 'none') {
+	                                el.style.setProperty('transform', 'none', 'important');
+	                            }
+	                        }
+	                        if (cs.visibility === 'hidden') {
+	                            el.style.setProperty('visibility', 'visible', 'important');
+	                        }
+	                    } catch (e) {}
+	                });
+	            } catch (e) {}
+	        },
+
+        createDragGhost: function(element, e) {
+            try {
+                if (!element) return;
+                if (this.dragGhost && this.dragGhost.parentNode) {
+                    this.dragGhost.parentNode.removeChild(this.dragGhost);
+                }
+                var rect = element.getBoundingClientRect();
+                var ghost = document.createElement('div');
+                ghost.setAttribute('data-design-ignore', 'true');
+                ghost.style.cssText =
+                    'position:fixed;pointer-events:none;z-index:1000002;' +
+                    'border:2px solid #bee6f0;background:rgba(190,230,240,0.10);' +
+                    'box-shadow:0 8px 24px rgba(0,0,0,0.18);' +
+                    'border-radius:10px;' +
+                    'width:' + rect.width + 'px;height:' + rect.height + 'px;' +
+                    'left:' + rect.left + 'px;top:' + rect.top + 'px;' +
+                    'transform:translateZ(0);';
+                document.body.appendChild(ghost);
+                this.dragGhost = ghost;
+                // Calculate offset based on actual cursor position relative to element
+                // so the ghost maintains the same relative position to the cursor
+                if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') {
+                    this.dragGhostOffsetX = e.clientX - rect.left;
+                    this.dragGhostOffsetY = e.clientY - rect.top;
+                } else {
+                    // Fallback to center if no event provided
+                    this.dragGhostOffsetX = rect.width / 2;
+                    this.dragGhostOffsetY = rect.height / 2;
+                }
+            } catch (e) {
+                this.dragGhost = null;
+            }
+        },
+
+        removeDragGhost: function() {
+            try {
+                if (this.dragGhost && this.dragGhost.parentNode) {
+                    this.dragGhost.parentNode.removeChild(this.dragGhost);
+                }
+            } catch (e) {}
+            this.dragGhost = null;
+        },
+
+        getPositionAnchor: function(element) {
+            try {
+                if (!element || !element.parentNode) return '';
+
+                var isAutoId = function(id) {
+                    try { return !!(id && /^design-el-\\d+$/.test(id)); } catch (e) { return false; }
+                };
+
+                var selfId = null;
+                try { selfId = element.getAttribute('data-design-id'); } catch (e0) {}
+                // Prefer anchors that reference stable (source-provided) IDs so:
+                // - the anchor doesn't change when we auto-assign IDs during selection/dragging
+                // - sync-to-sandbox can usually find the referenced target in source
+                var preferStableSiblings = !!(selfId && !isAutoId(selfId));
+
+                var prev = element.previousElementSibling;
+                var prevId = null;
+                var prevAutoId = null;
+                while (prev) {
+                    var pid = null;
+                    try { pid = prev.getAttribute ? prev.getAttribute('data-design-id') : null; } catch (e1) { pid = null; }
+                    if (pid) {
+                        if (!preferStableSiblings || !isAutoId(pid)) { prevId = pid; break; }
+                        if (!prevAutoId) prevAutoId = pid;
+                    }
+                    prev = prev.previousElementSibling;
+                }
+
+                var next = element.nextElementSibling;
+                var nextId = null;
+                var nextAutoId = null;
+                while (next) {
+                    var nid = null;
+                    try { nid = next.getAttribute ? next.getAttribute('data-design-id') : null; } catch (e2) { nid = null; }
+                    if (nid) {
+                        if (!preferStableSiblings || !isAutoId(nid)) { nextId = nid; break; }
+                        if (!nextAutoId) nextAutoId = nid;
+                    }
+                    next = next.nextElementSibling;
+                }
+
+                // If we're preferring stable siblings but none exist nearby, fall back to auto IDs
+                // so move/swap tracking still works within purely auto-assigned DOM regions.
+                if (!nextId && preferStableSiblings && nextAutoId) nextId = nextAutoId;
+                if (!prevId && preferStableSiblings && prevAutoId) prevId = prevAutoId;
+
+                if (nextId) return 'before:' + nextId;
+                if (prevId) return 'after:' + prevId;
+                return 'only';
+            } catch (e) {
+                return '';
+            }
+        },
+
+        getReorderAxis: function(parentEl) {
+            try {
+                if (!parentEl) return 'y';
+                var cs = window.getComputedStyle(parentEl);
+                if (!cs) return 'y';
+                var display = (cs.display || '').toLowerCase();
+                if (display.indexOf('flex') !== -1) {
+                    var dir = (cs.flexDirection || '').toLowerCase();
+                    if (dir.indexOf('row') === 0) return 'x';
+                    if (dir.indexOf('column') === 0) return 'y';
+                }
+            } catch (e) {}
+            return 'y';
+        },
+
+        moveDomElement: function(el, target, mode) {
+            try {
+                if (!el || !target || el === target) return false;
+                var parent = el.parentNode;
+                if (!parent || parent !== target.parentNode) return false;
+                if (mode === 'before') {
+                    parent.insertBefore(el, target);
+                    return true;
+                }
+                if (mode === 'after') {
+                    parent.insertBefore(el, target.nextSibling);
+                    return true;
+                }
+                return false;
+            } catch (e) {
+                return false;
+            }
+        },
+
+        swapDomElements: function(a, b) {
+            try {
+                if (!a || !b || a === b) return false;
+                var parent = a.parentNode;
+                if (!parent || parent !== b.parentNode) return false;
+
+                // Only support swapping siblings for now (safer).
+                var placeholder = document.createComment('design-mode-swap');
+                parent.insertBefore(placeholder, a);
+                parent.insertBefore(a, b);
+                parent.insertBefore(b, placeholder);
+                parent.removeChild(placeholder);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        },
+
+        swapElementsByDesignId: function(designId, targetDesignId, skipTracking, slideNumber) {
+            try {
+                if (!designId || !targetDesignId) return false;
+                var a = null;
+                var b = null;
+                try {
+                    if (slideNumber !== undefined && slideNumber !== null) {
+                        a = document.querySelector('[data-slide-number=\"' + slideNumber + '\"] [data-design-id=\"' + designId + '\"]');
+                        b = document.querySelector('[data-slide-number=\"' + slideNumber + '\"] [data-design-id=\"' + targetDesignId + '\"]');
+                    }
+                } catch (e0) { a = null; b = null; }
+                if (!a) a = document.querySelector('[data-design-id=\"' + designId + '\"]');
+                if (!b) b = document.querySelector('[data-design-id=\"' + targetDesignId + '\"]');
+                if (!a || !b) return false;
+                if (a.parentNode !== b.parentNode) return false;
+
+                var aOld = this.getPositionAnchor(a);
+                var bOld = this.getPositionAnchor(b);
+                var ok = this.swapDomElements(a, b);
+                if (ok && !skipTracking) {
+                    var aNew = this.getPositionAnchor(a);
+                    var bNew = this.getPositionAnchor(b);
+                    var groupId = 'swap-' + Date.now() + '-' + Math.floor(Math.random() * 1000000);
+                    this.trackChange(designId, 'move', 'position', { from: aOld, to: aNew }, { slideNumber: slideNumber, groupId: groupId, groupLabel: 'Swap' });
+                    this.trackChange(targetDesignId, 'move', 'position', { from: bOld, to: bNew }, { slideNumber: slideNumber, groupId: groupId, groupLabel: 'Swap' });
+                }
+                this.updateOverlayPositions();
+                return ok;
+            } catch (e) {
+                return false;
+            }
+        },
+
+        moveElementByDesignId: function(designId, anchor, skipTracking, slideNumber) {
+            try {
+                if (!designId || !anchor) return false;
+                var el = null;
+                try {
+                    if (slideNumber !== undefined && slideNumber !== null) {
+                        el = document.querySelector('[data-slide-number=\"' + slideNumber + '\"] [data-design-id=\"' + designId + '\"]');
+                    }
+                } catch (e0) { el = null; }
+                if (!el) el = document.querySelector('[data-design-id=\"' + designId + '\"]');
+                if (!el || !el.parentNode) return false;
+
+                var oldPos = this.getPositionAnchor(el);
+                var ok = false;
+
+                if (anchor === 'only' || anchor === oldPos) {
+                    ok = true;
+                } else if (anchor.indexOf('before:') === 0) {
+                    var targetId = anchor.substring('before:'.length);
+                    var target = null;
+                    try {
+                        if (slideNumber !== undefined && slideNumber !== null) {
+                            target = document.querySelector('[data-slide-number=\"' + slideNumber + '\"] [data-design-id=\"' + targetId + '\"]');
+                        }
+                    } catch (e1) { target = null; }
+                    if (!target) target = document.querySelector('[data-design-id=\"' + targetId + '\"]');
+                    if (target && target.parentNode === el.parentNode) {
+                        el.parentNode.insertBefore(el, target);
+                        ok = true;
+                    }
+                } else if (anchor.indexOf('after:') === 0) {
+                    var targetId2 = anchor.substring('after:'.length);
+                    var target2 = null;
+                    try {
+                        if (slideNumber !== undefined && slideNumber !== null) {
+                            target2 = document.querySelector('[data-slide-number=\"' + slideNumber + '\"] [data-design-id=\"' + targetId2 + '\"]');
+                        }
+                    } catch (e2) { target2 = null; }
+                    if (!target2) target2 = document.querySelector('[data-design-id=\"' + targetId2 + '\"]');
+                    if (target2 && target2.parentNode === el.parentNode) {
+                        el.parentNode.insertBefore(el, target2.nextSibling);
+                        ok = true;
+                    }
+                }
+
+                var newPos = this.getPositionAnchor(el);
+                if (ok && !skipTracking && oldPos !== newPos) {
+                    this.trackChange(designId, 'move', 'position', { from: oldPos, to: newPos }, { slideNumber: slideNumber });
+                }
+                this.updateOverlayPositions();
+                return ok;
+            } catch (e) {
+                return false;
+            }
+        },
+
+        deleteElementByDesignId: function(designId, skipTracking, slideNumber, meta) {
+            try {
+                if (!designId) return false;
+                var el = null;
+                try {
+                    if (slideNumber !== undefined && slideNumber !== null) {
+                        el = document.querySelector('[data-slide-number="' + slideNumber + '"] [data-design-id="' + designId + '"]');
+                    }
+                } catch (e0) { el = null; }
+                if (!el) el = document.querySelector('[data-design-id="' + designId + '"]');
+                if (!el) return false;
+
+                // Idempotency: if already soft-deleted, keep as-is.
+                try {
+                    if (el.getAttribute && el.getAttribute('data-design-deleted') === 'true') {
+                        return true;
+                    }
+                } catch (e00) {}
+
+                var outerHTML = el.outerHTML || '';
+
+                // Track the change before hiding so elementContext remains useful.
+                if (!skipTracking) {
+                    this.trackChange(designId, 'delete', 'element', { from: outerHTML, to: null }, { slideNumber: slideNumber, groupId: meta && meta.groupId, groupLabel: meta && meta.groupLabel });
+                }
+
+                // Soft-delete by hiding the element (keeps DOM identity stable for undo).
+                try {
+                    if (el.setAttribute) {
+                        el.setAttribute('data-design-deleted', 'true');
+                        try { el.setAttribute('data-design-deleted-display', (el.style && typeof el.style.display === 'string') ? el.style.display : ''); } catch (e1) {}
+                        try { el.setAttribute('data-design-deleted-visibility', (el.style && typeof el.style.visibility === 'string') ? el.style.visibility : ''); } catch (e2) {}
+                    }
+                } catch (e3) {}
+                try {
+                    if (el.style && el.style.setProperty) {
+                        el.style.setProperty('display', 'none', 'important');
+                    }
+                } catch (e4) {}
+
+                // Clear selection if deleted element was selected
+                if (this.selectedElement === el) {
+                    this.selectedElement = null;
+                    this.hideSelection();
+                    this.hideResizeHandles();
+                }
+
+                if (this.hoveredElement === el) {
+                    this.hoveredElement = null;
+                    this.hideHighlight();
+                    this.notifyParent('DESIGN_MODE_ELEMENT_HOVER', null);
+                }
+
+                this.updateOverlayPositions();
+                return true;
+            } catch (e) {
+                console.error('[DesignMode] deleteElementByDesignId error:', e);
+                return false;
+            }
+        },
+
+        restoreElementByDesignId: function(designId, skipTracking, slideNumber) {
+            try {
+                if (!designId) return false;
+                var el = null;
+                try {
+                    if (slideNumber !== undefined && slideNumber !== null) {
+                        el = document.querySelector('[data-slide-number="' + slideNumber + '"] [data-design-id="' + designId + '"]');
+                    }
+                } catch (e0) { el = null; }
+                if (!el) el = document.querySelector('[data-design-id="' + designId + '"]');
+                if (!el) return false;
+
+                var display = null;
+                var visibility = null;
+                try { display = el.getAttribute ? el.getAttribute('data-design-deleted-display') : null; } catch (e1) { display = null; }
+                try { visibility = el.getAttribute ? el.getAttribute('data-design-deleted-visibility') : null; } catch (e2) { visibility = null; }
+
+                try {
+                    if (el.style) {
+                        try { el.style.removeProperty('display'); } catch (e3) { try { el.style.display = ''; } catch (e4) {} }
+                        if (display !== null && display !== undefined && display !== '') {
+                            try { el.style.setProperty('display', display, ''); } catch (e5) { try { el.style.display = display; } catch (e6) {} }
+                        }
+
+                        try { el.style.removeProperty('visibility'); } catch (e7) { try { el.style.visibility = ''; } catch (e8) {} }
+                        if (visibility !== null && visibility !== undefined && visibility !== '') {
+                            try { el.style.setProperty('visibility', visibility, ''); } catch (e9) { try { el.style.visibility = visibility; } catch (e10) {} }
+                        }
+                    }
+                } catch (e11) {}
+
+                try {
+                    if (el.removeAttribute) {
+                        el.removeAttribute('data-design-deleted');
+                        el.removeAttribute('data-design-deleted-display');
+                        el.removeAttribute('data-design-deleted-visibility');
+                    }
+                } catch (e12) {}
+
+                // Keep internal pending-change map consistent with parent state.
+                try {
+                    var key = ((slideNumber !== undefined && slideNumber !== null) ? (String(slideNumber) + ':') : '') + designId + ':delete:element';
+                    if (this.pendingChanges && this.pendingChanges.delete) {
+                        this.pendingChanges.delete(key);
+                    }
+                } catch (e13) {}
+
+                this.updateOverlayPositions();
+                return true;
+            } catch (e) {
+                console.error('[DesignMode] restoreElementByDesignId error:', e);
+                return false;
+            }
+        },
+
+        isMultiSelectMode: false,
+        multiSelectedElements: [],
+
+        toggleMultiSelectMode: function(enabled) {
+            this.isMultiSelectMode = !!enabled;
+            if (!enabled) {
+                this.clearMultiSelection();
+            }
+            this.updateMultiSelectOverlays();
+        },
+
+        addToMultiSelection: function(el) {
+            if (!el || !el.getAttribute) return;
+            var designId = el.getAttribute('data-design-id');
+            if (!designId) return;
+            var exists = this.multiSelectedElements.some(function(item) {
+                return item.el === el;
+            });
+            if (!exists) {
+                this.multiSelectedElements.push({ el: el, designId: designId });
+                this.updateMultiSelectOverlays();
+            }
+        },
+
+        removeFromMultiSelection: function(el) {
+            this.multiSelectedElements = this.multiSelectedElements.filter(function(item) {
+                return item.el !== el;
+            });
+            this.updateMultiSelectOverlays();
+        },
+
+        toggleMultiSelection: function(el) {
+            if (!el || !el.getAttribute) return;
+            var exists = this.multiSelectedElements.some(function(item) {
+                return item.el === el;
+            });
+            if (exists) {
+                this.removeFromMultiSelection(el);
+            } else {
+                this.addToMultiSelection(el);
+            }
+        },
+
+        clearMultiSelection: function() {
+            this.multiSelectedElements = [];
+            this.updateMultiSelectOverlays();
+        },
+
+        updateMultiSelectOverlays: function() {
+            if (!this._multiSelectOverlaysById) this._multiSelectOverlaysById = {};
+
+            // Remove all overlays when exiting multi-select.
+            if (!this.isMultiSelectMode) {
+                try {
+                    for (var k in this._multiSelectOverlaysById) {
+                        if (!this._multiSelectOverlaysById.hasOwnProperty(k)) continue;
+                        var node = this._multiSelectOverlaysById[k];
+                        try { if (node && node.parentNode) node.parentNode.removeChild(node); } catch (e0) {}
+                    }
+                } catch (e1) {}
+                this._multiSelectOverlaysById = {};
+                try {
+                    var leftovers = document.querySelectorAll('.design-mode-multi-select-overlay');
+                    for (var i = 0; i < leftovers.length; i++) {
+                        try { if (leftovers[i] && leftovers[i].parentNode) leftovers[i].parentNode.removeChild(leftovers[i]); } catch (e2) {}
+                    }
+                } catch (e3) {}
+                return;
+            }
+
+            var active = {};
+
+            for (var j = 0; j < this.multiSelectedElements.length; j++) {
+                var item = this.multiSelectedElements[j];
+                if (!item) continue;
+
+                var designId = item.designId;
+                if (!designId) {
+                    try { designId = item.el && item.el.getAttribute ? item.el.getAttribute('data-design-id') : null; } catch (e4) { designId = null; }
+                    if (designId) item.designId = designId;
+                }
+                if (!designId) continue;
+
+                var el = item.el;
+                if (!el || (document.documentElement && !document.documentElement.contains(el))) {
+                    try { el = document.querySelector('[data-design-id="' + designId + '"]'); } catch (e5) { el = null; }
+                    if (el) item.el = el;
+                }
+                if (!el || !el.getBoundingClientRect) continue;
+
+                var rect = el.getBoundingClientRect();
+                if ((rect.width || 0) <= 0 || (rect.height || 0) <= 0) continue;
+
+                active[designId] = true;
+
+                var overlay = this._multiSelectOverlaysById[designId];
+                if (!overlay || !overlay.parentNode) {
+                    overlay = document.createElement('div');
+                    overlay.className = 'design-mode-multi-select-overlay';
+                    overlay.setAttribute('data-design-ignore', 'true');
+                    overlay.style.cssText =
+                        'position:fixed;pointer-events:none;border:2px solid #ef4444;' +
+                        'background:rgba(239,68,68,0.1);z-index:999997;';
+                    document.body.appendChild(overlay);
+                    this._multiSelectOverlaysById[designId] = overlay;
+                }
+
+                overlay.style.top = rect.top + 'px';
+                overlay.style.left = rect.left + 'px';
+                overlay.style.width = rect.width + 'px';
+                overlay.style.height = rect.height + 'px';
+            }
+
+            // Remove stale overlays.
+            try {
+                for (var id in this._multiSelectOverlaysById) {
+                    if (!this._multiSelectOverlaysById.hasOwnProperty(id)) continue;
+                    if (active[id]) continue;
+                    var ov = this._multiSelectOverlaysById[id];
+                    try { if (ov && ov.parentNode) ov.parentNode.removeChild(ov); } catch (e6) {}
+                    delete this._multiSelectOverlaysById[id];
+                }
+            } catch (e7) {}
+        },
+
+        startDrag: function(element, e) {
+            try {
+                if (!element) return;
+                this.isDragging = true;
+                this.draggingElement = element;
+                this.dragTarget = null;
+                this.createDragGhost(element, e);
+                this.updateDrag(e);
+            } catch (e) {}
+        },
+
+        updateDrag: function(e) {
+            try {
+                if (!this.isDragging || !this.dragGhost) return;
+                var x = e.clientX - (this.dragGhostOffsetX || 0);
+                var y = e.clientY - (this.dragGhostOffsetY || 0);
+                this.dragGhost.style.left = x + 'px';
+                this.dragGhost.style.top = y + 'px';
+
+                var under = null;
+                try {
+                    under = document.elementFromPoint(e.clientX, e.clientY);
+                } catch (err) {
+                    under = e.target;
+                }
+                // Resolve the drop target to the closest sibling "item" (direct child of the drag parent),
+                // so dragging over nested elements still targets the correct container.
+                var target = null;
+                try {
+                    var dragParent = this.draggingElement ? this.draggingElement.parentNode : null;
+                    if (dragParent && under) {
+                        var node = under;
+                        while (node && node !== document.body) {
+                            if (node.parentNode === dragParent) {
+                                target = node;
+                                break;
+                            }
+                            node = node.parentNode;
+                        }
+                    }
+                } catch (e) {}
+                target = this.getEditableElement(target || under);
+                if (target && this.draggingElement && target === this.draggingElement) {
+                    target = null;
+                }
+
+                var canReorder =
+                    target &&
+                    this.draggingElement &&
+                    target.parentNode &&
+                    target.parentNode === this.draggingElement.parentNode;
+
+                if (canReorder) {
+                    this.dragTarget = target;
+                    this.dragDropMode = 'swap';
+                    try {
+                        var rect = target.getBoundingClientRect();
+                        var axis = this.getReorderAxis(target.parentNode);
+                        var denom = axis === 'x' ? (rect.width || 1) : (rect.height || 1);
+                        var rel = axis === 'x'
+                            ? ((e.clientX - rect.left) / denom)
+                            : ((e.clientY - rect.top) / denom);
+                        // Make swapping easy (default), and reserve only the edge zones for insert-before/after.
+                        if (rel < 0.20) this.dragDropMode = 'before';
+                        else if (rel > 0.80) this.dragDropMode = 'after';
+                        else this.dragDropMode = 'swap';
+                    } catch (e) {
+                        this.dragDropMode = 'swap';
+                    }
+                    this.showHighlight(target);
+                } else {
+                    this.dragTarget = null;
+                    this.dragDropMode = null;
+                    this.hideHighlight();
+                }
+            } catch (e) {}
+        },
+
+        endDrag: function() {
+            this.isDragging = false;
+            this.dragCandidate = null;
+            this.draggingElement = null;
+            this.dragTarget = null;
+            this.dragDropMode = null;
+            this.removeDragGhost();
+            this.hideHighlight();
+        },
+
+        startResize: function(handle, e) {
+            try {
+                if (!handle) return;
+                if (!this.selectedElement) return;
+                var el = this.selectedElement;
+                if (!document.documentElement.contains(el)) return;
+
+                var rect = el.getBoundingClientRect();
+                this.isResizing = true;
+                this.resizeHandle = handle;
+                this.resizeStartX = e.clientX;
+                this.resizeStartY = e.clientY;
+                this.resizeStartWidth = rect.width || 0;
+                this.resizeStartHeight = rect.height || 0;
+                this.resizeElement = el;
+                this.hoverResizeHandle = handle;
+                document.body.style.cursor =
+                    (handle === 'e')
+                        ? 'ew-resize'
+                        : (handle === 's')
+                            ? 'ns-resize'
+                            : 'nwse-resize';
+
+                // Don't allow drag to start while resizing.
+                this.dragCandidate = null;
+                this.isDragging = false;
+                this.draggingElement = null;
+                this.dragTarget = null;
+                this.dragDropMode = null;
+
+                try { e.preventDefault(); e.stopPropagation(); } catch (err) {}
+            } catch (e) {}
+        },
+
+        getResizeHandleForPoint: function(x, y) {
+            try {
+                if (!this.selectedElement) return null;
+                var el = this.selectedElement;
+                if (!document.documentElement.contains(el)) return null;
+
+                var rect = el.getBoundingClientRect();
+                if (!rect) return null;
+
+                var threshold = 6;
+                if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return null;
+
+                var nearRight = Math.abs(rect.right - x) <= threshold;
+                var nearBottom = Math.abs(rect.bottom - y) <= threshold;
+                if (nearRight && nearBottom) return 'se';
+                if (nearRight) return 'e';
+                if (nearBottom) return 's';
+                return null;
+            } catch (e) {
+                return null;
+            }
+        },
+
+        updateResizeHoverState: function(e) {
+            if (!this.enabled) return;
+            if (!e) return;
+            if (this.isResizing || this.isDragging || this.dragCandidate) return;
+
+            var handle = this.getResizeHandleForPoint(e.clientX, e.clientY);
+            this.hoverResizeHandle = handle;
+            if (!handle) {
+                // Check if hovered element is a text element
+                var isTextElement = false;
+                var currentElement = this.getEditableElement(e.target);
+                if (currentElement) {
+                    var tagName = currentElement.tagName;
+                    var textTags = ['DIV', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'SPAN', 'LABEL', 'A', 'LI', 'TD', 'TH', 'BLOCKQUOTE', 'PRE', 'CODE'];
+                    isTextElement = textTags.indexOf(tagName) !== -1;
+                }
+                document.body.style.cursor = isTextElement ? 'text' : 'pointer';
+                return;
+            }
+            document.body.style.cursor =
+                (handle === 'e')
+                    ? 'ew-resize'
+                    : (handle === 's')
+                        ? 'ns-resize'
+                        : 'nwse-resize';
+        },
+
+        updateResize: function(e) {
+            if (!this.isResizing || !this.resizeElement) return;
+            try {
+                var el = this.resizeElement;
+                var designId = null;
+                try { designId = el.getAttribute('data-design-id'); } catch (err) {}
+                if (!designId) return;
+
+                var dx = e.clientX - (this.resizeStartX || 0);
+                var dy = e.clientY - (this.resizeStartY || 0);
+
+                var minSize = 24;
+                var newW = this.resizeStartWidth;
+                var newH = this.resizeStartHeight;
+
+                if (this.resizeHandle === 'e' || this.resizeHandle === 'se') {
+                    newW = Math.max(minSize, Math.round((this.resizeStartWidth || 0) + dx));
+                    this.setStyle(designId, 'width', newW + 'px', false);
+                }
+                if (this.resizeHandle === 's' || this.resizeHandle === 'se') {
+                    newH = Math.max(minSize, Math.round((this.resizeStartHeight || 0) + dy));
+                    this.setStyle(designId, 'height', newH + 'px', false);
+                }
+
+                this.updateOverlayPositions();
+                try { e.preventDefault(); e.stopPropagation(); } catch (err2) {}
+            } catch (e) {}
+        },
+
+        endResize: function() {
+            this.isResizing = false;
+            this.resizeHandle = null;
+            this.resizeElement = null;
+            this.hoverResizeHandle = null;
+            document.body.style.cursor = this.enabled ? 'pointer' : '';
+        },
+
+        handleMouseDown: function(e) {
+            if (!this.enabled) return;
+            if (!e || e.button !== 0) return;
+            var edgeHandle = this.getResizeHandleForPoint(e.clientX, e.clientY);
+            if (edgeHandle) {
+                this.startResize(edgeHandle, e);
+                return;
+            }
+            // Always resolve the target from the click position to allow selecting
+            // child elements even when a parent is selected. This lets users click
+            // on nested elements (like buttons inside a container) to select them.
+            var target = this.getEditableElement(e.target);
+            // If clicking on an element that doesn't have a design-id but is inside
+            // the currently selected element, fall back to the selected element for drag.
+            if (!target) {
+                try {
+                    if (this.selectedElement && (this.selectedElement === e.target || this.selectedElement.contains(e.target))) {
+                        target = this.selectedElement;
+                    }
+                } catch (e) {}
+            }
+            if (!target) return;
+            this.dragCandidate = target;
+            this.dragStartX = e.clientX;
+            this.dragStartY = e.clientY;
+            this.isDragging = false;
+            this.draggingElement = null;
+            this.dragTarget = null;
+        },
+
+        handleMouseUp: function(e) {
+            if (!this.enabled) return;
+            if (!e || e.button !== 0) return;
+            if (this.isResizing) {
+                this.suppressNextClick = true;
+                this.endResize();
+                try { e.preventDefault(); e.stopPropagation(); } catch (err0) {}
+                return;
+            }
+            if (!this.dragCandidate && !this.isDragging) return;
+
+            if (this.isDragging && this.draggingElement) {
+                var dragId = null;
+                var targetId = null;
+                try {
+                    dragId = this.draggingElement.getAttribute('data-design-id');
+                } catch (err) {}
+                try {
+                    targetId = this.dragTarget ? this.dragTarget.getAttribute('data-design-id') : null;
+                } catch (err2) {}
+
+                if (dragId && targetId && this.dragTarget && this.dragDropMode) {
+                    if (this.dragDropMode === 'swap') {
+                        var aOld = this.getPositionAnchor(this.draggingElement);
+                        var bOld = this.getPositionAnchor(this.dragTarget);
+                        var swapped = this.swapDomElements(this.draggingElement, this.dragTarget);
+                        if (swapped) {
+                            var aNew = this.getPositionAnchor(this.draggingElement);
+                            var bNew = this.getPositionAnchor(this.dragTarget);
+                            var groupId = 'swap-' + Date.now() + '-' + Math.floor(Math.random() * 1000000);
+                            if (aOld !== aNew) this.trackChange(dragId, 'move', 'position', { from: aOld, to: aNew }, { groupId: groupId, groupLabel: 'Swap' });
+                            if (bOld !== bNew) this.trackChange(targetId, 'move', 'position', { from: bOld, to: bNew }, { groupId: groupId, groupLabel: 'Swap' });
+                        }
+                    } else {
+                        var oldPos = this.getPositionAnchor(this.draggingElement);
+                        var moved = this.moveDomElement(this.draggingElement, this.dragTarget, this.dragDropMode);
+                        if (moved) {
+                            var newPos = this.getPositionAnchor(this.draggingElement);
+                            if (oldPos !== newPos) {
+                                this.trackChange(dragId, 'move', 'position', { from: oldPos, to: newPos });
+                            }
+                        }
+                    }
+                } else if (dragId) {
+                    // Free-position move (new coordinates): when dropping without a reorder target,
+                    // persist an offset via styles so the element stays where you dropped it.
+                    try {
+                        var dx = e.clientX - (this.dragStartX || 0);
+                        var dy = e.clientY - (this.dragStartY || 0);
+                        var dist2 = (dx * dx) + (dy * dy);
+                        if (dist2 > 9) {
+                            var el = this.draggingElement;
+                            var cs = null;
+                            try { cs = window.getComputedStyle(el); } catch (e0) {}
+
+                            // Prefer CSS `translate` (Transform Level 2) so we don't clobber existing transforms
+                            // (e.g. Framer Motion sets inline transform).
+                            var supportsTranslate = false;
+                            try { supportsTranslate = !!(window.CSS && CSS.supports && CSS.supports('translate', '1px 1px')); } catch (e1) {}
+                            if (supportsTranslate) {
+                                var baseX = 0;
+                                var baseY = 0;
+                                var inlineTranslate = '';
+                                // NOTE: we apply styles via the design-mode override stylesheet, not inline styles,
+                                // so prefer reading from `styleOverrides` (then computed style) for stable accumulation.
+                                try {
+                                    inlineTranslate =
+                                        (this.styleOverrides &&
+                                         this.styleOverrides[dragId] &&
+                                         this.styleOverrides[dragId].hasOwnProperty('translate'))
+                                            ? (this.styleOverrides[dragId]['translate'] || '')
+                                            : '';
+                                } catch (e2) {}
+                                if (!inlineTranslate) {
+                                    try { inlineTranslate = cs ? (cs.getPropertyValue('translate') || '') : ''; } catch (e2b) {}
+                                }
+                                try {
+                                    var mt = inlineTranslate.match(/(-?\\d+(?:\\.\\d+)?)px(?:\\s+(-?\\d+(?:\\.\\d+)?)px)?/);
+                                    if (mt && mt[1]) {
+                                        baseX = parseFloat(mt[1]) || 0;
+                                        baseY = mt[2] ? (parseFloat(mt[2]) || 0) : 0;
+                                    }
+                                } catch (e3) {}
+                                var newX = Math.round(baseX + dx);
+                                var newY = Math.round(baseY + dy);
+                                var translateValue = (newX === 0 && newY === 0) ? 'none' : (newX + 'px ' + newY + 'px');
+                                this.setStyle(dragId, 'translate', translateValue, false);
+                            } else {
+                                // Fallback: only use `transform` when safe (no existing transforms), otherwise try left/top.
+                                var inlineTransform = '';
+                                var computedTransform = 'none';
+                                try {
+                                    inlineTransform =
+                                        (this.styleOverrides &&
+                                         this.styleOverrides[dragId] &&
+                                         this.styleOverrides[dragId].hasOwnProperty('transform'))
+                                            ? (this.styleOverrides[dragId]['transform'] || '')
+                                            : '';
+                                } catch (e4) {}
+                                if (!inlineTransform) {
+                                    try { inlineTransform = el.style.getPropertyValue('transform') || ''; } catch (e4b) {}
+                                }
+                                try { computedTransform = cs ? (cs.getPropertyValue('transform') || 'none') : 'none'; } catch (e5) {}
+
+                                var isOurTranslate = false;
+                                var baseX2 = 0;
+                                var baseY2 = 0;
+                                try {
+                                    var m2 = inlineTransform.match(/^\\s*translate\\(\\s*(-?\\d+(?:\\.\\d+)?)px\\s*,\\s*(-?\\d+(?:\\.\\d+)?)px\\s*\\)\\s*$/i);
+                                    if (m2 && m2[1] && m2[2]) {
+                                        isOurTranslate = true;
+                                        baseX2 = parseFloat(m2[1]) || 0;
+                                        baseY2 = parseFloat(m2[2]) || 0;
+                                    }
+                                } catch (e6) {}
+
+                                var canUseTransform = computedTransform === 'none' || isOurTranslate;
+                                if (canUseTransform) {
+                                    var newX2 = Math.round(baseX2 + dx);
+                                    var newY2 = Math.round(baseY2 + dy);
+                                    var transformValue = (newX2 === 0 && newY2 === 0) ? 'none' : ('translate(' + newX2 + 'px, ' + newY2 + 'px)');
+                                    this.setStyle(dragId, 'transform', transformValue, false);
+                                } else {
+                                    // Last resort: preserve transforms and apply an offset via left/top.
+                                    var pos = 'static';
+                                    try { pos = cs ? (cs.getPropertyValue('position') || 'static') : 'static'; } catch (e7) {}
+                                    if (!pos || pos === 'static') {
+                                        this.setStyle(dragId, 'position', 'relative', false);
+                                    }
+                                    var baseLeft = 0;
+                                    var baseTop = 0;
+                                    try {
+                                        var leftOverride = '';
+                                        try {
+                                            leftOverride =
+                                                (this.styleOverrides &&
+                                                 this.styleOverrides[dragId] &&
+                                                 this.styleOverrides[dragId].hasOwnProperty('left'))
+                                                    ? (this.styleOverrides[dragId]['left'] || '')
+                                                    : '';
+                                        } catch (e8a) {}
+                                        var leftStr = leftOverride || (el.style.getPropertyValue('left') || '') || (cs ? (cs.getPropertyValue('left') || '') : '');
+                                        baseLeft = (leftStr && leftStr !== 'auto') ? (parseFloat(leftStr) || 0) : 0;
+                                    } catch (e8) {}
+                                    try {
+                                        var topOverride = '';
+                                        try {
+                                            topOverride =
+                                                (this.styleOverrides &&
+                                                 this.styleOverrides[dragId] &&
+                                                 this.styleOverrides[dragId].hasOwnProperty('top'))
+                                                    ? (this.styleOverrides[dragId]['top'] || '')
+                                                    : '';
+                                        } catch (e9a) {}
+                                        var topStr = topOverride || (el.style.getPropertyValue('top') || '') || (cs ? (cs.getPropertyValue('top') || '') : '');
+                                        baseTop = (topStr && topStr !== 'auto') ? (parseFloat(topStr) || 0) : 0;
+                                    } catch (e9) {}
+                                    this.setStyle(dragId, 'left', Math.round(baseLeft + dx) + 'px', false);
+                                    this.setStyle(dragId, 'top', Math.round(baseTop + dy) + 'px', false);
+                                }
+                            }
+                        }
+                    } catch (e10) {}
+                }
+
+                // Prevent the click handler from selecting/navigating after a drag.
+                this.suppressNextClick = true;
+                this.endDrag();
+                try { e.preventDefault(); e.stopPropagation(); } catch (err3) {}
+                return;
+            }
+
+            this.dragCandidate = null;
+        },
+
+        attachEventListeners: function() {
+            var self = this;
+            this._handleMouseMove = function(e) { self.handleMouseMove(e); };
+            this._handleMouseOut = function(e) { self.handleMouseOut(e); };
+            this._handleMouseDown = function(e) { self.handleMouseDown(e); };
+            this._handleMouseUp = function(e) { self.handleMouseUp(e); };
+            this._handleClick = function(e) { self.handleClick(e); };
+            this._handleDoubleClick = function(e) { self.handleDoubleClick(e); };
+            this._handleKeyDown = function(e) { self.handleKeyDown(e); };
+
+            document.addEventListener('mousemove', this._handleMouseMove, true);
+            document.addEventListener('mouseout', this._handleMouseOut, true);
+            document.addEventListener('mousedown', this._handleMouseDown, true);
+            document.addEventListener('mouseup', this._handleMouseUp, true);
+            document.addEventListener('click', this._handleClick, true);
+            document.addEventListener('dblclick', this._handleDoubleClick, true);
+            document.addEventListener('keydown', this._handleKeyDown, true);
+        },
+
+        detachEventListeners: function() {
+            document.removeEventListener('mousemove', this._handleMouseMove, true);
+            document.removeEventListener('mouseout', this._handleMouseOut, true);
+            document.removeEventListener('mousedown', this._handleMouseDown, true);
+            document.removeEventListener('mouseup', this._handleMouseUp, true);
+            document.removeEventListener('click', this._handleClick, true);
+            document.removeEventListener('dblclick', this._handleDoubleClick, true);
+            document.removeEventListener('keydown', this._handleKeyDown, true);
+        },
+
+        handleMouseMove: function(e) {
+            if (!this.enabled) return;
+            if (this.isResizing) {
+                this.updateResize(e);
+                return;
+            }
+            this.updateResizeHoverState(e);
+            if (this.dragCandidate) {
+                var dx = e.clientX - (this.dragStartX || 0);
+                var dy = e.clientY - (this.dragStartY || 0);
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                if (!this.isDragging && dist > 6) {
+                    this.startDrag(this.dragCandidate, e);
+                }
+                if (this.isDragging) {
+                    this.updateDrag(e);
+                    try { e.preventDefault(); e.stopPropagation(); } catch (err) {}
+                    return;
+                }
+            }
+            var target = this.getEditableElement(e.target);
+            if (!target) {
+                if (this.hoveredElement) {
+                    this.hoveredElement = null;
+                    this.hideHighlight();
+                    this.notifyParent('DESIGN_MODE_ELEMENT_HOVER', null);
+                }
+                return;
+            }
+            if (target === this.hoveredElement) return;
+            this.hoveredElement = target;
+            this.showHighlight(target);
+            this.notifyParent('DESIGN_MODE_ELEMENT_HOVER', this.getElementInfo(target));
+        },
+
+        handleMouseOut: function(e) {
+            if (!this.enabled) return;
+            var related = null;
+            try { related = e ? e.relatedTarget : null; } catch (err) {}
+            var isInside = false;
+            try {
+                isInside =
+                    related &&
+                    document.documentElement &&
+                    document.documentElement.contains(related);
+            } catch (err2) {
+                isInside = false;
+            }
+            if (isInside) return;
+            if (this.hoveredElement) {
+                this.hoveredElement = null;
+                this.hideHighlight();
+                this.notifyParent('DESIGN_MODE_ELEMENT_HOVER', null);
+            }
+        },
+
+        handleClick: function(e) {
+            if (!this.enabled) return;
+            if (this.suppressNextClick) {
+                this.suppressNextClick = false;
+                try { e.preventDefault(); e.stopPropagation(); } catch (err) {}
+                return;
+            }
+            var target = this.getEditableElement(e.target);
+            if (!target) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Handle multi-select mode
+            if (this.isMultiSelectMode) {
+                this.toggleMultiSelection(target);
+                var elementInfo = this.getElementInfo(target);
+                var selectedInfos = this.multiSelectedElements.map(function(item) {
+                    return this.getElementInfo(item.el);
+                }, this);
+                this.notifyParent('DESIGN_MODE_MULTI_SELECT_CHANGE', {
+                    element: elementInfo,
+                    selected: selectedInfos
+                });
+                return;
+            }
+
+            this.selectedElement = target;
+            this.showSelection(target);
+            this.notifyParent('DESIGN_MODE_ELEMENT_SELECT', this.getElementInfo(target));
+        },
+
+        handleDoubleClick: function(e) {
+            if (!this.enabled) return;
+            if (this.suppressNextClick) {
+                this.suppressNextClick = false;
+                try { e.preventDefault(); e.stopPropagation(); } catch (err) {}
+                return;
+            }
+            var target = this.getEditableElement(e.target);
+            if (!target) return;
+            e.preventDefault();
+            e.stopPropagation();
+            this.selectedElement = target;
+            this.showSelection(target);
+            this.notifyParent('DESIGN_MODE_ELEMENT_DOUBLE_CLICK', this.getElementInfo(target));
+        },
+
+        handleKeyDown: function(e) {
+            if (!this.enabled) return;
+            // Cmd/Ctrl+Z -> request undo, Cmd/Ctrl+Shift+Z or Cmd/Ctrl+Y -> request redo
+            try {
+                var key = (e && e.key) ? String(e.key).toLowerCase() : '';
+                var isModifier = e.ctrlKey || e.metaKey;
+                if (isModifier && !e.altKey) {
+                    var target = e.target;
+                    try {
+                        if (target && target.tagName) {
+                            var tag = String(target.tagName).toLowerCase();
+                            if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+                        }
+                        if (target && target.isContentEditable) return;
+                    } catch (e0) {}
+
+                    // Undo: Cmd/Ctrl+Z (without Shift)
+                    if (key === 'z' && !e.shiftKey) {
+                        this.notifyParent('DESIGN_MODE_UNDO_REQUEST', null);
+                        try { e.preventDefault(); e.stopPropagation(); } catch (err0) {}
+                        return;
+                    }
+                    // Redo: Cmd/Ctrl+Shift+Z or Cmd/Ctrl+Y
+                    if ((key === 'z' && e.shiftKey) || key === 'y') {
+                        this.notifyParent('DESIGN_MODE_REDO_REQUEST', null);
+                        try { e.preventDefault(); e.stopPropagation(); } catch (err0) {}
+                        return;
+                    }
+                }
+            } catch (e1) {}
+            if (e.key === 'Escape') {
+                this.selectedElement = null;
+                this.hideSelection();
+                this.notifyParent('DESIGN_MODE_ELEMENT_SELECT', null);
+            }
+        },
+
+        getEditableElement: function(target) {
+            if (!target) return null;
+
+            // Normalize: event targets can be Text nodes in some browsers/edge-cases.
+            if (!(target instanceof Element)) {
+                try {
+                    if (target.parentElement) target = target.parentElement;
+                    else if (target.parentNode && target.parentNode.nodeType === 1) target = target.parentNode;
+                } catch (e) {}
+            }
+
+            if (!target || !(target instanceof Element)) return null;
+            if (target.closest(IGNORE_SELECTORS)) return null;
+            try {
+                // Slide Design Mode deck scaffolding (wrapper/canvas) is not part of the authored HTML.
+                // Never select it or assign auto-generated design IDs to it.
+                if (target.hasAttribute && target.hasAttribute('data-design-scaffold')) return null;
+            } catch (e) {}
+
+            // Prefer the most specific editable element under the cursor, even within
+            // stable, author-provided design-id scopes. This lets users select nested
+            // elements like `<span>` inside a `<h1 data-design-id=...>`.
+            var el = target;
+            while (el && el !== document.body) {
+                try {
+                    if (el.hasAttribute && el.hasAttribute('data-design-scaffold')) {
+                        el = el.parentElement;
+                        continue;
+                    }
+                } catch (e) {}
+                if (el.matches && el.matches(EDITABLE_SELECTORS)) {
+                    if (!el.hasAttribute('data-design-id')) {
+                        el.setAttribute('data-design-id', 'design-el-' + (this.idCounter++));
+                    }
+                    return el;
+                }
+                el = el.parentElement;
+            }
+
+            // Last resort: select the nearest element that already has a design id.
+            try {
+                var withId = target.closest('[data-design-id]');
+                if (withId && withId !== document.body) return withId;
+            } catch (e) {}
+
+            return null;
+        },
+
+        showHighlight: function(element) {
+            if (!element || !this.highlightOverlay) return;
+            var rect = element.getBoundingClientRect();
+            this.highlightOverlay.style.display = 'block';
+            this.highlightOverlay.style.top = rect.top + 'px';
+            this.highlightOverlay.style.left = rect.left + 'px';
+            this.highlightOverlay.style.width = rect.width + 'px';
+            this.highlightOverlay.style.height = rect.height + 'px';
+        },
+
+        hideHighlight: function() {
+            if (this.highlightOverlay) this.highlightOverlay.style.display = 'none';
+        },
+
+        positionResizeHandles: function(element) {
+            if (!this.resizeHandles) return;
+            if (!element || !document.documentElement.contains(element)) {
+                this.hideResizeHandles();
+                return;
+            }
+            try {
+                var rect = element.getBoundingClientRect();
+                var size = 10;
+                var half = size / 2;
+
+                // Hide handles for tiny elements.
+                if ((rect.width || 0) < 24 || (rect.height || 0) < 24) {
+                    this.hideResizeHandles();
+                    return;
+                }
+
+                if (this.resizeHandles.e) {
+                    this.resizeHandles.e.style.display = 'block';
+                    this.resizeHandles.e.style.left = (rect.right - half) + 'px';
+                    this.resizeHandles.e.style.top = (rect.top + (rect.height / 2) - half) + 'px';
+                }
+                if (this.resizeHandles.s) {
+                    this.resizeHandles.s.style.display = 'block';
+                    this.resizeHandles.s.style.left = (rect.left + (rect.width / 2) - half) + 'px';
+                    this.resizeHandles.s.style.top = (rect.bottom - half) + 'px';
+                }
+                if (this.resizeHandles.se) {
+                    this.resizeHandles.se.style.display = 'block';
+                    this.resizeHandles.se.style.left = (rect.right - half) + 'px';
+                    this.resizeHandles.se.style.top = (rect.bottom - half) + 'px';
+                }
+            } catch (e) {
+                this.hideResizeHandles();
+            }
+        },
+
+        hideResizeHandles: function() {
+            if (!this.resizeHandles) return;
+            try {
+                if (this.resizeHandles.e) this.resizeHandles.e.style.display = 'none';
+                if (this.resizeHandles.s) this.resizeHandles.s.style.display = 'none';
+                if (this.resizeHandles.se) this.resizeHandles.se.style.display = 'none';
+            } catch (e) {}
+        },
+
+        showSelection: function(element) {
+            if (!element || !this.selectionOverlay) return;
+            // Don't show selection while temporary highlight is active
+            if (this.isTemporaryHighlightActive) return;
+            var rect = element.getBoundingClientRect();
+            this.selectionOverlay.style.display = 'block';
+            this.selectionOverlay.style.top = rect.top + 'px';
+            this.selectionOverlay.style.left = rect.left + 'px';
+            this.selectionOverlay.style.width = rect.width + 'px';
+            this.selectionOverlay.style.height = rect.height + 'px';
+        },
+
+        hideSelection: function() {
+            if (this.selectionOverlay) this.selectionOverlay.style.display = 'none';
+        },
+
+        showTemporaryHighlight: function(designId) {
+            var self = this;
+            var el = document.querySelector('[data-design-id="' + designId + '"]');
+            if (!el || !this.temporaryHighlightOverlay) return;
+
+            // Clear any existing timeout and animation frame
+            if (this.temporaryHighlightTimeout) {
+                clearTimeout(this.temporaryHighlightTimeout);
+            }
+            if (this.temporaryHighlightAnimFrame) {
+                cancelAnimationFrame(this.temporaryHighlightAnimFrame);
+            }
+
+            // Hide the selection overlay and reset temp highlight first
+            this.hideSelection();
+            this.temporaryHighlightOverlay.style.display = 'none';
+            this.isTemporaryHighlightActive = true;
+
+            // Function to position the overlay at the element's current position
+            var positionOverlay = function() {
+                var rect = el.getBoundingClientRect();
+                self.temporaryHighlightOverlay.style.top = rect.top + 'px';
+                self.temporaryHighlightOverlay.style.left = rect.left + 'px';
+                self.temporaryHighlightOverlay.style.width = rect.width + 'px';
+                self.temporaryHighlightOverlay.style.height = rect.height + 'px';
+                self.temporaryHighlightOverlay.style.display = 'block';
+            };
+
+            // Use double requestAnimationFrame to ensure layout is complete
+            // First rAF queues for next frame, second ensures paint is done
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    // Position initially
+                    positionOverlay();
+
+                    // Scroll element into view
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Continuously update overlay position during scroll animation
+                    var startTime = Date.now();
+                    var animateDuration = 600; // Match smooth scroll duration
+                    var animate = function() {
+                        positionOverlay();
+                        if (Date.now() - startTime < animateDuration) {
+                            self.temporaryHighlightAnimFrame = requestAnimationFrame(animate);
+                        }
+                    };
+                    self.temporaryHighlightAnimFrame = requestAnimationFrame(animate);
+                });
+            });
+
+            // Auto-hide after 2 seconds
+            this.temporaryHighlightTimeout = setTimeout(function() {
+                self.hideTemporaryHighlight();
+            }, 2000);
+        },
+
+        hideTemporaryHighlight: function() {
+            if (this.temporaryHighlightOverlay) {
+                this.temporaryHighlightOverlay.style.display = 'none';
+            }
+            if (this.temporaryHighlightTimeout) {
+                clearTimeout(this.temporaryHighlightTimeout);
+                this.temporaryHighlightTimeout = null;
+            }
+            if (this.temporaryHighlightAnimFrame) {
+                cancelAnimationFrame(this.temporaryHighlightAnimFrame);
+                this.temporaryHighlightAnimFrame = null;
+            }
+            this.isTemporaryHighlightActive = false;
+        },
+
+        updateOverlayPositions: function() {
+            if (this.hoveredElement) this.showHighlight(this.hoveredElement);
+            if (this.selectedElement) this.showSelection(this.selectedElement);
+            if (this.loadingElement) this.showLoading(this.loadingElement);
+            if (this.isMultiSelectMode) this.updateMultiSelectOverlays();
+        },
+
+	        getXPath: function(element) {
+            if (!element) return '';
+            var parts = [];
+            var current = element;
+            while (current && current.nodeType === Node.ELEMENT_NODE) {
+                var index = 1;
+                var sibling = current.previousSibling;
+                while (sibling) {
+                    if (sibling.nodeType === Node.ELEMENT_NODE && sibling.tagName === current.tagName) {
+                        index++;
+                    }
+                    sibling = sibling.previousSibling;
+                }
+                var tagName = current.tagName.toLowerCase();
+                var part = index > 1 ? tagName + '[' + index + ']' : tagName;
+                parts.unshift(part);
+                current = current.parentElement;
+            }
+            return '/' + parts.join('/');
+        },
+
+		        getDirectTextContent: function(element) {
+		            // Get only direct text nodes, excluding icons and nested elements
+		            var text = '';
+		            for (var i = 0; i < element.childNodes.length; i++) {
+		                var node = element.childNodes[i];
+		                if (node.nodeType === Node.TEXT_NODE) {
+		                    text += node.textContent;
+		                }
+		            }
+		            text = text.trim();
+
+            // If no direct text but has a single child element with text, use that
+            // This handles cases like <div><p>text</p></div> without falling back to innerText
+            if (!text && element.children.length === 1) {
+                var child = element.children[0];
+                // Recursively get text from the single child
+                text = this.getDirectTextContent(child);
+            }
+
+            return text;
+        },
+
+		        getDeckDimensions: function() {
+		            // Slide decks are rendered as a stacked list of `.ii-slide-wrapper` nodes.
+		            // We use their measured size to help the parent scale the preview without cropping.
+		            try {
+		                var wrappers = document.querySelectorAll('.ii-slide-wrapper');
+		                if (!wrappers || !wrappers.length) return null;
+		                var maxW = 0;
+		                var maxH = 0;
+		                for (var i = 0; i < wrappers.length; i++) {
+		                    var w = wrappers[i];
+		                    if (!w) continue;
+		                    var ow = w.offsetWidth || 0;
+		                    var oh = w.offsetHeight || 0;
+		                    if (ow > maxW) maxW = ow;
+		                    if (oh > maxH) maxH = oh;
+		                }
+		                if (maxW <= 0 || maxH <= 0) return null;
+		                return { width: maxW, height: maxH };
+		            } catch (e) {
+		                return null;
+		            }
+		        },
+
+		        findByXPath: function(xpath) {
+		            try {
+		                if (!xpath) return null;
+		                var result = document.evaluate(
+	                    xpath,
+	                    document,
+	                    null,
+	                    XPathResult.FIRST_ORDERED_NODE_TYPE,
+	                    null
+	                );
+	                return result && result.singleNodeValue ? result.singleNodeValue : null;
+	            } catch (e) {
+	                return null;
+	            }
+	        },
+
+	        getReactSource: function(element) {
+	            try {
+	                if (!element) return null;
+	                var fiber = null;
+	                for (var key in element) {
+	                    if (key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')) {
+	                        fiber = element[key];
+	                        break;
+	                    }
+	                }
+	                if (!fiber) return null;
+
+	                var node = fiber;
+	                var depth = 0;
+	                var stack = [];
+	                while (node && depth < 25) {
+	                    if (node.type) {
+	                        var name = null;
+	                        if (typeof node.type === 'function') name = node.type.name;
+	                        else if (typeof node.type === 'string') name = node.type;
+	                        else if (typeof node.type === 'object' && node.type && node.type.displayName)
+	                            name = node.type.displayName;
+	                        if (name) stack.push(name);
+	                    }
+
+	                    if (node._debugSource) {
+	                        return {
+	                            fileName: node._debugSource.fileName || null,
+	                            lineNumber: node._debugSource.lineNumber || null,
+	                            columnNumber: node._debugSource.columnNumber || null,
+	                            componentStack: stack.slice(0, 8)
+	                        };
+	                    }
+	                    if (node._debugOwner && node._debugOwner._debugSource) {
+	                        var src = node._debugOwner._debugSource;
+	                        return {
+	                            fileName: src.fileName || null,
+	                            lineNumber: src.lineNumber || null,
+	                            columnNumber: src.columnNumber || null,
+	                            componentStack: stack.slice(0, 8)
+	                        };
+	                    }
+
+	                    node = node.return || (node._debugOwner ? node._debugOwner.return : null);
+	                    depth++;
+	                }
+	            } catch (e) {
+	                return null;
+	            }
+	            return null;
+	        },
+
+	        getElementInfo: function(element) {
+	            if (!element) return null;
+	            var designId = element.getAttribute('data-design-id');
+	            var rect = element.getBoundingClientRect();
+	            var computed = window.getComputedStyle(element);
+                var slideNumber = null;
+                try {
+                    var slideRoot = element.closest ? element.closest('[data-slide-number]') : null;
+                    if (slideRoot && slideRoot.getAttribute) {
+                        var sn = slideRoot.getAttribute('data-slide-number');
+                        if (sn !== null && sn !== undefined) {
+                            var parsed = parseInt(sn, 10);
+                            if (!isNaN(parsed)) slideNumber = parsed;
+                        }
+                    }
+                } catch (e) { slideNumber = null; }
+            // Prefer full, rendered text (includes nested spans); fallback to direct text nodes.
+            var displayText = '';
+            try {
+                var t = (element.innerText || element.textContent || '').trim();
+                if (t) displayText = t.substring(0, 500);
+            } catch (e) { displayText = ''; }
+            if (!displayText) {
+                try { displayText = (this.getDirectTextContent(element) || '').trim().substring(0, 500); } catch (e2) { displayText = ''; }
+            }
+
+            // Enhanced: Capture parent context for better source file matching
+            var parentChain = [];
+            var current = element.parentElement;
+            var depth = 0;
+            while (current && depth < 3) {
+                // Convert className to string (handles SVGAnimatedString)
+                var pClassName = '';
+                try {
+                    if (current.className) {
+                        if (typeof current.className === 'string') {
+                            pClassName = current.className;
+                        } else if (current.className.baseVal !== undefined) {
+                            pClassName = current.className.baseVal;
+                        } else {
+                            pClassName = String(current.className);
+                        }
+                    }
+                } catch (e) { pClassName = ''; }
+
+                // Convert id to string (handles SVGAnimatedString)
+                var pId = '';
+                try {
+                    if (current.id) {
+                        if (typeof current.id === 'string') {
+                            pId = current.id;
+                        } else if (current.id.baseVal !== undefined) {
+                            pId = current.id.baseVal;
+                        } else {
+                            pId = String(current.id);
+                        }
+                    }
+                } catch (e) { pId = ''; }
+
+                parentChain.push({
+                    tag: current.tagName.toLowerCase(),
+                    className: pClassName,
+                    id: pId,
+                    designId: (current.getAttribute && current.getAttribute('data-design-id')) || ''
+                });
+                current = current.parentElement;
+                depth++;
+            }
+
+            // Enhanced: Capture all attributes for better matching
+            var attributes = {};
+            for (var i = 0; i < element.attributes.length; i++) {
+                var attr = element.attributes[i];
+                if (!attr.name.startsWith('data-design')) {
+                    attributes[attr.name] = attr.value;
+                }
+            }
+
+	            // Enhanced: Get outer HTML snippet for context
+	            var outerSnippet = element.outerHTML.substring(0, 1500);
+
+	            // Extra: capture surrounding/ancestor text to help locate source for icon-only elements.
+	            var contextText = '';
+	            try {
+	                var ctxEl = element;
+	                var ctxDepth = 0;
+	                while (ctxEl && ctxDepth < 4 && !contextText) {
+	                    ctxEl = ctxEl.parentElement;
+	                    if (!ctxEl) break;
+	                    var t = (ctxEl.innerText || '').trim();
+	                    if (t) contextText = t.substring(0, 500);
+	                    ctxDepth++;
+	                }
+	            } catch (e) {}
+
+	            var prevSiblingText = '';
+	            var nextSiblingText = '';
+	            try {
+	                if (element.previousElementSibling) {
+	                    prevSiblingText = (element.previousElementSibling.innerText || '').trim().substring(0, 200);
+	                }
+	                if (element.nextElementSibling) {
+	                    nextSiblingText = (element.nextElementSibling.innerText || '').trim().substring(0, 200);
+	                }
+	            } catch (e) {}
+
+	            var reactSource = this.getReactSource(element);
+
+                // Convert className to string (handles SVGAnimatedString for SVG elements)
+                var eClassName = '';
+                try {
+                    if (element.className) {
+                        if (typeof element.className === 'string') {
+                            eClassName = element.className;
+                        } else if (element.className.baseVal !== undefined) {
+                            eClassName = element.className.baseVal;
+                        } else {
+                            eClassName = String(element.className);
+                        }
+                    }
+                } catch (e) { eClassName = ''; }
+
+                // Convert id to string (handles SVGAnimatedString for SVG elements)
+                var eId = '';
+                try {
+                    if (element.id) {
+                        if (typeof element.id === 'string') {
+                            eId = element.id;
+                        } else if (element.id.baseVal !== undefined) {
+                            eId = element.id.baseVal;
+                        } else {
+                            eId = String(element.id);
+                        }
+                    }
+                } catch (e) { eId = ''; }
+
+	            return {
+	                designId: designId,
+                    slideNumber: slideNumber,
+	                tagName: element.tagName.toLowerCase(),
+	                className: eClassName,
+                id: eId,
+                textContent: displayText,
+	                innerHTML: element.innerHTML.substring(0, 1000),
+	                outerHTML: outerSnippet,
+	                contextText: contextText,
+	                prevSiblingText: prevSiblingText,
+	                nextSiblingText: nextSiblingText,
+	                reactSource: reactSource,
+	                attributes: attributes,
+	                parentChain: parentChain,
+	                rect: {
+	                    top: rect.top, left: rect.left, width: rect.width,
+                    height: rect.height, bottom: rect.bottom, right: rect.right
+                },
+                computedStyles: {
+                    fontFamily: computed.fontFamily,
+                    fontSize: computed.fontSize,
+                    fontWeight: computed.fontWeight,
+                    color: computed.color,
+                    backgroundColor: computed.backgroundColor,
+                    backgroundImage: computed.backgroundImage,
+                    backgroundClip: computed.getPropertyValue('background-clip'),
+                    webkitBackgroundClip: computed.getPropertyValue('-webkit-background-clip'),
+                    webkitTextFillColor: computed.getPropertyValue('-webkit-text-fill-color'),
+                    borderImageSource: computed.getPropertyValue('border-image-source'),
+                    borderRadius: computed.borderRadius,
+                    padding: computed.padding,
+                    margin: computed.margin,
+                    lineHeight: computed.lineHeight,
+                    letterSpacing: computed.letterSpacing,
+                    textAlign: computed.textAlign,
+                    textDecorationLine: computed.textDecorationLine || computed.textDecoration,
+                    fontStyle: computed.fontStyle,
+                    opacity: computed.opacity,
+                    width: computed.width,
+                    height: computed.height,
+                    borderColor: computed.borderColor,
+                    borderStyle: computed.borderStyle,
+                    borderWidth: computed.borderWidth,
+                    boxShadow: computed.boxShadow,
+                    textTransform: computed.textTransform
+                },
+	                xpath: this.getXPath(element)
+	            };
+	        },
+
+            getDocumentSnapshot: function(opts) {
+                // Return a compact, tool-friendly snapshot of the current DOM (the iframe copy).
+                // This is used by the Design Mode "Modify with AI" feature to retarget edits without reading sandbox source.
+                var snapshotStarted = Date.now();
+                try {
+                    opts = opts || {};
+                    var maxNodes = typeof opts.maxNodes === 'number' ? opts.maxNodes : 800;
+                    var maxTextLen = typeof opts.maxTextLen === 'number' ? opts.maxTextLen : 160;
+                    var maxHtmlLen = typeof opts.maxHtmlLen === 'number' ? opts.maxHtmlLen : 900;
+
+                    // Ensure IDs exist for editable elements before snapshotting.
+                    try { this.markElements(); } catch (e) {}
+
+                    var nodes = [];
+                    var seen = {};
+                    var queue = [];
+                    if (document && document.body) queue.push(document.body);
+
+                    while (queue.length && nodes.length < maxNodes) {
+                        var el = queue.shift();
+                        if (!el || el.nodeType !== Node.ELEMENT_NODE) continue;
+
+                        try {
+                            if (el.matches && el.matches(IGNORE_SELECTORS)) continue;
+                            if (el.closest && el.closest(IGNORE_SELECTORS)) continue;
+                        } catch (e) {}
+
+                        // Enqueue children regardless of whether this node has a design id.
+                        try {
+                            var children = el.children;
+                            if (children && children.length) {
+                                for (var i = 0; i < children.length; i++) {
+                                    queue.push(children[i]);
+                                }
+                            }
+                        } catch (e) {}
+
+                        var designId = null;
+                        try { designId = el.getAttribute && el.getAttribute('data-design-id'); } catch (e) { designId = null; }
+                        if (!designId) continue;
+                        if (seen[designId]) continue;
+                        seen[designId] = true;
+
+                        var parentId = null;
+                        try {
+                            var p = el.parentElement;
+                            while (p && p !== document.body) {
+                                if (p.matches && p.matches(IGNORE_SELECTORS)) { p = p.parentElement; continue; }
+                                var pid = p.getAttribute && p.getAttribute('data-design-id');
+                                if (pid) { parentId = pid; break; }
+                                p = p.parentElement;
+                            }
+                        } catch (e) { parentId = null; }
+
+                        var childIds = [];
+                        try {
+                            for (var ci = 0; ci < el.children.length; ci++) {
+                                var cEl = el.children[ci];
+                                if (!cEl || !cEl.getAttribute) continue;
+                                if (cEl.matches && cEl.matches(IGNORE_SELECTORS)) continue;
+                                var cid = cEl.getAttribute('data-design-id');
+                                if (cid) childIds.push(cid);
+                            }
+                        } catch (e) { childIds = []; }
+
+                        var text = '';
+                        try {
+                            text = (this.getDirectTextContent(el) || (el.innerText || '') || (el.textContent || '') || '').trim();
+                            if (text && text.length > maxTextLen) text = text.substring(0, maxTextLen);
+                        } catch (e) { text = ''; }
+
+                        var attrs = {};
+                        try {
+                            var whitelist = ['href','src','alt','title','aria-label','role','type','name','value','placeholder'];
+                            for (var wi = 0; wi < whitelist.length; wi++) {
+                                var an = whitelist[wi];
+                                var av = el.getAttribute ? el.getAttribute(an) : null;
+                                if (av) attrs[an] = av.substring(0, 200);
+                            }
+                            var testId = el.getAttribute ? el.getAttribute('data-testid') : null;
+                            if (testId) attrs['data-testid'] = testId.substring(0, 200);
+                        } catch (e) { attrs = {}; }
+
+                        var html = '';
+                        try {
+                            html = el.outerHTML || '';
+                            if (html && html.length > maxHtmlLen) html = html.substring(0, maxHtmlLen);
+                        } catch (e) { html = ''; }
+
+                        // Convert className to string (handles SVGAnimatedString for SVG elements)
+                        var className = '';
+                        try {
+                            if (el.className) {
+                                // SVG elements have className as SVGAnimatedString
+                                if (typeof el.className === 'string') {
+                                    className = el.className;
+                                } else if (el.className.baseVal !== undefined) {
+                                    className = el.className.baseVal;
+                                } else {
+                                    className = String(el.className);
+                                }
+                            }
+                        } catch (e) { className = ''; }
+
+                        // Convert id to string (handles SVGAnimatedString for SVG elements)
+                        var elId = '';
+                        try {
+                            if (el.id) {
+                                if (typeof el.id === 'string') {
+                                    elId = el.id;
+                                } else if (el.id.baseVal !== undefined) {
+                                    elId = el.id.baseVal;
+                                } else {
+                                    elId = String(el.id);
+                                }
+                            }
+                        } catch (e) { elId = ''; }
+
+                        nodes.push({
+                            designId: designId,
+                            tagName: (el.tagName || '').toLowerCase(),
+                            className: className,
+                            id: elId,
+                            textContent: text || '',
+                            attributes: attrs,
+                            parentDesignId: parentId,
+                            childDesignIds: childIds,
+                            html: html
+                        });
+                    }
+
+                    var elapsed = Date.now() - snapshotStarted;
+                    console.log('[DesignMode] Generated snapshot with', nodes.length, 'nodes in', elapsed, 'ms');
+                    return {
+                        version: 1,
+                        generatedAt: Date.now(),
+                        url: (location && location.href) ? location.href : '',
+                        title: document.title || '',
+                        nodes: nodes
+                    };
+                } catch (e) {
+                    var elapsedError = Date.now() - snapshotStarted;
+                    console.error('[DesignMode] Snapshot generation failed after', elapsedError, 'ms:', e);
+                    return {
+                        version: 1,
+                        generatedAt: Date.now(),
+                        url: '',
+                        title: '',
+                        nodes: []
+                    };
+                }
+            },
+
+            ensureStyleOverrideSheet: function() {
+                try {
+                    if (this.styleOverrideEl && this.styleOverrideEl.parentNode) return;
+                    var existing = document.getElementById('design-mode-style-overrides');
+                    if (existing) {
+                        this.styleOverrideEl = existing;
+                    } else {
+                        var styleEl = document.createElement('style');
+                        styleEl.id = 'design-mode-style-overrides';
+                        styleEl.setAttribute('data-design-ignore', 'true');
+                        document.head.appendChild(styleEl);
+                        this.styleOverrideEl = styleEl;
+                    }
+                    if (!this.styleOverrides) this.styleOverrides = {};
+                } catch (e) {}
+            },
+
+            renderStyleOverrides: function() {
+                if (!this.styleOverrideEl) return;
+                var css = '';
+                try {
+                    for (var id in this.styleOverrides) {
+                        if (!this.styleOverrides.hasOwnProperty(id)) continue;
+                        var props = this.styleOverrides[id];
+                        var decls = [];
+                        for (var prop in props) {
+                            if (!props.hasOwnProperty(prop)) continue;
+                            var v = props[prop];
+                            if (v === undefined || v === null || v === '') continue;
+                            var sv = String(v).replace(/[\\n\\r]/g, ' ').trim();
+                            decls.push(prop + ': ' + sv + ' !important');
+                        }
+                        if (decls.length) {
+                            css += '[data-design-id=\"' + id + '\"] { ' + decls.join('; ') + '; }\\n';
+                        }
+                    }
+                } catch (e) {}
+                this.styleOverrideEl.textContent = css;
+            },
+
+            scheduleRenderStyleOverrides: function() {
+                if (!this.styleOverrideEl) return;
+                if (this._styleRenderScheduled) return;
+                this._styleRenderScheduled = true;
+                var self = this;
+                try {
+                    this._styleRenderHandle = window.requestAnimationFrame(function() {
+                        self._styleRenderScheduled = false;
+                        self._styleRenderHandle = null;
+                        self.renderStyleOverrides();
+                    });
+                } catch (e) {
+                    this._styleRenderScheduled = false;
+                    this._styleRenderHandle = null;
+                    this.renderStyleOverrides();
+                }
+            },
+
+            normalizeCssProperty: function(property) {
+                try {
+                    if (property === undefined || property === null) return '';
+                    var p = String(property).trim();
+                    if (!p) return '';
+                    // Preserve custom properties exactly as-is (case-sensitive).
+                    if (p.indexOf('--') === 0) return p;
+                    // If it's already kebab-case, just normalize casing.
+                    if (p.indexOf('-') !== -1) return p.toLowerCase();
+
+                    var vendorPrefix = '';
+                    if (p.indexOf('Webkit') === 0) { vendorPrefix = '-webkit-'; p = p.substring(6); }
+                    else if (p.indexOf('Moz') === 0) { vendorPrefix = '-moz-'; p = p.substring(3); }
+                    else if (p.indexOf('ms') === 0) { vendorPrefix = '-ms-'; p = p.substring(2); }
+                    else if (p.indexOf('O') === 0) { vendorPrefix = '-o-'; p = p.substring(1); }
+
+                    var kebab = p.replace(/([a-z0-9])([A-Z])/g, '$1-$2').replace(/_/g, '-').toLowerCase();
+                    return vendorPrefix + kebab;
+                } catch (e) {
+                    try { return String(property || '').trim(); } catch (e2) { return ''; }
+                }
+            },
+
+            updateStyleOverride: function(designId, property, value) {
+                this.ensureStyleOverrideSheet();
+                var prop = this.normalizeCssProperty(property);
+                if (!prop) return;
+                if (!this.styleOverrides) this.styleOverrides = {};
+                if (!this.styleOverrides[designId]) this.styleOverrides[designId] = {};
+                if (value) {
+                    this.styleOverrides[designId][prop] = value;
+                } else {
+                    try { delete this.styleOverrides[designId][prop]; } catch (e) {}
+                }
+                var empty = true;
+                try {
+                    for (var k in this.styleOverrides[designId]) {
+                        if (this.styleOverrides[designId].hasOwnProperty(k)) { empty = false; break; }
+                    }
+                } catch (e) {}
+                if (empty) {
+                    try { delete this.styleOverrides[designId]; } catch (e) {}
+                }
+                this.scheduleRenderStyleOverrides();
+            },
+
+		        setStyle: function(designId, property, value, skipTracking, slideNumber, meta) {
+		            var el = null;
+                    try {
+                        if (slideNumber !== undefined && slideNumber !== null) {
+                            el = document.querySelector('[data-slide-number="' + slideNumber + '"] [data-design-id="' + designId + '"]');
+                        }
+                    } catch (e) { el = null; }
+                    if (!el) {
+		                el = document.querySelector('[data-design-id="' + designId + '"]');
+                    }
+		            if (!el) {
+		                return false;
+		            }
+                var prop = this.normalizeCssProperty(property);
+                if (!prop) return false;
+	            var oldValue = '';
+                if (!skipTracking) {
+                    oldValue = el.style.getPropertyValue(prop) ||
+	                           window.getComputedStyle(el).getPropertyValue(prop);
+                }
+                this.updateStyleOverride(designId, prop, value);
+	            if (!skipTracking) {
+                    var metaInfo = { slideNumber: slideNumber };
+                    try {
+                        if (meta && meta.groupId) metaInfo.groupId = meta.groupId;
+                        if (meta && meta.groupLabel) metaInfo.groupLabel = meta.groupLabel;
+                    } catch (e) {}
+	                this.trackChange(designId, 'style', prop, { from: oldValue, to: value }, metaInfo);
+	            }
+	            if (this.selectedElement === el) this.showSelection(el);
+	            return true;
+	        },
+
+	        setText: function(designId, text, skipTracking, slideNumber, meta) {
+	            var el = null;
+                try {
+                    if (slideNumber !== undefined && slideNumber !== null) {
+                        el = document.querySelector('[data-slide-number="' + slideNumber + '"] [data-design-id="' + designId + '"]');
+                    }
+                } catch (e) { el = null; }
+                if (!el) {
+	                el = document.querySelector('[data-design-id="' + designId + '"]');
+                }
+	            if (!el) return false;
+            var oldText = this.getDirectTextContent(el);
+
+            // Find and update only direct text nodes, preserving icons and other elements
+            var textNodeFound = false;
+            for (var i = 0; i < el.childNodes.length; i++) {
+                var node = el.childNodes[i];
+                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                    node.textContent = textNodeFound ? '' : text;
+                    textNodeFound = true;
+                }
+            }
+
+            // If no text node found, append one (but only if element has no complex children)
+            if (!textNodeFound && el.children.length === 0) {
+                el.textContent = text;
+            } else if (!textNodeFound) {
+                // Prepend a text node before other content
+                el.insertBefore(document.createTextNode(text), el.firstChild);
+            }
+
+            if (!skipTracking) {
+                var metaInfoText = { slideNumber: slideNumber };
+                try {
+                    if (meta && meta.groupId) metaInfoText.groupId = meta.groupId;
+                    if (meta && meta.groupLabel) metaInfoText.groupLabel = meta.groupLabel;
+                } catch (e) {}
+                this.trackChange(designId, 'text', 'textContent', { from: oldText, to: text }, metaInfoText);
+            }
+            return true;
+        },
+
+	        setAttribute: function(designId, attribute, value, skipTracking, slideNumber, meta) {
+	            var el = null;
+                try {
+                    if (slideNumber !== undefined && slideNumber !== null) {
+                        el = document.querySelector('[data-slide-number="' + slideNumber + '"] [data-design-id="' + designId + '"]');
+                    }
+                } catch (e) { el = null; }
+                if (!el) {
+	                el = document.querySelector('[data-design-id="' + designId + '"]');
+                }
+	            if (!el) return false;
+
+                var attr = '';
+                try { attr = String(attribute || '').trim(); } catch (e) { attr = ''; }
+                if (!attr) return false;
+                if (attr.toLowerCase() !== 'src') return false;
+
+                var oldValue = '';
+                if (!skipTracking) {
+                    try { oldValue = el.getAttribute(attr) || ''; } catch (e) { oldValue = ''; }
+                }
+
+                try {
+                    if (value === null || value === undefined) {
+                        el.removeAttribute(attr);
+                    } else {
+                        el.setAttribute(attr, value);
+                    }
+                } catch (e) {
+                    return false;
+                }
+
+                if (!skipTracking) {
+                    var metaInfoAttr = { slideNumber: slideNumber };
+                    try {
+                        if (meta && meta.groupId) metaInfoAttr.groupId = meta.groupId;
+                        if (meta && meta.groupLabel) metaInfoAttr.groupLabel = meta.groupLabel;
+                    } catch (e) {}
+                    this.trackChange(designId, 'attribute', attr, { from: oldValue, to: value }, metaInfoAttr);
+                }
+                if (this.selectedElement === el) this.showSelection(el);
+                return true;
+	        },
+
+	        setIcon: function(designId, iconName, svgInner, skipTracking, slideNumber) {
+	            // Robust SVG update that plays nicer with React:
+	            // - Keep the existing <svg> element instance (avoid React ref mismatches).
+	            // - Replace its children with parsed nodes created via createElementNS.
+	            // - Store an override so icons survive React re-renders/hydration.
+	            // - If anything fails, restore the old icon and record no change.
+	            var self = this;
+	            try { self._lastOpError = null; } catch (e) {}
+	            try { self._lastOpDebug = null; } catch (e) {}
+	            var fail = function(reason, debug) {
+	                try { self._lastOpError = reason; } catch (e) {}
+	                if (debug) {
+	                    try { self._lastOpDebug = debug; } catch (e) {}
+	                }
+	                console.warn('[DesignMode] setIcon failed:', reason, debug || '');
+	                return false;
+	            };
+
+	            var el = null;
+                try {
+                    if (slideNumber !== undefined && slideNumber !== null) {
+                        el = document.querySelector('[data-slide-number="' + slideNumber + '"] [data-design-id="' + designId + '"]');
+                    }
+                } catch (e) { el = null; }
+                if (!el) {
+	                el = document.querySelector('[data-design-id="' + designId + '"]');
+                }
+	            if (!el) return fail('no_element', { designId: designId });
+
+                // If the target (or a descendant) is a Material Icons element, convert it to inline SVG.
+                // This keeps "set_icon" operations compatible with slides that were generated using icon fonts.
+                var materialEl = null;
+                var oldMaterialName = '';
+                try {
+                    var clsRaw = el.className;
+                    var cls = '';
+                    if (typeof clsRaw === 'string') cls = clsRaw;
+                    else if (clsRaw && clsRaw.baseVal !== undefined) cls = clsRaw.baseVal;
+                    else cls = String(clsRaw || '');
+                    cls = cls.toLowerCase();
+                    if (cls.indexOf('material-icons') !== -1 || cls.indexOf('material-symbols') !== -1) {
+                        materialEl = el;
+                    }
+                } catch (e) { materialEl = null; }
+
+                if (!materialEl) {
+                    try {
+                        materialEl = el.querySelector('.material-icons, .material-symbols, .material-symbols-outlined, .material-symbols-rounded, .material-symbols-sharp');
+                    } catch (e) { materialEl = null; }
+                }
+
+                try {
+                    if (materialEl) oldMaterialName = (materialEl.textContent || '').trim();
+                } catch (e) { oldMaterialName = ''; }
+
+	            var svg = null;
+	            var isSvgElement = false;
+	            try {
+	                if (el.tagName && String(el.tagName).toLowerCase() === 'svg') {
+	                    svg = el;
+	                    isSvgElement = true;
+	                } else {
+	                    svg = el.querySelector('svg.lucide') || el.querySelector('svg');
+	                }
+	            } catch (e) {
+	                svg = null;
+	            }
+
+                // If the selected element doesn't contain an <svg> yet but it uses Material Icons,
+                // inject an <svg> so Lucide SVG replacements render (Material icon ligatures often go blank).
+                if (!svg && materialEl && svgInner && typeof svgInner === 'string' && svgInner.trim()) {
+                    try {
+                        while (materialEl.firstChild) {
+                            materialEl.removeChild(materialEl.firstChild);
+                        }
+                    } catch (e) {
+                        try { materialEl.textContent = ''; } catch (e2) {}
+                    }
+                    try {
+                        svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                        svg.setAttribute('width', '1em');
+                        svg.setAttribute('height', '1em');
+                        svg.setAttribute('aria-hidden', 'true');
+                        svg.setAttribute('focusable', 'false');
+                        try { svg.style.verticalAlign = 'middle'; } catch (e3) {}
+                        materialEl.appendChild(svg);
+                    } catch (e4) {
+                        svg = null;
+                    }
+                }
+
+                // Fallback for text-based material icons when no SVG payload is available.
+                if (!svg && materialEl && iconName) {
+                    try {
+                        materialEl.textContent = iconName;
+                    } catch (e5) {
+                        return fail('material_icon_update_failed', { designId: designId, error: String(e5) });
+                    }
+                    if (!skipTracking) {
+                        var fromVal2 = '';
+                        var toVal2 = '';
+                        try {
+                            fromVal2 = JSON.stringify({ name: oldMaterialName || null, svg: '' });
+                            toVal2 = JSON.stringify({ name: iconName || null, svg: '' });
+                        } catch (e6) {
+                            fromVal2 = oldMaterialName || '';
+                            toVal2 = String(iconName || '');
+                        }
+                        this.trackChange(designId, 'attribute', 'icon', { from: fromVal2, to: toVal2 }, { slideNumber: slideNumber });
+                    }
+                    return true;
+                }
+
+                // Slides: if there is no existing icon placeholder (<svg> or Material Icons element),
+                // allow inserting a new inline <svg> so AI can "add an icon" within slide content.
+                if (!svg && svgInner && typeof svgInner === 'string' && svgInner.trim()) {
+                    var allowInsert = false;
+                    try {
+                        if (slideNumber !== undefined && slideNumber !== null) {
+                            allowInsert = true;
+                        } else if (el && el.closest && el.closest('[data-slide-number]')) {
+                            allowInsert = true;
+                        }
+                    } catch (e7) { allowInsert = false; }
+
+                    if (allowInsert) {
+                        try {
+                            var tn = (el.tagName || '').toLowerCase();
+                            var voidTags = {
+                                area: 1, base: 1, br: 1, col: 1, embed: 1, hr: 1,
+                                img: 1, input: 1, link: 1, meta: 1, param: 1,
+                                source: 1, track: 1, wbr: 1
+                            };
+                            if (!voidTags[tn]) {
+                                svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                                svg.setAttribute('width', '1em');
+                                svg.setAttribute('height', '1em');
+                                svg.setAttribute('aria-hidden', 'true');
+                                svg.setAttribute('focusable', 'false');
+                                try {
+                                    svg.style.display = 'inline-block';
+                                    svg.style.verticalAlign = 'middle';
+                                    if (
+                                        tn === 'h1' || tn === 'h2' || tn === 'h3' || tn === 'h4' || tn === 'h5' || tn === 'h6' ||
+                                        tn === 'p' || tn === 'span' || tn === 'a' || tn === 'button' || tn === 'label' || tn === 'li'
+                                    ) {
+                                        svg.style.marginRight = '0.35em';
+                                    }
+                                } catch (e8) {}
+                                try {
+                                    if (el.firstChild) el.insertBefore(svg, el.firstChild);
+                                    else el.appendChild(svg);
+                                } catch (e9) {
+                                    svg = null;
+                                }
+                            }
+                        } catch (e10) {
+                            svg = null;
+                        }
+                    }
+                }
+	            if (!svg) return fail('no_svg', { designId: designId, elTag: el.tagName, isSvgElement: isSvgElement });
+
+	            var ns = 'http://www.w3.org/2000/svg';
+	            try { ns = svg.namespaceURI || ns; } catch (e) {}
+
+	            var normalize = function(v) {
+	                try {
+	                    return String(v || '')
+	                        .trim()
+	                        .toLowerCase()
+	                        .replace(/[_\\s]+/g, '-')
+	                        .replace(/[^a-z0-9-]+/g, '')
+	                        .replace(/-+/g, '-')
+	                        .replace(/^-|-$/g, '');
+	                } catch (e) {
+	                    return '';
+	                }
+	            };
+
+	            var newName = normalize(iconName);
+
+	            var inner = svgInner || '';
+	            try {
+	                if (inner && typeof inner === 'string' && inner.indexOf('<svg') !== -1) {
+	                    var tmp = document.createElement('div');
+	                    tmp.innerHTML = inner;
+	                    var svgEl = tmp.querySelector('svg');
+	                    if (svgEl) inner = svgEl.innerHTML || '';
+	                }
+	            } catch (e) {}
+	            if (!inner || typeof inner !== 'string' || !inner.trim()) {
+	                return fail('empty_svg_inner', { designId: designId });
+	            }
+
+	            // Snapshot old state for restoration + change tracking.
+	            var oldInner = '';
+	            try { oldInner = svg.innerHTML || ''; } catch (e) { oldInner = ''; }
+	            var oldName = '';
+	            try {
+	                oldName = (svg.getAttribute && svg.getAttribute('data-design-icon')) ? String(svg.getAttribute('data-design-icon')) : '';
+	            } catch (e) { oldName = ''; }
+	            if (!oldName) {
+	                try {
+	                    if (svg.classList && svg.classList.forEach) {
+	                        svg.classList.forEach(function(c) {
+	                            if (!oldName && c && c.indexOf('lucide-') === 0 && c !== 'lucide') {
+	                                oldName = c.slice('lucide-'.length);
+	                            }
+	                        });
+	                    }
+	                } catch (e) {}
+	            }
+                if (!oldName && oldMaterialName) {
+                    oldName = oldMaterialName;
+                }
+
+	            var oldClass = '';
+	            try { oldClass = svg.getAttribute('class') || ''; } catch (e) { oldClass = ''; }
+	            var oldDesignIconAttr = null;
+	            try { oldDesignIconAttr = svg.getAttribute ? svg.getAttribute('data-design-icon') : null; } catch (e) { oldDesignIconAttr = null; }
+
+	            var baseAttrNames = ['viewBox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'];
+	            var oldBaseAttrs = {};
+	            try {
+	                for (var bi = 0; bi < baseAttrNames.length; bi++) {
+	                    var bn = baseAttrNames[bi];
+	                    try { oldBaseAttrs[bn] = svg.getAttribute(bn); } catch (e) { oldBaseAttrs[bn] = null; }
+	                }
+	            } catch (e) {}
+
+	            var oldKids = [];
+	            try {
+	                var kids = svg.childNodes || [];
+	                for (var ki = 0; ki < kids.length; ki++) {
+	                    try { oldKids.push(kids[ki].cloneNode(true)); } catch (e) {}
+	                }
+	            } catch (e) {}
+
+	            var restoreOld = function(reason, debug) {
+	                try {
+	                    while (svg.firstChild) {
+	                        svg.removeChild(svg.firstChild);
+	                    }
+	                } catch (e) {}
+	                try {
+	                    for (var ri = 0; ri < oldKids.length; ri++) {
+	                        try { svg.appendChild(oldKids[ri].cloneNode(true)); } catch (e) {}
+	                    }
+	                } catch (e) {}
+	                try {
+	                    if (oldClass) svg.setAttribute('class', oldClass);
+	                    else svg.removeAttribute('class');
+	                } catch (e) {}
+	                try {
+	                    if (oldDesignIconAttr === null || oldDesignIconAttr === undefined || oldDesignIconAttr === '') {
+	                        svg.removeAttribute('data-design-icon');
+	                    } else {
+	                        svg.setAttribute('data-design-icon', oldDesignIconAttr);
+	                    }
+	                } catch (e) {}
+	                try {
+	                    for (var bi2 = 0; bi2 < baseAttrNames.length; bi2++) {
+	                        var bn2 = baseAttrNames[bi2];
+	                        var ov = (oldBaseAttrs && oldBaseAttrs.hasOwnProperty(bn2)) ? oldBaseAttrs[bn2] : null;
+	                        if (ov === null || ov === undefined) {
+	                            try { svg.removeAttribute(bn2); } catch (e) {}
+	                        } else {
+	                            try { svg.setAttribute(bn2, ov); } catch (e) {}
+	                        }
+	                    }
+	                } catch (e) {}
+	                return fail(reason, debug);
+	            };
+
+	            // Build new SVG child nodes from the provided `inner`.
+	            var newNodes = [];
+	            var built = false;
+
+	            var cloneSvgNode = function(src) {
+	                if (!src) return null;
+	                if (src.nodeType === Node.TEXT_NODE) {
+	                    try {
+	                        var t = src.textContent || '';
+	                        if (!t || !t.trim()) return null;
+	                        return document.createTextNode(t);
+	                    } catch (e) {
+	                        return null;
+	                    }
+	                }
+	                if (src.nodeType !== Node.ELEMENT_NODE) return null;
+	                var tagName = null;
+	                try { tagName = (src.tagName || '').toLowerCase(); } catch (e) { tagName = ''; }
+	                if (!tagName) return null;
+	                var out = null;
+	                try { out = document.createElementNS(ns, tagName); } catch (e) { out = null; }
+	                if (!out) return null;
+	                try {
+	                    var attrs = src.attributes || [];
+	                    for (var ai = 0; ai < attrs.length; ai++) {
+	                        var a = attrs[ai];
+	                        if (!a || !a.name) continue;
+	                        try { out.setAttribute(a.name, a.value); } catch (e) {}
+	                    }
+	                } catch (e) {}
+	                try {
+	                    var ck = src.childNodes || [];
+	                    for (var ci = 0; ci < ck.length; ci++) {
+	                        var child = cloneSvgNode(ck[ci]);
+	                        if (child) {
+	                            try { out.appendChild(child); } catch (e) {}
+	                        }
+	                    }
+	                } catch (e) {}
+	                return out;
+	            };
+
+	            try {
+	                // Preferred: parse as SVG XML so attributes are preserved.
+	                try {
+	                    var parser = new DOMParser();
+	                    var doc = parser.parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + inner + '</svg>', 'image/svg+xml');
+	                    var parsedSvg = doc && doc.documentElement ? doc.documentElement : null;
+	                    var parseErrors = null;
+	                    try { parseErrors = doc.getElementsByTagName('parsererror'); } catch (e) { parseErrors = null; }
+	                    if (parsedSvg && (!parseErrors || !parseErrors.length)) {
+	                        var childNodes = parsedSvg.childNodes || [];
+	                        for (var i = 0; i < childNodes.length; i++) {
+	                            var n = childNodes[i];
+	                            var rebuilt = cloneSvgNode(n);
+	                            if (rebuilt) newNodes.push(rebuilt);
+	                        }
+	                        built = newNodes.length > 0;
+	                    }
+	                } catch (e) {}
+
+	                // Fallback: parse via a temporary SVG element in this document.
+	                if (!built) {
+	                    try {
+	                        var tmpSvg2 = document.createElementNS(ns, 'svg');
+	                        tmpSvg2.innerHTML = inner;
+	                        var tmpChildren = tmpSvg2.childNodes || [];
+	                        for (var j = 0; j < tmpChildren.length; j++) {
+	                            var tn = tmpChildren[j];
+	                            var rebuilt2 = cloneSvgNode(tn);
+	                            if (rebuilt2) newNodes.push(rebuilt2);
+	                        }
+	                        built = newNodes.length > 0;
+	                    } catch (e) {}
+	                }
+	            } catch (e) {
+	                built = false;
+	            }
+
+	            if (!built) {
+	                return fail('build_failed', { designId: designId });
+	            }
+
+	            // Update lucide classes + base attributes so the icon renders.
+	            try {
+	                if (svg.classList) {
+	                    svg.classList.add('lucide');
+	                    var remove = [];
+	                    svg.classList.forEach(function(c) {
+	                        if (c && c.indexOf('lucide-') === 0) remove.push(c);
+	                    });
+	                    for (var r = 0; r < remove.length; r++) {
+	                        try { svg.classList.remove(remove[r]); } catch (e) {}
+	                    }
+	                    if (newName) svg.classList.add('lucide-' + newName);
+	                }
+	            } catch (e) {}
+
+	            try {
+	                if (!svg.getAttribute('viewBox')) svg.setAttribute('viewBox', '0 0 24 24');
+	                if (!svg.getAttribute('fill')) svg.setAttribute('fill', 'none');
+	                svg.setAttribute('stroke', 'currentColor');
+	                svg.setAttribute('stroke-width', svg.getAttribute('stroke-width') || '2');
+	                svg.setAttribute('stroke-linecap', svg.getAttribute('stroke-linecap') || 'round');
+	                svg.setAttribute('stroke-linejoin', svg.getAttribute('stroke-linejoin') || 'round');
+	            } catch (e) {}
+
+	            var frag = null;
+	            var appended = 0;
+	            try { frag = document.createDocumentFragment(); } catch (e) { frag = null; }
+	            if (!frag) return fail('no_fragment', { designId: designId });
+	            for (var ni = 0; ni < newNodes.length; ni++) {
+	                try {
+	                    frag.appendChild(newNodes[ni]);
+	                    appended += 1;
+	                } catch (e) {}
+	            }
+	            if (appended === 0) return fail('no_nodes_appended', { designId: designId });
+
+	            try {
+	                while (svg.firstChild) {
+	                    svg.removeChild(svg.firstChild);
+	                }
+	                svg.appendChild(frag);
+	            } catch (e) {
+	                return restoreOld('apply_exception', { designId: designId });
+	            }
+
+	            // Validate: must contain at least one shape element in the SVG namespace.
+	            var firstShape = null;
+	            try { firstShape = svg.querySelector('path,line,polyline,polygon,rect,circle,ellipse'); } catch (e) { firstShape = null; }
+	            if (!firstShape) return restoreOld('no_shapes', { designId: designId });
+	            try {
+	                if (firstShape.namespaceURI && firstShape.namespaceURI !== 'http://www.w3.org/2000/svg') {
+	                    return restoreOld('wrong_namespace', { designId: designId, shapeNs: firstShape.namespaceURI });
+	                }
+	            } catch (e) {}
+
+	            var markerName = newName || 'custom';
+	            try { svg.setAttribute('data-design-icon', markerName); } catch (e) {}
+
+		            // Persist override so React re-renders don't wipe it.
+		            try {
+		                if (!self.iconOverrides) self.iconOverrides = {};
+		                var sig = '';
+		                try {
+		                    var shapes = svg.querySelectorAll('path,line,polyline,polygon,rect,circle,ellipse');
+		                    if (shapes && shapes.length) {
+		                        var parts = [];
+		                        var max = Math.min(80, shapes.length);
+		                        for (var si = 0; si < max; si++) {
+		                            var s = shapes[si];
+		                            if (!s || !s.getAttribute) continue;
+		                            var tag = '';
+		                            try { tag = (s.tagName || '').toLowerCase(); } catch (e) { tag = ''; }
+		                            if (!tag) continue;
+		                            var attrs = [];
+		                            if (tag === 'path') {
+		                                attrs.push('d=' + (s.getAttribute('d') || ''));
+		                            } else if (tag === 'line') {
+		                                attrs.push('x1=' + (s.getAttribute('x1') || ''));
+		                                attrs.push('y1=' + (s.getAttribute('y1') || ''));
+		                                attrs.push('x2=' + (s.getAttribute('x2') || ''));
+		                                attrs.push('y2=' + (s.getAttribute('y2') || ''));
+		                            } else if (tag === 'rect') {
+		                                attrs.push('x=' + (s.getAttribute('x') || ''));
+		                                attrs.push('y=' + (s.getAttribute('y') || ''));
+		                                attrs.push('w=' + (s.getAttribute('width') || ''));
+		                                attrs.push('h=' + (s.getAttribute('height') || ''));
+		                                attrs.push('rx=' + (s.getAttribute('rx') || ''));
+		                                attrs.push('ry=' + (s.getAttribute('ry') || ''));
+		                            } else if (tag === 'circle') {
+		                                attrs.push('cx=' + (s.getAttribute('cx') || ''));
+		                                attrs.push('cy=' + (s.getAttribute('cy') || ''));
+		                                attrs.push('r=' + (s.getAttribute('r') || ''));
+		                            } else if (tag === 'ellipse') {
+		                                attrs.push('cx=' + (s.getAttribute('cx') || ''));
+		                                attrs.push('cy=' + (s.getAttribute('cy') || ''));
+		                                attrs.push('rx=' + (s.getAttribute('rx') || ''));
+		                                attrs.push('ry=' + (s.getAttribute('ry') || ''));
+		                            } else if (tag === 'polyline' || tag === 'polygon') {
+		                                attrs.push('points=' + (s.getAttribute('points') || ''));
+		                            }
+		                            parts.push(tag + ':' + attrs.join(','));
+		                        }
+		                        sig = parts.join('|');
+		                    }
+		                } catch (e) { sig = ''; }
+		                self.iconOverrides[designId] = { iconName: markerName, svgInner: String(inner || ''), sig: sig };
+		            } catch (e) {}
+
+	            if (!skipTracking) {
+	                var fromVal = '';
+	                var toVal = '';
+	                try {
+	                    fromVal = JSON.stringify({ name: oldName || null, svg: oldInner || '' });
+	                    toVal = JSON.stringify({ name: newName || (iconName || null), svg: String(inner || '') });
+	                } catch (e) {
+	                    fromVal = oldInner || '';
+	                    toVal = String(inner || '');
+	                }
+	                this.trackChange(designId, 'attribute', 'icon', { from: fromVal, to: toVal }, { slideNumber: slideNumber });
+	            }
+
+	            try {
+	                self._lastOpDebug = {
+	                    designId: designId,
+	                    oldSvgClass: oldClass || null,
+	                    newSvgClass: (svg.getAttribute && svg.getAttribute('class')) ? svg.getAttribute('class') : null,
+	                    oldChildCount: oldKids.length || 0,
+	                    newChildCount: (svg.childNodes && svg.childNodes.length) ? svg.childNodes.length : 0
+	                };
+	            } catch (e) {}
+
+	            if (this.selectedElement === el) this.showSelection(el);
+	            console.log('[DesignMode] setIcon success:', {
+	                designId: designId,
+	                iconName: markerName,
+	                isSvgElement: isSvgElement,
+	                svgClass: (svg.getAttribute && svg.getAttribute('class')) ? svg.getAttribute('class') : null,
+	                childCount: (svg.childNodes && svg.childNodes.length) ? svg.childNodes.length : 0
+	            });
+	            return true;
+	        },
+
+        trackChange: function(designId, type, property, value, meta) {
+            var slideNumber = null;
+            try {
+                if (meta && meta.slideNumber !== undefined && meta.slideNumber !== null) {
+                    slideNumber = meta.slideNumber;
+                }
+            } catch (e) { slideNumber = null; }
+
+            var key = (slideNumber !== null ? (String(slideNumber) + ':') : '') + designId + ':' + type + ':' + property;
+
+            var el = null;
+            try {
+                if (slideNumber !== null && slideNumber !== undefined) {
+                    el = document.querySelector('[data-slide-number="' + slideNumber + '"] [data-design-id="' + designId + '"]');
+                }
+            } catch (e) { el = null; }
+            if (!el) {
+                el = document.querySelector('[data-design-id="' + designId + '"]');
+            }
+            var elementContext = el ? this.getElementInfo(el) : null;
+            try {
+                if (elementContext && elementContext.slideNumber !== undefined && elementContext.slideNumber !== null) {
+                    slideNumber = elementContext.slideNumber;
+                }
+            } catch (e) {}
+
+            var change = {
+                designId: designId,
+                slideNumber: slideNumber,
+                type: type,
+                property: property,
+                value: value,
+                timestamp: Date.now(),
+                elementContext: elementContext
+            };
+            try {
+                if (meta && meta.groupId) change.groupId = meta.groupId;
+                if (meta && meta.groupLabel) change.groupLabel = meta.groupLabel;
+            } catch (e) {}
+            this.pendingChanges.set(key, change);
+            this.notifyParent('DESIGN_MODE_CHANGE', change);
+        },
+
+        getPendingChanges: function() {
+            return Array.from(this.pendingChanges.values());
+        },
+
+        clearPendingChanges: function() {
+            this.pendingChanges.clear();
+        },
+
+        notifyParent: function(type, payload) {
+            try {
+                window.parent.postMessage({ type: type, payload: payload }, '*');
+            } catch (err) {
+                console.error('[DesignMode] Failed to notify parent:', err);
+            }
+        },
+
+	        handleParentMessage: function(event) {
+            var data = event.data || {};
+            var type = data.type;
+            var payload = data.payload || {};
+
+            switch (type) {
+                case 'DESIGN_MODE_ENABLE':
+                    this.enable();
+                    break;
+                case 'DESIGN_MODE_DISABLE':
+                    this.disable();
+                    break;
+                case 'DESIGN_MODE_CLEAR_SELECTION':
+                    this.selectedElement = null;
+                    this.hideSelection();
+                    this.hideResizeHandles();
+                    break;
+                case 'DESIGN_MODE_SET_ELEMENT_LOADING':
+                    this.setElementLoading(payload.designId, payload.isLoading, payload.xpath);
+                    break;
+	                case 'DESIGN_MODE_SET_STYLE':
+	                    var applied = this.setStyle(payload.designId, payload.property, payload.value, payload.skipTracking, payload.slideNumber, { groupId: payload.groupId, groupLabel: payload.groupLabel });
+	                    if (!applied && payload && payload.xpath) {
+	                        var el = this.findByXPath(payload.xpath);
+	                        if (el && el.setAttribute) {
+	                            try { el.setAttribute('data-design-id', payload.designId); } catch (e) {}
+	                            this.setStyle(payload.designId, payload.property, payload.value, payload.skipTracking, payload.slideNumber, { groupId: payload.groupId, groupLabel: payload.groupLabel });
+	                        }
+	                    }
+	                    break;
+	                case 'DESIGN_MODE_SET_TEXT':
+	                    var appliedText = this.setText(payload.designId, payload.text, payload.skipTracking, payload.slideNumber, { groupId: payload.groupId, groupLabel: payload.groupLabel });
+	                    if (!appliedText && payload && payload.xpath) {
+	                        var el2 = this.findByXPath(payload.xpath);
+	                        if (el2 && el2.setAttribute) {
+	                            try { el2.setAttribute('data-design-id', payload.designId); } catch (e) {}
+	                            this.setText(payload.designId, payload.text, payload.skipTracking, payload.slideNumber, { groupId: payload.groupId, groupLabel: payload.groupLabel });
+	                        }
+	                    }
+	                    break;
+	                case 'DESIGN_MODE_SET_ATTRIBUTE':
+	                    var attrName = payload.attribute || payload.property || payload.name;
+	                    var attrValue = payload.value;
+	                    var appliedAttr = this.setAttribute(payload.designId, attrName, attrValue, payload.skipTracking, payload.slideNumber, { groupId: payload.groupId, groupLabel: payload.groupLabel });
+	                    if (!appliedAttr && payload && payload.xpath) {
+	                        var elAttr = this.findByXPath(payload.xpath);
+	                        if (elAttr && elAttr.setAttribute) {
+	                            try { elAttr.setAttribute('data-design-id', payload.designId); } catch (e) {}
+	                            this.setAttribute(payload.designId, attrName, attrValue, payload.skipTracking, payload.slideNumber, { groupId: payload.groupId, groupLabel: payload.groupLabel });
+	                        }
+	                    }
+	                    break;
+	                    case 'DESIGN_MODE_SET_ICON':
+	                        var iconName = payload.iconName || payload.icon_name || payload.name;
+	                        var svgInner = payload.svgInner || payload.svg_inner || payload.svg;
+	                        var appliedIcon = this.setIcon(payload.designId, iconName, svgInner, payload.skipTracking, payload.slideNumber);
+	                        if (!appliedIcon && payload && payload.xpath) {
+	                            var elIcon = this.findByXPath(payload.xpath);
+	                            if (elIcon && elIcon.setAttribute) {
+	                                try { elIcon.setAttribute('data-design-id', payload.designId); } catch (e) {}
+	                                appliedIcon = this.setIcon(payload.designId, iconName, svgInner, payload.skipTracking, payload.slideNumber);
+	                            }
+	                        }
+	                        try {
+	                            this.notifyParent('DESIGN_MODE_OP_RESULT', {
+	                                op: 'set_icon',
+	                                designId: payload.designId,
+	                                ok: !!appliedIcon,
+	                                iconName: iconName || null,
+	                                error: this._lastOpError || null,
+	                                debug: this._lastOpDebug || null
+	                            });
+	                        } catch (e) {}
+	                        break;
+	                    case 'DESIGN_MODE_MOVE_ELEMENT':
+	                        var moved = this.moveElementByDesignId(payload.designId, payload.anchor, payload.skipTracking, payload.slideNumber);
+	                        if (!moved && payload && payload.xpath) {
+	                            try {
+	                                var elMove = this.findByXPath(payload.xpath);
+	                                if (elMove && elMove.setAttribute) {
+	                                    try { elMove.setAttribute('data-design-id', payload.designId); } catch (e) {}
+	                                    moved = this.moveElementByDesignId(payload.designId, payload.anchor, payload.skipTracking, payload.slideNumber);
+	                                }
+	                            } catch (e) {}
+	                        }
+	                        break;
+	                    case 'DESIGN_MODE_SWAP_ELEMENTS':
+	                        var swapped = this.swapElementsByDesignId(payload.designId, payload.targetDesignId, payload.skipTracking, payload.slideNumber);
+	                        if (!swapped && payload && payload.xpath) {
+	                            try {
+	                                var elSwap = this.findByXPath(payload.xpath);
+	                                if (elSwap && elSwap.setAttribute) {
+	                                    try { elSwap.setAttribute('data-design-id', payload.designId); } catch (e) {}
+	                                    swapped = this.swapElementsByDesignId(payload.designId, payload.targetDesignId, payload.skipTracking, payload.slideNumber);
+	                                }
+	                            } catch (e) {}
+	                        }
+	                        break;
+                    case 'DESIGN_MODE_DELETE_ELEMENT':
+                        var deleted = this.deleteElementByDesignId(payload.designId, payload.skipTracking, payload.slideNumber, { groupId: payload.groupId, groupLabel: payload.groupLabel });
+                        if (!deleted && payload && payload.xpath) {
+                            try {
+                                var elDel = this.findByXPath(payload.xpath);
+                                if (elDel && elDel.setAttribute) {
+                                    try { elDel.setAttribute('data-design-id', payload.designId); } catch (e) {}
+                                    deleted = this.deleteElementByDesignId(payload.designId, payload.skipTracking, payload.slideNumber, { groupId: payload.groupId, groupLabel: payload.groupLabel });
+                                }
+                            } catch (e) {}
+                        }
+                        try {
+                            this.notifyParent('DESIGN_MODE_OP_RESULT', {
+                                op: 'delete_element',
+                                designId: payload.designId,
+                                ok: !!deleted,
+                                error: this._lastOpError || null
+                            });
+                        } catch (e) {}
+                        break;
+                    case 'DESIGN_MODE_RESTORE_ELEMENT':
+                        var restored = this.restoreElementByDesignId(payload.designId, payload.skipTracking, payload.slideNumber);
+                        if (!restored && payload && payload.xpath) {
+                            try {
+                                var elRestore = this.findByXPath(payload.xpath);
+                                if (elRestore && elRestore.setAttribute) {
+                                    try { elRestore.setAttribute('data-design-id', payload.designId); } catch (e) {}
+                                    restored = this.restoreElementByDesignId(payload.designId, payload.skipTracking, payload.slideNumber);
+                                }
+                            } catch (e) {}
+                        }
+                        try {
+                            this.notifyParent('DESIGN_MODE_OP_RESULT', {
+                                op: 'restore_element',
+                                designId: payload.designId,
+                                ok: !!restored,
+                                error: this._lastOpError || null
+                            });
+                        } catch (e) {}
+                        break;
+                    case 'DESIGN_MODE_TOGGLE_MULTI_SELECT':
+                        this.toggleMultiSelectMode(payload.enabled);
+                        break;
+                case 'DESIGN_MODE_CLEAR_CHANGES':
+                    this.clearPendingChanges();
+                    break;
+                case 'DESIGN_MODE_REQUEST_SYNC':
+                    this.notifyParent('DESIGN_MODE_SYNC_RESPONSE', {
+                        changes: this.getPendingChanges()
+                    });
+                    break;
+                case 'DESIGN_MODE_HIGHLIGHT_ELEMENT':
+                    this.showTemporaryHighlight(payload.designId);
+                    break;
+	                case 'DESIGN_MODE_GET_DOCUMENT_SNAPSHOT':
+	                    var requestId = payload && payload.requestId ? payload.requestId : ('snap-' + Date.now() + '-' + Math.floor(Math.random() * 1000000));
+	                    var opts = payload && payload.options ? payload.options : {};
+	                    console.log('[DesignMode] Getting document snapshot', requestId, opts);
+	                    var snapshot = this.getDocumentSnapshot(opts);
+	                    console.log('[DesignMode] Snapshot result:', { requestId: requestId, nodeCount: (snapshot && snapshot.nodes) ? snapshot.nodes.length : 0 });
+	                    this.notifyParent('DESIGN_MODE_DOCUMENT_SNAPSHOT', {
+	                        requestId: requestId,
+	                        snapshot: snapshot
+	                    });
+	                    break;
+	                case 'DESIGN_MODE_GET_DECK_DIMENSIONS':
+	                    try {
+	                        var dims = this.getDeckDimensions();
+	                        this.notifyParent('DESIGN_MODE_DECK_DIMENSIONS', dims || null);
+	                    } catch (e) {}
+	                    break;
+	            }
+	        }
+	    };
+
+    // Listen for messages from parent
+    window.addEventListener('message', function(e) {
+        window.__DESIGN_MODE_RUNTIME__.handleParentMessage(e);
+    });
+
+    // Update overlays on scroll/resize
+    window.addEventListener('scroll', function() {
+        window.__DESIGN_MODE_RUNTIME__.updateOverlayPositions();
+    }, true);
+    window.addEventListener('resize', function() {
+        window.__DESIGN_MODE_RUNTIME__.updateOverlayPositions();
+    });
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            window.__DESIGN_MODE_RUNTIME__.init();
+        });
+    } else {
+        window.__DESIGN_MODE_RUNTIME__.init();
+    }
+})();
+</script>

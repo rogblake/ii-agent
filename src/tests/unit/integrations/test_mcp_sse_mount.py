@@ -3,12 +3,11 @@ from types import SimpleNamespace
 import pytest
 from fastapi import FastAPI
 
-pytest.importorskip("ii_agent.engine.agents.beta.controller.agent_controller")
-
-from ii_agent.integrations.mcp_sse import integration
+pytestmark = pytest.mark.external
 
 
 def test_mount_to_fastapi_skips_when_server_creation_fails(monkeypatch):
+    integration = pytest.importorskip("ii_agent.integrations.mcp_sse.integration")
     app = FastAPI()
     monkeypatch.setattr(integration, "create_mcp_server_sync", lambda: None)
 
@@ -18,6 +17,7 @@ def test_mount_to_fastapi_skips_when_server_creation_fails(monkeypatch):
 
 
 def test_mount_to_fastapi_mounts_wrapper_app(monkeypatch):
+    integration = pytest.importorskip("ii_agent.integrations.mcp_sse.integration")
     app = FastAPI()
 
     class FakeHTTPApp:

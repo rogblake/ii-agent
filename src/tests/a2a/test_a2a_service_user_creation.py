@@ -14,6 +14,8 @@ from ii_agent.integrations.a2a.as_server import IIAgentA2AServer
 from ii_agent.core.config.settings import get_settings
 from ii_agent.auth.users.models import User
 
+pytestmark = pytest.mark.external
+
 
 TEST_SCHEMA_NAME = os.getenv("II_AGENT_TEST_SCHEMA", "test_ii_agent_a2a")
 

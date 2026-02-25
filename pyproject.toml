@@ -113,15 +113,27 @@ ii-agent-tools = { git = "ssh://git@github.com/Intelligent-Internet/ii-agent-too
 dev = [
     "mypy>=1.19.1",
     "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.3.0",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["src/tests"]
+addopts = "-ra --strict-markers --strict-config"
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
     "smoke: Smoke tests",
     "external: Tests that require external services",
+    "allowed_skip: Explicitly documented skip allowed in required suites",
 ]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["ii_agent"]
+omit = ["src/tests/*"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true

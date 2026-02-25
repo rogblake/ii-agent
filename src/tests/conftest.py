@@ -4,7 +4,6 @@ import io
 import os
 from contextlib import asynccontextmanager
 from copy import deepcopy
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -13,9 +12,103 @@ import pytest
 os.environ.setdefault("LLM_CONFIGS__default__model", "gpt-4o")
 os.environ.setdefault("LLM_CONFIGS__default__api_type", "openai")
 os.environ.setdefault("LLM_CONFIGS__default__api_key", "test-key")
+os.environ.setdefault("COMPOSIO_CACHE_DIR", "/tmp/.composio")
+os.environ.setdefault("II_AGENT_SKIP_MIGRATIONS", "1")
 
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.storage.base import BaseStorage
+
+_REQUIRED_SUITE_MARKERS = {"unit", "integration", "smoke"}
+_ALL_SUITE_MARKERS = _REQUIRED_SUITE_MARKERS | {"external"}
+_UNEXPECTED_SKIPS_ATTR = "_ii_agent_unexpected_skips"
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--fail-on-unexpected-skip",
+        action="store_true",
+        default=False,
+        help="Fail the run when required suites contain unclassified skipped tests.",
+    )
+
+
+def pytest_configure(config):
+    setattr(config, _UNEXPECTED_SKIPS_ATTR, [])
+
+
+def _has_suite_marker(item: pytest.Item) -> bool:
+    return any(item.get_closest_marker(marker) for marker in _ALL_SUITE_MARKERS)
+
+
+def _suite_markers_for_item(item: pytest.Item) -> set[str]:
+    return {marker for marker in _ALL_SUITE_MARKERS if item.get_closest_marker(marker)}
+
+
+def pytest_collection_modifyitems(config, items: list[pytest.Item]):
+    for item in items:
+        nodeid = item.nodeid
+
+        # Keep suite marker policy stable regardless of runner invocation style.
+        if not _has_suite_marker(item):
+            if "src/tests/unit/" in nodeid:
+                item.add_marker(pytest.mark.unit)
+            elif "src/tests/integration/" in nodeid:
+                item.add_marker(pytest.mark.integration)
+            elif "src/tests/smoke/" in nodeid:
+                item.add_marker(pytest.mark.smoke)
+            elif "src/tests/a2a/" in nodeid:
+                item.add_marker(pytest.mark.external)
+
+        suite_markers = _suite_markers_for_item(item) & _REQUIRED_SUITE_MARKERS
+        if len(suite_markers) > 1:
+            raise pytest.UsageError(
+                f"{item.nodeid} has multiple required suite markers: {sorted(suite_markers)}"
+            )
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[Any]):
+    outcome = yield
+    report: pytest.TestReport = outcome.get_result()
+
+    if report.when != "setup" or report.outcome != "skipped":
+        return
+
+    markers = {marker.name for marker in item.iter_markers()}
+
+    # Only enforce skip policy on required suites. External tests are opt-in.
+    if not (markers & _REQUIRED_SUITE_MARKERS):
+        return
+    if "external" in markers or "allowed_skip" in markers:
+        return
+
+    reason = str(report.longrepr)
+    getattr(item.config, _UNEXPECTED_SKIPS_ATTR).append((item.nodeid, reason))
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int):
+    should_fail_on_skip = session.config.getoption("--fail-on-unexpected-skip") or (
+        os.getenv("II_AGENT_FAIL_ON_SKIP", "").lower() in {"1", "true", "yes"}
+    )
+
+    unexpected_skips: list[tuple[str, str]] = getattr(
+        session.config, _UNEXPECTED_SKIPS_ATTR, []
+    )
+
+    if not should_fail_on_skip or not unexpected_skips:
+        return
+
+    terminal_reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+    if terminal_reporter:
+        terminal_reporter.write_sep(
+            "=",
+            f"{len(unexpected_skips)} unexpected skip(s) in required suites",
+        )
+        for nodeid, reason in unexpected_skips:
+            reason_line = reason.splitlines()[-1] if reason else "no reason provided"
+            terminal_reporter.write_line(f"{nodeid} -> {reason_line}")
+
+    session.exitstatus = pytest.ExitCode.TESTS_FAILED
 
 
 @pytest.fixture(autouse=True)

@@ -1290,14 +1290,14 @@ class DesignService:
         if "<head " in rewritten:
             return re.sub(
                 r"(<head[^>]*>)",
-                rf"\1\n{injection}\n",
+                lambda m: f"{m.group(1)}\n{injection}\n",
                 rewritten,
                 count=1,
             )
         if "<html>" in rewritten or "<html " in rewritten:
             return re.sub(
                 r"(<html[^>]*>)",
-                rf"\1\n<head>\n{injection}\n</head>\n",
+                lambda m: f"{m.group(1)}\n<head>\n{injection}\n</head>\n",
                 rewritten,
                 count=1,
             )
@@ -2267,11 +2267,16 @@ class DesignService:
         if "<head>" in html:
             return html.replace("<head>", f"<head>\n{injection}\n", 1)
         if "<head " in html:
-            return re.sub(r"(<head[^>]*>)", rf"\1\n{injection}\n", html, count=1)
+            return re.sub(
+                r"(<head[^>]*>)",
+                lambda m: f"{m.group(1)}\n{injection}\n",
+                html,
+                count=1,
+            )
         if "<html>" in html or "<html " in html:
             return re.sub(
                 r"(<html[^>]*>)",
-                rf"\1\n<head>\n{injection}\n</head>\n",
+                lambda m: f"{m.group(1)}\n<head>\n{injection}\n</head>\n",
                 html,
                 count=1,
             )

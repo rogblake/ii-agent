@@ -1,0 +1,27 @@
+"""Shared constants for source-mapping sync."""
+
+from __future__ import annotations
+
+DESIGN_MODE_MANIFEST_FILENAME = "design-mode.manifest.json"
+_DESIGN_MODE_CSS_OVERRIDES_START = "/* === Design Mode Overrides (ii-agent) === */"
+_DESIGN_MODE_CSS_OVERRIDES_END = "/* === End Design Mode Overrides === */"
+_DESIGN_MODE_HTML_TAG_NAMES: set[str] = {
+    "a", "abbr", "address", "area", "article", "aside", "audio", "b", "base", "bdi", "bdo",
+    "blockquote", "body", "br", "button", "canvas", "caption", "cite", "code", "col", "colgroup",
+    "data", "datalist", "dd", "del", "details", "dfn", "dialog", "div", "dl", "dt", "em",
+    "embed", "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5",
+    "h6", "head", "header", "hgroup", "hr", "html", "i", "iframe", "img", "input", "ins", "kbd",
+    "label", "legend", "li", "link", "main", "map", "mark", "menu", "meta", "meter", "nav", "noscript",
+    "object", "ol", "optgroup", "option", "output", "p", "param", "picture", "pre", "progress", "q",
+    "rp", "rt", "ruby", "s", "samp", "script", "section", "select", "small", "source", "span", "strong",
+    "style", "sub", "summary", "sup", "svg", "table", "tbody", "td", "template", "textarea", "tfoot",
+    "th", "thead", "time", "title", "tr", "track", "u", "ul", "var", "video", "wbr", "path", "g", "circle",
+    "rect", "line", "polyline", "polygon", "ellipse", "text", "defs", "clipPath", "mask", "linearGradient",
+    "radialGradient", "stop", "use", "symbol",
+}
+
+
+def _truncate_for_log(value: str, limit: int = 4000) -> str:
+    if len(value) <= limit:
+        return value
+    return value[:limit] + "\n...[truncated]"

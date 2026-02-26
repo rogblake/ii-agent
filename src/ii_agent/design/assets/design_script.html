@@ -2447,11 +2447,11 @@
                             if (!props.hasOwnProperty(prop)) continue;
                             var v = props[prop];
                             if (v === undefined || v === null || v === '') continue;
-                            var sv = String(v).replace(/[\\n\\r]/g, ' ').trim();
+                            var sv = String(v).replace(/[\n\r]/g, ' ').trim();
                             decls.push(prop + ': ' + sv + ' !important');
                         }
                         if (decls.length) {
-                            css += '[data-design-id=\"' + id + '\"] { ' + decls.join('; ') + '; }\\n';
+                            css += '[data-design-id="' + id + '"] { ' + decls.join('; ') + '; }\n';
                         }
                     }
                 } catch (e) {}

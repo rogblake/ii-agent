@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 
 from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.design.dependencies import DesignServiceDep
+from ii_agent.design.nano_banana.router import router as nano_banana_router
 from ii_agent.design.schemas import (
     AIChangeRequest,
     AIChangeResponse,
@@ -27,6 +28,9 @@ from ii_agent.design.schemas import (
 )
 
 router = APIRouter(prefix="/design-mode", tags=["Design Mode"])
+
+# Include Nano Banana sub-router → /design-mode/nano-banana/*
+router.include_router(nano_banana_router)
 
 _HTML_HEADERS = {
     "Cache-Control": "no-store",

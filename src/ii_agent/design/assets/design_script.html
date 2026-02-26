@@ -90,7 +90,7 @@
 	                var els = document.querySelectorAll('[data-design-id^="design-el-"]');
 	                els.forEach(function(el) {
 	                    var v = el.getAttribute('data-design-id') || '';
-	                    var m = v.match(/^design-el-(\\d+)$/);
+	                    var m = v.match(/^design-el-(\d+)$/);
 	                    if (m && m[1]) {
 	                        var n = parseInt(m[1], 10);
 	                        if (!isNaN(n) && n > max) max = n;
@@ -727,7 +727,7 @@
                 if (!element || !element.parentNode) return '';
 
                 var isAutoId = function(id) {
-                    try { return !!(id && /^design-el-\\d+$/.test(id)); } catch (e) { return false; }
+                    try { return !!(id && /^design-el-\d+$/.test(id)); } catch (e) { return false; }
                 };
 
                 var selfId = null;
@@ -1474,7 +1474,7 @@
                                     try { inlineTranslate = cs ? (cs.getPropertyValue('translate') || '') : ''; } catch (e2b) {}
                                 }
                                 try {
-                                    var mt = inlineTranslate.match(/(-?\\d+(?:\\.\\d+)?)px(?:\\s+(-?\\d+(?:\\.\\d+)?)px)?/);
+                                    var mt = inlineTranslate.match(/(-?\d+(?:\.\d+)?)px(?:\s+(-?\d+(?:\.\d+)?)px)?/);
                                     if (mt && mt[1]) {
                                         baseX = parseFloat(mt[1]) || 0;
                                         baseY = mt[2] ? (parseFloat(mt[2]) || 0) : 0;
@@ -1505,7 +1505,7 @@
                                 var baseX2 = 0;
                                 var baseY2 = 0;
                                 try {
-                                    var m2 = inlineTransform.match(/^\\s*translate\\(\\s*(-?\\d+(?:\\.\\d+)?)px\\s*,\\s*(-?\\d+(?:\\.\\d+)?)px\\s*\\)\\s*$/i);
+                                    var m2 = inlineTransform.match(/^\s*translate\(\s*(-?\d+(?:\.\d+)?)px\s*,\s*(-?\d+(?:\.\d+)?)px\s*\)\s*$/i);
                                     if (m2 && m2[1] && m2[2]) {
                                         isOurTranslate = true;
                                         baseX2 = parseFloat(m2[1]) || 0;
@@ -2812,7 +2812,7 @@
 	                    return String(v || '')
 	                        .trim()
 	                        .toLowerCase()
-	                        .replace(/[_\\s]+/g, '-')
+	                        .replace(/[_\s]+/g, '-')
 	                        .replace(/[^a-z0-9-]+/g, '')
 	                        .replace(/-+/g, '-')
 	                        .replace(/^-|-$/g, '');

@@ -119,7 +119,8 @@ class CreditService:
             {
                 "session_id": row.session_id,
                 "session_title": row.session_title or "Untitled Session",
-                "credits": row.credits,
+                # Stored as negative for consumption; expose usage as positive value.
+                "credits": abs(row.credits),
                 "updated_at": row.updated_at,
             }
             for row in result
@@ -165,6 +166,33 @@ class CreditService:
         except SQLAlchemyError:
             logger.error("DB error deducting credits for %s", user_id, exc_info=True)
             raise
+
+    async def deduct_and_track_session_usage(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+        amount: float,
+    ) -> bool:
+        """Deduct credits and record usage against a session.
+
+        Returns ``True`` if deduction/tracking completed or amount <= 0.
+        Returns ``False`` when deduction fails (insufficient balance, missing user).
+        """
+        if amount <= 0:
+            return True
+
+        success = await self.deduct(db, user_id, amount)
+        if not success:
+            return False
+
+        await self.accumulate_session_usage(
+            db,
+            session_id,
+            -amount,  # negative = consumption
+        )
+        return True
 
     async def add(
         self,
@@ -268,4 +296,3 @@ class CreditService:
                 "Error getting session usage for %s", session_id, exc_info=True
             )
             raise
-

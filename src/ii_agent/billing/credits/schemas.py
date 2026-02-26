@@ -21,7 +21,7 @@ class SessionCreditHistory(BaseModel):
 
     session_id: str
     session_title: str = Field(description="Name/title of the session")
-    credits: float = Field(description="Total credits used in this session")
+    credits: float = Field(description="Total credits used in this session (positive value)")
     updated_at: datetime = Field(description="When the session was last updated")
 
 

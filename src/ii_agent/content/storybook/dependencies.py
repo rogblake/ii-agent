@@ -1,5 +1,7 @@
 """FastAPI dependencies for storybook domain."""
 
+from __future__ import annotations
+
 from typing import Annotated
 
 from fastapi import Depends
@@ -11,6 +13,7 @@ from ii_agent.content.storybook.service import StorybookService
 from ii_agent.content.storybook.export_service import StorybookExportService
 from ii_agent.content.storybook.version_service import StorybookVersionService
 from ii_agent.content.storybook.voice_service import StorybookVoiceService
+from ii_agent.content.storybook.edit_service import StorybookEditService
 
 
 # ==================== Repository Dependencies ====================
@@ -68,6 +71,18 @@ def get_storybook_voice_service(
     )
 
 
+def get_storybook_edit_service(
+    repo: StorybookRepositoryDep,
+    version_service: StorybookVersionServiceDep,
+) -> StorybookEditService:
+    """Provide StorybookEditService instance."""
+    return StorybookEditService(
+        repo=repo,
+        version_service=version_service,
+    )
+
+
 StorybookExportServiceDep = Annotated[StorybookExportService, Depends(get_storybook_export_service)]
 StorybookVersionServiceDep = Annotated[StorybookVersionService, Depends(get_storybook_version_service)]
 StorybookVoiceServiceDep = Annotated[StorybookVoiceService, Depends(get_storybook_voice_service)]
+StorybookEditServiceDep = Annotated[StorybookEditService, Depends(get_storybook_edit_service)]

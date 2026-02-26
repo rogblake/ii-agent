@@ -16,6 +16,7 @@ that imports this module (including the main API server).
 import ii_agent.core.logger  # noqa: F401, E402
 
 import os
+import platform
 
 from celery import Celery
 from celery.signals import setup_logging, worker_process_init
@@ -66,11 +67,37 @@ def get_celery_result_backend() -> str:
     return get_celery_broker_url()
 
 
+def get_celery_worker_pool() -> str:
+    """Get Celery worker pool implementation.
+
+    Defaults to ``solo`` on macOS to avoid prefork crashes with native SDKs.
+    Use CELERY_WORKER_POOL to override explicitly in any environment.
+    """
+    configured_pool = os.environ.get("CELERY_WORKER_POOL")
+    if configured_pool:
+        return configured_pool
+    if platform.system() == "Darwin":
+        return "solo"
+    return "prefork"
+
+
+def get_celery_worker_concurrency(worker_pool: str) -> int:
+    """Get worker concurrency with pool-aware defaults."""
+    configured = os.environ.get("CELERY_WORKER_CONCURRENCY")
+    if configured:
+        return int(configured)
+    if worker_pool == "solo":
+        return 1
+    return 4
+
+
 celery_app = Celery(
     "ii_agent",
     broker=get_celery_broker_url(),
     backend=get_celery_result_backend(),
 )
+
+worker_pool = get_celery_worker_pool()
 
 celery_app.conf.update(
     task_serializer="json",
@@ -84,8 +111,9 @@ celery_app.conf.update(
     task_reject_on_worker_lost=True,
     task_time_limit=3600,
     task_soft_time_limit=3300,
+    worker_pool=worker_pool,
     worker_prefetch_multiplier=1,
-    worker_concurrency=4,
+    worker_concurrency=get_celery_worker_concurrency(worker_pool),
     worker_max_tasks_per_child=100,
     broker_connection_retry_on_startup=True,
     broker_pool_limit=10,

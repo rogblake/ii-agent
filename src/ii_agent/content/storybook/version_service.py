@@ -44,8 +44,24 @@ class StorybookVersionService:
         page_updates: Dict[str, Any],
     ) -> Optional[StorybookDetail]:
         """Create a new version of a storybook with an updated page."""
+        return await self.create_storybook_version_multi_page(
+            db,
+            source_storybook_id=source_storybook_id,
+            page_updates={edited_page_number: page_updates},
+        )
+
+    async def create_storybook_version_multi_page(
+        self,
+        db: AsyncSession,
+        *,
+        source_storybook_id: str,
+        page_updates: Dict[int, Dict[str, Any]],
+    ) -> Optional[StorybookDetail]:
+        """Create a new version with updates applied to one or more pages."""
         source = await self._repo.get_by_id(db, source_storybook_id)
         if not source:
+            return None
+        if not page_updates:
             return None
 
         new_storybook = Storybook(
@@ -63,19 +79,20 @@ class StorybookVersionService:
 
         new_pages = []
         for page in source.pages or []:
-            page_metadata = page.page_metadata or {}
+            page_metadata = dict(page.page_metadata or {})
             image_url = page.image_url
             html_content = page.html_content
             text_content = page.text_content
             audio_link = page.audio_link
 
-            if page.page_number == edited_page_number:
-                image_url = page_updates.get("image_url", image_url)
-                html_content = page_updates.get("html_content", html_content)
-                text_content = page_updates.get("text_content", text_content)
-                audio_link = page_updates.get("audio_link", audio_link)
-                if "image_prompt" in page_updates:
-                    page_metadata["image_prompt"] = page_updates["image_prompt"]
+            updates = page_updates.get(page.page_number) or {}
+            if updates:
+                image_url = updates.get("image_url", image_url)
+                html_content = updates.get("html_content", html_content)
+                text_content = updates.get("text_content", text_content)
+                audio_link = updates.get("audio_link", audio_link)
+                if "image_prompt" in updates:
+                    page_metadata["image_prompt"] = updates["image_prompt"]
 
             new_pages.append(StorybookPage(
                 id=str(uuid.uuid4()),

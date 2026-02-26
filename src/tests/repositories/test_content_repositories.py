@@ -356,4 +356,4 @@ async def test_storybook_repository_single_page_not_found_and_version_paths(
     assert without_status.style_json["generation"]["total_pages"] == 9
 
     version_family = await repo.get_version_family(db_session, root.id)
-    assert [storybook.id for storybook in version_family] == [root.id]
+    assert [storybook.id for storybook in version_family] == [child.id, root.id]

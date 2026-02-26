@@ -12,6 +12,7 @@ from celery import shared_task
 from ii_agent.celery.decorators import with_task_context
 from ii_agent.celery.manager import get_celery_container
 from ii_agent.celery.utils import queue_task
+from ii_agent.billing.credits.utils import usd_to_credits
 from ii_agent.core.logger import logger
 from ii_agent.core.redis import cancel
 
@@ -34,10 +35,6 @@ def _run_async(coro: Any) -> Any:
         return future.result()
     return loop.run_until_complete(coro)
 
-
-# Credit calculation constants
-# 100 credits = $1.5 USD
-USD_TO_CREDITS_MULTIPLIER = 100 / 1.5  # ≈ 66.67
 
 # Default image generation cost in USD (fallback if not returned by tool)
 DEFAULT_IMAGE_COST_USD = 0.02
@@ -88,7 +85,7 @@ def _estimate_page_credits(
 ) -> float:
     """Estimate total credits needed for one storybook page."""
     total_usd = image_cost_usd + max(audio_cost_usd, 0.0)
-    return total_usd * USD_TO_CREDITS_MULTIPLIER
+    return usd_to_credits(total_usd)
 
 
 async def _check_user_credits(user_id: str, required_credits: float) -> tuple[bool, float]:
@@ -119,13 +116,13 @@ async def _deduct_storybook_credits(
 
     container = get_celery_container()
     async with get_db_session_local() as db_session:
-        success = await container.credit_service.deduct(
-            db_session, user_id, credits_amount
+        success = await container.credit_service.deduct_and_track_session_usage(
+            db_session,
+            user_id=user_id,
+            session_id=session_id,
+            amount=credits_amount,
         )
         if success:
-            await container.credit_service.accumulate_session_usage(
-                db_session, session_id, -credits_amount
-            )
             logger.info(
                 "Charged %.4f credits for storybook: %s", credits_amount, description
             )
@@ -577,9 +574,9 @@ async def _generate_storybook_page_async(
     if scene_counted:
         actual_image_cost = DEFAULT_IMAGE_COST_USD
         actual_audio_cost = voice_cost_usd if voice_enabled else 0.0
-        page_credits = (actual_image_cost + actual_audio_cost) * USD_TO_CREDITS_MULTIPLIER
+        page_credits = usd_to_credits(actual_image_cost + actual_audio_cost)
 
-        await _deduct_storybook_credits(
+        charged = await _deduct_storybook_credits(
             user_id=session.user_id,
             session_id=session_id,
             credits_amount=page_credits,
@@ -588,6 +585,10 @@ async def _generate_storybook_page_async(
                 f"(image: ${actual_image_cost:.4f}, audio: ${actual_audio_cost:.4f})"
             ),
         )
+        if not charged:
+            error_msg = "insufficient_credits"
+            await _fail_storybook(storybook_id, error_msg, failure_payload)
+            return {"status": "failed", "error": error_msg}
 
     async with get_db_session_local() as db_session:
         await container.storybook_service.update_generation_status(

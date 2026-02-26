@@ -1,6 +1,7 @@
 import asyncio
 
 from ii_agent.celery import tasks
+from ii_agent.billing.credits.utils import usd_to_credits
 
 
 def test_get_celery_loop_reuses_single_loop(monkeypatch):
@@ -25,4 +26,4 @@ def test_page_mapping_helpers():
 def test_credit_estimation_math_is_deterministic():
     value = tasks._estimate_page_credits(image_cost_usd=0.03, audio_cost_usd=0.02)
 
-    assert round(value, 4) == round((0.05 * tasks.USD_TO_CREDITS_MULTIPLIER), 4)
+    assert round(value, 4) == round(usd_to_credits(0.05), 4)

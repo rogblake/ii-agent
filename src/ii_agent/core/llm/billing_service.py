@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.billing.credits.pricing import ModelPricing
+from ii_agent.billing.credits.utils import usd_to_credits
+from ii_agent.core.exceptions import PaymentRequiredError
 from ii_agent.core.llm.token_record import TokenRecord
 
 if TYPE_CHECKING:
@@ -15,10 +17,6 @@ if TYPE_CHECKING:
     from ii_agent.core.config.settings import Settings
 
 logger = logging.getLogger(__name__)
-
-# 100 credits = $1.5 USD  →  1 USD = 100/1.5 credits ≈ 66.67
-USD_TO_CREDITS_MULTIPLIER = 100 / 1.5
-
 
 class LLMBillingService:
     """Calculate token costs, deduct credits, and record session usage."""
@@ -61,10 +59,21 @@ class LLMBillingService:
         if credits <= 0:
             return 0.0
 
-        await self._credit_service.deduct(db, user_id, credits)
-        await self._credit_service.accumulate_session_usage(
-            db, session_id, -credits  # negative = consumption
+        charged = await self._credit_service.deduct_and_track_session_usage(
+            db,
+            user_id=user_id,
+            session_id=session_id,
+            amount=credits,
         )
+        if not charged:
+            logger.warning(
+                "Insufficient credits for model %s (user=%s, session=%s) charge=%.4f",
+                token_record.model_id,
+                user_id,
+                session_id,
+                credits,
+            )
+            raise PaymentRequiredError("Insufficient credits")
 
         logger.info(
             "Deducted %.4f credits for model %s (user=%s, session=%s) — "
@@ -112,4 +121,4 @@ class LLMBillingService:
             + cache_read_cost + record.direct_cost
         )
 
-        return total_usd * USD_TO_CREDITS_MULTIPLIER / 1.5
+        return usd_to_credits(total_usd)

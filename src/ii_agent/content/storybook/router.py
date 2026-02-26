@@ -2,16 +2,17 @@
 
 import logging
 import json
-from typing import Optional
+from typing import Dict, List, Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, Query, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 
-from ii_agent.core.exceptions import ValidationError
+from ii_agent.core.exceptions import PaymentRequiredError, ValidationError
 from ii_agent.sessions.dependencies import SessionServiceDep
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.auth.dependencies import CurrentUser, DBSession
+from ii_agent.billing.credits.dependencies import CreditServiceDep
 from ii_agent.content.storybook.exceptions import (
     StorybookAccessDeniedError,
     StorybookExportError,
@@ -22,19 +23,25 @@ from ii_agent.content.storybook.exceptions import (
 from ii_agent.content.storybook.dependencies import (
     StorybookServiceDep,
     StorybookExportServiceDep,
+    StorybookEditServiceDep,
     StorybookVersionServiceDep,
     StorybookVoiceServiceDep,
 )
 from ii_agent.content.storybook.schemas import (
+    DesignChange,
+    SaveEditsRequest,
+    SaveEditsResponse,
     StorybookDetail,
     StorybookGenerationResponse,
     StorybookListResponse,
+    VersionHistoryResponse,
     StorybookVoiceOverResponse,
     PageTextUpdateRequest,
     PageRegenerateRequest,
     StorybookVersionResponse,
 )
 from ii_agent.auth.users.dependencies import UserServiceDep
+from ii_agent.billing.credits.utils import usd_to_credits
 from ii_agent.content.media.service import _generate_image
 
 logger = logging.getLogger(__name__)
@@ -296,6 +303,171 @@ async def regenerate_page_image(
         raise StorybookVersionError("Failed to create new storybook version")
 
     return StorybookVersionResponse(success=True, storybook=new_storybook)
+
+
+@router.get("/{storybook_id}/edit/proxy", response_class=HTMLResponse)
+async def proxy_storybook_edit_page(
+    storybook_id: str,
+    current_user: CurrentUser,
+    service: StorybookServiceDep,
+    edit_service: StorybookEditServiceDep,
+    session_service: SessionServiceDep,
+    db: DBSession,
+    page_number: int = Query(..., description="Page number (1-indexed)", ge=1),
+) -> HTMLResponse:
+    """Fetch storybook page HTML with design mode runtime injected."""
+    storybook = await service.get_storybook_detail(
+        db,
+        storybook_id=storybook_id,
+        include_pages=False,
+    )
+    if not storybook:
+        raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
+
+    session_data = await session_service.get_session_details(
+        db,
+        storybook.session_id,
+        str(current_user.id),
+    )
+    if not session_data:
+        raise StorybookAccessDeniedError("Access denied to this storybook")
+
+    html_content = await edit_service.get_page_html_with_runtime(
+        db,
+        storybook_id=storybook_id,
+        page_number=page_number,
+    )
+    if not html_content:
+        raise StorybookPageNotFoundError(
+            f"Page {page_number} not found or has no HTML content"
+        )
+
+    return HTMLResponse(
+        content=html_content,
+        headers={
+            "Content-Security-Policy": "frame-ancestors 'self'",
+            "X-Frame-Options": "SAMEORIGIN",
+        },
+    )
+
+
+@router.post("/{storybook_id}/edit/save", response_model=SaveEditsResponse)
+async def save_storybook_edits(
+    storybook_id: str,
+    request: SaveEditsRequest,
+    current_user: CurrentUser,
+    service: StorybookServiceDep,
+    edit_service: StorybookEditServiceDep,
+    credit_service: CreditServiceDep,
+    session_service: SessionServiceDep,
+    db: DBSession,
+) -> SaveEditsResponse:
+    """Apply visual edit changes and create one new storybook version."""
+    storybook = await service.get_storybook_detail(
+        db,
+        storybook_id=storybook_id,
+        include_pages=False,
+    )
+    if not storybook:
+        return SaveEditsResponse(success=False, error="Storybook not found")
+
+    session_data = await session_service.get_session_details(
+        db,
+        storybook.session_id,
+        str(current_user.id),
+    )
+    if not session_data:
+        return SaveEditsResponse(
+            success=False,
+            error="Access denied to this storybook",
+        )
+
+    if request.storybook_id != storybook_id:
+        return SaveEditsResponse(
+            success=False,
+            error="Path storybook_id does not match request.storybook_id",
+        )
+    if not request.page_changes:
+        return SaveEditsResponse(success=False, error="No changes to save")
+
+    page_changes: Dict[int, List[DesignChange]] = {}
+    image_urls: Dict[int, str] = {}
+    for page_change in request.page_changes:
+        if page_change.changes:
+            page_changes[page_change.page_number] = page_change.changes
+        if page_change.image_url:
+            image_urls[page_change.page_number] = page_change.image_url
+
+    if not page_changes and not image_urls:
+        return SaveEditsResponse(success=False, error="No changes to save")
+
+    try:
+        new_storybook, total_voice_cost_usd = await edit_service.save_all_page_edits(
+            db,
+            storybook_id=storybook_id,
+            page_changes=page_changes,
+            image_urls=image_urls,
+        )
+    except Exception as exc:
+        logger.error("Error saving storybook edits: %s", exc, exc_info=True)
+        return SaveEditsResponse(success=False, error=f"Error saving changes: {exc}")
+
+    if not new_storybook:
+        return SaveEditsResponse(success=False, error="Failed to save changes")
+
+    if total_voice_cost_usd > 0:
+        credits_to_deduct = usd_to_credits(total_voice_cost_usd)
+        deduct_success = await credit_service.deduct_and_track_session_usage(
+            db,
+            user_id=str(current_user.id),
+            session_id=storybook.session_id,
+            amount=credits_to_deduct,
+        )
+        if deduct_success:
+            logger.info(
+                "[Storybook Edit] Deducted %.4f credits (voice cost: $%.4f) for storybook %s",
+                credits_to_deduct,
+                total_voice_cost_usd,
+                storybook_id,
+            )
+        else:
+            await db.rollback()
+            raise PaymentRequiredError("Insufficient credits")
+
+    return SaveEditsResponse(success=True, storybook=new_storybook)
+
+
+@router.get("/{storybook_id}/versions", response_model=VersionHistoryResponse)
+async def get_storybook_versions(
+    storybook_id: str,
+    current_user: CurrentUser,
+    service: StorybookServiceDep,
+    edit_service: StorybookEditServiceDep,
+    session_service: SessionServiceDep,
+    db: DBSession,
+) -> VersionHistoryResponse:
+    """Get version history for a storybook family."""
+    storybook = await service.get_storybook_detail(
+        db,
+        storybook_id=storybook_id,
+        include_pages=False,
+    )
+    if not storybook:
+        raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
+
+    session_data = await session_service.get_session_details(
+        db,
+        storybook.session_id,
+        str(current_user.id),
+    )
+    if not session_data:
+        raise StorybookAccessDeniedError("Access denied to this storybook")
+
+    versions = await edit_service.get_version_history(
+        db,
+        storybook_id=storybook_id,
+    )
+    return VersionHistoryResponse(versions=versions)
 
 
 @router.get("/{storybook_id}/download")

@@ -8,6 +8,7 @@ from typing import Optional, Dict, Any, TYPE_CHECKING
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.billing.credits.service import CreditService
+from ii_agent.billing.credits.utils import usd_to_credits
 from ii_agent.content.storybook.repository import StorybookRepository
 from ii_agent.content.storybook.schemas import (
     StorybookDetail,
@@ -218,9 +219,6 @@ class StorybookVoiceService:
         force: bool = False,
     ) -> StorybookVoiceOverResponse:
         """Generate voice-over and deduct credits in one service call."""
-        # Credit calculation constant: 100 credits = $1.5 USD
-        USD_TO_CREDITS_MULTIPLIER = 100 / 1.5  # ~66.67
-
         updated_storybook, generated_any, total_voice_cost_usd = (
             await self.generate_voiceover(
                 db,
@@ -252,22 +250,27 @@ class StorybookVoiceService:
             )
 
         if total_voice_cost_usd > 0:
-            credits_to_deduct = total_voice_cost_usd * USD_TO_CREDITS_MULTIPLIER
-            deduct_success = await self._credit_service.deduct(
-                db, user_id, credits_to_deduct
+            credits_to_deduct = usd_to_credits(total_voice_cost_usd)
+            deduct_success = await self._credit_service.deduct_and_track_session_usage(
+                db,
+                user_id=user_id,
+                session_id=session_id,
+                amount=credits_to_deduct,
             )
             if deduct_success:
-                await self._credit_service.accumulate_session_usage(
-                    db, session_id, -credits_to_deduct
-                )
-                await db.commit()
                 logger.info(
                     f"[Storybook Voice] Deducted {credits_to_deduct:.4f} credits "
                     f"(voice cost: ${total_voice_cost_usd:.4f}) for storybook {storybook_id}"
                 )
             else:
+                await db.rollback()
                 logger.warning(
                     f"[Storybook Voice] Failed to deduct credits for user {user_id}"
+                )
+                return StorybookVoiceOverResponse(
+                    success=False,
+                    storybook=None,
+                    error="Insufficient credits",
                 )
 
         return StorybookVoiceOverResponse(success=True, storybook=updated_storybook)

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -174,7 +174,12 @@ class StorybookRepository:
         """Get all storybooks sharing the same root (for version history)."""
         query = (
             select(Storybook)
-            .where(Storybook.id == root_storybook_id)
+            .where(
+                or_(
+                    Storybook.id == root_storybook_id,
+                    Storybook.root_storybook_id == root_storybook_id,
+                )
+            )
             .order_by(Storybook.version.desc())
         )
         result = await db.execute(query)

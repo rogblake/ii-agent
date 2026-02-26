@@ -23,6 +23,7 @@ from ii_agent.chat.schemas import (
 )
 from ii_agent.chat.tool_service import ChatToolService
 from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.core.exceptions import PaymentRequiredError
 from ii_agent.core.llm.token_record import TokenTracker
 
 if TYPE_CHECKING:
@@ -271,6 +272,8 @@ class LLMExecutionService:
                 token_record=token_record,
                 is_user_model=billing_context.llm_config.is_user_model(),
             )
+        except PaymentRequiredError:
+            raise
         except Exception:
             logger.warning(
                 "Failed to bill LLM usage for session %s",

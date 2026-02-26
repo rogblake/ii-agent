@@ -2,10 +2,12 @@
 
 import logging
 import json
+import uuid
 from typing import Dict, List, Optional
 from urllib.parse import quote
+from pathlib import Path
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, File, Query, Response, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 from ii_agent.core.exceptions import PaymentRequiredError, ValidationError
@@ -39,10 +41,12 @@ from ii_agent.content.storybook.schemas import (
     PageTextUpdateRequest,
     PageRegenerateRequest,
     StorybookVersionResponse,
+    StorybookBackgroundUploadResponse,
 )
 from ii_agent.auth.users.dependencies import UserServiceDep
 from ii_agent.billing.credits.utils import usd_to_credits
 from ii_agent.content.media.service import _generate_image
+from ii_agent.core.storage.dependencies import MediaTemplateStorageDep
 
 logger = logging.getLogger(__name__)
 
@@ -468,6 +472,64 @@ async def get_storybook_versions(
         storybook_id=storybook_id,
     )
     return VersionHistoryResponse(versions=versions)
+
+
+@router.post(
+    "/{storybook_id}/edit/upload-background",
+    response_model=StorybookBackgroundUploadResponse,
+)
+async def upload_storybook_background(
+    storybook_id: str,
+    current_user: CurrentUser,
+    service: StorybookServiceDep,
+    session_service: SessionServiceDep,
+    media_storage: MediaTemplateStorageDep,
+    db: DBSession,
+    file: UploadFile = File(...),
+) -> StorybookBackgroundUploadResponse:
+    """Upload a storybook background/reference image."""
+    storybook = await service.get_storybook_detail(
+        db,
+        storybook_id=storybook_id,
+        include_pages=False,
+    )
+    if not storybook:
+        raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
+
+    session_data = await session_service.get_session_details(
+        db,
+        storybook.session_id,
+        str(current_user.id),
+    )
+    if not session_data:
+        raise StorybookAccessDeniedError("Access denied to this storybook")
+
+    content_type = (file.content_type or "").lower()
+    if not content_type.startswith("image/"):
+        raise ValidationError("Only image uploads are supported")
+
+    suffix = Path(file.filename or "").suffix.lower()
+    if not suffix:
+        ext_map = {
+            "image/png": ".png",
+            "image/jpeg": ".jpg",
+            "image/jpg": ".jpg",
+            "image/webp": ".webp",
+            "image/gif": ".gif",
+            "image/avif": ".avif",
+        }
+        suffix = ext_map.get(content_type, ".png")
+
+    storage_path = (
+        f"sessions/{storybook.session_id}/storybook/backgrounds/"
+        f"{uuid.uuid4().hex}{suffix}"
+    )
+    public_url = media_storage.upload_and_get_permanent_url(
+        file.file,
+        storage_path,
+        content_type=content_type,
+    )
+    return StorybookBackgroundUploadResponse(url=public_url, storage_path=storage_path)
 
 
 @router.get("/{storybook_id}/download")

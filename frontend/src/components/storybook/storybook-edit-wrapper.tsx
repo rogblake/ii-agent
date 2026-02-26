@@ -190,10 +190,9 @@ export function StorybookEditWrapper({
         const load = async () => {
             try {
                 const response = await axiosInstance.get(
-                    '/storybook-edit/proxy',
+                    `/storybooks/${storybookId}/edit/proxy`,
                     {
                         params: {
-                            storybook_id: storybookId,
                             page_number: pageNumber
                         },
                         responseType: 'text'

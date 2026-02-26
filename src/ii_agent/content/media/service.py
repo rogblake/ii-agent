@@ -232,7 +232,6 @@ class MediaTemplateService:
         file_service: Any,
     ) -> ReferenceImageResponse:
         """Generate a reference image, store it, and create a FileUpload record."""
-        from ii_agent.tools.image_generation.service import _generate_reference_image
         from ii_agent.files.models import FileUpload
 
         try:

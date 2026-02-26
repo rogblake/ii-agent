@@ -82,6 +82,7 @@ dependencies = [
   "ii-agent-tools",
   "sqlalchemy>=2.0.0",
   "google-cloud-secret-manager>=2.20.0",
+  "composio"
 ]
 
 [project.optional-dependencies]

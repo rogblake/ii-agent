@@ -465,11 +465,10 @@ class StorybookService {
      */
     getEditProxyUrl(storybookId: string, pageNumber: number): string {
         const params = new URLSearchParams({
-            storybook_id: storybookId,
             page_number: pageNumber.toString()
         })
         // Return full URL for iframe src (auth handled by axios interceptor when loading via srcDoc)
-        return `${this.baseURL}/storybook-edit/proxy?${params.toString()}`
+        return `${this.baseURL}/storybooks/${storybookId}/edit/proxy?${params.toString()}`
     }
 
     /**
@@ -484,7 +483,7 @@ class StorybookService {
             page_changes: pageChanges
         }
         const response = await axiosInstance.post<SaveEditsResponse>(
-            '/storybook-edit/save',
+            `/storybooks/${storybookId}/edit/save`,
             request
         )
         return response.data
@@ -494,11 +493,8 @@ class StorybookService {
      * Get version history for a storybook
      */
     async getVersionHistory(storybookId: string): Promise<VersionHistoryResponse> {
-        const params = new URLSearchParams({
-            storybook_id: storybookId
-        })
         const response = await axiosInstance.get<VersionHistoryResponse>(
-            `/storybook-edit/versions?${params.toString()}`
+            `/storybooks/${storybookId}/versions`
         )
         return response.data
     }
@@ -510,14 +506,11 @@ class StorybookService {
         storybookId: string,
         file: File
     ): Promise<StorybookBackgroundUploadResponse> {
-        const params = new URLSearchParams({
-            storybook_id: storybookId
-        })
         const formData = new FormData()
         formData.append('file', file)
 
         const response = await axiosInstance.post<StorybookBackgroundUploadResponse>(
-            `/storybook-edit/upload-background?${params.toString()}`,
+            `/storybooks/${storybookId}/edit/upload-background`,
             formData,
             {
                 headers: {

@@ -257,6 +257,18 @@ class VersionHistoryResponse(BaseModel):
 
 
 # ============================================================================
+# Storybook Upload Models
+# ============================================================================
+
+
+class StorybookBackgroundUploadResponse(BaseModel):
+    """Response model for storybook background/reference image upload."""
+
+    url: str = Field(..., description="Public URL of uploaded image")
+    storage_path: str = Field(..., description="Storage path of uploaded image")
+
+
+# ============================================================================
 # AI Feature Models
 # ============================================================================
 

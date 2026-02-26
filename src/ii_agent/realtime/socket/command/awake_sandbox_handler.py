@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING, Dict, Any
 
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
@@ -13,7 +14,7 @@ from ii_agent.realtime.socket.command.command_handler import (
     UserCommandType,
 )
 from ii_agent.engine.sandboxes.schemas import SandboxStatus
-from ii_agent.engine.sandboxes.e2b import E2BSandboxManager
+from ii_agent.engine.sandboxes.exceptions import SandboxNotFoundException
 
 if TYPE_CHECKING:
     from ii_agent.core.container import ServiceContainer
@@ -33,21 +34,17 @@ class AwakeSandboxHandler(CommandHandler):
         status = SandboxStatus.NOT_INITIALIZED.value
         vscode_url = None
 
-        async with get_db_session_local() as db:
-            sandbox_record = await self.container.sandbox_service.resolve_sandbox_for_session(
-                db, session_info.id, session_service=self.container.session_service
-            )
-
-            if sandbox_record and sandbox_record.provider_sandbox_id:
-                # Connect to existing sandbox (this wakes it up)
-                sandbox_manager = await E2BSandboxManager.connect(
-                    sandbox_id=str(sandbox_record.id),
-                    session_id=str(sandbox_record.session_id),
-                    provider_sandbox_id=sandbox_record.provider_sandbox_id,
+        try:
+            async with get_db_session_local() as db:
+                sandbox_manager = await self.container.sandbox_service.wake_up_sandbox_by_session(
+                    db, uuid.UUID(session_info.id)
                 )
-                sandbox_info = await sandbox_manager.get_info()
-                status = sandbox_info.status.value
-                vscode_url = sandbox_info.vscode_url
+                if sandbox_manager:
+                    sandbox_info = await sandbox_manager.get_info()
+                    status = sandbox_info.status.value
+                    vscode_url = sandbox_info.vscode_url
+        except SandboxNotFoundException:
+            pass
 
         await self.send_event(
             RealtimeEvent(

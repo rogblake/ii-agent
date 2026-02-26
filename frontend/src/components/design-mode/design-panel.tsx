@@ -98,7 +98,7 @@ export function DesignPanel({ className }: { className?: string }) {
 
             // Use the full AI iframe plan endpoint
             const response = await axiosInstance.post(
-                '/design-mode/ai-iframe-plan',
+                '/projects/design/ai-iframe-plan',
                 {
                     session_id: sessionId,
                     user_request: userRequest,

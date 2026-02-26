@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ii_agent.chat.schemas import ErrorTextContent, JsonResultContent
-from ii_agent.design import lucide_catalog
+from ii_agent.shared.design import lucide_catalog
 
 from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
 from .design_mode_iframe_ai_list_icons import _FALLBACK_LUCIDE_ICON_NAMES

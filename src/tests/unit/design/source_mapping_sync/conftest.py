@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 import pytest
 
-from ii_agent.design.schemas import ElementContext, StyleChange
+from ii_agent.projects.design.schemas import ElementContext, StyleChange
 
 
 class FakeSandbox:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from ii_agent.design.source_mapping_sync._workspace import (
+from ii_agent.projects.design.source_mapping_sync._workspace import (
     _normalize_react_source_file_name,
     _normalize_workspace_file_path,
     _normalize_workspace_path,

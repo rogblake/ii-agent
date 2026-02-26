@@ -7,14 +7,14 @@ import re
 from typing import Any, Dict, List, Optional
 
 from ii_agent.core.logger import logger
-from ii_agent.design.schemas import ElementContext, StyleChange
-from ii_agent.design.source_mapping_sync._tag_utils import (
+from ii_agent.projects.design.schemas import ElementContext, StyleChange
+from ii_agent.projects.design.source_mapping_sync._tag_utils import (
     _extract_opening_tag_name,
     _find_matching_closing_tag_end,
     _find_tag_end,
     _normalize_whitespace_for_match,
 )
-from ii_agent.design.source_mapping_sync._workspace import (
+from ii_agent.projects.design.source_mapping_sync._workspace import (
     _normalize_react_source_file_name,
     _normalize_workspace_file_path,
     _parse_search_paths,

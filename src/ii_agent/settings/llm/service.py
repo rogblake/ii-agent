@@ -23,7 +23,7 @@ from ii_agent.settings.llm.schemas import (
 )
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.schemas import SessionInfo
-from ii_agent.utils.encryption import encryption_manager
+from ii_agent.core.secrets.encryption import encryption_manager
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.config.settings import Settings
 

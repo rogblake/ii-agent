@@ -1,6 +1,6 @@
 from cryptography.fernet import Fernet
 
-from ii_agent.utils.encryption import EncryptionManager
+from ii_agent.core.secrets.encryption import EncryptionManager
 
 
 def test_encrypt_decrypt_roundtrip():

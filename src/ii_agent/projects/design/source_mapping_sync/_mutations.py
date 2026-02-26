@@ -9,19 +9,19 @@ import shlex
 from typing import Any, Dict, List, Optional
 
 from ii_agent.core.logger import logger
-from ii_agent.design.source_mapping_sync._constants import (
+from ii_agent.projects.design.source_mapping_sync._constants import (
     _DESIGN_MODE_CSS_OVERRIDES_END,
     _DESIGN_MODE_CSS_OVERRIDES_START,
     _truncate_for_log,
 )
-from ii_agent.design.source_mapping_sync._tag_utils import (
+from ii_agent.projects.design.source_mapping_sync._tag_utils import (
     _extract_opening_tag_name,
     _find_element_span_for_design_id,
     _find_matching_closing_tag_end,
     _find_opening_tag_bounds_for_design_id,
     _find_tag_end,
 )
-from ii_agent.design.source_mapping_sync._workspace import (
+from ii_agent.projects.design.source_mapping_sync._workspace import (
     _parse_search_paths,
     _read_file_with_workspace_fallback,
     _score_globals_css_candidate,

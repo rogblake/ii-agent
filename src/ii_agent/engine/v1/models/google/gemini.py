@@ -24,7 +24,7 @@ from ii_agent.engine.v1.run.agent import RunOutput
 from ii_agent.core.logger import logger
 
 try:
-    from ii_agent.utils.gemini_schema import create_function_declaration
+    from ii_agent.engine.v1.models.google.gemini_schema import create_function_declaration
     from google import genai
     from google.genai import Client as GeminiClient
     from google.genai.errors import ClientError, ServerError

@@ -21,18 +21,6 @@ class DesignSessionAccessDeniedError(PermissionDeniedError):
     pass
 
 
-class DesignSlideNotFoundError(NotFoundError):
-    """Raised when one or more target slides are missing."""
-
-    pass
-
-
-class DesignValidationError(ValidationError):
-    """Raised when the design request payload is invalid."""
-
-    pass
-
-
 class DesignProxyHostNotAllowedError(PermissionDeniedError):
     """Raised when proxy host does not match session sandbox/public host."""
 
@@ -47,5 +35,11 @@ class DesignProxyFetchError(BadGatewayError):
 
 class DesignSandboxUnavailableError(ServiceUnavailableError):
     """Raised when the sandbox required for sync cannot be resolved."""
+
+    pass
+
+
+class DesignValidationError(ValidationError):
+    """Raised when the design request payload is invalid."""
 
     pass

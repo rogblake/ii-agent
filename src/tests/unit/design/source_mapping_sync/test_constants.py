@@ -1,6 +1,6 @@
 """Tests for _constants.py."""
 
-from ii_agent.design.source_mapping_sync._constants import (
+from ii_agent.projects.design.source_mapping_sync._constants import (
     DESIGN_MODE_MANIFEST_FILENAME,
     _DESIGN_MODE_CSS_OVERRIDES_END,
     _DESIGN_MODE_CSS_OVERRIDES_START,

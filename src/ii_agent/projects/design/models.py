@@ -1,11 +1,11 @@
-"""Internal domain models for design synchronization flows."""
+"""Internal domain models for project design synchronization flows."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import List
 
-from ii_agent.design.schemas import StyleChange
+from ii_agent.projects.design.schemas import StyleChange
 
 
 @dataclass(slots=True)

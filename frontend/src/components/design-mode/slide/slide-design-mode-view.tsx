@@ -209,7 +209,7 @@ export function SlideDesignModeView({
 
         const load = async () => {
             try {
-                const response = await axiosInstance.get('/design-mode/state', {
+                const response = await axiosInstance.get('/projects/design/state', {
                     params: { session_id: sessionId }
                 })
                 const serverChanges = Array.isArray(response?.data?.changes)
@@ -311,7 +311,7 @@ export function SlideDesignModeView({
         const load = async () => {
             try {
                 const response = await axiosInstance.get(
-                    '/design-mode/slide-deck-proxy',
+                    '/slides/design/slide-deck-proxy',
                     {
                         params: {
                             session_id: sessionId,
@@ -611,7 +611,7 @@ export function SlideDesignModeView({
         async (changes: DesignChange[]) => {
             if (!sessionId) return
             try {
-                await axiosInstance.post('/design-mode/state', {
+                await axiosInstance.post('/projects/design/state', {
                     session_id: sessionId,
                     changes,
                     redo_changes: redoChangesRef.current
@@ -921,7 +921,7 @@ export function SlideDesignModeView({
                 await persistState(changesToSync)
 
                 const response = await axiosInstance.post(
-                    '/design-mode/slide-deck-sync-state',
+                    '/slides/design/slide-deck-sync-state',
                     {
                         session_id: sessionId,
                         presentation_name: presentationName

@@ -73,7 +73,7 @@ export function AIChatModal({
         setIsLoading(true)
 
         try {
-            const response = await axiosInstance.post('/design-mode/ai-change', {
+            const response = await axiosInstance.post('/projects/design/ai-change', {
                 session_id: sessionId,
                 element_info: {
                     designId: element.designId,

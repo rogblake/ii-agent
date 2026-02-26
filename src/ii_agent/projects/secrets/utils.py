@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, Optional
 
-from ii_agent.utils.encryption import encryption_manager
+from ii_agent.core.secrets.encryption import encryption_manager
 
 
 def _encrypt_secrets_payload(payload: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:

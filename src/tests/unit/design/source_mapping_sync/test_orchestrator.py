@@ -4,8 +4,8 @@ import uuid
 
 import pytest
 
-from ii_agent.design.schemas import StyleChange
-from ii_agent.design.source_mapping_sync._orchestrator import (
+from ii_agent.projects.design.schemas import StyleChange
+from ii_agent.projects.design.source_mapping_sync._orchestrator import (
     _apply_changes_with_source_mapping,
     _emit_design_mode_sync_progress,
     _emit_sync_progress,

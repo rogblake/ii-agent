@@ -6,7 +6,7 @@ import re
 from typing import Any
 
 from ii_agent.chat.schemas import ErrorTextContent, JsonResultContent
-from ii_agent.design.schemas import IframeDocumentSnapshotNode
+from ii_agent.projects.design.schemas import IframeDocumentSnapshotNode
 
 from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
 from .design_mode_tooling import parse_tool_call_json

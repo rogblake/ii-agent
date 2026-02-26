@@ -111,7 +111,7 @@ export function useDesignMode(
 
         const load = async () => {
             try {
-                const response = await axiosInstance.get('/design-mode/proxy', {
+                const response = await axiosInstance.get('/projects/design/proxy', {
                     params: { session_id: sessionId, url: sandboxUrl },
                     responseType: 'text'
                 })

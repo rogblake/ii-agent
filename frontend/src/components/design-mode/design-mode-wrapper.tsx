@@ -243,7 +243,7 @@ export function DesignModeWrapper({
 
         const load = async () => {
             try {
-                const response = await axiosInstance.get('/design-mode/proxy', {
+                const response = await axiosInstance.get('/projects/design/proxy', {
                     params: { session_id: sessionId, url: trackedUrl },
                     responseType: 'text'
                 })
@@ -323,7 +323,7 @@ export function DesignModeWrapper({
 
         const load = async () => {
             try {
-                const response = await axiosInstance.get('/design-mode/state', {
+                const response = await axiosInstance.get('/projects/design/state', {
                     params: { session_id: sessionId }
                 })
                 const serverChanges = Array.isArray(response?.data?.changes)
@@ -1003,7 +1003,7 @@ export function DesignModeWrapper({
         async (changes: DesignChange[]) => {
             if (!sessionId) return
             try {
-                await axiosInstance.post('/design-mode/state', {
+                await axiosInstance.post('/projects/design/state', {
                     session_id: sessionId,
                     changes,
                     redo_changes: redoChangesRef.current
@@ -1100,7 +1100,7 @@ export function DesignModeWrapper({
             try {
                 // Ensure the latest local changes are flushed to DB so sync uses the current state.
                 if (changesToSync.length > 0) {
-                    await axiosInstance.post('/design-mode/state', {
+                    await axiosInstance.post('/projects/design/state', {
                         session_id: sessionId,
                         changes: changesToSync,
                         redo_changes: redoChangesRef.current
@@ -1108,7 +1108,7 @@ export function DesignModeWrapper({
                 }
 
                 const response = await axiosInstance.post(
-                    '/design-mode/sync-state',
+                    '/projects/design/sync-state',
                     {
                         session_id: sessionId
                     }
@@ -1150,7 +1150,7 @@ export function DesignModeWrapper({
 
                 if (selectedKeySet !== null) {
                     try {
-                        await axiosInstance.post('/design-mode/state', {
+                        await axiosInstance.post('/projects/design/state', {
                             session_id: sessionId,
                             changes: mergedRemaining,
                             redo_changes: redoChangesRef.current

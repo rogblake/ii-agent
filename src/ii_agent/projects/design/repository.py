@@ -1,22 +1,19 @@
-"""Repository layer for design domain - data access only."""
+"""Repository layer for project design domain - data access only."""
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any, Iterable, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.content.slides.models import SlideContent
-from ii_agent.content.slides.repository import SlideContentRepository
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
 
 
-class DesignRepository:
-    """Data access facade for design workflows.
+class ProjectDesignRepository:
+    """Data access facade for project design workflows.
 
-    This repository composes existing session/slide repositories so design
+    This repository composes existing session repository so project design
     service logic does not perform direct ORM queries.
     """
 
@@ -24,10 +21,8 @@ class DesignRepository:
         self,
         *,
         session_repo: SessionRepository,
-        slide_repo: SlideContentRepository,
     ) -> None:
         self._session_repo = session_repo
-        self._slide_repo = slide_repo
 
     async def get_session_for_user(
         self,
@@ -45,51 +40,6 @@ class DesignRepository:
         session_id: str,
     ) -> Optional[Session]:
         return await self._session_repo.get_by_id(db, session_id)
-
-    async def get_slide(
-        self,
-        db: AsyncSession,
-        *,
-        session_id: str,
-        presentation_name: str,
-        slide_number: int,
-    ) -> Optional[SlideContent]:
-        return await self._slide_repo.get_by_session_and_presentation_and_number(
-            db,
-            session_id=session_id,
-            presentation_name=presentation_name,
-            slide_number=slide_number,
-        )
-
-    async def get_presentation_slides(
-        self,
-        db: AsyncSession,
-        *,
-        session_id: str,
-        presentation_name: str,
-    ) -> list[SlideContent]:
-        return await self._slide_repo.get_slides_by_session_and_presentation(
-            db,
-            session_id=session_id,
-            presentation_name=presentation_name,
-        )
-
-    async def update_slide_html(
-        self,
-        db: AsyncSession,
-        *,
-        slide: SlideContent,
-        html: str,
-        mark_synced: bool = True,
-    ) -> None:
-        slide.slide_content = html
-        now = datetime.now(timezone.utc)
-        slide.updated_at = now
-        if mark_synced:
-            metadata = dict(slide.slide_metadata or {})
-            metadata["last_design_mode_sync"] = now.isoformat()
-            slide.slide_metadata = metadata
-        await db.flush()
 
     @staticmethod
     def get_design_state(session: Session) -> tuple[list[Any], list[Any], Optional[int]]:

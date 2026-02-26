@@ -2,8 +2,8 @@
 
 import pytest
 
-from ii_agent.design.schemas import StyleChange
-from ii_agent.design.source_mapping_sync._mutations import (
+from ii_agent.projects.design.schemas import StyleChange
+from ii_agent.projects.design.source_mapping_sync._mutations import (
     _apply_delete_change_by_design_id,
     _apply_icon_change_by_design_id,
     _apply_icon_change_by_dynamic_pattern,

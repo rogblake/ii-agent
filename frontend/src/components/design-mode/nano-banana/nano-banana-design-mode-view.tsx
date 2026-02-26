@@ -215,7 +215,7 @@ export function NanoBananaDesignModeView({
                 const components = detectionState?.components || []
 
                 const response = await axiosInstance.post(
-                    '/design-mode/nano-banana/regenerate',
+                    '/slides/nano-banana/regenerate',
                     {
                         session_id: sessionId,
                         presentation_name: presentationName,
@@ -315,7 +315,7 @@ export function NanoBananaDesignModeView({
 
         try {
             const response = await axiosInstance.post(
-                '/design-mode/nano-banana/remove-background',
+                '/slides/nano-banana/remove-background',
                 {
                     session_id: sessionId,
                     presentation_name: presentationName,

@@ -43,7 +43,7 @@ class NanoBananaRepository:
         """Validate user has access to the session. Raises if not found or denied."""
         session = await self._session_repo.get_by_id_and_user(db, session_id, user_id)
         if not session:
-            from ii_agent.design.exceptions import (
+            from ii_agent.projects.design.exceptions import (
                 DesignSessionAccessDeniedError,
                 DesignSessionNotFoundError,
             )

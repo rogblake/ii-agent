@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional
 
-from ii_agent.design.source_mapping_sync._constants import DESIGN_MODE_MANIFEST_FILENAME
-from ii_agent.design.source_mapping_sync._workspace import (
+from ii_agent.projects.design.source_mapping_sync._constants import DESIGN_MODE_MANIFEST_FILENAME
+from ii_agent.projects.design.source_mapping_sync._workspace import (
     _normalize_workspace_path,
     _read_file_with_workspace_fallback,
 )

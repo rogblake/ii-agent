@@ -5,12 +5,12 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from ii_agent.design.schemas import StyleChange
-from ii_agent.design.source_mapping_sync._backfill import (
+from ii_agent.projects.design.schemas import StyleChange
+from ii_agent.projects.design.source_mapping_sync._backfill import (
     _extract_anchor_snippets,
     _split_class_tokens,
 )
-from ii_agent.design.source_mapping_sync._tag_utils import (
+from ii_agent.projects.design.source_mapping_sync._tag_utils import (
     _extract_opening_tag_name,
     _find_opening_tag_bounds_for_design_id,
     _is_html_tag_name_for_design_mode,

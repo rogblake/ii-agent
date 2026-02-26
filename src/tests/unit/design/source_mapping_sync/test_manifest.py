@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from ii_agent.design.source_mapping_sync._manifest import (
+from ii_agent.projects.design.source_mapping_sync._manifest import (
     _load_design_mode_manifest_mapping,
     _parse_design_mode_manifest_mapping,
 )

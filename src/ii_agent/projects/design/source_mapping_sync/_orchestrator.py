@@ -6,21 +6,21 @@ import uuid
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from ii_agent.core.logger import logger
-from ii_agent.design.schemas import StyleChange
-from ii_agent.design.source_mapping_sync._constants import (
+from ii_agent.projects.design.schemas import StyleChange
+from ii_agent.projects.design.source_mapping_sync._constants import (
     DESIGN_MODE_MANIFEST_FILENAME,
     _truncate_for_log,
 )
-from ii_agent.design.source_mapping_sync._backfill import (
+from ii_agent.projects.design.source_mapping_sync._backfill import (
     _backfill_design_id_in_source_from_class_name,
     _backfill_design_id_in_source_from_component_callsite,
     _backfill_design_id_in_source_from_react_source,
     _backfill_design_id_in_source_from_text_search,
 )
-from ii_agent.design.source_mapping_sync._manifest import (
+from ii_agent.projects.design.source_mapping_sync._manifest import (
     _load_design_mode_manifest_mapping,
 )
-from ii_agent.design.source_mapping_sync._mutations import (
+from ii_agent.projects.design.source_mapping_sync._mutations import (
     _apply_delete_change_by_design_id,
     _apply_icon_change_by_design_id,
     _apply_icon_change_by_item_id_assignment,
@@ -36,13 +36,13 @@ from ii_agent.design.source_mapping_sync._mutations import (
     _find_best_source_file_for_icon_item_id,
     _find_icon_by_dynamic_pattern,
 )
-from ii_agent.design.source_mapping_sync._tag_utils import (
+from ii_agent.projects.design.source_mapping_sync._tag_utils import (
     _find_opening_tag_bounds_for_design_id,
 )
-from ii_agent.design.source_mapping_sync._verify import (
+from ii_agent.projects.design.source_mapping_sync._verify import (
     _verify_design_mode_target_matches_context,
 )
-from ii_agent.design.source_mapping_sync._workspace import (
+from ii_agent.projects.design.source_mapping_sync._workspace import (
     _read_file_with_workspace_fallback,
 )
 

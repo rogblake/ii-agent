@@ -8,7 +8,7 @@ import json
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.mobile.apple.models import AppleAuthStateEnum, AppleCredential
 from ii_agent.mobile.apple.repository import AppleCredentialRepository
-from ii_agent.utils.encryption import encryption_manager
+from ii_agent.core.secrets.encryption import encryption_manager
 
 
 class AppleCredentialService:

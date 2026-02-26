@@ -2,7 +2,7 @@
 
 import pytest
 
-from ii_agent.design.source_mapping_sync._backfill import (
+from ii_agent.projects.design.source_mapping_sync._backfill import (
     _build_line_start_offsets,
     _class_token_distinctiveness,
     _extract_anchor_snippets,

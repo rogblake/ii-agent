@@ -31,6 +31,7 @@ from ii_agent.core.secrets.provider import (
     GCPSecretProvider,
 )
 from ii_agent.core.secrets.loader import load_secrets
+from ii_agent.core.secrets.encryption import EncryptionManager, encryption_manager
 
 __all__ = [
     "SecretKey",
@@ -45,4 +46,6 @@ __all__ = [
     "LLM_SECRETS",
     "TOOL_SERVER_SECRETS",
     "COMPOSIO_SECRETS",
+    "EncryptionManager",
+    "encryption_manager",
 ]

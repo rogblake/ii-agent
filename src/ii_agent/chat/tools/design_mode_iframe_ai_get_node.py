@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ii_agent.chat.schemas import ErrorTextContent, JsonResultContent
-from ii_agent.design.schemas import IframeDocumentSnapshotNode
+from ii_agent.projects.design.schemas import IframeDocumentSnapshotNode
 
 from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
 from .design_mode_iframe_ai_search import _snapshot_nodes_by_id

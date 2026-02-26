@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.core.logger import logger
 from ii_agent.integrations.connectors.models import ComposioProfile
-from ii_agent.utils.encryption import EncryptionManager
+from ii_agent.core.secrets.encryption import EncryptionManager
 
 from .auth_config_service import AuthConfigService
 from .cache_service import ComposioCacheService

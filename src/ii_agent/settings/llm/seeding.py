@@ -79,7 +79,7 @@ async def seed_admin_llm_settings():
             for model_id, config_data in llm_configs.items():
                 encrypted_api_key = "empty"
                 if config_data.get("api_key"):
-                    from ii_agent.utils.encryption import encryption_manager
+                    from ii_agent.core.secrets.encryption import encryption_manager
 
                     encrypted_api_key = encryption_manager.encrypt(
                         config_data["api_key"]

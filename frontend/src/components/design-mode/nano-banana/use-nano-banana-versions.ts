@@ -34,7 +34,7 @@ export function useNanoBananaVersions({
 
         try {
             const response = await axiosInstance.get(
-                '/design-mode/nano-banana/versions',
+                '/slides/nano-banana/versions',
                 {
                     params: {
                         session_id: sessionId,
@@ -69,7 +69,7 @@ export function useNanoBananaVersions({
 
             try {
                 const response = await axiosInstance.post(
-                    '/design-mode/nano-banana/revert',
+                    '/slides/nano-banana/revert',
                     {
                         session_id: sessionId,
                         presentation_name: presentationName,

@@ -36,7 +36,9 @@ from ii_agent.content.media.router import tools_router as media_tools_router
 # from ii_agent.integrations.mcp_sse import mcp_wellknown_router, get_mcp_lifespan
 from ii_agent.content.slides import router as slides_router
 from ii_agent.content.slides import template_router as slide_templates_router
-from ii_agent.design.router import router as design_router
+from ii_agent.projects.design.router import router as project_design_router
+from ii_agent.content.slides.design.router import router as slide_design_router
+from ii_agent.content.slides.nano_banana.router import router as nano_banana_router
 from ii_agent.billing.credits.router import router as credits_router
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.container import ServiceContainer
@@ -220,7 +222,9 @@ def create_app():
     app.include_router(files_router)  # /files/*
     app.include_router(slides_router)  # /slides/*
     app.include_router(slide_templates_router)  # /slide-templates/*
-    app.include_router(design_router)  # /design-mode/*
+    app.include_router(project_design_router)  # /projects/design/*
+    app.include_router(slide_design_router)  # /slides/design/*
+    app.include_router(nano_banana_router)  # /slides/nano-banana/*
     app.include_router(wishlist_router)  # /wishlist/*
     # app.include_router(enhance_prompt_router)  # /enhance-prompt/*
     app.include_router(billing_router)  # /billing/*

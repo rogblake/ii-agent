@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from ii_agent.design.source_mapping_sync._constants import _DESIGN_MODE_HTML_TAG_NAMES
+from ii_agent.projects.design.source_mapping_sync._constants import _DESIGN_MODE_HTML_TAG_NAMES
 
 
 def _extract_opening_tag_name(tag: str) -> Optional[str]:

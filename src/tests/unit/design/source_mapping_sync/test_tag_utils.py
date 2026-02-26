@@ -2,7 +2,7 @@
 
 import pytest
 
-from ii_agent.design.source_mapping_sync._tag_utils import (
+from ii_agent.projects.design.source_mapping_sync._tag_utils import (
     _extract_closing_tag_name,
     _extract_opening_tag_name,
     _find_element_span_for_design_id,

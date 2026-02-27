@@ -22,12 +22,7 @@ from celery import Celery
 from celery.signals import setup_logging, worker_process_init
 from kombu import Exchange, Queue
 
-from ii_agent.workers.celery.model_imports import import_model_modules
-from ii_agent.core.config.settings import get_settings
 from ii_agent.core.logger import reconfigure_logging
-
-# Import ORM modules up-front so Celery workers don't depend on incidental imports.
-import_model_modules()
 
 
 @setup_logging.connect
@@ -38,7 +33,14 @@ def on_setup_logging(**kwargs):
 
 @worker_process_init.connect
 def on_worker_process_init(**kwargs):
-    """Re-apply dictConfig after all task modules are imported."""
+    """Re-apply dictConfig after all task modules are imported.
+
+    Also bootstrap ORM models so string-based relationships resolve
+    reliably in Celery worker processes.
+    """
+    from ii_agent.workers.celery.model_imports import import_model_modules
+
+    import_model_modules()
     reconfigure_logging()
 
 
@@ -48,8 +50,15 @@ def get_celery_broker_url() -> str:
     if celery_broker_url:
         return celery_broker_url
 
-    settings = get_settings()
-    redis_url = settings.redis.session_url if settings.redis else ""
+    # Try REDIS_SESSION_URL env var directly first to avoid heavy get_settings() import.
+    redis_url = os.environ.get("REDIS_SESSION_URL", "")
+    if not redis_url:
+        # Fall back to settings only when env var is missing.
+        from ii_agent.core.config.settings import get_settings
+
+        settings = get_settings()
+        redis_url = settings.redis.session_url if settings.redis else ""
+
     if redis_url:
         if redis_url.endswith("/0") or redis_url.endswith("/1"):
             return redis_url[:-1] + "2"

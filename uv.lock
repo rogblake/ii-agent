@@ -2533,7 +2533,7 @@ requires-dist = [
     { name = "google-cloud-aiplatform", specifier = ">=1.133.0" },
     { name = "google-cloud-secret-manager", specifier = ">=2.20.0" },
     { name = "google-cloud-storage", specifier = ">=3.7.0" },
-    { name = "google-genai", specifier = ">=1.57.0" },
+    { name = "google-genai", specifier = ">=1.57.0,<1.60" },
     { name = "httpx", specifier = ">=0.25.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "huggingface-hub", marker = "extra == 'gaia'", specifier = ">=0.31.1" },

@@ -73,7 +73,7 @@ export function SocketIOProvider({
 
     // Keep sessionIdRef in sync with sessionId (from URL params) or activeSessionId (from Redux)
     // Priority: sessionId (URL is source of truth) > activeSessionId (fallback for home page)
-    const currentSessionId = sessionId || activeSessionId
+    const currentSessionId = sessionId || activeSessionId || undefined
 
     // Reset session initialization flag when sessionId changes or on initial load
     if (sessionIdRef.current !== currentSessionId) {

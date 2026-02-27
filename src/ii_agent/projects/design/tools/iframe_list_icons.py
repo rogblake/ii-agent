@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from ii_agent.chat.schemas import ErrorTextContent, JsonResultContent
-from ii_agent.shared.design import lucide_catalog
+from ii_agent.projects.design.utils import lucide_catalog
 
-from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
-from .design_mode_tooling import parse_tool_call_json
+from ii_agent.chat.tools.base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
+from .tooling import parse_tool_call_json
 
 
 DESIGN_MODE_IFRAME_AI_LIST_ICONS_TOOL_NAME = "list_icons"

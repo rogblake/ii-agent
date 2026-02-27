@@ -22,7 +22,7 @@ from google.genai import types
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.shared.design.constants import (
+from ii_agent.projects.design.utils.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
     DESIGN_MODE_RUNTIME_SCRIPT,
 )

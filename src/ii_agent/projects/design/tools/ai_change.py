@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from ii_agent.chat.schemas import ErrorTextContent, JsonResultContent
 
-from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
-from .design_mode_tooling import parse_tool_call_json
+from ii_agent.chat.tools.base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
+from .tooling import parse_tool_call_json
 
 DESIGN_MODE_AI_CHANGE_TOOL_NAME = "submit_design_mode_ai_change"
 

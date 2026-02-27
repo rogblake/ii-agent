@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from ii_agent.chat.schemas import ErrorTextContent, JsonResultContent
-from ii_agent.shared.design import lucide_catalog
+from ii_agent.projects.design.utils import lucide_catalog
 
-from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
-from .design_mode_iframe_ai_list_icons import _FALLBACK_LUCIDE_ICON_NAMES
-from .design_mode_tooling import parse_tool_call_json
+from ii_agent.chat.tools.base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
+from .iframe_list_icons import _FALLBACK_LUCIDE_ICON_NAMES
+from .tooling import parse_tool_call_json
 
 
 DESIGN_MODE_IFRAME_AI_GET_ICON_SVG_TOOL_NAME = "get_icon_svg"

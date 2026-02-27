@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .base import BaseTool, ToolCallInput
+from ii_agent.chat.tools.base import BaseTool, ToolCallInput
 
 
 def parse_tool_call_json(tool_call: ToolCallInput) -> tuple[dict[str, Any], str | None]:

@@ -19,8 +19,8 @@ from ii_agent.content.storybook.voice_service import (
     _get_voice_service,
     _resolve_language_code,
 )
-from ii_agent.shared.design.constants import DESIGN_MODE_GOOGLE_FONTS, DESIGN_MODE_RUNTIME_SCRIPT
-from ii_agent.shared.design.html_patch import (
+from ii_agent.projects.design.utils.constants import DESIGN_MODE_GOOGLE_FONTS, DESIGN_MODE_RUNTIME_SCRIPT
+from ii_agent.projects.design.utils.html_patch import (
     apply_slide_delete_change_with_status,
     apply_slide_icon_change_with_status,
     apply_slide_move_change_with_status,

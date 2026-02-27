@@ -24,8 +24,8 @@ def _normalize_icon_name(name: str) -> str:
 
 
 def _repo_root() -> Path:
-    # src/ii_agent/shared/design/lucide_catalog.py -> repo root
-    return Path(__file__).resolve().parents[4]
+    # src/ii_agent/projects/design/utils/lucide_catalog.py -> repo root
+    return Path(__file__).resolve().parents[5]
 
 
 @lru_cache(maxsize=1)

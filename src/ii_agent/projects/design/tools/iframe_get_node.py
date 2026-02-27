@@ -5,9 +5,9 @@ from __future__ import annotations
 from ii_agent.chat.schemas import ErrorTextContent, JsonResultContent
 from ii_agent.projects.design.schemas import IframeDocumentSnapshotNode
 
-from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
-from .design_mode_iframe_ai_search import _snapshot_nodes_by_id
-from .design_mode_tooling import parse_tool_call_json
+from ii_agent.chat.tools.base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
+from .iframe_search import _snapshot_nodes_by_id
+from .tooling import parse_tool_call_json
 
 
 DESIGN_MODE_IFRAME_AI_GET_NODE_TOOL_NAME = "get_design_mode_iframe_dom_node"

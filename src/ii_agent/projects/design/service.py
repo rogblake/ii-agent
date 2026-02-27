@@ -21,7 +21,7 @@ from ii_agent.chat.schemas import (
     ToolResult,
 )
 from ii_agent.chat.tool_service import ChatToolService
-from ii_agent.chat.tools import (
+from ii_agent.projects.design.tools import (
     DesignModeAIChangeTool,
     DesignModeIframeAIGetIconSvgTool,
     DesignModeIframeAIGetNodeTool,
@@ -37,7 +37,7 @@ from ii_agent.core.llm.execution_service import (
     LLMExecutionService,
 )
 from ii_agent.core.logger import logger
-from ii_agent.shared.design.constants import (
+from ii_agent.projects.design.utils.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
     DESIGN_MODE_RUNTIME_SCRIPT,
 )
@@ -67,7 +67,7 @@ from ii_agent.projects.design.schemas import (
     SyncStateResponse,
 )
 from ii_agent.projects.design.source_mapping_sync import apply_changes_with_source_mapping
-from ii_agent.engine.prompts.design_mode_prompts import (
+from ii_agent.projects.design.prompts import (
     build_design_mode_iframe_plan_prompt,
     build_design_mode_style_change_prompt,
 )

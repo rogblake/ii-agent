@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from ii_agent.shared.design.constants import (
+from ii_agent.projects.design.utils.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
     DESIGN_MODE_RUNTIME_SCRIPT,
     EDITABLE_CLASS_NAMES,

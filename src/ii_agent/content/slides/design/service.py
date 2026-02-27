@@ -14,8 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.logger import logger
-from ii_agent.shared.design.deck_builder import build_slide_deck_html
-from ii_agent.shared.design.html_patch import (
+from ii_agent.projects.design.utils.deck_builder import build_slide_deck_html
+from ii_agent.projects.design.utils.html_patch import (
     apply_slide_icon_change,
     apply_slide_style_change,
     apply_slide_text_change,
@@ -27,7 +27,7 @@ from ii_agent.shared.design.html_patch import (
     apply_slide_text_change_with_status,
     sanitize_slide_presentation_name,
 )
-from ii_agent.shared.design.runtime_injector import (
+from ii_agent.projects.design.utils.runtime_injector import (
     inject_runtime_script_only,
     sanitize_legacy_editable_artifacts,
 )

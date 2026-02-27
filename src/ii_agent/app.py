@@ -118,7 +118,7 @@ def create_lifespan():
         # Startup: Initialize admin LLM settings and builtin skills
         from ii_agent.settings.llm.seeding import ensure_admin_llm_settings_seeded
         from ii_agent.content.skills.seeding import ensure_builtin_skills_synced
-        from ii_agent.scripts.tasks import start_scheduler
+        from ii_agent.workers.cron.tasks import start_scheduler
 
         try:
             await ensure_admin_llm_settings_seeded()
@@ -131,7 +131,7 @@ def create_lifespan():
         yield
 
         # Shutdown
-        from ii_agent.scripts.tasks import shutdown_scheduler
+        from ii_agent.workers.cron.tasks import shutdown_scheduler
 
         if sio_manager:
             await sio_manager.shutdown()

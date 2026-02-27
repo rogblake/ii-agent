@@ -43,10 +43,14 @@ from ii_agent.engine.v1.tools.function import (
 )
 from ii_agent.engine.v1.utils.timer import Timer
 from ii_agent.core.logger import logger
+from ii_agent.core.exceptions import RunCancelledException
+from ii_agent.core.redis.cancel import is_cancelled as _is_run_cancelled
 from ii_agent.engine.v1.utils.tools import (
     get_function_call_for_tool_call,
     get_function_call_for_tool_execution,
 )
+
+_TOOL_CANCELLED_MESSAGE = "Tool execution was interrupted due to run cancellation."
 
 
 @dataclass
@@ -1076,7 +1080,7 @@ class Model(ABC):
             function_call_timer.stop()
             result = FunctionExecutionResult(
                 status="failure",
-                result="Tool execution was interrupted due to run cancellation.",
+                result=_TOOL_CANCELLED_MESSAGE,
             )
             return False, function_call_timer, function_call, result
         except (anyio.ClosedResourceError, anyio.BrokenResourceError):
@@ -1088,7 +1092,7 @@ class Model(ABC):
                 function_call_timer.stop()
                 result = FunctionExecutionResult(
                     status="failure",
-                    result="Tool execution was interrupted due to run cancellation.",
+                    result=_TOOL_CANCELLED_MESSAGE,
                 )
                 return False, function_call_timer, function_call, result
             raise
@@ -1247,100 +1251,63 @@ class Model(ABC):
                 )
             ]
 
-        # Run tool calls with cancel-awareness: a sentinel task polls
-        # for cancellation and, when detected, cancels all pending tool tasks
-        # so the agent loop can return immediately instead of waiting.
-        from ii_agent.core.redis.cancel import is_cancelled as _is_run_cancelled
-        from ii_agent.core.exceptions import RunCancelledException
-
-        _CANCEL_SENTINEL = object()  # unique marker for the sentinel task
-
+        # Run tool calls with cancel-awareness: poll for cancellation every
+        # 0.5s and cancel pending tool tasks so the agent loop returns
+        # immediately instead of waiting.
         run_was_cancelled = False
 
         if function_calls_to_run:
-            tool_tasks = {
-                asyncio.create_task(
-                    self.arun_function_call(fc),
-                    name=f"tool-{fc.function.name}-{fc.call_id}",
-                ): fc
+            tool_tasks = [
+                (
+                    fc,
+                    asyncio.create_task(
+                        self.arun_function_call(fc),
+                        name=f"tool-{fc.function.name}-{fc.call_id}",
+                    ),
+                )
                 for fc in function_calls_to_run
-            }
+            ]
+            pending = {task for _, task in tool_tasks}
 
-            # Sentinel coroutine: polls cancellation flag and returns a marker
-            async def _cancel_sentinel() -> object:
-                while True:
-                    await asyncio.sleep(0.5)
-                    if run_id and await _is_run_cancelled(run_id):
-                        return _CANCEL_SENTINEL
-
-            sentinel_task = asyncio.create_task(_cancel_sentinel(), name="cancel-sentinel") if run_id else None
-            all_tasks = set(tool_tasks.keys())
-            if sentinel_task:
-                all_tasks.add(sentinel_task)
-
-            # Wait until all tool tasks complete OR the sentinel fires
-            done, pending = await asyncio.wait(all_tasks, return_when=asyncio.FIRST_COMPLETED)
-
-            # Keep waiting until either: sentinel fires, or all tool tasks are done
-            while pending and not run_was_cancelled:
-                for t in done:
-                    if t is sentinel_task:
+            if run_id:
+                # Cancel-aware: poll is_cancelled every 0.5s between wait cycles
+                while pending:
+                    _, pending = await asyncio.wait(pending, timeout=0.5)
+                    if pending and await _is_run_cancelled(run_id):
                         run_was_cancelled = True
+                        for t in pending:
+                            t.cancel()
+                        await asyncio.wait(pending, timeout=2.0)
+                        logger.info(
+                            f"Run {run_id} cancelled during tool execution — "
+                            f"{len(pending)} tool task(s) interrupted"
+                        )
                         break
-                if run_was_cancelled:
-                    break
-                # If the only pending task is the sentinel, all tools are done
-                if pending == {sentinel_task}:
-                    break
-                # Sentinel hasn't fired yet and tools still running, keep waiting
-                done_new, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-                done = done | done_new
-
-            if run_was_cancelled:
-                # Cancel all still-pending tool tasks
-                for t in pending:
-                    if t is not sentinel_task:
-                        t.cancel()
-                # Wait briefly for cancelled tasks to finish
-                if pending:
-                    await asyncio.wait(pending, timeout=2.0)
-                logger.info(f"Run {run_id} cancelled during tool execution — {len(pending)} tool task(s) interrupted")
             else:
-                # All tools completed normally — clean up sentinel
-                if sentinel_task and not sentinel_task.done():
-                    sentinel_task.cancel()
-                    try:
-                        await sentinel_task
-                    except asyncio.CancelledError:
-                        pass
+                # No run_id: wait for all tools to complete
+                await asyncio.wait(pending)
 
             # Collect results in original order
             results = []
-            for fc in function_calls_to_run:
-                task = next(t for t, f in tool_tasks.items() if f is fc)
+            for fc, task in tool_tasks:
                 if task.cancelled():
-                    # Produce a partial result for cancelled tools
-                    timer = Timer()
-                    cancelled_result = FunctionExecutionResult(
+                    results.append((False, Timer(), fc, FunctionExecutionResult(
                         status="failure",
-                        result="Tool execution was interrupted due to run cancellation.",
-                    )
-                    results.append((False, timer, fc, cancelled_result))
+                        result=_TOOL_CANCELLED_MESSAGE,
+                    )))
                 elif task.exception():
                     if run_was_cancelled:
                         # Exception is likely a side-effect of task cancellation
                         # (e.g. ClosedResourceError from MCP client cleanup).
-                        # Treat as interrupted instead of re-raising.
                         logger.warning(
-                            f"Tool {fc.function.name} raised {type(task.exception()).__name__} "
-                            f"during cancellation, treating as interrupted: {task.exception()}"
+                            f"Tool {fc.function.name} raised "
+                            f"{type(task.exception()).__name__} during cancellation, "
+                            f"treating as interrupted: {task.exception()}"
                         )
-                        timer = Timer()
-                        cancelled_result = FunctionExecutionResult(
+                        results.append((False, Timer(), fc, FunctionExecutionResult(
                             status="failure",
-                            result="Tool execution was interrupted due to run cancellation.",
-                        )
-                        results.append((False, timer, fc, cancelled_result))
+                            result=_TOOL_CANCELLED_MESSAGE,
+                        )))
                     else:
                         results.append(task.exception())
                 else:

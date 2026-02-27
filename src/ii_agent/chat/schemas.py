@@ -138,6 +138,9 @@ class MediaPreferences(BaseModel):
     ] | None = Field(
         None, description="Genre for storybook content generation"
     )
+    manga_layout: bool | None = Field(
+        None, description="Enable manga-style panel layouts for storybook"
+    )
     references: list[MediaReference] | None = Field(
         None,
         description="Reference images to guide generation (subject/scene/style).",

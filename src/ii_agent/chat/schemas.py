@@ -123,8 +123,8 @@ class MediaPreferences(BaseModel):
     )
     aspect_ratio: str | None = None
     resolution: str | None = None
-    page_count: int | None = Field(
-        None, description="Number of pages/scenes for storybook generation"
+    page_count: int | Literal["unlimited"] | None = Field(
+        None, description="Number of content pages for storybook generation (cover page is not counted). Use 'unlimited' for no page limit."
     )
     text_position: Literal["none", "left", "right", "top", "bottom", "separate_page"] | None = Field(
         None, description="Default text position for storybook layouts"

@@ -395,6 +395,25 @@ class StorybookGenerationTool(BaseTool):
                 f"[STORYBOOK] Scene {scene_index + 1}: Cover failed, generating without reference"
             )
 
+        # Explicitly control text inclusion for non-cover pages in the base prompt
+        if not is_cover_page:
+            if self.manga_layout:
+                if effective_text_content:
+                    language_label = self.storybook_language or "the selected language"
+                    image_prompt = (
+                        f"{image_prompt}\nIMPORTANT: Include speech bubbles or caption boxes "
+                        f"with readable {language_label} text. Use this exact dialogue text: "
+                        f"\"{effective_text_content}\". Keep the text concise and legible."
+                    )
+            else:
+                image_prompt = (
+                    f"{image_prompt}\nIMPORTANT: Do NOT include any text, letters, captions, "
+                    "titles, or typography in the image. This is an interior page illustration only. "
+                    "Also IMPORTANT: This is NOT the cover. Do NOT recreate the cover layout, "
+                    "composition, or camera angle. Depict a distinct scene that differs clearly "
+                    "from the cover while keeping character consistency."
+                )
+
         if is_separate_page_mode:
             gen_aspect_ratio = self.aspect_ratio
         else:
@@ -431,6 +450,7 @@ class StorybookGenerationTool(BaseTool):
         enhanced_prompt = self._enhance_prompt_with_style(
             image_prompt,
             style_context,
+            is_cover_page=is_cover_page,
             reference_type=reference_type,
             composition_rule=composition_rule,
         )
@@ -730,14 +750,64 @@ class StorybookGenerationTool(BaseTool):
         """Build style context string for prompt enhancement."""
         style_parts = []
 
-        if style.get("character_description"):
-            style_parts.append(f"Character: {style['character_description']}")
+        character_description = style.get("character_description")
+        art_style = style.get("art_style")
+        color_palette = style.get("color_palette")
 
-        if style.get("art_style"):
-            style_parts.append(f"Art style: {style['art_style']}")
+        if character_description:
+            style_parts.append(f"Character: {character_description}")
 
-        if style.get("color_palette"):
-            style_parts.append(f"Color palette: {style['color_palette']}")
+        if art_style:
+            style_parts.append(f"Art style: {art_style}")
+
+        if color_palette:
+            style_parts.append(f"Color palette: {color_palette}")
+
+        if self.manga_layout:
+            art_style_value = str(art_style or "").strip()
+            art_style_lower = art_style_value.lower()
+            color_palette_value = str(color_palette or "").strip()
+            color_palette_lower = color_palette_value.lower()
+
+            if not art_style_value:
+                style_parts.append(
+                    "Art style: traditional Japanese manga line art with clean black-and-white ink and screentone shading"
+                )
+            elif "manga" not in art_style_lower and "comic" not in art_style_lower:
+                style_parts.append(
+                    "Manga treatment: clean ink line art, consistent line weight, screentone shading"
+                )
+
+            is_monochrome = False
+            if color_palette_value:
+                if (
+                    "monochrome" in color_palette_lower
+                    or "grayscale" in color_palette_lower
+                    or "grey scale" in color_palette_lower
+                ):
+                    is_monochrome = True
+                else:
+                    has_black = "black" in color_palette_lower
+                    has_white = "white" in color_palette_lower
+                    has_gray = "gray" in color_palette_lower or "grey" in color_palette_lower
+                    if (has_black and has_white) or has_gray:
+                        is_monochrome = True
+
+            if not color_palette_value or is_monochrome:
+                style_parts.append(
+                    "Color palette: STRICTLY monochrome black and white only — no color whatsoever. "
+                    "No colored backgrounds, no colored effects, no colored highlights, no tinted panels, "
+                    "no sepia, no colored speech bubbles. Use only black ink, white space, and gray screentone shading"
+                )
+            else:
+                style_parts.append(
+                    f"Color palette: apply '{color_palette_value}' uniformly to EVERY page — "
+                    "no page should fall back to grayscale or use different colors"
+                )
+
+            style_parts.append(
+                "Consistency: identical line weight, screentone density, contrast, and color treatment across ALL pages"
+            )
 
         return ". ".join(style_parts) if style_parts else ""
 
@@ -745,6 +815,7 @@ class StorybookGenerationTool(BaseTool):
         self,
         image_prompt: str,
         style_context: str,
+        is_cover_page: bool = False,
         reference_type: Optional[str] = None,
         composition_rule: Optional[str] = None,
     ) -> str:
@@ -753,6 +824,7 @@ class StorybookGenerationTool(BaseTool):
         Args:
             image_prompt: The base image prompt
             style_context: Style information to apply
+            is_cover_page: Whether this is the cover page
             reference_type: Type of reference being used - currently only "style_only" is used
             composition_rule: Optional rule for subject placement/safe zones
         """
@@ -771,19 +843,55 @@ class StorybookGenerationTool(BaseTool):
             f"to ensure 100% canvas coverage. NEVER add borders or empty space to fit - fill the entire frame with content."
         )
 
+        # Add negative prompt for safety + non-cover rules
+        negative_prompt = (
+            " NEGATIVE PROMPT / STRICTLY PROHIBITED: No violence, gore, blood, injury, weapons, war, crime, "
+            "threats, hate symbols, harassment, or bullying. No sexual or suggestive content, nudity, fetish, "
+            "pornography, or sexualized minors. No self-harm or suicide. No drugs, alcohol abuse, smoking, or vaping. "
+            "No gambling, political propaganda, extremist imagery, or controversial symbols. No real person likeness, "
+            "no copyrighted characters/brands, no watermarks, and no text overlays."
+        )
+        if not is_cover_page:
+            negative_prompt += (
+                " Also, do NOT include any titles, text, letters, captions, typography, branding, logos, "
+                "book cover elements, thumbnails, or headings. The image should be a pure illustration without "
+                "any textual elements whatsoever. Ensure it does not look like a cover page or a table of contents. "
+                "Do NOT repeat the cover scene, cover composition, or a cover-like centered pose/layout."
+            )
+
+        # Manga-specific: enforce consistent color treatment in the image generation prompt
+        if self.manga_layout:
+            # Check if style_context indicates a non-monochrome palette was explicitly chosen
+            has_explicit_color = style_context and "apply '" in style_context
+            if not has_explicit_color:
+                negative_prompt += (
+                    " MANGA COLOR ENFORCEMENT: This is a black-and-white manga page. "
+                    "STRICTLY PROHIBITED: any color, colored elements, colored backgrounds, "
+                    "colored highlights, colored effects, tinted panels, sepia tones, "
+                    "colored speech bubbles, or any chromatic content. "
+                    "Use ONLY black ink lines, white space, and gray screentone shading."
+                )
+
         if composition_rule:
             borderless_note += f" {composition_rule}"
 
         # Add reference type context if applicable
         reference_note = ""
         if reference_type == "style_only":
-            reference_note = " Match the art style, color palette, and visual aesthetic of the reference image, but DO NOT copy characters or specific subjects."
+            reference_note = (
+                " Match the art style, color palette, and visual aesthetic of the reference image. "
+                "CRITICAL CHARACTER LOCK: All characters appearing in the reference image MUST look identical "
+                "in this new scene — same face, body proportions, hairstyle, hair color, skin tone, clothing, "
+                "accessories, and all distinguishing features. Do NOT alter any aspect of the characters' appearance. "
+                "Only the scene composition, camera angle, background, and action should change — "
+                "the characters themselves must remain visually consistent with the reference."
+            )
 
         if not style_context:
-            return f"{image_prompt}. {borderless_note}{reference_note}"
+            return f"{image_prompt}. {borderless_note}{negative_prompt}{reference_note}"
 
         # Append style context to prompt and enforce borderless output
-        return f"{image_prompt}. {style_context}. {borderless_note}{reference_note}"
+        return f"{image_prompt}. {style_context}. {borderless_note}{negative_prompt}{reference_note}"
 
 
     async def _generate_scene_image(

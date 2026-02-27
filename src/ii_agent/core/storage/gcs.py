@@ -1,13 +1,13 @@
 """Google Cloud Storage provider implementation."""
 
-import datetime
 import io
-from typing import BinaryIO
-
 import requests
-from google.auth import default
+import datetime
+from typing import BinaryIO
 from google.cloud import storage
-
+from google.auth import default
+from google.auth import compute_engine
+from google.auth.transport import requests as auth_requests
 from .base import BaseStorage
 
 
@@ -15,10 +15,7 @@ class GCS(BaseStorage):
     """Google Cloud Storage provider for file storage."""
 
     def __init__(
-        self,
-        project_id: str,
-        bucket_name: str,
-        custom_domain: str | None = None,
+        self, project_id: str, bucket_name: str, custom_domain: str | None = None
     ):
         # Get credentials with proper scopes for signing
         credentials, _ = default(
@@ -30,28 +27,34 @@ class GCS(BaseStorage):
         self.custom_domain = custom_domain
 
         # Cache signer and service account email for efficient signed URL generation
-        # This avoids repeated credential discovery and signer initialization
         self._credentials = credentials
         self._signer = None
         self._service_account_email = None
+        self._use_iam_signer = False
         self._initialize_signer()
 
     def _initialize_signer(self):
         """Initialize and cache the signer for efficient signed URL generation.
 
-        This method extracts the signer and service account email from credentials
-        once during initialization, avoiding repeated credential discovery and
-        signer initialization on every signed URL generation call.
+        Supports both SA key credentials (local signing) and WIF/compute engine
+        credentials (IAM signBlob API).
         """
         try:
-            # Try to get signer from credentials (works for service account credentials)
-            if hasattr(self._credentials, "signer"):
+            # SA key credentials have a local signer
+            if hasattr(self._credentials, "signer") and not isinstance(
+                self._credentials, compute_engine.Credentials
+            ):
                 self._signer = self._credentials.signer
-            if hasattr(self._credentials, "service_account_email"):
+                if hasattr(self._credentials, "service_account_email"):
+                    self._service_account_email = self._credentials.service_account_email
+            # WIF / compute engine credentials: use IAM signBlob via access_token
+            elif isinstance(self._credentials, compute_engine.Credentials):
+                self._use_iam_signer = True
+                # Refresh populates the real SA email (before refresh it's "default")
+                auth_request = auth_requests.Request()
+                self._credentials.refresh(auth_request)
                 self._service_account_email = self._credentials.service_account_email
         except (AttributeError, ValueError):
-            # If credentials don't support signing directly, fall back to default behavior
-            # The library will handle credential discovery on each call
             pass
 
     def write(
@@ -94,6 +97,22 @@ class GCS(BaseStorage):
 
         return file_obj
 
+    def _signed_url_kwargs(self, **extra) -> dict:
+        """Build kwargs for generate_signed_url, handling both SA key and WIF."""
+        kwargs = {"version": "v4", **extra}
+
+        if self._signer and self._service_account_email:
+            # SA key: pass credentials for local signing
+            kwargs["credentials"] = self._credentials
+        elif self._use_iam_signer and self._service_account_email:
+            # WIF: use IAM signBlob API via access_token + service_account_email
+            auth_request = auth_requests.Request()
+            self._credentials.refresh(auth_request)
+            kwargs["service_account_email"] = self._service_account_email
+            kwargs["access_token"] = self._credentials.token
+
+        return kwargs
+
     def get_download_signed_url(
         self, path: str, expiration_seconds: int = 3600
     ) -> str | None:
@@ -104,17 +123,10 @@ class GCS(BaseStorage):
                 f"File '{path}' not found in bucket '{self.bucket_name}'."
             )
 
-        # Generate the signed URL using cached signer for efficiency
-        # This avoids credential discovery and signer initialization overhead
-        kwargs = {
-            "version": "v4",
-            "expiration": datetime.timedelta(seconds=expiration_seconds),
-            "method": "GET",
-        }
-
-        # Use cached signer if available to avoid repeated credential operations
-        if self._signer and self._service_account_email:
-            kwargs["credentials"] = self._credentials
+        kwargs = self._signed_url_kwargs(
+            expiration=datetime.timedelta(seconds=expiration_seconds),
+            method="GET",
+        )
 
         url = blob.generate_signed_url(**kwargs)
 
@@ -125,17 +137,11 @@ class GCS(BaseStorage):
     ) -> str | None:
         blob = self.bucket.blob(path)
 
-        # Generate the signed URL for a PUT request using cached signer
-        kwargs = {
-            "version": "v4",
-            "expiration": datetime.timedelta(seconds=expiration_seconds),
-            "method": "PUT",
-            "content_type": content_type,
-        }
-
-        # Use cached signer if available to avoid repeated credential operations
-        if self._signer and self._service_account_email:
-            kwargs["credentials"] = self._credentials
+        kwargs = self._signed_url_kwargs(
+            expiration=datetime.timedelta(seconds=expiration_seconds),
+            method="PUT",
+            content_type=content_type,
+        )
 
         url = blob.generate_signed_url(**kwargs)
 
@@ -162,42 +168,36 @@ class GCS(BaseStorage):
         without making network requests per file, making it safe for generating
         hundreds or thousands of URLs without connection pool exhaustion.
 
-        Note: Images with paths starting with "sessions/" are generated images
-        stored in the public ii-agent-public bucket and will use public URLs
-        instead of signed URLs.
+        Note: Images with paths starting with "sessions/" are generated images.
+        If this storage client points at the public media bucket, the method
+        returns public URLs; otherwise it falls back to signed URLs.
         """
         if not paths:
             return []
 
-        expiration = datetime.timedelta(seconds=expiration_seconds)
+        base_kwargs = self._signed_url_kwargs(
+            expiration=datetime.timedelta(seconds=expiration_seconds),
+            method="GET",
+        )
         urls: list[str | None] = []
 
-        # Prepare kwargs once, reuse for all URLs
-        base_kwargs = {
-            "version": "v4",
-            "expiration": expiration,
-            "method": "GET",
-        }
-
-        # Use cached credentials if available
-        if self._signer and self._service_account_email:
-            base_kwargs["credentials"] = self._credentials
+        public_sessions_bucket = self.bucket.name == "ii-agent-public"
 
         for path in paths:
             try:
-                # Images starting with "sessions/" are generated images stored in
-                # the public ii-agent-public bucket, so use public URL instead
-                if path.startswith("sessions/"):
-                    url = f"https://storage.googleapis.com/ii-agent-public/{path}"
+                # Use public URLs for sessions/* only when the bucket is public.
+                if path.startswith("sessions/") and public_sessions_bucket:
+                    url = f"https://storage.googleapis.com/{self.bucket.name}/{path}"
                     urls.append(url)
-                else:
-                    blob = self.bucket.blob(path)
+                    continue
 
-                    # Skip existence check to avoid network calls
-                    # The signed URL will be valid regardless of file existence
-                    # Clients should handle 404s when accessing the URL
-                    url = blob.generate_signed_url(**base_kwargs)
-                    urls.append(url)
+                blob = self.bucket.blob(path)
+
+                # Skip existence check to avoid network calls
+                # The signed URL will be valid regardless of file existence
+                # Clients should handle 404s when accessing the URL
+                url = blob.generate_signed_url(**base_kwargs)
+                urls.append(url)
             except Exception:
                 # If signing fails for any reason, append None
                 urls.append(None)

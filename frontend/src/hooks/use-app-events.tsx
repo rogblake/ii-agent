@@ -564,11 +564,12 @@ export function useAppEvents() {
                         setTimeout(() => {
                             dispatch(setCurrentQuestion(''))
                             dispatch(setRequireClearFiles(true))
-                            const isShareMode =
-                                location.pathname?.includes('/share/') ||
-                                location.pathname?.includes('/presentations/')
-                            const isOnChatPage = location.pathname === '/chat'
-                            if (!isShareMode && !isOnChatPage) {
+                            // Only navigate from the home page — chat and agent pages
+                            // manage their own session URLs. This prevents stale
+                            // join_session SYSTEM events from overwriting the URL
+                            // when switching between sessions.
+                            const isOnHomePage = location.pathname === '/'
+                            if (isOnHomePage) {
                                 dispatch(setIsFromNewQuestion(true))
                                 navigate(`/${data.content.session_id}`)
                             }

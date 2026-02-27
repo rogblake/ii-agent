@@ -64,14 +64,16 @@ export function SocketIOProvider({
     const dispatch = useAppDispatch()
     const sessionInitializedRef = useRef(false)
     const shouldDisableJoinSession = location.pathname.includes('/chat')
+    const shouldDisableJoinSessionRef = useRef(shouldDisableJoinSession)
+    shouldDisableJoinSessionRef.current = shouldDisableJoinSession
 
     // Update the refs when values change
     handleEventRef.current = handleEvent
     isFromNewQuestionRef.current = isFromNewQuestion
 
-    // Keep sessionIdRef in sync with activeSessionId (from Redux) or sessionId (from URL params)
-    // Priority: activeSessionId (for newly created sessions) > sessionId (from URL)
-    const currentSessionId = activeSessionId || sessionId
+    // Keep sessionIdRef in sync with sessionId (from URL params) or activeSessionId (from Redux)
+    // Priority: sessionId (URL is source of truth) > activeSessionId (fallback for home page)
+    const currentSessionId = sessionId || activeSessionId
 
     // Reset session initialization flag when sessionId changes or on initial load
     if (sessionIdRef.current !== currentSessionId) {
@@ -162,7 +164,7 @@ export function SocketIOProvider({
             dispatch(setWsConnectionState(WebSocketConnectionState.CONNECTED))
 
             // Initialize the session on connect when a sessionId exists
-            if (sessionIdRef.current && !sessionInitializedRef.current) {
+            if (sessionIdRef.current && !sessionInitializedRef.current && !shouldDisableJoinSessionRef.current) {
                 console.log('Emitting join_session for:', sessionIdRef.current)
                 socketInstance.emit('join_session', {
                     session_uuid: sessionIdRef.current

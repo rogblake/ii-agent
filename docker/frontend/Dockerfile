@@ -1,4 +1,4 @@
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY frontend/ .
 
@@ -8,7 +8,7 @@ RUN if [ -f yarn.lock ]; then yarn --frozen-lockfile && yarn build; \
     else echo "Lockfile not found." && exit 1; \
     fi
 
-FROM node:18-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 RUN npm install -g serve
 COPY --from=builder /app/dist ./dist

@@ -1,6 +1,8 @@
 import asyncio
 import collections.abc
 from abc import ABC, abstractmethod
+
+import anyio
 from dataclasses import dataclass, field
 from types import AsyncGeneratorType, GeneratorType
 from typing import (
@@ -330,6 +332,7 @@ class Model(ABC):
                         function_call_results=function_call_results,
                         current_function_call_count=function_call_count,
                         function_call_limit=tool_call_limit,
+                        run_id=run_response.run_id if run_response else None,
                     ):
                         if isinstance(function_call_response, ModelResponse):
                             # The session state is updated by the function call
@@ -737,6 +740,7 @@ class Model(ABC):
                         function_call_results=function_call_results,
                         current_function_call_count=function_call_count,
                         function_call_limit=tool_call_limit,
+                        run_id=run_response.run_id if run_response else None,
                     ):
                         yield function_call_response
 
@@ -1067,6 +1071,27 @@ class Model(ABC):
             else:
                 result = await asyncio.to_thread(function_call.execute)
                 success = result.status == "success"
+        except asyncio.CancelledError:
+            # Task was cancelled due to run cancellation.
+            function_call_timer.stop()
+            result = FunctionExecutionResult(
+                status="failure",
+                result="Tool execution was interrupted due to run cancellation.",
+            )
+            return False, function_call_timer, function_call, result
+        except (anyio.ClosedResourceError, anyio.BrokenResourceError):
+            # Only treat as cancellation side-effect if the current task is
+            # actually being cancelled. Otherwise re-raise so legitimate MCP
+            # connection failures propagate normally.
+            current_task = asyncio.current_task()
+            if current_task is not None and current_task.cancelling() > 0:
+                function_call_timer.stop()
+                result = FunctionExecutionResult(
+                    status="failure",
+                    result="Tool execution was interrupted due to run cancellation.",
+                )
+                return False, function_call_timer, function_call, result
+            raise
         except AgentRunException as e:
             success = e
         except Exception as e:
@@ -1085,6 +1110,7 @@ class Model(ABC):
         current_function_call_count: int = 0,
         function_call_limit: Optional[int] = None,
         skip_pause_check: bool = False,
+        run_id: Optional[str] = None,
     ) -> AsyncIterator[Union[ModelResponse, RunOutputEvent]]:
         # Additional messages from function calls that will be added to the function call results
         if additional_input is None:
@@ -1221,10 +1247,106 @@ class Model(ABC):
                 )
             ]
 
-        results = await asyncio.gather(
-            *(self.arun_function_call(fc) for fc in function_calls_to_run),
-            return_exceptions=True,
-        )
+        # Run tool calls with cancel-awareness: a sentinel task polls
+        # for cancellation and, when detected, cancels all pending tool tasks
+        # so the agent loop can return immediately instead of waiting.
+        from ii_agent.core.redis.cancel import is_cancelled as _is_run_cancelled
+        from ii_agent.core.exceptions import RunCancelledException
+
+        _CANCEL_SENTINEL = object()  # unique marker for the sentinel task
+
+        run_was_cancelled = False
+
+        if function_calls_to_run:
+            tool_tasks = {
+                asyncio.create_task(
+                    self.arun_function_call(fc),
+                    name=f"tool-{fc.function.name}-{fc.call_id}",
+                ): fc
+                for fc in function_calls_to_run
+            }
+
+            # Sentinel coroutine: polls cancellation flag and returns a marker
+            async def _cancel_sentinel() -> object:
+                while True:
+                    await asyncio.sleep(0.5)
+                    if run_id and await _is_run_cancelled(run_id):
+                        return _CANCEL_SENTINEL
+
+            sentinel_task = asyncio.create_task(_cancel_sentinel(), name="cancel-sentinel") if run_id else None
+            all_tasks = set(tool_tasks.keys())
+            if sentinel_task:
+                all_tasks.add(sentinel_task)
+
+            # Wait until all tool tasks complete OR the sentinel fires
+            done, pending = await asyncio.wait(all_tasks, return_when=asyncio.FIRST_COMPLETED)
+
+            # Keep waiting until either: sentinel fires, or all tool tasks are done
+            while pending and not run_was_cancelled:
+                for t in done:
+                    if t is sentinel_task:
+                        run_was_cancelled = True
+                        break
+                if run_was_cancelled:
+                    break
+                # If the only pending task is the sentinel, all tools are done
+                if pending == {sentinel_task}:
+                    break
+                # Sentinel hasn't fired yet and tools still running, keep waiting
+                done_new, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+                done = done | done_new
+
+            if run_was_cancelled:
+                # Cancel all still-pending tool tasks
+                for t in pending:
+                    if t is not sentinel_task:
+                        t.cancel()
+                # Wait briefly for cancelled tasks to finish
+                if pending:
+                    await asyncio.wait(pending, timeout=2.0)
+                logger.info(f"Run {run_id} cancelled during tool execution — {len(pending)} tool task(s) interrupted")
+            else:
+                # All tools completed normally — clean up sentinel
+                if sentinel_task and not sentinel_task.done():
+                    sentinel_task.cancel()
+                    try:
+                        await sentinel_task
+                    except asyncio.CancelledError:
+                        pass
+
+            # Collect results in original order
+            results = []
+            for fc in function_calls_to_run:
+                task = next(t for t, f in tool_tasks.items() if f is fc)
+                if task.cancelled():
+                    # Produce a partial result for cancelled tools
+                    timer = Timer()
+                    cancelled_result = FunctionExecutionResult(
+                        status="failure",
+                        result="Tool execution was interrupted due to run cancellation.",
+                    )
+                    results.append((False, timer, fc, cancelled_result))
+                elif task.exception():
+                    if run_was_cancelled:
+                        # Exception is likely a side-effect of task cancellation
+                        # (e.g. ClosedResourceError from MCP client cleanup).
+                        # Treat as interrupted instead of re-raising.
+                        logger.warning(
+                            f"Tool {fc.function.name} raised {type(task.exception()).__name__} "
+                            f"during cancellation, treating as interrupted: {task.exception()}"
+                        )
+                        timer = Timer()
+                        cancelled_result = FunctionExecutionResult(
+                            status="failure",
+                            result="Tool execution was interrupted due to run cancellation.",
+                        )
+                        results.append((False, timer, fc, cancelled_result))
+                    else:
+                        results.append(task.exception())
+                else:
+                    results.append(task.result())
+        else:
+            results = []
 
         # Separate async generators from other results for concurrent processing
         async_generator_results: List[Any] = []
@@ -1298,6 +1420,14 @@ class Model(ABC):
                     None,
                 )
 
+            except asyncio.CancelledError:
+                # Generator was cancelled — store partial output
+                async_generator_outputs[generator_id] = (
+                    result,
+                    function_call_output,
+                    None,
+                )
+
             except Exception as e:
                 async_generator_outputs[generator_id] = (result, "", e)
 
@@ -1310,11 +1440,25 @@ class Model(ABC):
             task = asyncio.create_task(process_async_generator(result, i))
             generator_tasks.append(task)
 
-        # Stream events from the queue as they arrive
+        # Stream events from the queue as they arrive, with cancel awareness
         completed_generators_count = 0
         while completed_generators_count < active_generators_count:
             try:
-                event = await event_queue.get()
+                # Use a short timeout so we can check cancellation periodically
+                try:
+                    event = await asyncio.wait_for(event_queue.get(), timeout=0.5)
+                except asyncio.TimeoutError:
+                    # Check cancellation during async generator streaming
+                    if run_id and await _is_run_cancelled(run_id):
+                        run_was_cancelled = True
+                        for gt in generator_tasks:
+                            if not gt.done():
+                                gt.cancel()
+                        # Wait briefly for generators to wrap up
+                        if generator_tasks:
+                            await asyncio.wait(generator_tasks, timeout=2.0)
+                        break
+                    continue
 
                 if isinstance(event, tuple) and event[0] == "GENERATOR_DONE":
                     completed_generators_count += 1
@@ -1506,6 +1650,13 @@ class Model(ABC):
 
             # Add function call result to function call results
             function_call_results.append(function_call_result)
+
+        # If the run was cancelled during tool execution, raise after processing
+        # all completed results so they are saved in history
+        if run_was_cancelled:
+            raise RunCancelledException(
+                f"Run {run_id} was cancelled during tool execution"
+            )
 
         # Add any additional messages at the end
         if additional_input:

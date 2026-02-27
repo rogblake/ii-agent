@@ -163,6 +163,7 @@ class ToolManager:
             function_calls=[function_call],
             function_call_results=function_call_results,
             skip_pause_check=True,
+            run_id=run_response.run_id if run_response else None,
         ):
             if isinstance(call_result, ModelResponse):
                 if call_result.event == ModelResponseEvent.tool_call_started.value:

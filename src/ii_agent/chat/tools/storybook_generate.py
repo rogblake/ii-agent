@@ -131,10 +131,7 @@ class StorybookGenerationTool(BaseTool):
             self.user_text_position = getattr(media_preferences, "text_position", None)
             self.voice_enabled = bool(getattr(media_preferences, "voice_enabled", False))
             self.storybook_language = getattr(media_preferences, "language", None)
-            self.manga_layout = bool(getattr(media_preferences, "manga_layout", False))
-            if self.manga_layout:
-                self.user_text_position = "none"
-                self.voice_enabled = False
+            self.manga_layout = False
         else:
             self.image_model_name = None
             self.image_provider = "gemini"
@@ -397,22 +394,9 @@ class StorybookGenerationTool(BaseTool):
 
         # Explicitly control text inclusion for non-cover pages in the base prompt
         if not is_cover_page:
-            if self.manga_layout:
-                if effective_text_content:
-                    language_label = self.storybook_language or "the selected language"
-                    image_prompt = (
-                        f"{image_prompt}\nIMPORTANT: Include speech bubbles or caption boxes "
-                        f"with readable {language_label} text. Use this exact dialogue text: "
-                        f"\"{effective_text_content}\". Keep the text concise and legible."
-                    )
-            else:
-                image_prompt = (
-                    f"{image_prompt}\nIMPORTANT: Do NOT include any text, letters, captions, "
-                    "titles, or typography in the image. This is an interior page illustration only. "
-                    "Also IMPORTANT: This is NOT the cover. Do NOT recreate the cover layout, "
-                    "composition, or camera angle. Depict a distinct scene that differs clearly "
-                    "from the cover while keeping character consistency."
-                )
+            image_prompt = self._augment_non_cover_prompt(
+                image_prompt, effective_text_content
+            )
 
         if is_separate_page_mode:
             gen_aspect_ratio = self.aspect_ratio
@@ -726,6 +710,22 @@ class StorybookGenerationTool(BaseTool):
                 )
             )
 
+    def _augment_non_cover_prompt(
+        self, image_prompt: str, text_content: str
+    ) -> str:
+        """Augment the image prompt for non-cover pages.
+
+        Subclasses (e.g. MangaGenerationTool) override this to inject
+        speech-bubble text instead of the no-text instruction.
+        """
+        return (
+            f"{image_prompt}\nIMPORTANT: Do NOT include any text, letters, captions, "
+            "titles, or typography in the image. This is an interior page illustration only. "
+            "Also IMPORTANT: This is NOT the cover. Do NOT recreate the cover layout, "
+            "composition, or camera angle. Depict a distinct scene that differs clearly "
+            "from the cover while keeping character consistency."
+        )
+
     def _resolve_text_position(
         self,
         *,
@@ -762,52 +762,6 @@ class StorybookGenerationTool(BaseTool):
 
         if color_palette:
             style_parts.append(f"Color palette: {color_palette}")
-
-        if self.manga_layout:
-            art_style_value = str(art_style or "").strip()
-            art_style_lower = art_style_value.lower()
-            color_palette_value = str(color_palette or "").strip()
-            color_palette_lower = color_palette_value.lower()
-
-            if not art_style_value:
-                style_parts.append(
-                    "Art style: traditional Japanese manga line art with clean black-and-white ink and screentone shading"
-                )
-            elif "manga" not in art_style_lower and "comic" not in art_style_lower:
-                style_parts.append(
-                    "Manga treatment: clean ink line art, consistent line weight, screentone shading"
-                )
-
-            is_monochrome = False
-            if color_palette_value:
-                if (
-                    "monochrome" in color_palette_lower
-                    or "grayscale" in color_palette_lower
-                    or "grey scale" in color_palette_lower
-                ):
-                    is_monochrome = True
-                else:
-                    has_black = "black" in color_palette_lower
-                    has_white = "white" in color_palette_lower
-                    has_gray = "gray" in color_palette_lower or "grey" in color_palette_lower
-                    if (has_black and has_white) or has_gray:
-                        is_monochrome = True
-
-            if not color_palette_value or is_monochrome:
-                style_parts.append(
-                    "Color palette: STRICTLY monochrome black and white only — no color whatsoever. "
-                    "No colored backgrounds, no colored effects, no colored highlights, no tinted panels, "
-                    "no sepia, no colored speech bubbles. Use only black ink, white space, and gray screentone shading"
-                )
-            else:
-                style_parts.append(
-                    f"Color palette: apply '{color_palette_value}' uniformly to EVERY page — "
-                    "no page should fall back to grayscale or use different colors"
-                )
-
-            style_parts.append(
-                "Consistency: identical line weight, screentone density, contrast, and color treatment across ALL pages"
-            )
 
         return ". ".join(style_parts) if style_parts else ""
 
@@ -858,19 +812,6 @@ class StorybookGenerationTool(BaseTool):
                 "any textual elements whatsoever. Ensure it does not look like a cover page or a table of contents. "
                 "Do NOT repeat the cover scene, cover composition, or a cover-like centered pose/layout."
             )
-
-        # Manga-specific: enforce consistent color treatment in the image generation prompt
-        if self.manga_layout:
-            # Check if style_context indicates a non-monochrome palette was explicitly chosen
-            has_explicit_color = style_context and "apply '" in style_context
-            if not has_explicit_color:
-                negative_prompt += (
-                    " MANGA COLOR ENFORCEMENT: This is a black-and-white manga page. "
-                    "STRICTLY PROHIBITED: any color, colored elements, colored backgrounds, "
-                    "colored highlights, colored effects, tinted panels, sepia tones, "
-                    "colored speech bubbles, or any chromatic content. "
-                    "Use ONLY black ink lines, white space, and gray screentone shading."
-                )
 
         if composition_rule:
             borderless_note += f" {composition_rule}"

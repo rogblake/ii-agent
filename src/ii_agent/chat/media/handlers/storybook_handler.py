@@ -13,7 +13,9 @@ from ii_agent.chat.schemas import (
     MediaPreferences,
 )
 from ii_agent.chat.tools import StorybookGenerationTool
+from ii_agent.chat.tools.manga_generate import MangaGenerationTool
 from ..modes.base import BaseModeStrategy
+from ..modes.manga_mode import MangaModeStrategy
 from ..modes.storybook_mode import StorybookModeStrategy
 from ..registry import register_handler
 from .base import BaseMediaHandler
@@ -34,11 +36,9 @@ class StorybookMediaHandler(BaseMediaHandler):
     """
 
     def detect_mode(self, media_preferences: MediaPreferences) -> BaseModeStrategy:
-        """
-        Detect mode for storybook generation.
-
-        Storybook always uses StorybookModeStrategy (no advanced/mini tools variants).
-        """
+        """Detect mode: manga layout uses MangaModeStrategy, otherwise StorybookModeStrategy."""
+        if getattr(media_preferences, "manga_layout", False):
+            return MangaModeStrategy()
         return StorybookModeStrategy()
 
     async def create_tool(
@@ -49,7 +49,13 @@ class StorybookMediaHandler(BaseMediaHandler):
         media_preferences: MediaPreferences,
         container: ServiceContainer,
     ) -> StorybookGenerationTool:
-        """Create StorybookGenerationTool with configuration."""
+        """Create the appropriate generation tool based on the detected mode."""
+        if isinstance(mode_strategy, MangaModeStrategy):
+            return MangaGenerationTool(
+                session_id=session_id,
+                media_preferences=media_preferences,
+                container=container,
+            )
         return StorybookGenerationTool(
             session_id=session_id,
             media_preferences=media_preferences,

@@ -1,4 +1,4 @@
-"""Storybook mode strategy for narrative generation."""
+"""Manga mode strategy for manga-style panel layout generation."""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,17 +10,17 @@ from ii_agent.core.config.settings import get_settings
 from .base import BaseModeStrategy
 
 
-class StorybookModeStrategy(BaseModeStrategy):
+class MangaModeStrategy(BaseModeStrategy):
     """
-    Storybook mode strategy for multi-scene narrative generation.
+    Manga mode strategy for multi-panel manga page generation.
 
     - Keeps conversation context for narrative continuity
-    - Provides story structure and character consistency guidance
-    - Supports iterative refinement of story scenes
+    - Provides manga panel composition, speech bubble, and color consistency guidance
+    - Forces text_position to "none" (text rendered inside image as speech bubbles)
     """
 
     def should_clear_context(self) -> bool:
-        """Storybook mode keeps conversation context for narrative continuity."""
+        """Manga mode keeps conversation context for narrative continuity."""
         return False
 
     async def build_prompt_context(
@@ -30,13 +30,11 @@ class StorybookModeStrategy(BaseModeStrategy):
         session_id: str,
         media_preferences: MediaPreferences,
     ) -> str:
-        """Build narrative generation guidance for storybook mode."""
+        """Build narrative generation guidance for manga mode."""
         # Build page count instruction if provided
         page_count_instruction = ""
         page_count = getattr(media_preferences, 'page_count', None)
         if page_count and page_count != 'unlimited':
-            # page_count represents content pages only (cover page is NOT counted)
-            # Total scenes = 1 cover + page_count content pages
             total_scenes = int(page_count) + 1  # +1 for cover page
             page_count_instruction = f"""
 **CRITICAL PAGE COUNT REQUIREMENT:**
@@ -62,12 +60,6 @@ class StorybookModeStrategy(BaseModeStrategy):
   3) Only after the user explicitly confirms in a later message (e.g., "confirm", "approved", "looks good—generate") should you call generate_storybook.
   4) If the latest user message is not an explicit confirmation, keep refining the draft instead of generating.
 """
-
-        # Build text position default if provided (skip 'none')
-        text_position_note = ""
-        text_position = getattr(media_preferences, 'text_position', None)
-        if text_position and text_position != "none":
-            text_position_note = f"\n**DEFAULT TEXT POSITION: Use '{text_position}' as the default text_position unless the user specifies otherwise.**\n"
 
         # Build language instruction if provided
         language_instruction = ""
@@ -106,37 +98,107 @@ class StorybookModeStrategy(BaseModeStrategy):
             except Exception:
                 pass
 
-        # Build rich dialogue instruction if enabled
-        rich_dialogue_instruction = ""
+        manga_language_label = language or "the selected language"
+
+        # Build rich dialogue + manga combined instruction if rich_dialogue is enabled
+        combined_mode_instruction = ""
         rich_dialogue = getattr(media_preferences, 'rich_dialogue', None)
         if rich_dialogue:
-            rich_dialogue_instruction = """
+            combined_mode_instruction = """
 
-**RICH DIALOGUE MODE ENABLED:**
-- Text content should be LONGER (4-5 sentences per scene, not just 1-3)
-- HARD LIMIT: Maximum 490 characters per scene (including spaces and punctuation)
-- Include extended dialogue exchanges between characters
-- Add emotional inner thoughts and character monologue
-- Use sound effects (BAM, WHOOSH, tap tap) for dramatic effect
-- Show tension through pauses, ellipses, and silence
-- Every line must reveal character, increase tension, or advance the story
-- Keep dialogue purposeful and cinematic—avoid filler
+MANGA + RICH DIALOGUE COMBINED MODE
+Both manga_layout and rich_dialogue are enabled. Follow these priority rules:
+
+RULES THAT STILL APPLY ABSOLUTELY:
+- PAGE COUNT RULE: One scene = one page (even if multi-panel manga)
+- COVER PAGE RULE: Cover may be manga-style but must still be Scene 1
+- CHARACTER CONSISTENCY: Remains ABSOLUTE
+- FULL-BLEED RULE: Remains ABSOLUTE
+- LANGUAGE LOCK: Remains ABSOLUTE
+
+COMBINED MODE PRIORITIES:
+- Prioritize visual storytelling first
+- Dialogue must support panel rhythm, not overwhelm it
+- Let the manga panels carry the action; use dialogue to enhance emotional beats
+- Balance extended dialogue with visual pacing — avoid text-heavy pages that break manga flow
+"""
+
+        manga_layout_instruction = f"""
+
+MANGA LAYOUT MODE — ENABLED
+You are no longer generating single-page illustrations. You are now directing a REAL manga comic page.
+
+MANGA PANEL RULES (MANDATORY)
+- Each scene may contain multiple panels within ONE page
+- Panels must follow authentic manga composition, including:
+  - Panel gutters (spacing between panels)
+  - Asymmetrical panel sizes
+  - Vertical reading flow (top → bottom, right → left unless specified otherwise)
+- Do NOT generate western comic layouts unless explicitly requested
+
+PANEL COMPOSITION GUIDELINES
+Each manga page should include a deliberate mix of:
+- Wide establishing panels (setting, mood)
+- Medium action panels (movement, interaction)
+- Close-up panels (eyes, hands, emotional beats)
+- Avoid repetitive framing.
+
+VISUAL STORY FLOW
+- Action should visually flow from panel to panel
+- Character motion should guide the reader's eye
+- Use overlapping motion lines, background streaks, or environment continuity
+
+MANGA-SPECIFIC VISUAL ELEMENTS (ENCOURAGED)
+- Speed lines
+- Impact bursts
+- Stylized shadows
+- Emotional background effects (flowers, darkness, patterns, noise texture)
+- Panel breaks that emphasize shock, silence, or climax
+
+TEXT-IN-IMAGE REQUIREMENTS (MANDATORY)
+- All dialogue and captions must be rendered inside the image (speech bubbles or caption boxes)
+- The dialogue text MUST be written in {manga_language_label}
+- Use the scene's text_content as the exact speech bubble/caption text
+- Aim for 3-6 speech bubbles or caption boxes per page for richer dialogue
+- Keep bubble text short and legible; avoid long paragraphs
+- Set text_position to "none" for all non-cover pages (no external text blocks)
+
+CONSISTENCY ACROSS PAGES (MANDATORY)
+- Maintain consistent character design, line weight, screentone, panel gutter thickness, and lettering style across all pages
+- Keep reading direction consistent across the entire storybook
+
+MANGA COLOR CONSISTENCY (MANDATORY)
+- The ENTIRE storybook MUST use a SINGLE, CONSISTENT color treatment on EVERY page — either fully black-and-white OR fully colored. NEVER mix B&W and color pages.
+- If no color palette is specified or if the style is traditional manga: use STRICTLY black-and-white ink art with screentone shading on ALL pages. No color whatsoever — no colored backgrounds, no colored effects, no colored highlights, no colored speech bubbles, no tinted panels.
+- If a color palette IS specified: apply that EXACT palette uniformly to EVERY page. Do not let any page fall back to grayscale or use different colors.
+- EVERY image_prompt MUST explicitly state the color treatment (e.g., "black-and-white ink art, no color" or the specified color palette) to prevent the image generator from introducing inconsistent coloring.
+
+MANGA LAYOUT IMAGE PROMPT REQUIREMENT
+When manga_layout is enabled, the image_prompt MUST explicitly include:
+- "multi-panel manga page"
+- "comic panel layout"
+- "visible panel gutters"
+- "dynamic manga composition"
+- "speech bubbles with readable {manga_language_label} text"
+- The color treatment: "black-and-white ink art with screentone shading, no color" (or the user's specified color palette applied consistently)
+
+⚠️ STILL FULL-BLEED: The entire manga page must fill the canvas edge-to-edge. Panels exist INSIDE the page — NOT framed by borders around the page.
 """
 
         return f"""
 
-[STORYBOOK GENERATION MODE]
+[STORYBOOK GENERATION MODE — MANGA]
 
-You are creating an illustrated storybook with multiple pages. Each page combines:
-- An AI-generated image (visual scene)
-- Brief narrative text (1-3 sentences per scene)
-{page_count_instruction}{text_position_note}{language_instruction}{genre_instruction}{template_instruction}{rich_dialogue_instruction}
+You are creating a manga-style illustrated storybook with multiple pages. Each page combines:
+- An AI-generated manga panel layout (visual scene with speech bubbles)
+- Dialogue-heavy text rendered inside the image as speech bubbles
+{page_count_instruction}{language_instruction}{genre_instruction}{template_instruction}{manga_layout_instruction}{combined_mode_instruction}
 COVER PAGE (FIRST SCENE - REQUIRED):
 - The FIRST scene MUST ALWAYS be a cover page
 - The cover page should include the storybook title integrated into the image itself
 - Use text_position: "none" for the cover page (the title should be part of the generated image, not overlaid text)
 - The image_prompt should describe a visually appealing cover that includes the title text within the artwork
-- Example cover image_prompt: "Full-bleed storybook cover illustration (no borders) with the title 'The Adventures of Rosie Rabbit' in decorative lettering integrated into the sky, showing a small brown rabbit with floppy ears in a sunny meadow extending to all edges, watercolor style, cheerful and inviting"
+- Example cover image_prompt: "Full-bleed manga cover illustration (no borders) with the title 'The Adventures of Luna the Brave Cat' in decorative lettering integrated into the sky, showing a small brown rabbit with floppy ears in a sunny meadow extending to all edges, manga art style, dynamic composition"
 - The text_content for the cover should at least include the storybook title for voice narration (it won't be displayed since text_position is "none")
 
 STORY STRUCTURE GUIDELINES (starting from scene 2):
@@ -145,8 +207,8 @@ STORY STRUCTURE GUIDELINES (starting from scene 2):
 - End: Resolution, lesson learned, or satisfying conclusion
 - The number of content pages is determined by the user's page count selection
 - Remember: Cover page (Scene 1) is SEPARATE from content pages - it doesn't count toward the page limit
-- **NON-COVER PAGES (Scene 2+)**: Do NOT include any titles, text, or book-cover-style lettering in the image_prompt.
-- **MAXIMUM SCENE LIMIT: Never exceed 50 content scenes in the scenes array (51 total including cover). Each scene = 1 image generation. In separate_page mode, each scene produces 2 pages (image + text), so 50 scenes = 100 content pages.**
+- **NON-COVER PAGES (Scene 2+)**: Include speech bubbles only — no titles or book-cover-style lettering in the image_prompt.
+- **MAXIMUM SCENE LIMIT: Never exceed 50 content scenes in the scenes array (51 total including cover).**
 
 CHARACTER CONSISTENCY (ABSOLUTE LOCK — CRITICAL):
 - Every character MUST remain visually identical across ALL scenes unless the user explicitly instructs a change.
@@ -159,42 +221,33 @@ CHARACTER CONSISTENCY (ABSOLUTE LOCK — CRITICAL):
   - Color palette associated with the character
 - Use the style.character_description field to establish the full appearance and repeat it VERBATIM in every scene's image_prompt where the character appears.
 - The reference image from the previous page is provided to the image generator — your image_prompt MUST align with what was depicted in that reference. Do NOT introduce visual changes to characters between pages.
-- If a character's outfit or appearance should change (e.g., a costume change in the story), the user must explicitly request it or the story context must clearly justify it.
-- Example: If Scene 2 shows "a small brown rabbit with floppy ears wearing a red vest and blue scarf," then Scene 3, 4, 5, etc. must describe that rabbit with the EXACT same details: "a small brown rabbit with floppy ears wearing a red vest and blue scarf."
 
 SCENE DESCRIPTIONS (image_prompt):
 - Be highly detailed and specific for consistent visual style
 - Include: subject, action, setting, lighting, mood, artistic style
-- Maintain consistent art style across all scenes (watercolor, cartoon, realistic, etc.)
-    - **CRITICAL IMAGE GENERATION REQUIREMENT**: EVERY image prompt MUST explicitly specify that the image should fill the ENTIRE canvas (full bleed) with NO borders, NO letterboxing, NO white/gray bars on sides, NO empty space around edges, and NO centered content with surrounding emptiness. ALSO: Do NOT ask for "framed" or "book page style" designs that might trigger decorative borders. The generated artwork must extend completely to all edges.
-    - Example: "A small brown rabbit with floppy ears standing in a sunny meadow, wearing a red vest, surrounded by wildflowers, soft watercolor illustration style, warm lighting, cheerful mood"
+- Maintain consistent art style across all scenes
+    - **CRITICAL IMAGE GENERATION REQUIREMENT**: EVERY image prompt MUST explicitly specify that the image should fill the ENTIRE canvas (full bleed) with NO borders, NO letterboxing, NO white/gray bars on sides, NO empty space around edges, and NO centered content with surrounding emptiness.
 
 TEXT CONTENT (text_content):
-- Default (rich dialogue disabled): Keep text SHORT - less than 3 sentences per scene (ideally 1-2 sentences), max 190 characters per scene
-- With rich dialogue enabled: Use longer text (4-5 sentences with dialogue and inner thoughts), max 490 characters per scene
+- Use MORE dialogue. Target 3-6 short dialogue lines per scene (split with line breaks or " / " to indicate separate bubbles), ~45-120 words total, keep each line under ~12 words so text fits in speech bubbles
 - Text should complement the image, not repeat it
 - Provide story context, dialogue, or character thoughts
-- Example: "Rosie the rabbit loved exploring the meadow. One day, she discovered a mysterious path she had never seen before."
 
 TEXT LAYOUT (text_position & text_percentage):
 - **COVER PAGE (Scene 1)**: MUST use text_position: "none" because the title is part of the generated image
-- **Story Pages (Scene 2+)**: Use the user-selected setting ("left", "right", "top", "bottom") or "none" to omit text entirely
-- text_percentage: Follow the user's prompt; if not specified, default to ~30% text / 70% image
-- For horizontal layouts (left/right): Better for landscape images
-- For vertical layouts (top/bottom): Better for portrait images or dramatic scenes
-- Keep position consistent within a story for visual flow, or vary deliberately for emphasis
+- **Story Pages (Scene 2+)**: MUST use text_position: "none" (text is rendered inside the image as speech bubbles)
+- text_percentage: 0 for all manga pages
 
 IMAGE-TEXT COORDINATION:
-- Image shows the ACTION or SCENE visually
-- Text provides NARRATIVE CONTEXT, dialogue, or progression
-- Together they tell a cohesive, flowing story
-- **ABSOLUTELY CRITICAL - NO BORDERS ALLOWED**: Images MUST be full-bleed edge-to-edge illustrations that completely fill the entire canvas area. NEVER generate images with borders, frames, vignettes, letterboxing, white/gray bars on sides, or any empty space around the edges. The artwork must extend 100% to all four edges of the canvas with no exceptions. Do NOT create centered artwork with surrounding empty space - fill the complete frame.
+- Image shows the ACTION or SCENE visually with speech bubbles containing dialogue
+- Together the panels and bubbles tell a cohesive, flowing story
+- **ABSOLUTELY CRITICAL - NO BORDERS ALLOWED**: Images MUST be full-bleed edge-to-edge illustrations that completely fill the entire canvas area.
 - Each scene should advance the plot meaningfully
 
 STYLE CONSISTENCY (use style parameter):
 - character_description: FULL physical appearance of main character(s) — include face, body, hair, clothing, accessories, and all distinguishing features. Use IDENTICAL wording across ALL scenes.
-- art_style: "watercolor", "cartoon", "storybook illustration", "realistic", "comic book", etc.
-- color_palette: "warm and bright", "cool and mysterious", "monochrome", "pastel", etc.
+- art_style: "manga", "comic book", "anime", etc.
+- color_palette: "monochrome", "black and white", or a specific color palette applied uniformly
 - These help maintain visual consistency across all generated scenes
 - The previous page's generated image is used as a visual reference for each new page — your prompts must stay consistent with what was already rendered.
 
@@ -216,9 +269,9 @@ After calling the generate_storybook tool, you MUST follow these rules STRICTLY:
 5. ONLY provide a brief, friendly acknowledgment without any links
 
 ✓ CORRECT Response Examples:
-- "I've created your storybook! Check out the interactive viewer below to flip through the pages."
-- "Your 5-page adventure is ready! Click the storybook to read it."
-- "Done! Your illustrated story is displayed below with page-flip functionality."
+- "I've created your manga! Check out the interactive viewer below to flip through the pages."
+- "Your manga adventure is ready! Click to read it."
+- "Done! Your manga is displayed below with page-flip functionality."
 
 ✗ WRONG - Never do this:
 - Including URLs like "Here are your images: https://storage.googleapis.com/..."
@@ -230,4 +283,4 @@ The UI automatically displays the storybook in an interactive page-flip viewer. 
 
     def get_mode_name(self) -> str:
         """Return mode name for logging."""
-        return "storybook"
+        return "manga"

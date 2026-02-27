@@ -323,11 +323,19 @@ async def _fail_storybook(
 
 
 def _setup_storybook_tool(payload: dict[str, Any], session_id: str):
-    """Create and configure a StorybookGenerationTool from payload settings."""
-    from ii_agent.chat.tools.storybook_generate import StorybookGenerationTool
-
+    """Create and configure a StorybookGenerationTool (or MangaGenerationTool) from payload settings."""
     container = get_celery_container()
-    tool = StorybookGenerationTool(session_id=session_id, container=container)
+    manga_layout = bool(payload.get("manga_layout", False))
+
+    if manga_layout:
+        from ii_agent.chat.tools.manga_generate import MangaGenerationTool
+
+        tool = MangaGenerationTool(session_id=session_id, container=container)
+    else:
+        from ii_agent.chat.tools.storybook_generate import StorybookGenerationTool
+
+        tool = StorybookGenerationTool(session_id=session_id, container=container)
+
     tool.image_model_name = payload.get("image_model_name")
     tool.image_provider = payload.get("image_provider") or tool.image_provider
     tool.aspect_ratio = payload.get("aspect_ratio") or tool.aspect_ratio
@@ -335,10 +343,6 @@ def _setup_storybook_tool(payload: dict[str, Any], session_id: str):
     tool.user_text_position = payload.get("user_text_position")
     tool.voice_enabled = bool(payload.get("voice_enabled", False))
     tool.storybook_language = payload.get("storybook_language")
-    tool.manga_layout = bool(payload.get("manga_layout", False))
-    if tool.manga_layout:
-        tool.user_text_position = "none"
-        tool.voice_enabled = False
     return tool
 
 

@@ -9,6 +9,7 @@ from .file_search import FileSearchTool
 from .github import GitHubTool
 from .image_generate import ImageGenerationTool
 from .storybook_generate import StorybookGenerationTool
+from .manga_generate import MangaGenerationTool
 
 __all__ = [
     "BaseTool",
@@ -23,4 +24,5 @@ __all__ = [
     "GitHubTool",
     "ImageGenerationTool",
     "StorybookGenerationTool",
+    "MangaGenerationTool",
 ]

@@ -2,7 +2,11 @@ from datetime import timezone
 
 import pytest
 
-from ii_agent.scripts.import_waitlist import _normalise_email, _normalise_tz_suffix, _parse_created_at
+from ii_agent.workers.cron.jobs.import_waitlist import (
+    _normalise_email,
+    _normalise_tz_suffix,
+    _parse_created_at,
+)
 
 
 def test_normalise_tz_suffix_adds_minutes_when_missing():

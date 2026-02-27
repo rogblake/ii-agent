@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from typing import Awaitable, Callable, Literal, Sequence
 
 from ii_agent.core.logger import logger as app_logger
-from ii_agent.scripts import refresh_annual_subscription_credits as annual_refresh
-from ii_agent.scripts import refresh_free_user_credits as free_refresh
-from ii_agent.scripts.cron_manager import CronJobDefinition, CronManager
+from ii_agent.workers.cron import refresh_annual_subscription_credits as annual_refresh
+from ii_agent.workers.cron import refresh_free_user_credits as free_refresh
+from ii_agent.workers.cron.cron_manager import CronJobDefinition, CronManager
 
 CronJobRunner = Callable[[], Awaitable[None] | None]
 CronJobStatus = Literal["active", "inactive"]

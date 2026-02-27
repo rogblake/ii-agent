@@ -12,7 +12,7 @@ from typing import Any, Literal, Optional, TYPE_CHECKING, cast
 import anyio
 import httpx
 
-from ii_agent.celery.utils import queue_task
+from ii_agent.workers.celery.utils import queue_task
 from ii_agent.core.db.manager import get_db_session_local
 
 from ii_agent.content.media.service import _generate_image
@@ -652,7 +652,7 @@ class StorybookGenerationTool(BaseTool):
                 )
 
             task_id = queue_task(
-                "ii_agent.celery.tasks.storybook_generate_page",
+                "ii_agent.workers.celery.tasks.storybook_generate_page",
                 {
                     "storybook_id": storybook_id,
                     "scene_index": 0,

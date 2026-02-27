@@ -22,7 +22,7 @@ from celery import Celery
 from celery.signals import setup_logging, worker_process_init
 from kombu import Exchange, Queue
 
-from ii_agent.celery.model_imports import import_model_modules
+from ii_agent.workers.celery.model_imports import import_model_modules
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.logger import reconfigure_logging
 
@@ -124,9 +124,9 @@ celery_app.conf.update(
         Queue("low_priority", Exchange("low_priority"), routing_key="low_priority"),
     ),
     task_routes={
-        "ii_agent.celery.tasks.*": {"queue": "default"},
+        "ii_agent.workers.celery.tasks.*": {"queue": "default"},
     },
     beat_schedule={},
 )
 
-celery_app.autodiscover_tasks(["ii_agent.celery"])
+celery_app.autodiscover_tasks(["ii_agent.workers.celery"])

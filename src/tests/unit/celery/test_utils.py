@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from ii_agent.celery import utils
+from ii_agent.workers.celery import utils
 
 
 class FakeAsyncResult:

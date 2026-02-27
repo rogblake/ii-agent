@@ -1,4 +1,4 @@
-from ii_agent.scripts import tasks
+from ii_agent.workers.cron import tasks
 
 
 class FakeScheduler:

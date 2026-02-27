@@ -1,6 +1,6 @@
 import asyncio
 
-from ii_agent.celery import tasks
+from ii_agent.workers.celery import tasks
 from ii_agent.billing.credits.utils import usd_to_credits
 
 

@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 from celery.result import AsyncResult
 
-from ii_agent.celery.app import celery_app
+from ii_agent.workers.celery.app import celery_app
 
 _executor = ThreadPoolExecutor(max_workers=10)
 

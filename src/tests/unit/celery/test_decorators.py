@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from types import SimpleNamespace
 
-from ii_agent.celery.decorators import with_task_context
+from ii_agent.workers.celery.decorators import with_task_context
 
 
 class _FakeLogger:
@@ -16,7 +16,7 @@ class _FakeLogger:
 
 def test_with_task_context_injects_headers(monkeypatch):
     fake_logger = _FakeLogger()
-    monkeypatch.setattr("ii_agent.celery.decorators.logger", fake_logger)
+    monkeypatch.setattr("ii_agent.workers.celery.decorators.logger", fake_logger)
 
     @with_task_context
     def _task(self, value):
@@ -38,7 +38,7 @@ def test_with_task_context_injects_headers(monkeypatch):
 
 def test_with_task_context_handles_missing_headers(monkeypatch):
     fake_logger = _FakeLogger()
-    monkeypatch.setattr("ii_agent.celery.decorators.logger", fake_logger)
+    monkeypatch.setattr("ii_agent.workers.celery.decorators.logger", fake_logger)
 
     @with_task_context
     def _task(self):

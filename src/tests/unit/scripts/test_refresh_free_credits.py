@@ -1,4 +1,4 @@
-from ii_agent.scripts import refresh_free_user_credits as free_refresh
+from ii_agent.workers.cron import refresh_free_user_credits as free_refresh
 
 
 def test_monthly_free_credit_allowance_uses_plan_allowance(settings_factory, monkeypatch):

@@ -21,17 +21,17 @@ You have three options to specify session IDs:
 
 #### Option A: Command line argument
 ```bash
-python -m src.ii_agent.scripts.extend_sandbox_timeout --session-ids "session-1,session-2,session-3"
+python -m ii_agent.workers.cron.jobs.extend_sandbox_timeout --session-ids "session-1,session-2,session-3"
 ```
 
 #### Option B: JSON file
 ```bash
-python -m src.ii_agent.scripts.extend_sandbox_timeout --session-ids-file src/ii_agent/scripts/session_ids.json
+python -m ii_agent.workers.cron.jobs.extend_sandbox_timeout --session-ids-file /path/to/session_ids.json
 ```
 
 #### Option C: No arguments (processes all active sessions)
 ```bash
-python -m src.ii_agent.scripts.extend_sandbox_timeout
+python -m ii_agent.workers.cron.jobs.extend_sandbox_timeout
 ```
 
 ### 3. Monitoring

@@ -39,7 +39,7 @@ if [ -d ".venv" ]; then
 fi
 
 # Build the Python command with any passthrough arguments
-PYTHON_CMD=(python -m src.ii_agent.cron.extend_sandbox_timeout "$@")
+PYTHON_CMD=(python -m ii_agent.workers.cron.jobs.extend_sandbox_timeout "$@")
 
 echo "Processing permanent sessions"
 

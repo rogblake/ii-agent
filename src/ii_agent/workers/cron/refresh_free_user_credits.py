@@ -13,7 +13,7 @@ from ii_agent.core.config.settings import get_settings
 from ii_agent.core.logger import logger as app_logger
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.auth.users.models import User
-from ii_agent.scripts.cron_manager import CronJobDefinition, CronManager
+from ii_agent.workers.cron.cron_manager import CronJobDefinition, CronManager
 
 FREE_PLAN_ID = "free"
 DEFAULT_CRON_SCHEDULE = "0 0 1 * *"
@@ -70,7 +70,7 @@ async def refresh_free_user_credits() -> None:
 
 
 def _project_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    return Path(__file__).resolve().parents[4]
 
 
 def _default_command() -> str:
@@ -78,7 +78,7 @@ def _default_command() -> str:
     repo_root = _project_root()
     return (
         f"cd {repo_root} && {python_executable} -m "
-        "ii_agent.scripts.refresh_free_user_credits"
+        "ii_agent.workers.cron.refresh_free_user_credits"
     )
 
 

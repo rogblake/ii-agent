@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from ii_agent.scripts import refresh_annual_subscription_credits as annual_refresh
+from ii_agent.workers.cron import refresh_annual_subscription_credits as annual_refresh
 
 
 def test_parse_iso_date_handles_timezone_and_invalid_values():

@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from ii_agent.celery import app as celery_app_module
+from ii_agent.workers.celery import app as celery_app_module
 
 
 def test_broker_url_prefers_explicit_env(monkeypatch):

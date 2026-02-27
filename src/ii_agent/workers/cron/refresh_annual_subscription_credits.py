@@ -19,7 +19,7 @@ from ii_agent.core.config.settings import get_settings
 from ii_agent.core.logger import logger as app_logger
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.auth.users.models import User
-from ii_agent.scripts.cron_manager import CronJobDefinition, CronManager
+from ii_agent.workers.cron.cron_manager import CronJobDefinition, CronManager
 
 REFRESH_METADATA_KEY = "last_annual_credit_refresh"
 ACTIVE_STATUSES = {"active", "trialing"}
@@ -109,7 +109,7 @@ async def refresh_annual_subscription_credits() -> None:
 
 
 def _project_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    return Path(__file__).resolve().parents[4]
 
 
 def _default_command() -> str:
@@ -117,7 +117,7 @@ def _default_command() -> str:
     repo_root = _project_root()
     return (
         f"cd {repo_root} && {python_executable} -m "
-        "ii_agent.scripts.refresh_annual_subscription_credits"
+        "ii_agent.workers.cron.refresh_annual_subscription_credits"
     )
 
 

@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from ii_agent.scripts.cron_manager import CronJobDefinition, CronManager
+from ii_agent.workers.cron.cron_manager import CronJobDefinition, CronManager
 
 
 class FakeCron:

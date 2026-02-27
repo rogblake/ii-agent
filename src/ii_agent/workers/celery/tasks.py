@@ -9,9 +9,9 @@ from typing import Any, Optional
 
 from celery import shared_task
 
-from ii_agent.celery.decorators import with_task_context
-from ii_agent.celery.manager import get_celery_container
-from ii_agent.celery.utils import queue_task
+from ii_agent.workers.celery.decorators import with_task_context
+from ii_agent.workers.celery.manager import get_celery_container
+from ii_agent.workers.celery.utils import queue_task
 from ii_agent.billing.credits.utils import usd_to_credits
 from ii_agent.core.logger import logger
 from ii_agent.core.redis import cancel
@@ -628,7 +628,7 @@ async def _generate_storybook_page_async(
 
     next_scene_index = scene_index + 1
     next_task_id = queue_task(
-        "ii_agent.celery.tasks.storybook_generate_page",
+        "ii_agent.workers.celery.tasks.storybook_generate_page",
         {
             "storybook_id": storybook_id,
             "scene_index": next_scene_index,
@@ -687,7 +687,7 @@ async def _handle_storybook_page_failure(payload: dict[str, Any], error_message:
     )
 
 
-@shared_task(bind=True, name="ii_agent.celery.tasks.storybook_generate_page")
+@shared_task(bind=True, name="ii_agent.workers.celery.tasks.storybook_generate_page")
 @with_task_context
 def storybook_generate_page(self, payload: dict[str, Any]) -> dict[str, Any]:
     """Celery task to generate a single storybook page."""

@@ -63,8 +63,9 @@ RUN uv run playwright install --with-deps --only-shell chromium \
 FROM dependencies AS production
 
 # Copy only files needed for the backend build
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md alembic.ini ./
 COPY src/ src/
+COPY migrations/ migrations/
 COPY docker/backend/entrypoint.sh /entrypoint.sh
 
 # Install the project itself (source code only — deps are already cached)

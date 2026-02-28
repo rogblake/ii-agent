@@ -51,6 +51,35 @@ from ii_agent.engine.v1.utils.tools import (
 )
 
 _TOOL_CANCELLED_MESSAGE = "Tool execution was interrupted due to run cancellation."
+_TOOL_DETACHED_MESSAGE = (
+    "Run was interrupted. This tool is still executing in the background. "
+    "Results will be written to /tmp/{call_id}.txt when complete."
+)
+
+
+async def _write_detached_result(
+    task: asyncio.Task, call_id: str, tool_name: str
+) -> None:
+    """Await a detached tool task and persist its output to a temp file.
+
+    This runs as a fire-and-forget background task so the agent loop can
+    return immediately while the tool finishes on its own.
+    """
+    try:
+        _success, _timer, _fc, result = await task
+        content = result.result if result.result else "No output"
+    except asyncio.CancelledError:
+        content = "Tool task was cancelled before it could complete."
+    except Exception as exc:
+        content = f"Tool execution failed: {exc}"
+
+    path = f"/tmp/{call_id}.txt"
+    try:
+        with open(path, "w") as f:
+            f.write(content)
+        logger.info("Detached tool %s result written to %s", tool_name, path)
+    except Exception as exc:
+        logger.warning("Failed to write detached result for %s: %s", call_id, exc)
 
 
 @dataclass
@@ -1252,9 +1281,11 @@ class Model(ABC):
             ]
 
         # Run tool calls with cancel-awareness: poll for cancellation every
-        # 0.5s and cancel pending tool tasks so the agent loop returns
-        # immediately instead of waiting.
+        # 0.5s.  When cancelled, *detach* still-running tasks (let them
+        # finish in the background and write output to /tmp/<call_id>.txt)
+        # instead of aborting them mid-flight.
         run_was_cancelled = False
+        detached_tasks: set[asyncio.Task] = set()
 
         if function_calls_to_run:
             tool_tasks = [
@@ -1270,17 +1301,26 @@ class Model(ABC):
             pending = {task for _, task in tool_tasks}
 
             if run_id:
-                # Cancel-aware: poll is_cancelled every 0.5s between wait cycles
                 while pending:
                     _, pending = await asyncio.wait(pending, timeout=0.5)
                     if pending and await _is_run_cancelled(run_id):
                         run_was_cancelled = True
-                        for t in pending:
-                            t.cancel()
-                        await asyncio.wait(pending, timeout=2.0)
+                        detached_tasks = set(pending)
+                        # Fire-and-forget: let each running task finish and
+                        # persist its output to a temp file.
+                        for fc, task in tool_tasks:
+                            if task in detached_tasks:
+                                asyncio.create_task(
+                                    _write_detached_result(
+                                        task, fc.call_id, fc.function.name
+                                    ),
+                                    name=f"detached-{fc.call_id}",
+                                )
                         logger.info(
-                            f"Run {run_id} cancelled during tool execution — "
-                            f"{len(pending)} tool task(s) interrupted"
+                            "Run %s cancelled during tool execution — "
+                            "%d tool task(s) detached",
+                            run_id,
+                            len(detached_tasks),
                         )
                         break
             else:
@@ -1290,26 +1330,19 @@ class Model(ABC):
             # Collect results in original order
             results = []
             for fc, task in tool_tasks:
-                if task.cancelled():
+                if task in detached_tasks:
+                    # Tool is still running in background — return placeholder
+                    results.append((False, Timer(), fc, FunctionExecutionResult(
+                        status="failure",
+                        result=_TOOL_DETACHED_MESSAGE.format(call_id=fc.call_id),
+                    )))
+                elif task.cancelled():
                     results.append((False, Timer(), fc, FunctionExecutionResult(
                         status="failure",
                         result=_TOOL_CANCELLED_MESSAGE,
                     )))
-                elif task.exception():
-                    if run_was_cancelled:
-                        # Exception is likely a side-effect of task cancellation
-                        # (e.g. ClosedResourceError from MCP client cleanup).
-                        logger.warning(
-                            f"Tool {fc.function.name} raised "
-                            f"{type(task.exception()).__name__} during cancellation, "
-                            f"treating as interrupted: {task.exception()}"
-                        )
-                        results.append((False, Timer(), fc, FunctionExecutionResult(
-                            status="failure",
-                            result=_TOOL_CANCELLED_MESSAGE,
-                        )))
-                    else:
-                        results.append(task.exception())
+                elif task.done() and task.exception():
+                    results.append(task.exception())
                 else:
                     results.append(task.result())
         else:

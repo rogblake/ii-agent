@@ -29,6 +29,7 @@ from ii_agent.core.config.credits import CreditsSettings
 from ii_agent.core.config.agent import AgentSettings
 from ii_agent.core.config.mobile import MobileSettings
 from ii_agent.core.config.enhance_prompt_config import EnhancePromptConfig
+from ii_agent.core.config.nano_banana import NanoBananaConfig
 
 if TYPE_CHECKING:
     from ii_agent.core.storage.base import BaseStorage
@@ -189,6 +190,11 @@ class Settings(BaseSettings):
     enhance_prompt: EnhancePromptConfig = Field(
         default_factory=EnhancePromptConfig,
         description="Enhance prompt configuration (OpenAI-based prompt enhancement)",
+    )
+
+    nano_banana: NanoBananaConfig = Field(
+        default_factory=NanoBananaConfig,
+        description="Nano Banana slide detection LLM configuration",
     )
 
     # ========== Workspace Configuration ==========

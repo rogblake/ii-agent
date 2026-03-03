@@ -1,0 +1,46 @@
+"""Configuration for Nano Banana slide detection LLM."""
+
+from pydantic import Field
+from pydantic_settings import BaseSettings
+
+
+class NanoBananaConfig(BaseSettings):
+    """LLM configuration for Nano Banana vision-based slide component detection.
+
+    All fields can be set via environment variables with the ``NANO_BANANA_``
+    prefix (e.g. ``NANO_BANANA_MODEL``, ``NANO_BANANA_API_KEY``).
+    """
+
+    model: str = Field(
+        default="gemini-2.5-flash-preview-05-20",
+        description="Model identifier for vision detection",
+    )
+    api_key: str | None = Field(
+        default=None,
+        description="API key for the detection model provider",
+    )
+    api_type: str = Field(
+        default="gemini",
+        description="Provider type: gemini, openai, anthropic, custom",
+    )
+    temperature: float = Field(
+        default=0.1,
+        description="Sampling temperature for detection",
+    )
+    base_url: str | None = Field(
+        default=None,
+        description="Custom base URL (for custom/self-hosted providers)",
+    )
+    vertex_project_id: str | None = Field(
+        default=None,
+        description="GCP project ID when using Vertex AI",
+    )
+    vertex_region: str | None = Field(
+        default=None,
+        description="GCP region when using Vertex AI (e.g. us-central1)",
+    )
+
+    class Config:
+        env_prefix = "NANO_BANANA_"
+        env_file = ".env"
+        extra = "ignore"

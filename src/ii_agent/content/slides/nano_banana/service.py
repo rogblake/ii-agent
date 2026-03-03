@@ -1,7 +1,7 @@
 """Business logic for Nano Banana design mode.
 
 Handles:
-- Vision-based component detection using Gemini 3 Flash
+- Vision-based component detection via LLMExecutionService (provider-agnostic)
 - HTML overlay generation for interactive editing
 - Image regeneration with modifications
 - Version tracking and management
@@ -9,19 +9,19 @@ Handles:
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from html import escape as html_escape
 from io import BytesIO
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
-from google import genai
-from google.genai import types
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.chat.schemas import BinaryContent, MessageRole, TextContent, ToolCall
+from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.core.llm.execution_service import LLMExecutionService
 from ii_agent.projects.design.utils.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
     DESIGN_MODE_RUNTIME_SCRIPT,
@@ -52,9 +52,6 @@ from .schemas import (
 
 logger = logging.getLogger(__name__)
 
-# Vision model for component detection
-VISION_DETECTION_MODEL = "gemini-3-flash-preview"
-
 # Text component types that may have editable text
 TEXT_COMPONENT_TYPES = frozenset(
     [
@@ -68,6 +65,118 @@ TEXT_COMPONENT_TYPES = frozenset(
     ]
 )
 
+# Tool name used for structured detection output
+_DETECT_TOOL_NAME = "submit_detected_components"
+
+# OpenAI-format tool definition for component detection
+DETECT_COMPONENTS_TOOL: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": _DETECT_TOOL_NAME,
+        "description": (
+            "Submit the detected visual components found in the slide image. "
+            "Call this tool exactly once with all detected components."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "components": {
+                    "type": "array",
+                    "description": "List of all detected visual components",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "component_type": {
+                                "type": "string",
+                                "enum": [
+                                    "title",
+                                    "subtitle",
+                                    "text_block",
+                                    "bullet_list",
+                                    "header",
+                                    "footer",
+                                    "image",
+                                    "icon",
+                                    "logo",
+                                    "chart",
+                                    "shape",
+                                    "character",
+                                    "background_element",
+                                ],
+                                "description": "Type of visual component",
+                            },
+                            "label": {
+                                "type": "string",
+                                "description": "Human-readable label for the component",
+                            },
+                            "text_content": {
+                                "type": "string",
+                                "description": "Exact text content if readable, omit otherwise",
+                            },
+                            "bounding_box": {
+                                "type": "object",
+                                "description": "Bounding box in pixels",
+                                "properties": {
+                                    "left": {
+                                        "type": "number",
+                                        "description": "Pixels from left edge",
+                                    },
+                                    "top": {
+                                        "type": "number",
+                                        "description": "Pixels from top edge",
+                                    },
+                                    "width": {
+                                        "type": "number",
+                                        "description": "Width in pixels",
+                                    },
+                                    "height": {
+                                        "type": "number",
+                                        "description": "Height in pixels",
+                                    },
+                                },
+                                "required": ["left", "top", "width", "height"],
+                            },
+                            "z_index": {
+                                "type": "integer",
+                                "description": "1 for background, 2+ for foreground",
+                            },
+                            "confidence": {
+                                "type": "number",
+                                "description": "Detection confidence 0.0–1.0",
+                            },
+                            "styles": {
+                                "type": "object",
+                                "description": "Estimated visual styles",
+                                "properties": {
+                                    "font_size": {"type": "string"},
+                                    "font_weight": {
+                                        "type": "string",
+                                        "enum": ["normal", "bold", "light"],
+                                    },
+                                    "color": {
+                                        "type": "string",
+                                        "description": "#RRGGBB hex color",
+                                    },
+                                    "background_color": {
+                                        "type": "string",
+                                        "description": "#RRGGBB hex color or null",
+                                    },
+                                    "text_align": {
+                                        "type": "string",
+                                        "enum": ["left", "center", "right"],
+                                    },
+                                },
+                            },
+                        },
+                        "required": ["component_type", "label", "bounding_box"],
+                    },
+                },
+            },
+            "required": ["components"],
+        },
+    },
+}
+
 
 class NanoBananaService:
     """Unified service for Nano Banana design mode operations.
@@ -80,36 +189,13 @@ class NanoBananaService:
         self,
         *,
         repo: NanoBananaRepository,
-        gemini_api_key: Optional[str] = None,
-        gcp_project_id: Optional[str] = None,
-        gcp_location: Optional[str] = None,
+        llm_execution_service: LLMExecutionService,
+        llm_config: LLMConfig,
     ) -> None:
         self._repo = repo
-        self._gemini_api_key = gemini_api_key
-        self._gcp_project_id = gcp_project_id
-        self._gcp_location = gcp_location
-        self._vision_client: Optional[genai.Client] = None
+        self._llm_execution_service = llm_execution_service
+        self._llm_config = llm_config
         self._slide_gen_config = None
-
-    @property
-    def vision_client(self) -> genai.Client:
-        """Lazy-load the Gemini client for vision detection."""
-        if self._vision_client is None:
-            api_key = (self._gemini_api_key or "").strip()
-            if api_key:
-                self._vision_client = genai.Client(api_key=api_key)
-            elif self._gcp_project_id and self._gcp_location:
-                self._vision_client = genai.Client(
-                    vertexai=True,
-                    project=self._gcp_project_id,
-                    location=self._gcp_location,
-                )
-            else:
-                raise RuntimeError(
-                    "No Gemini API key found for nano banana detection. "
-                    "Set GEMINI_API_KEY or configure GCP project/location."
-                )
-        return self._vision_client
 
     @property
     def slide_generation_config(self):
@@ -131,7 +217,7 @@ class NanoBananaService:
         user_id: str,
         request: DetectRequest,
     ) -> DetectResponse:
-        """Detect visual components in a slide image using Gemini Vision."""
+        """Detect visual components in a slide image using vision LLM."""
         await self._repo.validate_session_access(
             db, session_id=request.session_id, user_id=user_id
         )
@@ -413,34 +499,44 @@ class NanoBananaService:
         self,
         image_url: str,
     ) -> Tuple[List[DetectedComponent], int, int]:
-        """Detect visual components in a slide image using Gemini Vision."""
+        """Detect visual components in a slide image via LLM tool calling."""
         image_bytes, mime_type = await self._download_image(image_url)
         width, height = self._get_image_dimensions(image_bytes)
 
         prompt = COMPONENT_DETECTION_PROMPT.format(width=width, height=height)
 
-        response = await self.vision_client.aio.models.generate_content(
-            model=VISION_DETECTION_MODEL,
-            contents=[
-                types.Content(
-                    role="user",
-                    parts=[
-                        types.Part.from_bytes(mime_type=mime_type, data=image_bytes),
-                        types.Part.from_text(text=prompt),
-                    ],
-                )
-            ],
-            config=types.GenerateContentConfig(
-                response_modalities=["TEXT"],
-                temperature=0.1,
-            ),
+        client = self._llm_execution_service.create_client(self._llm_config)
+        messages = [
+            self._llm_execution_service.new_message(
+                role=MessageRole.USER,
+                session_id="nano-banana-detect",
+                parts=[
+                    BinaryContent(mime_type=mime_type, data=image_bytes),
+                    TextContent(text=prompt),
+                ],
+            )
+        ]
+
+        response = await self._llm_execution_service.send_once(
+            client=client,
+            messages=messages,
+            tools=[DETECT_COMPONENTS_TOOL],
         )
 
-        raw_text = self._extract_text_response(response)
-        components = self._parse_detection_response(raw_text, width, height)
+        # Extract the structured payload from the tool call
+        for part in response.content or []:
+            if isinstance(part, ToolCall) and part.name == _DETECT_TOOL_NAME:
+                payload = self._llm_execution_service.parse_tool_input(part.input)
+                raw_components = payload.get("components", [])
+                components = _build_components(raw_components, width, height)
+                logger.info(
+                    "[NanoBanana] Detected %d components in slide image",
+                    len(components),
+                )
+                return components, width, height
 
-        logger.info("[NanoBanana] Detected %d components in slide image", len(components))
-        return components, width, height
+        logger.warning("[NanoBanana] LLM did not call the detection tool")
+        return [], width, height
 
     # ==================== Internal: Image Regeneration ====================
 
@@ -666,88 +762,55 @@ class NanoBananaService:
         except Exception:
             return 1280, 720  # Default slide dimensions
 
-    @staticmethod
-    def _extract_text_response(response) -> str:
-        """Extract text from Gemini response."""
-        raw_text = ""
-        if (
-            response.candidates
-            and response.candidates[0].content
-            and response.candidates[0].content.parts
-        ):
-            for part in response.candidates[0].content.parts:
-                if part.text:
-                    raw_text += part.text
-        return raw_text
-
-    @staticmethod
-    def _parse_detection_response(
-        raw_text: str, img_width: int, img_height: int
-    ) -> List[DetectedComponent]:
-        """Parse JSON response into DetectedComponent list."""
-        if not raw_text.strip():
-            logger.warning("[NanoBanana] Vision detection returned empty response")
-            return []
-
-        # Handle markdown code blocks
-        json_text = raw_text.strip()
-        if json_text.startswith("```"):
-            lines = json_text.split("\n")
-            lines = [line for line in lines if not line.strip().startswith("```")]
-            json_text = "\n".join(lines)
-
-        try:
-            raw_components = json.loads(json_text)
-        except json.JSONDecodeError as e:
-            logger.error(
-                "[NanoBanana] Failed to parse detection JSON: %s\nRaw: %s",
-                e,
-                raw_text[:500],
-            )
-            return []
-
-        if not isinstance(raw_components, list):
-            logger.error("[NanoBanana] Detection response is not a list")
-            return []
-
-        components: List[DetectedComponent] = []
-        type_counters: Dict[str, int] = {}
-
-        for raw in raw_components:
-            if not isinstance(raw, dict):
-                continue
-
-            comp_type = raw.get("component_type", "unknown")
-            idx = type_counters.get(comp_type, 0)
-            type_counters[comp_type] = idx + 1
-            design_id = f"nano-{comp_type}-{idx}"
-
-            bbox = _parse_bounding_box(raw.get("bounding_box", {}), img_width, img_height)
-            if not bbox:
-                logger.warning(
-                    "[NanoBanana] Invalid bounding box for %s, skipping", design_id
-                )
-                continue
-
-            styles = _parse_styles(raw.get("styles"))
-
-            components.append(
-                DetectedComponent(
-                    design_id=design_id,
-                    component_type=comp_type,
-                    label=str(raw.get("label", comp_type)),
-                    text_content=raw.get("text_content"),
-                    bounding_box=bbox,
-                    z_index=int(raw.get("z_index", 1)),
-                    confidence=float(raw.get("confidence", 0.0)),
-                    styles=styles,
-                )
-            )
-
-        return components
-
 
 # ============ Module-Level Helpers ============
+
+
+def _build_components(
+    raw_components: list[dict[str, Any]],
+    img_width: int,
+    img_height: int,
+) -> List[DetectedComponent]:
+    """Convert raw tool-call component dicts into DetectedComponent list."""
+    if not isinstance(raw_components, list):
+        logger.error("[NanoBanana] Detection payload 'components' is not a list")
+        return []
+
+    components: List[DetectedComponent] = []
+    type_counters: Dict[str, int] = {}
+
+    for raw in raw_components:
+        if not isinstance(raw, dict):
+            continue
+
+        comp_type = raw.get("component_type", "unknown")
+        idx = type_counters.get(comp_type, 0)
+        type_counters[comp_type] = idx + 1
+        design_id = f"nano-{comp_type}-{idx}"
+
+        bbox = _parse_bounding_box(raw.get("bounding_box", {}), img_width, img_height)
+        if not bbox:
+            logger.warning(
+                "[NanoBanana] Invalid bounding box for %s, skipping", design_id
+            )
+            continue
+
+        styles = _parse_styles(raw.get("styles"))
+
+        components.append(
+            DetectedComponent(
+                design_id=design_id,
+                component_type=comp_type,
+                label=str(raw.get("label", comp_type)),
+                text_content=raw.get("text_content"),
+                bounding_box=bbox,
+                z_index=int(raw.get("z_index", 1)),
+                confidence=float(raw.get("confidence", 0.0)),
+                styles=styles,
+            )
+        )
+
+    return components
 
 
 def _inject_runtime_script(html: str) -> str:

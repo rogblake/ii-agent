@@ -94,7 +94,7 @@ async def _pop_and_build_detached_reminder(session_id: str) -> Optional[Message]
     return Message(
         role="system",
         content="\n".join(lines),
-        add_to_agent_memory=False,
+        add_to_agent_memory=True,
     )
 
 

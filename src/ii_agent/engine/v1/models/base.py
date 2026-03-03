@@ -45,6 +45,10 @@ from ii_agent.engine.v1.utils.timer import Timer
 from ii_agent.core.logger import logger
 from ii_agent.core.exceptions import RunCancelledException
 from ii_agent.core.redis.cancel import is_cancelled as _is_run_cancelled
+from ii_agent.core.redis.detached_tool_results import (
+    store_detached_result as _store_detached_result,
+    pop_detached_results as _pop_detached_results,
+)
 from ii_agent.engine.v1.utils.tools import (
     get_function_call_for_tool_call,
     get_function_call_for_tool_execution,
@@ -52,18 +56,19 @@ from ii_agent.engine.v1.utils.tools import (
 
 _TOOL_CANCELLED_MESSAGE = "Tool execution was interrupted due to run cancellation."
 _TOOL_DETACHED_MESSAGE = (
-    "Run was interrupted. This tool is still executing in the background. "
-    "Results will be written to /tmp/{call_id}.txt when complete."
+    "Run was cancelled. This tool is still executing in the background. "
+    "Results will be available in the next run."
 )
 
 
 async def _write_detached_result(
-    task: asyncio.Task, call_id: str, tool_name: str
+    task: asyncio.Task, call_id: str, tool_name: str, session_id: str
 ) -> None:
-    """Await a detached tool task and persist its output to a temp file.
+    """Await a detached tool task and store its result in Redis.
 
     This runs as a fire-and-forget background task so the agent loop can
-    return immediately while the tool finishes on its own.
+    return immediately while the tool finishes on its own.  The result is
+    stored in Redis and injected into the next agent loop iteration.
     """
     try:
         _success, _timer, _fc, result = await task
@@ -73,13 +78,24 @@ async def _write_detached_result(
     except Exception as exc:
         content = f"Tool execution failed: {exc}"
 
-    path = f"/tmp/{call_id}.txt"
-    try:
-        with open(path, "w") as f:
-            f.write(content)
-        logger.info("Detached tool %s result written to %s", tool_name, path)
-    except Exception as exc:
-        logger.warning("Failed to write detached result for %s: %s", call_id, exc)
+    await _store_detached_result(session_id, call_id, tool_name, content)
+
+
+async def _pop_and_build_detached_reminder(session_id: str) -> Optional[Message]:
+    """Check Redis for completed detached tool results, return a reminder Message if any."""
+    results = await _pop_detached_results(session_id)
+    if not results:
+        return None
+    lines = ["<system-reminder>", "Previously cancelled tools have now completed:\n"]
+    for r in results:
+        lines.append(f"[{r['tool_name']}] (call_id: {r['call_id']})")
+        lines.append(f"Result:\n{r['result']}\n")
+    lines.append("</system-reminder>")
+    return Message(
+        role="system",
+        content="\n".join(lines),
+        add_to_agent_memory=False,
+    )
 
 
 @dataclass
@@ -333,6 +349,12 @@ class Model(ABC):
             function_call_count = 0
 
             while True:
+                # Inject completed detached tool results from previous cancelled runs
+                if run_response and run_response.session_id:
+                    _reminder = await _pop_and_build_detached_reminder(run_response.session_id)
+                    if _reminder:
+                        messages.append(_reminder)
+
                 # Get response from model
                 assistant_message = Message(role=self.assistant_message_role)
                 await self._aprocess_model_response(
@@ -366,6 +388,7 @@ class Model(ABC):
                         current_function_call_count=function_call_count,
                         function_call_limit=tool_call_limit,
                         run_id=run_response.run_id if run_response else None,
+                        session_id=run_response.session_id if run_response else None,
                     ):
                         if isinstance(function_call_response, ModelResponse):
                             # The session state is updated by the function call
@@ -725,6 +748,12 @@ class Model(ABC):
             function_call_count = 0
 
             while True:
+                # Inject completed detached tool results from previous cancelled runs
+                if run_response and run_response.session_id:
+                    _reminder = await _pop_and_build_detached_reminder(run_response.session_id)
+                    if _reminder:
+                        messages.append(_reminder)
+
                 # Create assistant message and stream data
                 assistant_message = Message(role=self.assistant_message_role)
                 stream_data = MessageData()
@@ -774,6 +803,7 @@ class Model(ABC):
                         current_function_call_count=function_call_count,
                         function_call_limit=tool_call_limit,
                         run_id=run_response.run_id if run_response else None,
+                        session_id=run_response.session_id if run_response else None,
                     ):
                         yield function_call_response
 
@@ -1144,6 +1174,7 @@ class Model(ABC):
         function_call_limit: Optional[int] = None,
         skip_pause_check: bool = False,
         run_id: Optional[str] = None,
+        session_id: Optional[str] = None,
     ) -> AsyncIterator[Union[ModelResponse, RunOutputEvent]]:
         # Additional messages from function calls that will be added to the function call results
         if additional_input is None:
@@ -1307,12 +1338,13 @@ class Model(ABC):
                         run_was_cancelled = True
                         detached_tasks = set(pending)
                         # Fire-and-forget: let each running task finish and
-                        # persist its output to a temp file.
+                        # store its result in Redis for the next loop iteration.
                         for fc, task in tool_tasks:
                             if task in detached_tasks:
                                 asyncio.create_task(
                                     _write_detached_result(
-                                        task, fc.call_id, fc.function.name
+                                        task, fc.call_id, fc.function.name,
+                                        session_id or "",
                                     ),
                                     name=f"detached-{fc.call_id}",
                                 )

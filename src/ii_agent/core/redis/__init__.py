@@ -62,6 +62,11 @@ from ii_agent.core.redis.cancel import (
     get_active_runs,
 )
 
+from ii_agent.core.redis.detached_tool_results import (
+    store_detached_result,
+    pop_detached_results,
+)
+
 __all__ = [
     # Client
     "redis_client",
@@ -89,4 +94,7 @@ __all__ = [
     "cleanup_run",
     "raise_if_cancelled",
     "get_active_runs",
+    # Detached tool results
+    "store_detached_result",
+    "pop_detached_results",
 ]

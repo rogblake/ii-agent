@@ -12,7 +12,7 @@ class NanoBananaConfig(BaseSettings):
     """
 
     model: str = Field(
-        default="gemini-2.5-flash-preview-05-20",
+        default="gemini-3-flash-preview",
         description="Model identifier for vision detection",
     )
     api_key: str | None = Field(

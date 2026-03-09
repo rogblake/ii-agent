@@ -1,34 +1,36 @@
 """Convert messages to Anthropic format."""
 
-import logging
 import json
-from typing import List, Dict, Any, Tuple, Optional
+import logging
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel
 
 from ii_agent.chat.schemas import (
+    ArrayResultContent,
     BinaryContent,
+    ErrorJsonContent,
+    ErrorTextContent,
+    ExecutionDeniedContent,
+    FileDataContentPart,
+    FileUrlContentPart,
+    ImageDataContentPart,
     ImageURLContent,
     ImageUrlContentPart,
+    JsonResultContent,
     Message,
     MessageRole,
     ReasoningContent,
-    TextContent,
-    TextResultContent,
-    JsonResultContent,
-    ExecutionDeniedContent,
-    ErrorTextContent,
-    ErrorJsonContent,
-    ArrayResultContent,
     StorybookProgressContent,
     StorybookResultContent,
+    TextContent,
     TextContentPart,
-    ImageDataContentPart,
-    FileDataContentPart,
+    TextResultContent,
     ToolCall,
     ToolResult,
 )
-from .cache_control import CacheControlValidator, AnthropicCacheControl
+
+from .cache_control import AnthropicCacheControl, CacheControlValidator
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +153,13 @@ def convert_tool_result_content(result) -> Tuple[Any, bool]:
                         "text": f"![Generated Image]({item.url})",
                     }
                 )  # Note: use text block for image URL for now
+            elif isinstance(item, FileUrlContentPart):
+                content_parts.append(
+                    {
+                        "type": "text",
+                        "text": f"![Generated File]({item.url})",
+                    }
+                )
             else:
                 logger.warning(f"Unsupported tool content part type: {item.type}")
         return content_parts if content_parts else "No content", is_error

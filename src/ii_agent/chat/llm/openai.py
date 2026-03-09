@@ -2,88 +2,89 @@
 
 import asyncio
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import AsyncIterator, List, Literal, Optional, Dict, Any, Tuple, Union
-from pydantic import BaseModel, Field
+from datetime import datetime, timedelta, timezone
+from typing import Any, AsyncIterator, Dict, List, Literal, Optional, Tuple, Union
 
 import anyio
 import openai
-from sqlalchemy import select, or_
-from openai.types.responses.response_output_text_param import (
-    AnnotationContainerFileCitation,
-)
+from openai.types import FileObject
 from openai.types.containers import FileRetrieveResponse
 from openai.types.responses import (
     Response,
-    ResponseCodeInterpreterToolCall,
-    ResponseFunctionToolCall,
-    ResponseOutputMessage,
-    ResponseReasoningItem,
-    ResponseTextDeltaEvent,
-    ResponseTextDoneEvent,
-    ResponseFunctionCallArgumentsDeltaEvent,
-    ResponseFunctionCallArgumentsDoneEvent,
-    ResponseOutputItemAddedEvent,
-    ResponseOutputItemDoneEvent,
-    ResponseContentPartAddedEvent,
-    ResponseContentPartDoneEvent,
-    ResponseCreatedEvent,
-    ResponseCompletedEvent,
-    ResponseInProgressEvent,
-    ResponseFailedEvent,
-    ResponseErrorEvent,
-    ResponseReasoningTextDeltaEvent,
-    ResponseReasoningTextDoneEvent,
-    ResponseReasoningSummaryTextDeltaEvent,
-    ResponseReasoningSummaryTextDoneEvent,
-    ResponseRefusalDeltaEvent,
-    ResponseRefusalDoneEvent,
     ResponseCodeInterpreterCallCodeDeltaEvent,
     ResponseCodeInterpreterCallCodeDoneEvent,
     ResponseCodeInterpreterCallCompletedEvent,
-    ResponseFileSearchCallCompletedEvent,
-    ResponseWebSearchCallCompletedEvent,
-    ResponseOutputText,
-    ResponseOutputRefusal,
     ResponseCodeInterpreterCallInProgressEvent,
+    ResponseCodeInterpreterToolCall,
+    ResponseCompletedEvent,
+    ResponseContentPartAddedEvent,
+    ResponseContentPartDoneEvent,
+    ResponseCreatedEvent,
+    ResponseErrorEvent,
+    ResponseFailedEvent,
+    ResponseFileSearchCallCompletedEvent,
+    ResponseFunctionCallArgumentsDeltaEvent,
+    ResponseFunctionCallArgumentsDoneEvent,
+    ResponseFunctionToolCall,
+    ResponseInProgressEvent,
+    ResponseOutputItemAddedEvent,
+    ResponseOutputItemDoneEvent,
+    ResponseOutputMessage,
+    ResponseOutputRefusal,
+    ResponseOutputText,
+    ResponseReasoningItem,
+    ResponseReasoningSummaryTextDeltaEvent,
+    ResponseReasoningSummaryTextDoneEvent,
+    ResponseReasoningTextDeltaEvent,
+    ResponseReasoningTextDoneEvent,
+    ResponseRefusalDeltaEvent,
+    ResponseRefusalDoneEvent,
+    ResponseTextDeltaEvent,
+    ResponseTextDoneEvent,
+    ResponseWebSearchCallCompletedEvent,
 )
-from openai.types import FileObject
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
-from ii_agent.core.storage.locations import get_session_file_path
+from openai.types.responses.response_output_text_param import (
+    AnnotationContainerFileCitation,
+)
+from pydantic import BaseModel, Field
+from sqlalchemy import or_, select
+
 from ii_agent.billing.usage.models import TokenUsage
 from ii_agent.chat.base import LLMClient
+from ii_agent.chat.models import ProviderContainer, ProviderFile
+from ii_agent.chat.prompts.openai_system_prompt import template
 from ii_agent.chat.schemas import (
-    ImageUrlContentPart,
-    RunResponseEvent,
-    RunResponseOutput,
-    EventType,
+    ArrayResultContent,
+    BinaryContent,
     CodeBlockContent,
     ContentPart,
+    ErrorJsonContent,
+    ErrorTextContent,
+    EventType,
+    ExecutionDeniedContent,
+    FileDataContentPart,
+    FileUrlContentPart,
+    FinishReason,
+    ImageDataContentPart,
+    ImageUrlContentPart,
+    JsonResultContent,
     Message,
     MessageRole,
     ReasoningContent,
-    TextContent,
-    BinaryContent,
-    ToolCall,
-    FinishReason,
-    TextResultContent,
-    JsonResultContent,
-    ExecutionDeniedContent,
-    ErrorTextContent,
-    ErrorJsonContent,
-    ArrayResultContent,
+    RunResponseEvent,
+    RunResponseOutput,
     StorybookProgressContent,
     StorybookResultContent,
+    TextContent,
     TextContentPart,
-    ImageDataContentPart,
-    FileDataContentPart,
+    TextResultContent,
+    ToolCall,
 )
-
-from ii_agent.files.models import FileUpload
-from ii_agent.chat.models import ProviderContainer, ProviderFile
-from ii_agent.chat.prompts.openai_system_prompt import template
+from ii_agent.core.config.llm_config import APITypes, LLMConfig
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.storage.client import storage
+from ii_agent.core.storage.locations import get_session_file_path
+from ii_agent.files.models import FileUpload
 
 logger = logging.getLogger(__name__)
 
@@ -579,6 +580,13 @@ class OpenAIProvider(LLMClient):
                                         "text": f"![Generated Image]({item.url})",
                                     }
                                 )
+                            elif isinstance(item, FileUrlContentPart):
+                                content_parts.append(
+                                    {
+                                        "type": "input_text",
+                                        "text": f"![Generated File]({item.url})",
+                                    }
+                                )
                             else:
                                 logger.warning(
                                     f"Unsupported tool content part type: {item.type}"
@@ -695,8 +703,8 @@ class OpenAIProvider(LLMClient):
                     file_bytes = await file_content_response.aread()
 
                     # Generate storage path
-                    import uuid
                     import io
+                    import uuid
 
                     file_uuid = str(uuid.uuid4())
                     storage_path = get_session_file_path(

@@ -14,6 +14,11 @@ from ii_agent.content.storybook.export_service import StorybookExportService
 from ii_agent.content.storybook.version_service import StorybookVersionService
 from ii_agent.content.storybook.voice_service import StorybookVoiceService
 from ii_agent.content.storybook.edit_service import StorybookEditService
+from ii_agent.content.storybook.ai_edit_service import StorybookAIEditService
+from ii_agent.auth.users.dependencies import UserServiceDep
+from ii_agent.settings.llm.dependencies import LLMSettingServiceDep
+from ii_agent.core.llm.dependencies import LLMExecutionServiceDep
+from ii_agent.sessions.dependencies import SessionServiceDep
 
 
 # ==================== Repository Dependencies ====================
@@ -82,7 +87,26 @@ def get_storybook_edit_service(
     )
 
 
+def get_storybook_ai_edit_service(
+    session_service: SessionServiceDep,
+    user_service: UserServiceDep,
+    credit_service: CreditServiceDep,
+    llm_setting_service: LLMSettingServiceDep,
+    llm_execution: LLMExecutionServiceDep,
+) -> StorybookAIEditService:
+    """Provide StorybookAIEditService instance."""
+    return StorybookAIEditService(
+        session_service=session_service,
+        user_service=user_service,
+        credit_service=credit_service,
+        llm_setting_service=llm_setting_service,
+        llm_execution=llm_execution,
+        config=get_settings(),
+    )
+
+
 StorybookExportServiceDep = Annotated[StorybookExportService, Depends(get_storybook_export_service)]
 StorybookVersionServiceDep = Annotated[StorybookVersionService, Depends(get_storybook_version_service)]
 StorybookVoiceServiceDep = Annotated[StorybookVoiceService, Depends(get_storybook_voice_service)]
 StorybookEditServiceDep = Annotated[StorybookEditService, Depends(get_storybook_edit_service)]
+StorybookAIEditServiceDep = Annotated[StorybookAIEditService, Depends(get_storybook_ai_edit_service)]

@@ -2,6 +2,7 @@
 
 from .models import Storybook, StorybookPage, StorybookPageLink
 from .service import StorybookService
+from .ai_edit_service import StorybookAIEditService
 from .router import router
 
 __all__ = [
@@ -11,6 +12,7 @@ __all__ = [
     "StorybookPageLink",
     # Service
     "StorybookService",
+    "StorybookAIEditService",
     # Router
     "router",
 ]

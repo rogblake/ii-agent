@@ -9,8 +9,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from ii_agent.auth.dependencies import get_current_user
+from ii_agent.auth.users.dependencies import get_user_service
 from ii_agent.billing.credits.dependencies import get_credit_service
 from ii_agent.content.storybook.dependencies import (
+    get_storybook_ai_edit_service,
     get_storybook_edit_service,
     get_storybook_export_service,
     get_storybook_service,
@@ -18,10 +20,12 @@ from ii_agent.content.storybook.dependencies import (
 )
 from ii_agent.content.storybook.router import router
 from ii_agent.core.dependencies import _db_session_dependency
+from ii_agent.core.llm.dependencies import get_llm_execution_service
 from ii_agent.core.middleware import ii_agent_error_handler
-from ii_agent.core.exceptions import IIAgentError
+from ii_agent.core.exceptions import IIAgentError, ValidationError
 from ii_agent.core.storage.dependencies import get_media_template_storage
 from ii_agent.sessions.dependencies import get_session_service
+from ii_agent.settings.llm.dependencies import get_llm_setting_service
 
 
 pytestmark = pytest.mark.unit
@@ -66,6 +70,43 @@ def _make_app(*, session_access: bool = True, export_bytes: bytes | None = b"pdf
         async def get_version_history(self, db, storybook_id):
             return []
 
+    class _AIEditService:
+        async def rewrite_content(self, db, *, storybook, user_id: str, content: str, page_image_url=None):
+            if not content.strip():
+                raise ValidationError("No content provided to rewrite")
+            return "rewritten text"
+
+        async def generate_background(
+            self,
+            db,
+            *,
+            storybook,
+            user_id: str,
+            prompt: str,
+            page_image_url=None,
+            text_position=None,
+        ):
+            if not prompt.strip():
+                raise ValidationError("No prompt provided for image generation")
+            return "https://storage.local/generated-background.png"
+
+        async def regenerate_image(
+            self,
+            db,
+            *,
+            storybook,
+            user_id: str,
+            page_number: int,
+            prompt: str,
+            reference_image_url=None,
+            scene_text=None,
+            text_position=None,
+            text_percentage=None,
+        ):
+            if not prompt.strip():
+                raise ValidationError("No prompt provided for image regeneration")
+            return "https://storage.local/generated-page.png"
+
     class _ExportService:
         async def download_storybook_as_pdf(self, db, storybook_id: str):
             return export_bytes
@@ -98,10 +139,14 @@ def _make_app(*, session_access: bool = True, export_bytes: bytes | None = b"pdf
     app.dependency_overrides[get_current_user] = _fake_user
     app.dependency_overrides[get_storybook_service] = lambda: _StorybookService()
     app.dependency_overrides[get_storybook_edit_service] = lambda: _EditService()
+    app.dependency_overrides[get_storybook_ai_edit_service] = lambda: _AIEditService()
     app.dependency_overrides[get_storybook_export_service] = lambda: _ExportService()
     app.dependency_overrides[get_storybook_voice_service] = lambda: _VoiceService()
     app.dependency_overrides[get_credit_service] = lambda: _CreditService()
     app.dependency_overrides[get_session_service] = lambda: _SessionService()
+    app.dependency_overrides[get_user_service] = lambda: SimpleNamespace()
+    app.dependency_overrides[get_llm_setting_service] = lambda: SimpleNamespace()
+    app.dependency_overrides[get_llm_execution_service] = lambda: SimpleNamespace()
     app.dependency_overrides[get_media_template_storage] = lambda: _Storage()
     return app
 
@@ -136,6 +181,47 @@ def test_storybook_edit_save_path_validation_error_response():
         "success": False,
         "storybook": None,
         "error": "Path storybook_id does not match request.storybook_id",
+    }
+
+
+def test_storybook_ai_rewrite_path_validation_error_response():
+    app = _make_app()
+    with TestClient(app) as client:
+        resp = client.post(
+            "/storybooks/sb1/edit/ai-rewrite",
+            headers={"Authorization": "Bearer token"},
+            json={
+                "storybook_id": "sb2",
+                "content": "Rewrite me",
+            },
+        )
+
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "success": False,
+        "rewritten_content": None,
+        "error": "Path storybook_id does not match request.storybook_id",
+    }
+
+
+def test_storybook_ai_regenerate_requires_prompt():
+    app = _make_app()
+    with TestClient(app) as client:
+        resp = client.post(
+            "/storybooks/sb1/edit/ai-regenerate-image",
+            headers={"Authorization": "Bearer token"},
+            json={
+                "storybook_id": "sb1",
+                "page_number": 1,
+                "prompt": "   ",
+            },
+        )
+
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "success": False,
+        "image_url": None,
+        "error": "No prompt provided for image regeneration",
     }
 
 

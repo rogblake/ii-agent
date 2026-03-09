@@ -537,7 +537,7 @@ class StorybookService {
             element_context: elementContext
         }
         const response = await axiosInstance.post<AIRewriteResponse>(
-            '/storybook-edit/ai-rewrite',
+            `/storybooks/${storybookId}/edit/ai-rewrite`,
             request
         )
         return response.data
@@ -559,7 +559,7 @@ class StorybookService {
             text_position: textPosition
         }
         const response = await axiosInstance.post<AIGenerateBackgroundResponse>(
-            '/storybook-edit/ai-generate-background',
+            `/storybooks/${storybookId}/edit/ai-generate-background`,
             request
         )
         return response.data
@@ -636,7 +636,7 @@ class StorybookService {
             text_percentage: params.textPercentage
         }
         const response = await axiosInstance.post<AIRegenerateImageResponse>(
-            '/storybook-edit/ai-regenerate-image',
+            `/storybooks/${params.storybookId}/edit/ai-regenerate-image`,
             request
         )
         return response.data

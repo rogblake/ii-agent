@@ -26,6 +26,7 @@ from ii_agent.content.storybook.dependencies import (
     StorybookServiceDep,
     StorybookExportServiceDep,
     StorybookEditServiceDep,
+    StorybookAIEditServiceDep,
     StorybookVersionServiceDep,
     StorybookVoiceServiceDep,
 )
@@ -42,6 +43,12 @@ from ii_agent.content.storybook.schemas import (
     PageRegenerateRequest,
     StorybookVersionResponse,
     StorybookBackgroundUploadResponse,
+    AIRewriteRequest,
+    AIRewriteResponse,
+    AIGenerateBackgroundRequest,
+    AIGenerateBackgroundResponse,
+    AIRegenerateImageRequest,
+    AIRegenerateImageResponse,
 )
 from ii_agent.auth.users.dependencies import UserServiceDep
 from ii_agent.billing.credits.utils import usd_to_credits
@@ -530,6 +537,187 @@ async def upload_storybook_background(
         content_type=content_type,
     )
     return StorybookBackgroundUploadResponse(url=public_url, storage_path=storage_path)
+
+
+@router.post(
+    "/{storybook_id}/edit/ai-rewrite",
+    response_model=AIRewriteResponse,
+)
+async def ai_rewrite_storybook_content(
+    storybook_id: str,
+    request: AIRewriteRequest,
+    current_user: CurrentUser,
+    service: StorybookServiceDep,
+    session_service: SessionServiceDep,
+    ai_edit_service: StorybookAIEditServiceDep,
+    db: DBSession,
+) -> AIRewriteResponse:
+    """Rewrite storybook text content using the AI edit service."""
+    if request.storybook_id != storybook_id:
+        return AIRewriteResponse(
+            success=False,
+            error="Path storybook_id does not match request.storybook_id",
+        )
+
+    storybook = await service.get_storybook_detail(
+        db,
+        storybook_id=storybook_id,
+        include_pages=False,
+    )
+    if not storybook:
+        return AIRewriteResponse(success=False, error="Storybook not found")
+
+    session_data = await session_service.get_session_details(
+        db,
+        storybook.session_id,
+        str(current_user.id),
+    )
+    if not session_data:
+        return AIRewriteResponse(
+            success=False,
+            error="Access denied to this storybook",
+        )
+
+    try:
+        rewritten_text = await ai_edit_service.rewrite_content(
+            db,
+            storybook=storybook,
+            user_id=str(current_user.id),
+            content=request.content,
+            page_image_url=request.page_image_url,
+        )
+        return AIRewriteResponse(success=True, rewritten_content=rewritten_text)
+    except PaymentRequiredError:
+        return AIRewriteResponse(success=False, error="Insufficient credits")
+    except ValidationError as exc:
+        return AIRewriteResponse(success=False, error=exc.message)
+    except Exception as exc:
+        logger.error("[Storybook AI Rewrite] Failed: %s", exc, exc_info=True)
+        return AIRewriteResponse(
+            success=False,
+            error=f"Failed to rewrite content: {exc}",
+        )
+
+
+@router.post(
+    "/{storybook_id}/edit/ai-generate-background",
+    response_model=AIGenerateBackgroundResponse,
+)
+async def ai_generate_storybook_background(
+    storybook_id: str,
+    request: AIGenerateBackgroundRequest,
+    current_user: CurrentUser,
+    service: StorybookServiceDep,
+    session_service: SessionServiceDep,
+    ai_edit_service: StorybookAIEditServiceDep,
+    db: DBSession,
+) -> AIGenerateBackgroundResponse:
+    """Generate or outpaint a background image for storybook editing."""
+    if request.storybook_id != storybook_id:
+        return AIGenerateBackgroundResponse(
+            success=False,
+            error="Path storybook_id does not match request.storybook_id",
+        )
+
+    storybook = await service.get_storybook_detail(
+        db,
+        storybook_id=storybook_id,
+        include_pages=False,
+    )
+    if not storybook:
+        return AIGenerateBackgroundResponse(success=False, error="Storybook not found")
+
+    session_data = await session_service.get_session_details(
+        db,
+        storybook.session_id,
+        str(current_user.id),
+    )
+    if not session_data:
+        return AIGenerateBackgroundResponse(
+            success=False,
+            error="Access denied to this storybook",
+        )
+
+    try:
+        image_url = await ai_edit_service.generate_background(
+            db,
+            storybook=storybook,
+            user_id=str(current_user.id),
+            prompt=request.prompt,
+            page_image_url=request.page_image_url,
+            text_position=request.text_position,
+        )
+        return AIGenerateBackgroundResponse(success=True, image_url=image_url)
+    except ValidationError as exc:
+        return AIGenerateBackgroundResponse(success=False, error=exc.message)
+    except Exception as exc:
+        logger.error("[Storybook AI Background] Failed: %s", exc, exc_info=True)
+        return AIGenerateBackgroundResponse(
+            success=False,
+            error=f"Failed to generate image: {exc}",
+        )
+
+
+@router.post(
+    "/{storybook_id}/edit/ai-regenerate-image",
+    response_model=AIRegenerateImageResponse,
+)
+async def ai_regenerate_storybook_image(
+    storybook_id: str,
+    request: AIRegenerateImageRequest,
+    current_user: CurrentUser,
+    service: StorybookServiceDep,
+    session_service: SessionServiceDep,
+    ai_edit_service: StorybookAIEditServiceDep,
+    db: DBSession,
+) -> AIRegenerateImageResponse:
+    """Generate a replacement page image using storybook context and layout metadata."""
+    if request.storybook_id != storybook_id:
+        return AIRegenerateImageResponse(
+            success=False,
+            error="Path storybook_id does not match request.storybook_id",
+        )
+
+    storybook = await service.get_storybook_detail(
+        db,
+        storybook_id=storybook_id,
+        include_pages=True,
+    )
+    if not storybook:
+        return AIRegenerateImageResponse(success=False, error="Storybook not found")
+
+    session_data = await session_service.get_session_details(
+        db,
+        storybook.session_id,
+        str(current_user.id),
+    )
+    if not session_data:
+        return AIRegenerateImageResponse(
+            success=False,
+            error="Access denied to this storybook",
+        )
+
+    try:
+        image_url = await ai_edit_service.regenerate_image(
+            db,
+            storybook=storybook,
+            user_id=str(current_user.id),
+            page_number=request.page_number,
+            prompt=request.prompt,
+            reference_image_url=request.reference_image_url,
+            scene_text=request.scene_text,
+            text_position=request.text_position,
+            text_percentage=request.text_percentage,
+        )
+        return AIRegenerateImageResponse(success=True, image_url=image_url)
+    except ValidationError as exc:
+        return AIRegenerateImageResponse(success=False, error=exc.message)
+    except Exception as exc:
+        logger.error("[Storybook AI Regenerate] Failed: %s", exc, exc_info=True)
+        return AIRegenerateImageResponse(
+            success=False,
+            error=str(exc),
+        )
 
 
 @router.get("/{storybook_id}/download")

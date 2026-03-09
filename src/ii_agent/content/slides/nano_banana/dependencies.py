@@ -40,6 +40,7 @@ def _build_llm_config(nb_config: NanoBananaConfig) -> LLMConfig:
         base_url=nb_config.base_url,
         vertex_project_id=nb_config.vertex_project_id,
         vertex_region=nb_config.vertex_region,
+        thinking_tokens=nb_config.thinking_tokens,
         config_type="system",
     )
 

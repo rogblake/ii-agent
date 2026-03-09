@@ -223,6 +223,22 @@ class GeminiProvider(LLMClient):
             )
             self.client = genai.Client(api_key=api_key)
 
+    @staticmethod
+    def _extract_system_text(messages: List[Message]) -> Optional[str]:
+        """Extract concatenated text from SYSTEM role messages.
+
+        Gemini does not support a ``system`` role in contents — system text
+        must be passed via ``config.system_instruction`` instead.
+        """
+        parts: list[str] = []
+        for msg in messages:
+            if msg.role != MessageRole.SYSTEM:
+                continue
+            for part in msg.parts:
+                if isinstance(part, TextContent) and part.text:
+                    parts.append(part.text)
+        return "\n".join(parts) if parts else None
+
     def _convert_messages(
         self,
         messages: List[Message],
@@ -230,10 +246,14 @@ class GeminiProvider(LLMClient):
         """Convert Message objects to Gemini format.
 
         Files are preprocessed in the service layer and added as BinaryContent parts.
+        SYSTEM messages are skipped here — use ``_extract_system_text`` to
+        collect them for ``config.system_instruction``.
         """
         contents = []
         for msg in messages:
             match msg.role:
+                case MessageRole.SYSTEM:
+                    continue
                 case MessageRole.USER:
                     parts = []
                     # Convert all parts (BinaryContent from file preprocessing comes first)
@@ -411,11 +431,12 @@ class GeminiProvider(LLMClient):
 
         Files are preprocessed in the service layer and added as BinaryContent parts.
 
-        provider_options["gemini"]["system_instruction"] – override the default
-        system prompt.  Set to ``None`` to omit it entirely.
+        Supported ``provider_options["gemini"]`` keys:
 
-        provider_options["gemini"]["thinking_config"] – override the default
-        thinking config.  Set to ``None`` to disable thinking.
+        - ``system_instruction`` (str | None): override the default chat system
+          prompt.  ``None`` omits the system instruction entirely.
+        - ``thinking_config`` (ThinkingConfig | None): override the default
+          thinking config.  ``None`` disables thinking.
         """
         gemini_messages = self._convert_messages(messages)
         gemini_opts = (provider_options or {}).get("gemini", {})
@@ -435,20 +456,23 @@ class GeminiProvider(LLMClient):
         if gemini_tools:
             config_dict["tools"] = gemini_tools
 
-        # System instruction: allow override / disable via provider_options
+        # System instruction: provider_options override > inline SYSTEM messages > default
+        inline_system = self._extract_system_text(messages)
         if "system_instruction" in gemini_opts:
             if gemini_opts["system_instruction"] is not None:
                 config_dict["system_instruction"] = gemini_opts["system_instruction"]
+        elif inline_system:
+            config_dict["system_instruction"] = inline_system
         else:
             config_dict["system_instruction"] = template.substitute(
                 current_date=datetime.now().strftime("%Y-%m-%d")
             )
 
-        # Thinking config: allow override / disable via provider_options
+        # Thinking config: provider_options override > llm_config.thinking_tokens
         if "thinking_config" in gemini_opts:
             if gemini_opts["thinking_config"] is not None:
                 config_dict["thinking_config"] = gemini_opts["thinking_config"]
-        else:
+        elif self.llm_config.thinking_tokens and self.llm_config.thinking_tokens > 0:
             config_dict["thinking_config"] = types.ThinkingConfig(
                 thinking_level=types.ThinkingLevel.LOW,
                 include_thoughts=True,
@@ -631,14 +655,20 @@ class GeminiProvider(LLMClient):
         if gemini_tools:
             config_dict["tools"] = gemini_tools
 
-        config_dict["system_instruction"] = template.substitute(
-            current_date=datetime.now().strftime("%Y-%m-%d")
-        )
+        # System instruction: honour SYSTEM role messages, else default
+        inline_system = self._extract_system_text(messages)
+        if inline_system:
+            config_dict["system_instruction"] = inline_system
+        else:
+            config_dict["system_instruction"] = template.substitute(
+                current_date=datetime.now().strftime("%Y-%m-%d")
+            )
 
-        config_dict["thinking_config"] = types.ThinkingConfig(
-            thinking_level=types.ThinkingLevel.LOW,
-            include_thoughts=True,
-        )
+        if self.llm_config.thinking_tokens and self.llm_config.thinking_tokens > 0:
+            config_dict["thinking_config"] = types.ThinkingConfig(
+                thinking_level=types.ThinkingLevel.LOW,
+                include_thoughts=True,
+            )
 
         config = types.GenerateContentConfig(**config_dict)
 

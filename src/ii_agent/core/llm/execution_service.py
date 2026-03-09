@@ -150,6 +150,7 @@ class LLMExecutionService:
         force_final_once: bool = True,
         final_tool_prompt: str = _FORCE_FINAL_TOOL_PROMPT,
         billing_context: LLMBillingContext | None = None,
+        provider_options: dict[str, Any] | None = None,
     ) -> ToolLoopResult:
         """Run iterative tool loop until final payload is emitted."""
         conversation = list(messages)
@@ -158,7 +159,9 @@ class LLMExecutionService:
         last_response: RunResponseOutput | None = None
 
         for step in range(max(1, max_loops)):
-            response = await client.send(messages=conversation, tools=tools)
+            response = await client.send(
+                messages=conversation, tools=tools, provider_options=provider_options
+            )
             last_response = response
             await self._bill_usage_if_needed(
                 usage=response.usage,

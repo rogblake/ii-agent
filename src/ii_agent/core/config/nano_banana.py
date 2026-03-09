@@ -39,6 +39,10 @@ class NanoBananaConfig(BaseSettings):
         default=None,
         description="GCP region when using Vertex AI (e.g. us-central1)",
     )
+    thinking_tokens: int = Field(
+        default=0,
+        description="Thinking budget (0 = disabled). Detection does not need thinking.",
+    )
 
     class Config:
         env_prefix = "NANO_BANANA_"

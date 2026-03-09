@@ -12,8 +12,8 @@ from ii_agent.chat.schemas import (
     TextContent,
     MediaPreferences,
 )
-from ii_agent.chat.tools import StorybookGenerationTool
 from ii_agent.chat.tools.manga_generate import MangaGenerationTool
+from ii_agent.chat.tools.storybook_generate import StorybookGenerationTool
 from ..modes.base import BaseModeStrategy
 from ..modes.manga_mode import MangaModeStrategy
 from ..modes.storybook_mode import StorybookModeStrategy

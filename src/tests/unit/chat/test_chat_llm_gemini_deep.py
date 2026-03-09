@@ -45,6 +45,7 @@ def _make_llm_config(model="gemini-pro", temperature=None) -> LLMConfig:
     cfg.vertex_project_id = None
     cfg.vertex_region = None
     cfg.temperature = temperature
+    cfg.thinking_tokens = 0
     cfg.setting_id = "test-setting"
     return cfg
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from types import SimpleNamespace
+from types import SimpleNamespace
 from typing import Any, Dict, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -700,3 +701,386 @@ class TestClose:
         assert client._clients == {}
         assert client._httpx_client is None
         assert client._agent_card is None
+
+
+# ---------------------------------------------------------------------------
+# call_agent / stream_agent
+# ---------------------------------------------------------------------------
+
+
+class TestCallAgent:
+    @pytest.mark.asyncio
+    async def test_call_agent_success_and_extensions_merged(self):
+        from a2a.client.helpers import create_text_message_object
+        from a2a.types import Role
+
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+
+        async def _stream_payload():
+            message = create_text_message_object(role=Role.agent, content="agent result")
+            message.metadata = {"extensions": {"active": ["ext-a"]}}
+            yield message
+
+        mock_client = MagicMock()
+        mock_client.send_message = MagicMock(return_value=_stream_payload())
+        client._get_client = AsyncMock(return_value=mock_client)
+
+        result = await client.call_agent("hello")
+        assert result["success"] is True
+        assert result["content"] == "agent result"
+        assert result["extensions"]["active"] == ["ext-a"]
+        assert result["extensions"]["activated"] == ["ext-a"]
+
+    @pytest.mark.asyncio
+    async def test_call_agent_no_payload_is_error(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+
+        async def _empty_stream():
+            if False:
+                yield None
+
+        mock_client = MagicMock()
+        mock_client.send_message = MagicMock(return_value=_empty_stream())
+        client._get_client = AsyncMock(return_value=mock_client)
+
+        result = await client.call_agent("hello")
+        assert result["success"] is False
+        assert result["content"] == "Error: No response received from agent."
+
+    @pytest.mark.asyncio
+    async def test_call_agent_exception_path(self):
+        client = _make_client()
+        client._get_client = AsyncMock(side_effect=RuntimeError("boom"))
+
+        result = await client.call_agent("hello")
+        assert result["success"] is False
+        assert "boom" in result["content"]
+
+
+class TestStreamAgent:
+    @pytest.mark.asyncio
+    async def test_stream_agent_yields_items_and_tracks_extensions(self):
+        from a2a.client.helpers import create_text_message_object
+        from a2a.types import Role
+
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+
+        async def _stream_payload():
+            update = create_text_message_object(role=Role.agent, content="update text")
+            update.metadata = {"extensions": {"active": ["ext-update"]}}
+            task = create_text_message_object(role=Role.agent, content="task text")
+            yield (task, update)
+
+        mock_client = MagicMock()
+        mock_client.send_message = MagicMock(return_value=_stream_payload())
+        client._get_client = AsyncMock(return_value=mock_client)
+        store = MagicMock()
+        client._store_response_extensions = store
+
+        items = []
+        async for item in client.stream_agent("hello"):
+            items.append(item)
+
+        assert len(items) == 2
+        assert items[1].metadata["extensions"]["active"] == ["ext-update"]
+        store.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_stream_agent_exception_is_propagated(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+
+        async def _stream_payload():
+            raise RuntimeError("stream-failed")
+            yield  # pragma: no cover
+
+        mock_client = MagicMock()
+        mock_client.send_message = MagicMock(return_value=_stream_payload())
+        client._get_client = AsyncMock(return_value=mock_client)
+        store = MagicMock()
+        client._store_response_extensions = store
+
+        with pytest.raises(RuntimeError, match="stream-failed"):
+            items = []
+            async for item in client.stream_agent("hello"):
+                items.append(item)
+
+        store.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Client card and transport cache
+# ---------------------------------------------------------------------------
+
+
+class TestAgentCardAndClientCache:
+    @pytest.mark.asyncio
+    async def test_get_agent_card_uses_cache_when_set(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        cached = MagicMock(name="cached-card")
+        client._agent_card = cached
+        result = await client.get_agent_card()
+        assert result is cached
+
+    @pytest.mark.asyncio
+    async def test_get_agent_card_fetches_and_caches_card(self):
+        from ii_agent.integrations.a2a.as_client import A2ACardResolver, IIAgentA2AClient
+
+        client = _make_client()
+        client._agent_card = None
+        client._get_http_client = AsyncMock(return_value=MagicMock())
+
+        resolver = MagicMock()
+        resolved_card = MagicMock(name="resolved-card")
+        resolver.get_agent_card = AsyncMock(return_value=resolved_card)
+
+        with patch("ii_agent.integrations.a2a.as_client.A2ACardResolver", return_value=resolver):
+            result = await client.get_agent_card()
+
+        assert result is resolved_card
+        assert client._agent_card is resolved_card
+        resolver.get_agent_card.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_refresh_agent_card_forces_refetch(self):
+        client = _make_client()
+        client._agent_card = MagicMock(name="old")
+        client.get_agent_card = AsyncMock(return_value=MagicMock(name="new"))
+        result = await client.refresh_agent_card()
+        assert client._agent_card is not None
+        client.get_agent_card.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_client_reuses_cached_transport(self):
+        from ii_agent.integrations.a2a.as_client import ClientConfig, ClientFactory, IIAgentA2AClient
+
+        client = _make_client()
+        client._get_http_client = AsyncMock(return_value=MagicMock(name="httpx"))
+        mock_agent_card = MagicMock(name="card")
+        client.get_agent_card = AsyncMock(return_value=mock_agent_card)
+        client._hydrate_extension_config = MagicMock()
+
+        fake_client = MagicMock(name="a2a-client")
+
+        with patch("ii_agent.integrations.a2a.as_client.ClientFactory") as mock_factory_cls:
+            mock_factory = MagicMock()
+            mock_factory.create.return_value = fake_client
+            mock_factory_cls.return_value = mock_factory
+            config = await client._get_client(streaming=True)
+            config_again = await client._get_client(streaming=True)
+
+        assert config_again is fake_client
+        assert client._clients[True].client is fake_client
+        mock_factory.create.assert_called_once()
+        mock_factory_cls.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Extension helpers
+# ---------------------------------------------------------------------------
+
+
+class TestExtensionHelpers:
+    @pytest.mark.asyncio
+    async def test_apply_extension_metadata_defaults_populates_context(self):
+        from a2a.types import AgentExtension
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        client._extension_definitions = {
+            "urn:one": AgentExtension(
+                uri="urn:one",
+                params={
+                    "metadata_key": "ii-agent",
+                    "sections": ["tool_args", "missing_section"],
+                    "fields": ["session_id"],
+                },
+            )
+        }
+
+        message = MagicMock()
+        message.metadata = {}
+        client._apply_extension_metadata_defaults(
+            message=message,
+            context={
+                "tool_args": {"mode": "fast"},
+                "session_id": "session-1",
+            },
+        )
+
+        ii_agent_metadata = message.metadata["ii-agent"]
+        assert ii_agent_metadata["tool_args"] == {"mode": "fast"}
+        assert ii_agent_metadata["missing_section"] == {}
+        assert ii_agent_metadata["session_id"] == "session-1"
+
+    def test_capture_server_extensions_from_payload_sets_summary(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        context = ClientCallContext()
+        payload = MagicMock(metadata={"extensions": {"active": ["ext-a"]}})
+        client._capture_server_extensions(context, payload)
+        state = context.state[ExtensionsHeaderInterceptor._STATE_KEY]
+        assert state["server_summary"] == {"active": ["ext-a"]}
+        assert "snapshot" not in state
+
+    def test_capture_extensions_snapshot_uses_existing_snapshot(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        client._last_response_extensions = {"active": ["ext-b"]}
+        context = ClientCallContext()
+        context.state = {ExtensionsHeaderInterceptor._STATE_KEY: {"snapshot": {"requested": ["ext-b"]}}}
+
+        snapshot = client._capture_extensions_snapshot(context)
+        assert snapshot == {"requested": ["ext-b"]}
+
+    def test_capture_extensions_snapshot_uses_server_summary(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        context = ClientCallContext()
+        context.state = {ExtensionsHeaderInterceptor._STATE_KEY: {"server_summary": {"active": ["ext-c"]}}}
+
+        snapshot = client._capture_extensions_snapshot(context)
+        assert snapshot == {"active": ["ext-c"]}
+
+    def test_capture_extensions_snapshot_returns_last_response_when_no_live_state(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        client._last_response_extensions = {"active": ["ext-last"]}
+        context = ClientCallContext()
+        context.state = object()
+
+        snapshot = client._capture_extensions_snapshot(context)
+        assert snapshot == {"active": ["ext-last"]}
+
+
+class TestStreamExtensionsFlow:
+    def test_synchronize_stream_extensions_with_tuple_payload(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        context = ClientCallContext()
+        context.state = {
+            ExtensionsHeaderInterceptor._STATE_KEY: {"server_summary": {"active": ["ext-a"]}}
+        }
+
+        task = MagicMock(metadata=None)
+        update = MagicMock(metadata={"extensions": {"requested": ["ext-a"]}})
+        client._synchronize_stream_extensions(context, (task, update))
+
+        assert task.metadata == {"extensions": {"active": ["ext-a"]}}
+        assert update.metadata == {"extensions": {"active": ["ext-a"], "requested": ["ext-a"]}}
+
+    def test_synchronize_stream_extensions_without_summary_is_noop(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        context = ClientCallContext()
+        context.state = {}
+        message = MagicMock(metadata={"extensions": {"existing": ["x"]}})
+
+        client._synchronize_stream_extensions(context, message)
+        # unchanged because there is no negotiation summary
+        assert message.metadata["extensions"] == {"existing": ["x"]}
+
+
+class TestPayloadTextExtraction:
+    def test_extract_text_from_payload_from_task_status_update(self):
+        from a2a.types import Message, Role, TaskStatusUpdateEvent
+        from a2a.client.helpers import create_text_message_object
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        status = create_text_message_object(role=Role.agent, content="status text")
+        status_msg = create_text_message_object(role=Role.agent, content="status wrapper")
+        status_update = TaskStatusUpdateEvent(status=MagicMock(message=status_msg))
+        task = create_text_message_object(role=Role.agent, content="task")
+        payload = (task, status_update)
+
+        result = IIAgentA2AClient()._extract_text_from_payload(payload)
+        assert result == "status text"
+
+    def test_extract_text_from_task_history_fallback(self):
+        from a2a.types import Message, Role
+        from a2a.client.helpers import create_text_message_object
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        history_msg = create_text_message_object(role=Role.agent, content="history text")
+        task = SimpleNamespace(
+            status=None,
+            artifacts=[],
+            history=[history_msg],
+        )
+
+        result = IIAgentA2AClient()._extract_text_from_task(task)
+        assert result == "history text"
+
+    def test_extract_text_from_part_with_dict_root(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        payload = {"root": SimpleNamespace(text="dict-root")}
+        assert IIAgentA2AClient._extract_text_from_part(payload) == "dict-root"
+
+
+class TestResponseExtensionsStorage:
+    def test_store_response_extensions_handles_requested_and_missing(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        context = ClientCallContext()
+        context.state = {ExtensionsHeaderInterceptor._STATE_KEY: {"requested": ["ext-a", "ext-b"], "activated": ["ext-a"]}}
+        result: dict = {}
+        client._store_response_extensions(context, result)
+
+        assert result["extensions"]["requested"] == ["ext-a", "ext-b"]
+        assert result["extensions"]["activated"] == ["ext-a"]
+        assert result["extensions"]["missing"] == ["ext-b"]
+        assert client.get_last_response_extensions() == result["extensions"]
+
+    def test_store_response_extensions_with_no_state_returns_none(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        context = ClientCallContext()
+        client._last_response_extensions = {}
+        context.state = {}
+        result = {}
+        client._store_response_extensions(context, result)
+        assert result == {}
+
+
+class TestHttpClient:
+    @pytest.mark.asyncio
+    async def test_get_http_client_reuses_open_client(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        client._httpx_client = MagicMock()
+        client._httpx_client.is_closed = False
+        existing = client._httpx_client
+        assert await client._get_http_client() is existing
+
+    @pytest.mark.asyncio
+    async def test_get_http_client_creates_new_client_on_missing(self):
+        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
+
+        client = _make_client()
+        client._httpx_client = MagicMock()
+        client._httpx_client.is_closed = True
+        mock_new = MagicMock()
+
+        with patch("ii_agent.integrations.a2a.as_client.httpx.AsyncClient", return_value=mock_new):
+            result = await client._get_http_client()
+
+        assert result is mock_new

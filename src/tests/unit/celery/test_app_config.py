@@ -1,5 +1,3 @@
-from types import SimpleNamespace
-
 from ii_agent.workers.celery import app as celery_app_module
 
 
@@ -11,11 +9,7 @@ def test_broker_url_prefers_explicit_env(monkeypatch):
 
 def test_broker_url_maps_redis_db_to_2(monkeypatch):
     monkeypatch.delenv("CELERY_BROKER_URL", raising=False)
-    monkeypatch.setattr(
-        celery_app_module,
-        "get_settings",
-        lambda: SimpleNamespace(redis=SimpleNamespace(session_url="redis://localhost:6379/0")),
-    )
+    monkeypatch.setenv("REDIS_SESSION_URL", "redis://localhost:6379/0")
 
     assert celery_app_module.get_celery_broker_url() == "redis://localhost:6379/2"
 

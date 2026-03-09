@@ -12,7 +12,7 @@ import pytest
 from ii_agent.content.slides.nano_banana.service import (
     NanoBananaService,
     TEXT_COMPONENT_TYPES,
-    # VISION_DETECTION_MODEL,
+    _build_components,
 )
 from ii_agent.content.slides.nano_banana.schemas import (
     BoundingBox,
@@ -42,56 +42,43 @@ def _detected_component(
 
 
 def _make_nano_service(
-    gemini_api_key="test-key",
-    gcp_project=None,
-    gcp_location=None,
     repo=None,
+    llm_execution_service=None,
+    llm_config=None,
 ) -> NanoBananaService:
+    llm_execution_service = llm_execution_service or AsyncMock()
+    llm_config = llm_config or SimpleNamespace(
+        model="gemini-2.5-flash",
+        thinking_tokens=0,
+    )
     return NanoBananaService(
         repo=repo or AsyncMock(),
-        gemini_api_key=gemini_api_key,
-        gcp_project_id=gcp_project,
-        gcp_location=gcp_location,
+        llm_execution_service=llm_execution_service,
+        llm_config=llm_config,
     )
 
 
 # ---------------------------------------------------------------------------
-# NanoBananaService.vision_client
+# NanoBananaService initialization
 # ---------------------------------------------------------------------------
 
 
-class TestVisionClient:
-    def test_lazy_loads_with_api_key(self):
-        svc = _make_nano_service(gemini_api_key="sk-test")
-        with patch("ii_agent.content.slides.nano_banana.service.genai.Client") as MockClient:
-            MockClient.return_value = MagicMock()
-            client = svc.vision_client
-        assert client is not None
+class TestNanoBananaServiceInit:
+    def test_stores_injected_dependencies(self):
+        repo = AsyncMock()
+        llm_execution_service = AsyncMock()
+        llm_config = SimpleNamespace(model="gemini-2.5-flash", thinking_tokens=0)
 
-    def test_uses_vertexai_when_no_api_key(self):
         svc = _make_nano_service(
-            gemini_api_key="",
-            gcp_project="my-project",
-            gcp_location="us-central1",
-        )
-        with patch("ii_agent.content.slides.nano_banana.service.genai.Client") as MockClient:
-            MockClient.return_value = MagicMock()
-            client = svc.vision_client
-        MockClient.assert_called_once_with(
-            vertexai=True, project="my-project", location="us-central1"
+            repo=repo,
+            llm_execution_service=llm_execution_service,
+            llm_config=llm_config,
         )
 
-    def test_raises_without_credentials(self):
-        svc = _make_nano_service(gemini_api_key="", gcp_project=None, gcp_location=None)
-        with pytest.raises(RuntimeError, match="No Gemini API key"):
-            _ = svc.vision_client
-
-    def test_cached_after_first_access(self):
-        svc = _make_nano_service()
-        mock_client = MagicMock()
-        svc._vision_client = mock_client
-        client = svc.vision_client
-        assert client is mock_client
+        assert svc._repo is repo
+        assert svc._llm_execution_service is llm_execution_service
+        assert svc._llm_config is llm_config
+        assert svc._slide_gen_config is None
 
 
 # ---------------------------------------------------------------------------
@@ -361,83 +348,64 @@ class TestRevertToVersion:
 
 
 # ---------------------------------------------------------------------------
-# NanoBananaService._parse_detection_response
+# NanoBananaService._build_components
 # ---------------------------------------------------------------------------
 
 
-class TestParseDetectionResponse:
-    def test_parses_valid_json_list_response(self):
-        svc = _make_nano_service()
-        # The method expects a JSON list of component objects
-        response_json = json.dumps([
-            {
-                "component_type": "title",
-                "label": "Title",
-                "bounding_box": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.2},
-                "styles": {},
-            }
-        ])
-        # image dimensions in pixels
-        components = svc._parse_detection_response(response_json, 1920, 1080)
+class TestBuildComponents:
+    def test_parses_valid_component_list(self):
+        components = _build_components(
+            [
+                {
+                    "component_type": "title",
+                    "label": "Title",
+                    "bounding_box": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.2},
+                    "styles": {},
+                }
+            ],
+            1920,
+            1080,
+        )
         assert len(components) == 1
         assert components[0].component_type == "title"
 
     def test_handles_empty_list(self):
-        svc = _make_nano_service()
-        components = svc._parse_detection_response("[]", 800, 600)
+        components = _build_components([], 800, 600)
         assert components == []
 
-    def test_handles_invalid_json(self):
-        svc = _make_nano_service()
-        components = svc._parse_detection_response("not-json!!!", 800, 600)
-        assert components == []
-
-    def test_handles_json_with_markdown_fences(self):
-        svc = _make_nano_service()
-        payload = "[]"
-        fenced = f"```json\n{payload}\n```"
-        components = svc._parse_detection_response(fenced, 800, 600)
+    def test_handles_non_list_payload(self):
+        components = _build_components("not-json!!!", 800, 600)
         assert components == []
 
     def test_generates_unique_design_ids(self):
-        svc = _make_nano_service()
-        response_json = json.dumps([
-            {
-                "component_type": "text_block",
-                "label": "Body",
-                "bounding_box": {"x": 0.1, "y": 0.3, "width": 0.8, "height": 0.5},
-                "styles": {},
-            }
-        ])
-        components = svc._parse_detection_response(response_json, 800, 600)
+        components = _build_components(
+            [
+                {
+                    "component_type": "text_block",
+                    "label": "Body",
+                    "bounding_box": {"x": 0.1, "y": 0.3, "width": 0.8, "height": 0.5},
+                    "styles": {},
+                }
+            ],
+            800,
+            600,
+        )
         assert len(components) == 1
         assert components[0].design_id is not None
-        # design_id format is nano-{type}-{idx}
         assert components[0].design_id.startswith("nano-")
 
-    def test_handles_empty_string(self):
-        svc = _make_nano_service()
-        components = svc._parse_detection_response("", 800, 600)
-        assert components == []
-
-    def test_handles_non_list_response(self):
-        svc = _make_nano_service()
-        # Object, not list
-        response_json = json.dumps({"components": []})
-        components = svc._parse_detection_response(response_json, 800, 600)
-        assert components == []
-
     def test_skips_items_with_invalid_bounding_box(self):
-        svc = _make_nano_service()
-        response_json = json.dumps([
-            {
-                "component_type": "title",
-                "label": "Title",
-                "bounding_box": {},  # Missing fields
-            }
-        ])
-        components = svc._parse_detection_response(response_json, 800, 600)
-        # Invalid bbox should be skipped
+        components = _build_components(
+            [
+                {
+                    "component_type": "title",
+                    "label": "Title",
+                    "bounding_box": {},
+                }
+            ],
+            800,
+            600,
+        )
         assert len(components) == 0
 
 
@@ -577,7 +545,11 @@ class TestRemoveBackground:
             image_url="https://img.url",
         )
 
-        with patch.object(svc, "_download_image", side_effect=RuntimeError("Download failed")):
+        with patch.object(
+            svc,
+            "_run_background_removal",
+            side_effect=RuntimeError("Download failed"),
+        ):
             result = await svc.remove_background(None, user_id="u-1", request=request)
 
         assert result.success is False

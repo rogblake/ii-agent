@@ -73,7 +73,7 @@ class TestStorybookGenerationToolInit:
         assert tool.resolution == "2K"
         assert tool.image_provider == "openai"
 
-    def test_manga_layout_disables_voice_and_sets_text_none(self):
+    def test_storybook_tool_does_not_apply_manga_mode_overrides(self):
         prefs = MagicMock()
         prefs.model_name = "model"
         prefs.provider = "gemini"
@@ -86,9 +86,9 @@ class TestStorybookGenerationToolInit:
         prefs.manga_layout = True
 
         tool = _make_tool(media_preferences=prefs)
-        assert tool.manga_layout is True
-        assert tool.voice_enabled is False
-        assert tool.user_text_position == "none"
+        assert tool.manga_layout is False
+        assert tool.voice_enabled is True
+        assert tool.user_text_position == "right"
 
     def test_name_property(self):
         tool = _make_tool()

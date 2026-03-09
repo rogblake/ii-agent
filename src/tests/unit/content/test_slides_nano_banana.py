@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -11,8 +12,8 @@ import pytest
 from ii_agent.content.slides.nano_banana.service import (
     NanoBananaService,
     TEXT_COMPONENT_TYPES,
-    # VISION_DETECTION_MODEL,
     _build_edit_summary,
+    _build_components,
     _inject_runtime_script,
     _parse_bounding_box,
     _parse_styles,
@@ -35,6 +36,7 @@ from ii_agent.content.slides.nano_banana.schemas import (
     Selection,
     SelectionType,
 )
+from ii_agent.chat.schemas import ToolCall
 
 
 # ---------------------------------------------------------------------------
@@ -45,9 +47,22 @@ def _now():
     return datetime.now(timezone.utc)
 
 
-def _make_service(repo=None, gemini_api_key="test-key") -> NanoBananaService:
+def _make_service(
+    repo=None,
+    llm_execution_service=None,
+    llm_config=None,
+) -> NanoBananaService:
     repo = repo or MagicMock()
-    return NanoBananaService(repo=repo, gemini_api_key=gemini_api_key)
+    llm_execution_service = llm_execution_service or MagicMock()
+    llm_config = llm_config or SimpleNamespace(
+        model="gemini-2.5-flash",
+        thinking_tokens=0,
+    )
+    return NanoBananaService(
+        repo=repo,
+        llm_execution_service=llm_execution_service,
+        llm_config=llm_config,
+    )
 
 
 def _detected_component(
@@ -81,21 +96,18 @@ def _instruction(instruction_type: InstructionType, ai_prompt: str = "") -> Inst
 # ---------------------------------------------------------------------------
 
 class TestNanoBananaServiceInit:
-    def test_can_instantiate_with_api_key(self):
-        service = _make_service(gemini_api_key="key-123")
-        assert service._gemini_api_key == "key-123"
-
-    def test_can_instantiate_with_gcp_project(self):
-        service = NanoBananaService(
-            repo=MagicMock(),
-            gcp_project_id="my-proj",
-            gcp_location="us-central1",
+    def test_can_instantiate_with_dependencies(self):
+        repo = MagicMock()
+        llm_execution_service = MagicMock()
+        llm_config = SimpleNamespace(model="gemini-2.5-flash", thinking_tokens=0)
+        service = _make_service(
+            repo=repo,
+            llm_execution_service=llm_execution_service,
+            llm_config=llm_config,
         )
-        assert service._gcp_project_id == "my-proj"
-
-    def test_vision_client_initially_none(self):
-        service = _make_service()
-        assert service._vision_client is None
+        assert service._repo is repo
+        assert service._llm_execution_service is llm_execution_service
+        assert service._llm_config is llm_config
 
     def test_slide_gen_config_initially_none(self):
         service = _make_service()
@@ -103,42 +115,81 @@ class TestNanoBananaServiceInit:
 
 
 # ---------------------------------------------------------------------------
-# vision_client property
+# _run_detection
 # ---------------------------------------------------------------------------
 
-class TestVisionClientProperty:
-    def test_raises_when_no_credentials(self):
-        service = NanoBananaService(repo=MagicMock())
-        with pytest.raises(RuntimeError, match="No Gemini API key"):
-            _ = service.vision_client
-
-    def test_uses_api_key_when_available(self):
-        service = _make_service(gemini_api_key="my-key")
-        with patch("ii_agent.content.slides.nano_banana.service.genai.Client") as mock_client:
-            mock_client.return_value = MagicMock()
-            client = service.vision_client
-        mock_client.assert_called_once_with(api_key="my-key")
-        assert client is mock_client.return_value
-
-    def test_uses_vertexai_when_gcp_credentials(self):
-        service = NanoBananaService(
-            repo=MagicMock(),
-            gcp_project_id="proj",
-            gcp_location="us-east1",
+class TestRunDetection:
+    @pytest.mark.asyncio
+    async def test_builds_components_from_tool_call_payload(self):
+        llm_execution_service = MagicMock()
+        llm_execution_service.create_client.return_value = "client"
+        llm_execution_service.new_message.return_value = "message"
+        llm_execution_service.parse_tool_input.return_value = {
+            "components": [
+                {
+                    "component_type": "title",
+                    "label": "Title",
+                    "text_content": "Hello",
+                    "bounding_box": {
+                        "left": 0,
+                        "top": 0,
+                        "width": 640,
+                        "height": 120,
+                    },
+                }
+            ]
+        }
+        llm_execution_service.send_once = AsyncMock(
+            return_value=SimpleNamespace(
+                content=[
+                    ToolCall(
+                        id="call-1",
+                        name="submit_detected_components",
+                        input='{"components":[]}',
+                        finished=True,
+                    )
+                ]
+            )
         )
-        with patch("ii_agent.content.slides.nano_banana.service.genai.Client") as mock_client:
-            mock_client.return_value = MagicMock()
-            client = service.vision_client
-        mock_client.assert_called_once_with(vertexai=True, project="proj", location="us-east1")
+        service = _make_service(llm_execution_service=llm_execution_service)
 
-    def test_caches_client_on_second_access(self):
-        service = _make_service(gemini_api_key="key")
-        with patch("ii_agent.content.slides.nano_banana.service.genai.Client") as mock_client:
-            mock_client.return_value = MagicMock()
-            c1 = service.vision_client
-            c2 = service.vision_client
-        assert mock_client.call_count == 1
-        assert c1 is c2
+        with patch.object(
+            service,
+            "_download_image",
+            AsyncMock(return_value=(b"image-bytes", "image/png")),
+        ):
+            with patch.object(service, "_get_image_dimensions", return_value=(1280, 720)):
+                components, width, height = await service._run_detection(
+                    "https://example.com/img.png"
+                )
+
+        assert (width, height) == (1280, 720)
+        assert len(components) == 1
+        assert components[0].design_id == "nano-title-0"
+        llm_execution_service.send_once.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_when_detection_tool_not_called(self):
+        llm_execution_service = MagicMock()
+        llm_execution_service.create_client.return_value = "client"
+        llm_execution_service.new_message.return_value = "message"
+        llm_execution_service.send_once = AsyncMock(
+            return_value=SimpleNamespace(content=[])
+        )
+        service = _make_service(llm_execution_service=llm_execution_service)
+
+        with patch.object(
+            service,
+            "_download_image",
+            AsyncMock(return_value=(b"image-bytes", "image/png")),
+        ):
+            with patch.object(service, "_get_image_dimensions", return_value=(1280, 720)):
+                components, width, height = await service._run_detection(
+                    "https://example.com/img.png"
+                )
+
+        assert components == []
+        assert (width, height) == (1280, 720)
 
 
 # ---------------------------------------------------------------------------
@@ -395,53 +446,12 @@ class TestGetImageDimensions:
 
 
 # ---------------------------------------------------------------------------
-# _extract_text_response
+# _build_components
 # ---------------------------------------------------------------------------
 
-class TestExtractTextResponse:
-    def test_extracts_text_from_response_parts(self):
-        part = MagicMock()
-        part.text = "hello world"
-        candidate = MagicMock()
-        candidate.content.parts = [part]
-        response = MagicMock()
-        response.candidates = [candidate]
-        result = NanoBananaService._extract_text_response(response)
-        assert result == "hello world"
-
-    def test_returns_empty_string_when_no_candidates(self):
-        response = MagicMock()
-        response.candidates = []
-        result = NanoBananaService._extract_text_response(response)
-        assert result == ""
-
-    def test_concatenates_multiple_parts(self):
-        p1, p2 = MagicMock(), MagicMock()
-        p1.text = "part1 "
-        p2.text = "part2"
-        candidate = MagicMock()
-        candidate.content.parts = [p1, p2]
-        response = MagicMock()
-        response.candidates = [candidate]
-        result = NanoBananaService._extract_text_response(response)
-        assert result == "part1 part2"
-
-
-# ---------------------------------------------------------------------------
-# _parse_detection_response
-# ---------------------------------------------------------------------------
-
-class TestParseDetectionResponse:
-    def test_returns_empty_list_for_empty_text(self):
-        result = NanoBananaService._parse_detection_response("", 1280, 720)
-        assert result == []
-
-    def test_returns_empty_list_for_invalid_json(self):
-        result = NanoBananaService._parse_detection_response("not json", 1280, 720)
-        assert result == []
-
-    def test_returns_empty_list_when_json_is_not_list(self):
-        result = NanoBananaService._parse_detection_response('{"key": "val"}', 1280, 720)
+class TestBuildComponents:
+    def test_returns_empty_list_for_non_list_payload(self):
+        result = _build_components({"key": "val"}, 1280, 720)
         assert result == []
 
     def test_parses_valid_components(self):
@@ -454,21 +464,12 @@ class TestParseDetectionResponse:
                 "confidence": 0.95,
             }
         ]
-        import json
-        result = NanoBananaService._parse_detection_response(json.dumps(raw), 1280, 720)
+        result = _build_components(raw, 1280, 720)
         assert len(result) == 1
         assert result[0].design_id == "nano-title-0"
         assert result[0].component_type == "title"
 
-    def test_strips_markdown_code_blocks(self):
-        import json
-        raw = [{"component_type": "shape", "label": "Box", "bounding_box": {"left": 10, "top": 10, "width": 100, "height": 50}}]
-        text = f"```json\n{json.dumps(raw)}\n```"
-        result = NanoBananaService._parse_detection_response(text, 1280, 720)
-        assert len(result) == 1
-
     def test_skips_components_with_invalid_bounding_box(self):
-        import json
         raw = [
             {
                 "component_type": "image",
@@ -476,7 +477,7 @@ class TestParseDetectionResponse:
                 "bounding_box": {"left": 0, "top": 0, "width": 0, "height": 0},
             }
         ]
-        result = NanoBananaService._parse_detection_response(json.dumps(raw), 1280, 720)
+        result = _build_components(raw, 1280, 720)
         assert result == []
 
 

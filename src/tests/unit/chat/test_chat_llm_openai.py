@@ -721,19 +721,22 @@ class TestConvertTools:
 
 class TestSystemPromptTemplate:
     def test_template_has_current_date_placeholder(self):
-        from ii_agent.chat.llm.openai import SYSTEM_PROMPT_TEMPLATE, template
+        from ii_agent.chat.prompts.openai_system_prompt import (
+            SYSTEM_PROMPT_TEMPLATE,
+            template,
+        )
         from datetime import datetime
 
         result = template.substitute(current_date=datetime.now().strftime("%Y-%m-%d"))
         assert "2026" in result or str(datetime.now().year) in result
 
     def test_template_contains_chatgpt(self):
-        from ii_agent.chat.llm.openai import SYSTEM_PROMPT_TEMPLATE
+        from ii_agent.chat.prompts.openai_system_prompt import SYSTEM_PROMPT_TEMPLATE
 
         assert "ChatGPT" in SYSTEM_PROMPT_TEMPLATE
 
     def test_template_contains_tools_section(self):
-        from ii_agent.chat.llm.openai import SYSTEM_PROMPT_TEMPLATE
+        from ii_agent.chat.prompts.openai_system_prompt import SYSTEM_PROMPT_TEMPLATE
 
         assert "## web" in SYSTEM_PROMPT_TEMPLATE
         assert "web_search" in SYSTEM_PROMPT_TEMPLATE

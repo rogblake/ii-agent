@@ -22,6 +22,7 @@ from ii_agent.content.slides.nano_banana.schemas import (
 from ii_agent.content.slides.nano_banana.service import (
     NanoBananaService,
     _build_edit_summary,
+    _build_components,
     _inject_runtime_script,
     _parse_bounding_box,
     _parse_styles,
@@ -41,7 +42,11 @@ class _FakeRepo:
 
 
 def _service(repo: _FakeRepo) -> NanoBananaService:
-    return NanoBananaService(repo=repo, gemini_api_key="test-key")
+    return NanoBananaService(
+        repo=repo,
+        llm_execution_service=AsyncMock(),
+        llm_config=SimpleNamespace(model="gemini-2.5-flash", thinking_tokens=0),
+    )
 
 
 def _instruction_text() -> Instruction:
@@ -350,22 +355,34 @@ def test_inject_runtime_script_fallback_locations():
     assert raw.startswith("<link") or "__DESIGN_MODE_RUNTIME__" in raw
 
 
-def test_parse_detection_response_and_overlay_building(monkeypatch):
+def test_build_components_and_overlay_building():
     repo = _FakeRepo()
     service = _service(repo)
 
-    components = service._parse_detection_response(
-        '[{"component_type":"title","label":"Title","text_content":"Hello","bounding_box":{"left":0,"top":0,"width":640,"height":120}}]',
+    components = _build_components(
+        [
+            {
+                "component_type": "title",
+                "label": "Title",
+                "text_content": "Hello",
+                "bounding_box": {
+                    "left": 0,
+                    "top": 0,
+                    "width": 640,
+                    "height": 120,
+                },
+            }
+        ],
         1280,
         720,
     )
     assert len(components) == 1
     assert components[0].design_id.startswith("nano-title-")
 
-    bad_json = service._parse_detection_response("not-json", 1280, 720)
-    assert bad_json == []
+    bad_payload = _build_components("not-json", 1280, 720)
+    assert bad_payload == []
 
-    not_list = service._parse_detection_response('{"a":1}', 1280, 720)
+    not_list = _build_components({"a": 1}, 1280, 720)
     assert not_list == []
 
     overlay = service._build_overlay_html(

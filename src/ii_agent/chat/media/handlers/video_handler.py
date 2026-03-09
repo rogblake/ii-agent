@@ -12,12 +12,11 @@ from ii_agent.chat.schemas import (
     BinaryContent,
     TextContent,
     MediaPreferences,
+    VideoSettings,
 )
 from ii_agent.chat.tools import BaseTool
 from ii_agent.chat.tools.video_generate import (
     VideoGenerationTool,
-    VideoSettings,
-    VideoFrameReference,
     DURATION_TO_SECONDS,
 )
 from ii_agent.chat.tools.video_concatenate import ConcatenateVideosTool
@@ -80,8 +79,8 @@ class VideoMediaHandler(BaseMediaHandler):
             - ConcatenateVideosTool: Combine multiple videos into one
             - ExtractFramesTool: Extract frames for video continuity
         """
-        video_settings = self._extract_video_settings(media_preferences)
-        video_frames = self._extract_video_frames(media_preferences)
+        video_settings = media_preferences.video_settings or VideoSettings()
+        video_frames = media_preferences.video_frames or []
 
         logger.info(
             f"[VIDEO_HANDLER] Creating tools with settings: "
@@ -121,7 +120,7 @@ class VideoMediaHandler(BaseMediaHandler):
         video_context_parts: List[BinaryContent | TextContent] = []
 
         # Add video frame references (start/end frames)
-        video_frames = self._extract_video_frames(media_preferences)
+        video_frames = media_preferences.video_frames or []
         if video_frames:
             frame_configs = [
                 ("start", "START FRAME (Video should begin with this scene)"),
@@ -146,29 +145,27 @@ class VideoMediaHandler(BaseMediaHandler):
                     logger.debug(f"[VIDEO_HANDLER] Added {frame_type} frame")
 
         # Add storybook context when switching from storybook to video mode
-        storybook_ctx = self._extract_storybook_context(media_preferences)
-        if storybook_ctx and storybook_ctx.get("reference_images"):
-            reference_images = storybook_ctx["reference_images"]
-            scripts = storybook_ctx.get("scripts", [])
+        storybook_ctx = media_preferences.storybook_context
+        if storybook_ctx and storybook_ctx.reference_images:
             lines = [
                 "\n\n--- STORYBOOK CONTEXT FOR VIDEO GENERATION ---",
-                f"Storybook ID: {storybook_ctx.get('storybook_id', 'unknown')}",
+                f"Storybook ID: {storybook_ctx.storybook_id}",
                 "Use these scenes as visual style references for the video.",
                 "The video should match the visual style, characters, and scenes shown.\n",
                 "Generated story:",
             ]
 
-            for i, image_url in enumerate(reference_images):
+            for i, image_url in enumerate(storybook_ctx.reference_images):
                 lines.append(f"- Scene {i + 1}:")
                 lines.append(f"  + url: {image_url}")
-                if i < len(scripts) and scripts[i]:
-                    lines.append(f"  + script: {scripts[i]}")
+                if i < len(storybook_ctx.scripts) and storybook_ctx.scripts[i]:
+                    lines.append(f"  + script: {storybook_ctx.scripts[i]}")
 
             video_context_parts.append(TextContent(text="\n".join(lines)))
 
             logger.info(
                 f"[VIDEO_HANDLER] Added storybook context: "
-                f"{len(reference_images)} images, {len(scripts)} scripts"
+                f"{len(storybook_ctx.reference_images)} images, {len(storybook_ctx.scripts)} scripts"
             )
 
         return video_context_parts
@@ -189,7 +186,7 @@ class VideoMediaHandler(BaseMediaHandler):
         mode_strategy: BaseModeStrategy,
     ) -> str:
         """Generate tool hint text for video generation."""
-        video_settings = self._extract_video_settings(media_preferences)
+        video_settings = media_preferences.video_settings or VideoSettings()
 
         # Build explicit user configuration block
         user_config = (
@@ -205,7 +202,7 @@ class VideoMediaHandler(BaseMediaHandler):
         duration_str = video_settings.duration
         duration_seconds = DURATION_TO_SECONDS.get(duration_str, 6)
 
-        video_frames = self._extract_video_frames(media_preferences)
+        video_frames = media_preferences.video_frames or []
         has_start = video_frames and any(f.type == "start" for f in video_frames)
         has_end = video_frames and any(f.type == "end" for f in video_frames)
 
@@ -236,12 +233,11 @@ class VideoMediaHandler(BaseMediaHandler):
 
         # Build storybook context hint
         storybook_hint = ""
-        storybook_ctx = self._extract_storybook_context(media_preferences)
-        if storybook_ctx and storybook_ctx.get("reference_images"):
-            reference_images = storybook_ctx["reference_images"]
+        storybook_ctx = media_preferences.storybook_context
+        if storybook_ctx and storybook_ctx.reference_images:
             image_list = "\n".join(
                 f"  • Image {i + 1}: {url}"
-                for i, url in enumerate(reference_images[:5])
+                for i, url in enumerate(storybook_ctx.reference_images[:5])
             )
             storybook_hint = (
                 f"\n\n📚 STORYBOOK CONTEXT AVAILABLE:"
@@ -338,74 +334,6 @@ class VideoMediaHandler(BaseMediaHandler):
         return media_hint
 
     # ── Helper methods ────────────────────────────────────────────────
-
-    def _extract_video_settings(self, media_preferences: MediaPreferences) -> VideoSettings:
-        """Extract video settings from media preferences."""
-        # Try to get video_settings from media_preferences if available
-        video_settings_data = getattr(media_preferences, 'video_settings', None)
-        if video_settings_data and isinstance(video_settings_data, dict):
-            return VideoSettings(
-                duration=video_settings_data.get("duration", "8s"),
-                resolution=video_settings_data.get("resolution", "720p"),
-                aspect_ratio=video_settings_data.get("aspect_ratio", "16:9"),
-                audio_included=video_settings_data.get("audio_included", True),
-                multishot_mode=video_settings_data.get("multishot_mode", False),
-            )
-        elif video_settings_data and hasattr(video_settings_data, 'duration'):
-            return VideoSettings(
-                duration=getattr(video_settings_data, 'duration', '8s'),
-                resolution=getattr(video_settings_data, 'resolution', '720p'),
-                aspect_ratio=getattr(video_settings_data, 'aspect_ratio', '16:9'),
-                audio_included=getattr(video_settings_data, 'audio_included', True),
-                multishot_mode=getattr(video_settings_data, 'multishot_mode', False),
-            )
-        return VideoSettings(
-            aspect_ratio=media_preferences.aspect_ratio or "16:9",
-            resolution=media_preferences.resolution or "720p",
-        )
-
-    def _extract_video_frames(self, media_preferences: MediaPreferences) -> list[VideoFrameReference]:
-        """Extract video frames from media preferences."""
-        video_frames_data = getattr(media_preferences, 'video_frames', None)
-        if not video_frames_data:
-            return []
-
-        frames = []
-        for frame_data in video_frames_data:
-            if isinstance(frame_data, dict):
-                frames.append(VideoFrameReference(
-                    id=frame_data.get("id", ""),
-                    url=frame_data.get("url", ""),
-                    type=frame_data.get("type", "start"),
-                    file_id=frame_data.get("file_id"),
-                ))
-            elif hasattr(frame_data, 'id'):
-                frames.append(VideoFrameReference(
-                    id=getattr(frame_data, 'id', ''),
-                    url=getattr(frame_data, 'url', ''),
-                    type=getattr(frame_data, 'type', 'start'),
-                    file_id=getattr(frame_data, 'file_id', None),
-                ))
-        return frames
-
-    def _extract_storybook_context(self, media_preferences: MediaPreferences) -> dict | None:
-        """Extract storybook context from media preferences."""
-        storybook_ctx = getattr(media_preferences, 'storybook_context', None)
-        if not storybook_ctx:
-            return None
-
-        if isinstance(storybook_ctx, dict):
-            if storybook_ctx.get("reference_images"):
-                return storybook_ctx
-        elif hasattr(storybook_ctx, 'reference_images'):
-            ref_images = getattr(storybook_ctx, 'reference_images', [])
-            if ref_images:
-                return {
-                    "storybook_id": getattr(storybook_ctx, 'storybook_id', 'unknown'),
-                    "reference_images": ref_images,
-                    "scripts": getattr(storybook_ctx, 'scripts', []),
-                }
-        return None
 
     async def _get_frame_public_url(
         self,

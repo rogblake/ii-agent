@@ -14,6 +14,9 @@ from ii_agent.chat.schemas import (
     ErrorTextContent,
     FileUrlContentPart,
     MediaPreferences,
+    VideoSettings,
+    VideoFrameReference,
+    StorybookContext,
 )
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.storage.client import media_storage, storage
@@ -61,47 +64,6 @@ TRUSTED_DOMAINS = [
     "sfile.ii.inc",
 ]
 
-
-class VideoSettings:
-    """Video generation settings extracted from media preferences."""
-
-    def __init__(
-        self,
-        duration: str = "8s",
-        resolution: str = "720p",
-        aspect_ratio: str = "16:9",
-        audio_included: bool = True,
-        multishot_mode: bool = False,
-    ):
-        self.duration = duration
-        self.resolution = resolution
-        self.aspect_ratio = aspect_ratio
-        self.audio_included = audio_included
-        self.multishot_mode = multishot_mode
-
-
-class VideoFrameReference:
-    """Reference frame for video generation (start or end frame)."""
-
-    def __init__(self, id: str, url: str, type: str, file_id: str | None = None):
-        self.id = id
-        self.url = url
-        self.type = type  # "start" or "end"
-        self.file_id = file_id
-
-
-class StorybookContext:
-    """Storybook context for video generation."""
-
-    def __init__(
-        self,
-        storybook_id: str,
-        reference_images: list[str],
-        scripts: list[str] | None = None,
-    ):
-        self.storybook_id = storybook_id
-        self.reference_images = reference_images
-        self.scripts = scripts or []
 
 
 def is_trusted_url(url: str) -> bool:

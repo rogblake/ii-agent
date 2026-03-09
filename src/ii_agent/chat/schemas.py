@@ -110,6 +110,63 @@ class MediaReference(BaseModel):
     )
 
 
+VideoDurationType = Literal["4s", "6s", "8s", "10s", "12s", "18s", "24s", "30s"]
+# "2460p" is a legacy typo for 4K (2160p) - both supported for backwards compatibility
+VideoResolutionType = Literal["720p", "1080p", "2160p", "2460p", "4k"]
+VideoAspectRatioType = Literal["16:9", "9:16"]
+
+
+class VideoSettings(BaseModel):
+    """Video generation settings."""
+
+    duration: VideoDurationType = Field(
+        "6s", description="Video duration (4s, 6s, 8s, 10s, 12s, 18s, 24s, 30s)"
+    )
+    resolution: VideoResolutionType = Field(
+        "720p", description="Video resolution (720p, 1080p, 2160p, 4k)"
+    )
+    aspect_ratio: VideoAspectRatioType = Field(
+        "16:9", description="Video aspect ratio (16:9 or 9:16)"
+    )
+    audio_included: bool = Field(
+        True, description="Whether to generate audio with the video"
+    )
+    multishot_mode: bool = Field(
+        True, description="Whether to split prompt into scenes with camera cuts"
+    )
+
+
+class VideoFrameReference(BaseModel):
+    """Reference frame for video generation (start or end frame)."""
+
+    id: str = Field(..., description="Unique identifier for this frame reference")
+    url: str = Field(..., description="URL or path to the frame image")
+    type: Literal["start", "end"] = Field(
+        ..., description="Frame type - 'start' for first frame, 'end' for last frame"
+    )
+    file_id: str | None = Field(
+        None, description="Optional file ID if the frame was uploaded"
+    )
+
+
+class StorybookContext(BaseModel):
+    """Storybook context for video generation.
+
+    When switching from storybook mode to video mode, this context provides
+    reference images and scripts from the storybook to guide video generation.
+    """
+
+    storybook_id: str = Field(..., description="ID of the source storybook")
+    reference_images: list[str] = Field(
+        default_factory=list,
+        description="List of image URLs from storybook pages (first 5 pages)",
+    )
+    scripts: list[str] = Field(
+        default_factory=list,
+        description="Text content/scripts from storybook pages",
+    )
+
+
 class MediaPreferences(BaseModel):
     enabled: bool
     type: Literal["image", "video", "storybook", "infographic", "poster"]
@@ -158,13 +215,13 @@ class MediaPreferences(BaseModel):
         description="Flag for advanced mode",
     )
     # Video-specific settings
-    video_settings: Optional[Dict[str, Any]] = Field(
+    video_settings: VideoSettings | None = Field(
         None, description="Video generation settings (duration, resolution, audio, etc.)"
     )
-    video_frames: Optional[List[Dict[str, Any]]] = Field(
+    video_frames: list[VideoFrameReference] | None = Field(
         None, description="Reference frames for video generation (start/end frames)"
     )
-    storybook_context: Optional[Dict[str, Any]] = Field(
+    storybook_context: StorybookContext | None = Field(
         None,
         description="Storybook context for video generation (auto-detected when switching from storybook to video mode)",
     )

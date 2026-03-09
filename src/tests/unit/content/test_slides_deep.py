@@ -12,7 +12,7 @@ import pytest
 from ii_agent.content.slides.nano_banana.service import (
     NanoBananaService,
     TEXT_COMPONENT_TYPES,
-    VISION_DETECTION_MODEL,
+    # VISION_DETECTION_MODEL,
 )
 from ii_agent.content.slides.nano_banana.schemas import (
     BoundingBox,

@@ -369,11 +369,11 @@ class StorybookAIEditService:
         llm_config.thinking_tokens = 0
 
         client = get_client(llm_config)
-        prompt = f"Please rewrite the following text:\n\n{content.strip()}"
+        prompt = f"Please rewrite the following text. Do not add any extra content or context.\n\n{content.strip()}"
         if page_image_url:
             prompt = (
                 "Use the attached storybook page image as visual context. "
-                "Rewrite the following text so it better fits what is happening in the scene:\n\n"
+                "Rewrite the following text so it better fits what is happening in the scene:\n\n This will be the final content, just rewrite it do not add any extra content or context.\n\n"
                 f"{content.strip()}"
             )
 
@@ -405,9 +405,13 @@ class StorybookAIEditService:
             ),
             usage_key="storybook_ai_rewrite",
         )
-        rewritten_text = "".join(
-            part.text for part in result.content if isinstance(part, TextContent)
-        ).strip()
+        texts = []
+        for part in result.content:
+            if isinstance(part, TextContent):
+                texts.append(part.text)
+            elif isinstance(part, str):
+                texts.append(part)
+        rewritten_text = "".join(texts).strip()
         if not rewritten_text:
             raise ValidationError("AI did not return any rewritten content")
         return rewritten_text

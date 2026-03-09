@@ -788,7 +788,7 @@ class CodeInterpreter:
 class RunResponseOutput:
     """Complete response from provider."""
 
-    content: List[ContentPart]
+    content: List[ContentPart] | str
     usage: TokenUsage
     finish_reason: FinishReason
     files: List[Dict[str, Any]] | None = None

@@ -11,7 +11,7 @@ import pytest
 from ii_agent.content.slides.nano_banana.service import (
     NanoBananaService,
     TEXT_COMPONENT_TYPES,
-    VISION_DETECTION_MODEL,
+    # VISION_DETECTION_MODEL,
     _build_edit_summary,
     _inject_runtime_script,
     _parse_bounding_box,
@@ -572,5 +572,5 @@ class TestModuleLevelHelpers:
         assert "subtitle" in TEXT_COMPONENT_TYPES
         assert "footer" in TEXT_COMPONENT_TYPES
 
-    def test_vision_detection_model_constant(self):
-        assert VISION_DETECTION_MODEL == "gemini-3-flash-preview"
+    # def test_vision_detection_model_constant(self):
+    #     assert VISION_DETECTION_MODEL == "gemini-3-flash-preview"

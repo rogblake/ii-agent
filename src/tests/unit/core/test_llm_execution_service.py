@@ -47,8 +47,10 @@ class FakeClient:
     def __init__(self, responses):
         self._responses = responses
         self.calls = 0
+        self.provider_options = []
 
-    async def send(self, messages, tools=None):
+    async def send(self, messages, tools=None, provider_options=None):
+        self.provider_options.append(provider_options)
         response = self._responses[self.calls]
         self.calls += 1
         return response
@@ -134,6 +136,39 @@ async def test_send_once_passes_user_model_flag():
 
     assert len(billing.calls) == 1
     assert billing.calls[0].is_user_model is True
+
+
+@pytest.mark.asyncio
+async def test_send_once_forwards_provider_options():
+    llm_config = LLMConfig(model="gpt-4o", api_type=APITypes.OPENAI, config_type="system")
+    service = LLMExecutionService()
+    client = FakeClient(
+        [
+            RunResponseOutput(
+                content=[TextContent(text="done")],
+                usage=TokenUsage(prompt_tokens=1, completion_tokens=1),
+                finish_reason=FinishReason.END_TURN,
+            )
+        ]
+    )
+    message = Message(
+        id=uuid4(),
+        role=MessageRole.USER,
+        session_id="s1",
+        parts=[TextContent(text="hello")],
+        created_at=0,
+        updated_at=0,
+    )
+    provider_options = {"gemini": {"system_instruction": "Return JSON only"}}
+
+    await service.send_once(
+        client=client,
+        messages=[message],
+        provider_options=provider_options,
+        billing_context=_billing_context(llm_config),
+    )
+
+    assert client.provider_options == [provider_options]
 
 
 @pytest.mark.asyncio

@@ -458,6 +458,7 @@ class GeminiProvider(LLMClient):
         tools: Optional[List[Any]] = None,
         is_code_interpreter_enabled: bool = False,
         session_id: Optional[str] = None,
+        provider_options: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[RunResponseEvent]:
         """Stream response with granular events.
 
@@ -468,6 +469,7 @@ class GeminiProvider(LLMClient):
         )
 
         gemini_messages = self._convert_messages(messages)
+        gemini_opts = (provider_options or {}).get("gemini", {})
 
         # Gemini doesn't support mixing code execution with function calling
         # When code execution is enabled, skip regular tools
@@ -485,16 +487,22 @@ class GeminiProvider(LLMClient):
         if gemini_tools:
             config_dict["tools"] = gemini_tools
 
-        # System instruction: honour SYSTEM role messages, else default
+        # System instruction: provider_options override > inline SYSTEM messages > default
         inline_system = self._extract_system_text(messages)
-        if inline_system:
+        if "system_instruction" in gemini_opts:
+            if gemini_opts["system_instruction"] is not None:
+                config_dict["system_instruction"] = gemini_opts["system_instruction"]
+        elif inline_system:
             config_dict["system_instruction"] = inline_system
         else:
             config_dict["system_instruction"] = template.substitute(
                 current_date=datetime.now().strftime("%Y-%m-%d")
             )
 
-        if self.llm_config.thinking_tokens and self.llm_config.thinking_tokens > 0:
+        if "thinking_config" in gemini_opts:
+            if gemini_opts["thinking_config"] is not None:
+                config_dict["thinking_config"] = gemini_opts["thinking_config"]
+        elif self.llm_config.thinking_tokens and self.llm_config.thinking_tokens > 0:
             config_dict["thinking_config"] = types.ThinkingConfig(
                 thinking_level=types.ThinkingLevel.LOW,
                 include_thoughts=True,

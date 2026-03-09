@@ -610,6 +610,25 @@ class TestOpenAIProviderSendDeep:
         system_msgs = [m for m in input_msgs if isinstance(m, dict) and m.get("role") == "system"]
         assert len(system_msgs) == 0
 
+    @pytest.mark.asyncio
+    async def test_send_accepts_provider_options_keyword(self):
+        provider = _make_provider()
+
+        mock_response = MagicMock()
+        mock_response.output = []
+        mock_response.status = "completed"
+        mock_response.usage = None
+
+        with patch.object(provider.client.responses, "create", new=AsyncMock(return_value=mock_response)):
+            with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+                result = await provider.send(
+                    messages=[_make_user_message("Hello")],
+                    session_id=_SESSION_ID,
+                    provider_options={"openai": {"reasoning": {"effort": "high"}}},
+                )
+
+        assert result.finish_reason == FinishReason.END_TURN
+
 
 # ---------------------------------------------------------------------------
 # OpenAIProvider.stream() - event types coverage

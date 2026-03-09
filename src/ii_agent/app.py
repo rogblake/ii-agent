@@ -20,12 +20,12 @@ from ii_agent.sessions.router import router as sessions_router
 from ii_agent.billing import router as billing_router
 from ii_agent.sessions.wishlist import router as wishlist_router
 from ii_agent.integrations.connectors import router as connectors_router
+from ii_agent.integrations.enhance_prompt import router as enhance_prompt_router
 from ii_agent.files.router import router as files_router
 from ii_agent.content.storybook.router import router as storybook_router
 from ii_agent.settings.llm import router as llm_settings_router
 from ii_agent.settings.mcp import router as mcp_settings_router
 from ii_agent.content.skills import router as skills_settings_router
-# from ii_agent.engine.agents.beta.enhance_prompt import router as enhance_prompt_router
 from ii_agent.chat.router import router as chat_router
 from ii_agent.engine.v1.api import v1_router
 from ii_agent.projects.router import router as project_router
@@ -226,7 +226,7 @@ def create_app():
     app.include_router(slide_design_router)  # /slides/design/*
     app.include_router(nano_banana_router)  # /slides/nano-banana/*
     app.include_router(wishlist_router)  # /wishlist/*
-    # app.include_router(enhance_prompt_router)  # /enhance-prompt/*
+    app.include_router(enhance_prompt_router)  # /enhance-prompt/*
     app.include_router(billing_router)  # /billing/*
     app.include_router(chat_router)  # /chat/*
     app.include_router(connectors_router)  # /connectors/*

@@ -864,6 +864,7 @@ class OpenAIProvider(LLMClient):
         self,
         messages: List[Message],
         tools: Optional[List[Any]] = None,
+        provider_options: Optional[Dict[str, Any]] = None,
         is_code_interpreter_enabled: bool = False,
         session_id: Optional[str] = None,
     ) -> RunResponseOutput:
@@ -874,6 +875,7 @@ class OpenAIProvider(LLMClient):
             tools: Optional list of tools
             is_code_interpreter_enabled: Whether code interpreter is enabled
             session_id: Session ID for container management
+            provider_options: Reserved for provider-specific request options
         """
         # Ensure container exists if code interpreter is enabled
         container_id = None
@@ -988,6 +990,7 @@ class OpenAIProvider(LLMClient):
         session_id: str,
         tools: Optional[List[Any]] = None,
         is_code_interpreter_enabled: bool = False,
+        provider_options: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[RunResponseEvent]:
         """Stream response with granular events using Responses API.
 
@@ -996,6 +999,7 @@ class OpenAIProvider(LLMClient):
             tools: Optional list of tools
             is_code_interpreter_enabled: Enable code interpreter tool
             session_id: Session ID for container management
+            provider_options: Reserved for provider-specific request options
         """
         # Ensure container exists if code interpreter is enabled
         # container_id = None

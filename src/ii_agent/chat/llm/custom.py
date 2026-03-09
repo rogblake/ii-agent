@@ -219,7 +219,10 @@ class CustomProvider(LLMClient):
         return converted_tools
 
     async def send(
-        self, messages: List[Message], tools: Optional[List[Any]] = None
+        self,
+        messages: List[Message],
+        tools: Optional[List[Any]] = None,
+        provider_options: Optional[Dict[str, Any]] = None,
     ) -> RunResponseOutput:
         """Send messages and get complete response using litellm."""
         litellm_messages = self._convert_messages(messages)
@@ -314,7 +317,13 @@ class CustomProvider(LLMClient):
             raise
 
     async def stream(
-        self, messages: List[Message], tools: Optional[List[Any]] = None, **kwargs
+        self,
+        messages: List[Message],
+        tools: Optional[List[Any]] = None,
+        is_code_interpreter_enabled: bool = False,
+        session_id: Optional[str] = None,
+        provider_options: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> AsyncIterator[RunResponseEvent]:
         """Stream response events using litellm."""
         litellm_messages = self._convert_messages(messages)

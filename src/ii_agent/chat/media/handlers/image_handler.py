@@ -58,14 +58,14 @@ class ImageMediaHandler(BaseMediaHandler):
         # Default to normal mode
         return NormalModeStrategy()
 
-    async def create_tool(
+    async def create_tools(
         self,
         *,
         session_id: str,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
         container: ServiceContainer,
-    ) -> ImageGenerationTool:
+    ) -> list[ImageGenerationTool]:
         """Create ImageGenerationTool with configuration."""
 
         # Determine if this is mini tools mode
@@ -74,7 +74,7 @@ class ImageMediaHandler(BaseMediaHandler):
         # Get media references
         media_refs = media_preferences.references if media_preferences.references else None
 
-        return ImageGenerationTool(
+        return [ImageGenerationTool(
             session_id=session_id,
             media_preferences=media_preferences,
             image_aspect_ratio=media_preferences.aspect_ratio,
@@ -82,7 +82,7 @@ class ImageMediaHandler(BaseMediaHandler):
             references=media_refs,
             mini_tools_mode=is_mini_tools_mode,
             container=container,
-        )
+        )]
 
     async def build_llm_context(
         self,

@@ -10,6 +10,9 @@ from .github import GitHubTool
 from .image_generate import ImageGenerationTool
 from .storybook_generate import StorybookGenerationTool
 from .manga_generate import MangaGenerationTool
+from .video_generate import VideoGenerationTool
+from .video_concatenate import ConcatenateVideosTool
+from .video_extract_frames import ExtractFramesTool
 
 __all__ = [
     "BaseTool",
@@ -25,4 +28,7 @@ __all__ = [
     "ImageGenerationTool",
     "StorybookGenerationTool",
     "MangaGenerationTool",
+    "VideoGenerationTool",
+    "ConcatenateVideosTool",
+    "ExtractFramesTool",
 ]

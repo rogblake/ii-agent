@@ -1,8 +1,8 @@
 """Unified file processor for routing and content extraction."""
 
-import logging
-from typing import List, Set, Optional, BinaryIO
-from dataclasses import dataclass
+import io
+from typing import List, Set, Optional, BinaryIO, Tuple
+from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from pathlib import Path
 from urllib.parse import urlparse
@@ -12,12 +12,47 @@ from sqlalchemy import select
 from ii_agent.files.models import FileUpload
 from ii_agent.chat.schemas import BinaryContent, TextContent
 from ii_agent.core.storage.client import media_storage
+from ii_agent.core.config.llm_config import APITypes
+from ii_agent.core.logger import logger
 
-logger = logging.getLogger(__name__)
+# ============================================================================
+# Exceptions
+# ============================================================================
+
+
+class ImageCompressionError(Exception):
+    """Raised when image compression fails to meet provider size limits."""
+
+
+# ============================================================================
+# Provider Image Limits
+# ============================================================================
+
+# Provider-specific limits (raw bytes before base64 encoding)
+# Anthropic: 5MB base64 limit → ~3.75MB raw
+# OpenAI/Gemini: 10MB limit
+PROVIDER_IMAGE_LIMITS = {
+    APITypes.ANTHROPIC: int(5 * 1024 * 1024 * 3 / 4),  # ~3.75MB (5MB base64)
+    APITypes.OPENAI: 10 * 1024 * 1024,  # 10MB
+    APITypes.GEMINI: 10 * 1024 * 1024,  # 10MB
+    APITypes.CUSTOM: 10 * 1024 * 1024,  # 10MB default
+}
+DEFAULT_IMAGE_LIMIT = int(5 * 1024 * 1024 * 3 / 4)  # Conservative default (~3.75MB)
 
 
 # File size thresholds
 SIZE_THRESHOLD_MB = 50
+
+# Token thresholds for content routing
+# Leave ~28k tokens for conversation context and system prompt
+# Claude has 128k context, so we use 100k as the max for file content
+MAX_CONTENT_TOKENS = 100000
+
+# Approximate tokens per character (conservative estimate: 1 token ≈ 3 chars)
+CHARS_PER_TOKEN = 3
+
+# PDF page limit for Anthropic Claude API
+MAX_PDF_PAGES = 100
 
 # ============================================================================
 # Data Models
@@ -36,11 +71,85 @@ class ProcessedFiles:
     large_file_ids: Set[str]  # Large files for vector store
     large_file_info: List[dict]  # Info about large files for logging
     skipped_files: List[dict]  # Files that couldn't be processed
+    total_text_tokens: int = 0  # Total estimated tokens from text content
+    vector_store_reason: List[dict] = field(default_factory=list)  # Reasons files were routed to vector store
 
 
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
+
+def estimate_tokens(text: str) -> int:
+    """
+    Estimate the number of tokens in text.
+
+    Uses a conservative estimate of 1 token per 3 characters.
+    This is a rough approximation but sufficient for routing decisions.
+    Uses ceiling division to avoid underestimation.
+    """
+    import math
+    return math.ceil(len(text) / CHARS_PER_TOKEN)
+
+
+def get_pdf_page_count(file_bytes: bytes) -> int:
+    """
+    Get the number of pages in a PDF file.
+
+    Args:
+        file_bytes: PDF file content as bytes
+
+    Returns:
+        Number of pages, or -1 if unable to determine
+    """
+    try:
+        import fitz  # PyMuPDF
+
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        try:
+            page_count = len(doc)
+            return page_count
+        finally:
+            doc.close()
+    except ImportError:
+        logger.warning("[PDF] PyMuPDF not available, cannot count PDF pages")
+        return -1
+    except Exception as e:
+        logger.error(f"[PDF] Error counting PDF pages: {e}")
+        return -1
+
+
+def extract_pdf_text(file_bytes: bytes) -> Optional[str]:
+    """
+    Extract text from a PDF file.
+
+    Args:
+        file_bytes: PDF file content as bytes
+
+    Returns:
+        Extracted text or None if extraction fails
+    """
+    try:
+        import fitz  # PyMuPDF
+
+        text_content = []
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        try:
+            for page_num, page in enumerate(doc):
+                text = page.get_text()
+                if text.strip():
+                    text_content.append(f"[Page {page_num + 1}]\n{text}")
+
+            return "\n\n".join(text_content) if text_content else None
+        finally:
+            doc.close()
+
+    except ImportError:
+        logger.warning("[PDF] PyMuPDF not available, cannot extract PDF text")
+        return None
+    except Exception as e:
+        logger.error(f"[PDF] Error extracting PDF text: {e}")
+        return None
 
 
 def is_text_extractable(content_type: Optional[str], file_name: str) -> bool:
@@ -76,19 +185,120 @@ def is_remote_url(path: str) -> bool:
     return parsed.scheme in {"http", "https"}
 
 
+def compress_image_for_provider(
+    file_bytes: bytes,
+    mime_type: str,
+    target_limit: int,
+) -> Tuple[bytes, str]:
+    """
+    Compress image to meet provider-specific size limits.
+
+    Uses progressive compression strategy:
+    1. Check if already under limit → return unchanged
+    2. Try different max dimensions (4K → 1K)
+    3. Try different quality levels (95 → 35)
+    4. If all attempts fail → raise ImageCompressionError
+
+    Args:
+        file_bytes: Original image bytes
+        mime_type: Original MIME type
+        target_limit: Target size limit in bytes
+
+    Returns:
+        Tuple of (compressed_bytes, mime_type)
+
+    Raises:
+        ImageCompressionError: If compression cannot meet the limit
+    """
+    from PIL import Image
+
+    # Check if already under limit
+    if len(file_bytes) <= target_limit:
+        logger.debug(
+            f"[IMAGE_COMPRESSION] Image already under limit "
+            f"({len(file_bytes)} bytes <= {target_limit} bytes)"
+        )
+        return file_bytes, mime_type
+
+    original_size = len(file_bytes)
+    logger.info(
+        f"[IMAGE_COMPRESSION] Starting compression: {original_size} bytes → target {target_limit} bytes"
+    )
+
+    try:
+        # Open the image
+        img = Image.open(io.BytesIO(file_bytes))
+
+        # Convert RGBA/P to RGB (for JPEG compression)
+        if img.mode in ("RGBA", "P"):
+            logger.debug(f"[IMAGE_COMPRESSION] Converting {img.mode} to RGB")
+            img = img.convert("RGB")
+
+        original_dimensions = img.size
+
+        # Progressive compression strategy
+        max_dimensions = [4096, 3072, 2048, 1536, 1024]
+        quality_levels = [95, 85, 75, 65, 55, 45, 35]
+
+        for max_dim in max_dimensions:
+            # Resize if needed (maintaining aspect ratio)
+            resized_img = img.copy()
+            if max(img.size) > max_dim:
+                resized_img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+                logger.debug(
+                    f"[IMAGE_COMPRESSION] Resized from {original_dimensions} to {resized_img.size}"
+                )
+
+            for quality in quality_levels:
+                # Compress as JPEG
+                buffer = io.BytesIO()
+                resized_img.save(buffer, format="JPEG", quality=quality, optimize=True)
+                compressed_bytes = buffer.getvalue()
+
+                if len(compressed_bytes) <= target_limit:
+                    logger.info(
+                        f"[IMAGE_COMPRESSION] Success: {original_size} → {len(compressed_bytes)} bytes "
+                        f"(max_dim={max_dim}, quality={quality}, dimensions={resized_img.size})"
+                    )
+                    return compressed_bytes, "image/jpeg"
+
+                logger.debug(
+                    f"[IMAGE_COMPRESSION] Attempt: max_dim={max_dim}, quality={quality} → "
+                    f"{len(compressed_bytes)} bytes (still too large)"
+                )
+
+        # All attempts failed
+        raise ImageCompressionError(
+            f"Image could not be compressed to meet the {target_limit / 1024 / 1024:.1f}MB limit. "
+            f"Original size: {original_size / 1024 / 1024:.1f}MB. "
+            f"Please upload a smaller image."
+        )
+
+    except ImageCompressionError:
+        raise
+    except Exception as e:
+        logger.error(f"[IMAGE_COMPRESSION] Error during compression: {e}", exc_info=True)
+        raise ImageCompressionError(
+            f"Failed to compress image: {str(e)}. Please upload a smaller image."
+        )
+
+
 async def process_files_for_message(
     db_session: AsyncSession,
     file_ids: List[str],
     storage,
     session_id: str,
+    api_type: Optional[APITypes] = None,
 ) -> ProcessedFiles:
     """
     Process files and prepare content parts for message.
 
     Strategy:
     - Files > 50MB → Large files → Vector store + FileSearchTool
-    - PDF/images ≤ 50MB → BinaryContent (base64 encoded)
+    - PDFs with >100 pages → Extract text → Check token limits
+    - PDF/images ≤ 50MB with ≤100 pages → BinaryContent (base64 encoded)
     - Text files ≤ 50MB → TextContent (extract text and add to message)
+    - If total extracted text > 100k tokens → Route excess to vector store
     - Other files ≤ 50MB → Skip (unsupported)
 
     Args:
@@ -96,14 +306,18 @@ async def process_files_for_message(
         file_ids: List of file IDs to process
         storage: Storage client for reading files
         session_id: Session ID for logging
+        api_type: Optional API type for provider-specific image compression
 
     Returns:
         ProcessedFiles with content parts and routing info
+
+    Raises:
+        ImageCompressionError: If an image cannot be compressed to meet provider limits
     """
     if not file_ids:
         logger.info(f"[FILE_PROCESSOR] session={session_id}: No files to process")
         return ProcessedFiles(
-            binary_parts=[], text_parts=[], large_file_ids=set(), large_file_info=[]
+            binary_parts=[], text_parts=[], large_file_ids=set(), large_file_info=[], skipped_files=[]
         )
 
     logger.info(
@@ -120,6 +334,8 @@ async def process_files_for_message(
     large_file_ids = set()
     large_file_info = []
     skipped_files = []
+    vector_store_reason = []
+    total_text_tokens = 0
 
     for file_upload in file_uploads:
         file_size_mb = file_upload.file_size / 1024 / 1024
@@ -134,13 +350,19 @@ async def process_files_for_message(
                     "size_kb": f"{file_upload.file_size / 1024:.2f}",
                 }
             )
+            vector_store_reason.append(
+                {
+                    "file_name": file_upload.file_name,
+                    "reason": f"File too large ({file_size_mb:.1f}MB > {SIZE_THRESHOLD_MB}MB)",
+                }
+            )
             logger.info(
                 f"[FILE_PROCESSOR] LARGE: {file_upload.file_name} "
                 f"({file_size_mb:.2f}MB) → Vector store"
             )
             continue
 
-        # Strategy 2: Small PDF/images → BinaryContent
+        # Strategy 2: Small PDF/images → BinaryContent (with page limit check for PDFs)
         if is_binary_file(file_upload.content_type, file_upload.file_name):
             try:
                 import anyio
@@ -173,6 +395,98 @@ async def process_files_for_message(
                     file_content.close()
                     mime_type = file_upload.content_type
 
+                # Compress images if needed for provider limits
+                # Note: PDFs are not compressed, only images
+                if mime_type and mime_type.startswith("image/"):
+                    target_limit = PROVIDER_IMAGE_LIMITS.get(api_type, DEFAULT_IMAGE_LIMIT)
+                    # compress_image_for_provider raises ImageCompressionError if it fails
+                    # Let it propagate to service.py error handler
+                    file_bytes, mime_type = compress_image_for_provider(
+                        file_bytes, mime_type, target_limit
+                    )
+
+                # Check PDF page count for Anthropic API limit
+                is_pdf = (
+                    mime_type == "application/pdf"
+                    or file_upload.file_name.lower().endswith(".pdf")
+                )
+
+                if is_pdf:
+                    page_count = get_pdf_page_count(file_bytes)
+                    logger.info(
+                        f"[FILE_PROCESSOR] PDF {file_upload.file_name}: {page_count} pages"
+                    )
+
+                    # Treat page count failure (-1) or excessive pages as needing text extraction
+                    if page_count == -1 or page_count > MAX_PDF_PAGES:
+                        # PDF has too many pages - extract text and check token limits
+                        logger.info(
+                            f"[FILE_PROCESSOR] PDF {file_upload.file_name} has {page_count} pages "
+                            f"(> {MAX_PDF_PAGES}), extracting text instead"
+                        )
+
+                        extracted_text = extract_pdf_text(file_bytes)
+                        if extracted_text:
+                            text_tokens = estimate_tokens(extracted_text)
+
+                            # Check if adding this text would exceed token limit
+                            if total_text_tokens + text_tokens > MAX_CONTENT_TOKENS:
+                                # Route to vector store
+                                large_file_ids.add(file_upload.id)
+                                large_file_info.append(
+                                    {
+                                        "file_id": file_upload.id,
+                                        "file_name": file_upload.file_name,
+                                        "size_kb": f"{file_upload.file_size / 1024:.2f}",
+                                    }
+                                )
+                                vector_store_reason.append(
+                                    {
+                                        "file_name": file_upload.file_name,
+                                        "reason": f"PDF too long ({page_count} pages, ~{text_tokens:,} tokens) - content exceeds context window",
+                                    }
+                                )
+                                logger.info(
+                                    f"[FILE_PROCESSOR] PDF {file_upload.file_name}: "
+                                    f"~{text_tokens:,} tokens would exceed limit, routing to vector store"
+                                )
+                            else:
+                                # Add as text content
+                                formatted_text = (
+                                    f"\n\n--- PDF: {file_upload.file_name} ({page_count} pages) ---\n"
+                                    f"{extracted_text}\n"
+                                    f"--- End of {file_upload.file_name} ---\n"
+                                )
+                                text_part = TextContent(text=formatted_text)
+                                text_parts.append(text_part)
+                                total_text_tokens += text_tokens
+                                logger.info(
+                                    f"[FILE_PROCESSOR] PDF {file_upload.file_name}: "
+                                    f"extracted {len(extracted_text)} chars (~{text_tokens:,} tokens) → TextContent"
+                                )
+                        else:
+                            # Text extraction failed, route to vector store
+                            large_file_ids.add(file_upload.id)
+                            large_file_info.append(
+                                {
+                                    "file_id": file_upload.id,
+                                    "file_name": file_upload.file_name,
+                                    "size_kb": f"{file_upload.file_size / 1024:.2f}",
+                                }
+                            )
+                            vector_store_reason.append(
+                                {
+                                    "file_name": file_upload.file_name,
+                                    "reason": f"PDF has {page_count} pages but text extraction failed",
+                                }
+                            )
+                            logger.warning(
+                                f"[FILE_PROCESSOR] PDF {file_upload.file_name}: "
+                                f"text extraction failed, routing to vector store"
+                            )
+                        continue
+
+                # PDF with <= 100 pages or image - use binary content
                 binary_part = BinaryContent(
                     path=file_upload.storage_path,
                     mime_type=mime_type,
@@ -186,14 +500,23 @@ async def process_files_for_message(
                     f"[FILE_PROCESSOR] BINARY: {file_upload.file_name} "
                     f"({logged_size_mb:.2f}MB, {len(file_bytes)} bytes) → BinaryContent"
                 )
+            except ImageCompressionError:
+                # Re-raise compression errors to be handled by service.py
+                raise
             except Exception as e:
                 logger.error(
                     f"Failed to load binary file {file_upload.file_name}: {e}",
                     exc_info=True,
                 )
+                skipped_files.append(
+                    {
+                        "file_name": file_upload.file_name,
+                        "reason": f"Load error: {str(e)[:100]}",
+                    }
+                )
             continue
 
-        # Strategy 3: Small text-extractable files → TextContent
+        # Strategy 3: Small text-extractable files → TextContent (with token limit check)
         if is_text_extractable(file_upload.content_type, file_upload.file_name):
             try:
                 import anyio
@@ -216,19 +539,47 @@ async def process_files_for_message(
                 file_content.close()
 
                 if extracted_text and extracted_text.strip():
-                    # Format text content with file name
-                    formatted_text = (
-                        f"\n\n--- File: {file_upload.file_name} ---\n"
-                        f"{extracted_text}\n"
-                        f"--- End of {file_upload.file_name} ---\n"
-                    )
+                    # Estimate tokens for this content
+                    text_tokens = estimate_tokens(extracted_text)
 
-                    text_part = TextContent(text=formatted_text)
-                    text_parts.append(text_part)
-                    logger.info(
-                        f"[FILE_PROCESSOR] TEXT: {file_upload.file_name} "
-                        f"({file_size_mb:.2f}MB, {len(extracted_text)} chars) → TextContent"
-                    )
+                    # Check if adding this text would exceed token limit
+                    if total_text_tokens + text_tokens > MAX_CONTENT_TOKENS:
+                        # Route to vector store
+                        large_file_ids.add(file_upload.id)
+                        large_file_info.append(
+                            {
+                                "file_id": file_upload.id,
+                                "file_name": file_upload.file_name,
+                                "size_kb": f"{file_upload.file_size / 1024:.2f}",
+                            }
+                        )
+                        vector_store_reason.append(
+                            {
+                                "file_name": file_upload.file_name,
+                                "reason": f"Content too long (~{text_tokens:,} tokens) - would exceed context window limit",
+                            }
+                        )
+                        logger.info(
+                            f"[FILE_PROCESSOR] TEXT {file_upload.file_name}: "
+                            f"~{text_tokens:,} tokens would exceed limit "
+                            f"(current: {total_text_tokens:,}, max: {MAX_CONTENT_TOKENS:,}), "
+                            f"routing to vector store"
+                        )
+                    else:
+                        # Format text content with file name
+                        formatted_text = (
+                            f"\n\n--- File: {file_upload.file_name} ---\n"
+                            f"{extracted_text}\n"
+                            f"--- End of {file_upload.file_name} ---\n"
+                        )
+
+                        text_part = TextContent(text=formatted_text)
+                        text_parts.append(text_part)
+                        total_text_tokens += text_tokens
+                        logger.info(
+                            f"[FILE_PROCESSOR] TEXT: {file_upload.file_name} "
+                            f"({file_size_mb:.2f}MB, {len(extracted_text)} chars, ~{text_tokens:,} tokens) → TextContent"
+                        )
                 else:
                     logger.warning(
                         f"[FILE_PROCESSOR] No text extracted from {file_upload.file_name}"
@@ -267,7 +618,7 @@ async def process_files_for_message(
     # Summary log
     logger.info(
         f"[FILE_PROCESSOR] session={session_id}: "
-        f"SUMMARY: {len(binary_parts)} binary, {len(text_parts)} text, "
+        f"SUMMARY: {len(binary_parts)} binary, {len(text_parts)} text (~{total_text_tokens:,} tokens), "
         f"{len(large_file_ids)} large (vector store), {len(skipped_files)} skipped"
     )
 
@@ -276,12 +627,19 @@ async def process_files_for_message(
             f"[FILE_PROCESSOR] Skipped files: {[f['file_name'] for f in skipped_files]}"
         )
 
+    if vector_store_reason:
+        logger.info(
+            f"[FILE_PROCESSOR] Vector store routing reasons: {vector_store_reason}"
+        )
+
     return ProcessedFiles(
         binary_parts=binary_parts,
         text_parts=text_parts,
         large_file_ids=large_file_ids,
         large_file_info=large_file_info,
         skipped_files=skipped_files,
+        total_text_tokens=total_text_tokens,
+        vector_store_reason=vector_store_reason,
     )
 
 

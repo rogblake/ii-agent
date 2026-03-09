@@ -157,6 +157,18 @@ class MediaPreferences(BaseModel):
         False,
         description="Flag for advanced mode",
     )
+    # Video-specific settings
+    video_settings: Optional[Dict[str, Any]] = Field(
+        None, description="Video generation settings (duration, resolution, audio, etc.)"
+    )
+    video_frames: Optional[List[Dict[str, Any]]] = Field(
+        None, description="Reference frames for video generation (start/end frames)"
+    )
+    storybook_context: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Storybook context for video generation (auto-detected when switching from storybook to video mode)",
+    )
+
 
 class AdvancedModeReference(MediaReference):
     """Advanced mode reference with preview URL."""

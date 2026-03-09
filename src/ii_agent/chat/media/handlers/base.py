@@ -47,24 +47,28 @@ class BaseMediaHandler(ABC):
         pass
 
     @abstractmethod
-    async def create_tool(
+    async def create_tools(
         self,
         *,
         session_id: str,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
         container: ServiceContainer,
-    ) -> BaseTool:
+    ) -> List[BaseTool]:
         """
-        Create configured tool instance for this media type.
+        Create configured tool instances for this media type.
+
+        Most handlers return a single tool. Video returns multiple
+        (generate, concatenate, extract_frames).
 
         Args:
             session_id: Current session ID
             mode_strategy: Mode strategy being used
             media_preferences: User's media generation preferences
+            container: Service container for dependencies
 
         Returns:
-            Configured tool instance (e.g., ImageGenerationTool)
+            List of configured tool instances
         """
         pass
 

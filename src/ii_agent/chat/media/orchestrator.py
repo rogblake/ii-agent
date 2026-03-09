@@ -35,11 +35,12 @@ class MediaContext:
     LLM message parts, and configuration.
     """
 
-    tool_name: str                                  # e.g., "generate_image"
-    tool_instance: BaseTool                         # Configured tool (e.g., ImageGenerationTool)
+    tool_name: str                                  # Primary tool name, e.g., "generate_image"
+    tools: List[BaseTool]                           # All tool instances for this media type
     llm_message_parts: List[BinaryContent | TextContent]  # Reference images with labels
     tool_hint: str                                  # Prompt context to append to user message
     should_clear_context: bool                      # Whether to clear conversation context
+    system_prompt_addition: str = ""                 # Additional system prompt (e.g., video director prompt)
 
 
 class MediaOrchestrator:
@@ -71,18 +72,18 @@ class MediaOrchestrator:
         )
 
     @classmethod
-    async def prepare_default_media_tool(
+    async def prepare_default_media_tools(
         cls,
         *,
         session_id: str,
         media_type: str = "image",
         container: ServiceContainer,
-    ) -> BaseTool:
+    ) -> List[BaseTool]:
         """
-        Prepare a simple media generation tool for chat mode without full context.
+        Prepare default media generation tools for chat mode without full context.
 
         This is used when generate_image is enabled in chat mode but no explicit
-        media_preferences were provided. Creates a lightweight tool instance with
+        media_preferences were provided. Creates lightweight tool instances with
         default settings.
 
         Args:
@@ -90,7 +91,7 @@ class MediaOrchestrator:
             media_type: Type of media to generate ("image" or "video")
 
         Returns:
-            BaseTool instance ready for use
+            List of BaseTool instances ready for use
         """
         # Get handler for media type
         handler_class = get_handler(media_type)
@@ -108,8 +109,8 @@ class MediaOrchestrator:
         # Detect mode (will be NormalMode since no advanced/mini tools)
         mode_strategy = handler.detect_mode(default_prefs)
 
-        # Create simple tool instance
-        tool = await handler.create_tool(
+        # Create tool instances
+        tools = await handler.create_tools(
             session_id=session_id,
             mode_strategy=mode_strategy,
             media_preferences=default_prefs,
@@ -117,11 +118,11 @@ class MediaOrchestrator:
         )
 
         logger.info(
-            f"[CHAT_MODE] Created default {media_type} generation tool with defaults: "
+            f"[CHAT_MODE] Created {len(tools)} default {media_type} generation tool(s) with defaults: "
             f"model={default_prefs.model_name}, provider={default_prefs.provider}"
         )
 
-        return tool
+        return tools
 
     @classmethod
     async def prepare_media_context(
@@ -164,8 +165,8 @@ class MediaOrchestrator:
         mode_strategy = handler.detect_mode(media_preferences)
         logger.info(f"[MEDIA] Detected mode: {mode_strategy.get_mode_name()}")
 
-        # 3. Create tool instance
-        tool = await handler.create_tool(
+        # 3. Create tool instance(s)
+        tools = await handler.create_tools(
             session_id=session_id,
             mode_strategy=mode_strategy,
             media_preferences=media_preferences,
@@ -189,12 +190,18 @@ class MediaOrchestrator:
             mode_strategy=mode_strategy,
         )
 
+        # 6. Build system prompt addition if handler supports it
+        system_prompt_addition = ""
+        if hasattr(handler, 'build_system_prompt_addition'):
+            system_prompt_addition = handler.build_system_prompt_addition(media_preferences)
+
         return MediaContext(
-            tool_name=tool.name,
-            tool_instance=tool,
+            tool_name=tools[0].name,
+            tools=tools,
             llm_message_parts=llm_parts,
             tool_hint=tool_hint,
             should_clear_context=mode_strategy.should_clear_context(),
+            system_prompt_addition=system_prompt_addition,
         )
 
     @classmethod

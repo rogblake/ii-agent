@@ -1,3 +1,5 @@
+"""Anthropic (Claude) chat system prompt."""
+
 from string import Template
 
 
@@ -264,8 +266,8 @@ ALWAYS convert to LaTeX format:
 - `(G_t=\sum_{k=t}^{T-1}\gamma^{k-t}r_k)` becomes `$$$$G_t=\sum_{k=t}^{T-1}\gamma^{k-t}r_k$$$$`
 - `(F_t:=\mathbb{E}[z_t z_t^\top \mid s_t])` becomes `$$F_t:=\mathbb{E}[z_t z_t^\top \mid s_t]$$$$`
 
-Example: `$$$$ \widehat{\nabla_\theta J(\theta)} = \sum_{t=0}^{T} \nabla_\theta \log \pi_\theta(a_t \mid s_t) \cdot G_t $$$$`
-Example: `$$$$ \frac{d}{dx}(x^3) = 3x^2 $$$$`
+Example: `$$$$ \widehat{\\nabla_\\theta J(\\theta)} = \sum_{t=0}^{T} \\nabla_\\theta \log \pi_\\theta(a_t \mid s_t) \cdot G_t $$$$`
+Example: `$$$$ \\frac{d}{dx}(x^3) = 3x^2 $$$$`
 Example: The return `$$$$G_t=\sum_{k=t}^{T-1}\gamma^{k-t}r_k$$$$` represents the cumulative discounted reward.
 
 This rule applies everywhere in your response - in sentences, bullet points, lists, and all other contexts. Only skip LaTeX formatting if the user explicitly requests plain text mathematics.

@@ -41,26 +41,26 @@ class StorybookMediaHandler(BaseMediaHandler):
             return MangaModeStrategy()
         return StorybookModeStrategy()
 
-    async def create_tool(
+    async def create_tools(
         self,
         *,
         session_id: str,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
         container: ServiceContainer,
-    ) -> StorybookGenerationTool:
+    ) -> list[StorybookGenerationTool]:
         """Create the appropriate generation tool based on the detected mode."""
         if isinstance(mode_strategy, MangaModeStrategy):
-            return MangaGenerationTool(
+            return [MangaGenerationTool(
                 session_id=session_id,
                 media_preferences=media_preferences,
                 container=container,
-            )
-        return StorybookGenerationTool(
+            )]
+        return [StorybookGenerationTool(
             session_id=session_id,
             media_preferences=media_preferences,
             container=container,
-        )
+        )]
 
     async def build_llm_context(
         self,

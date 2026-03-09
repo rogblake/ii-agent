@@ -84,14 +84,14 @@ class ChatToolService:
         ]
 
         if media_context:
-            all_search_tools.append(media_context.tool_instance)
+            all_search_tools.extend(media_context.tools)
         elif tools.get("generate_image"):
-            default_image_tool = await MediaOrchestrator.prepare_default_media_tool(
+            default_image_tools = await MediaOrchestrator.prepare_default_media_tools(
                 session_id=session_id,
                 media_type="image",
                 container=self._container,
             )
-            all_search_tools.append(default_image_tool)
+            all_search_tools.extend(default_image_tools)
 
         if vector_store:
             all_search_tools.append(

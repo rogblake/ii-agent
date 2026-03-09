@@ -40,15 +40,15 @@ class InfographicMediaHandler(BaseMediaHandler):
 
         return NormalModeStrategy()
 
-    async def create_tool(
+    async def create_tools(
         self,
         *,
         session_id: str,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
         container: ServiceContainer,
-    ) -> ImageGenerationTool:
-        return ImageGenerationTool(
+    ) -> list[ImageGenerationTool]:
+        return [ImageGenerationTool(
             session_id=session_id,
             media_preferences=media_preferences,
             image_aspect_ratio=media_preferences.aspect_ratio,
@@ -56,7 +56,7 @@ class InfographicMediaHandler(BaseMediaHandler):
             references=None,
             mini_tools_mode=False,
             container=container,
-        )
+        )]
 
     async def build_llm_context(
         self,

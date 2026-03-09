@@ -511,7 +511,7 @@ class NanoBananaService:
                 role=MessageRole.USER,
                 session_id="nano-banana-detect",
                 parts=[
-                    BinaryContent(mime_type=mime_type, data=image_bytes),
+                    BinaryContent(path="slide-image", mime_type=mime_type, data=image_bytes),
                     TextContent(text=prompt),
                 ],
             )
@@ -521,6 +521,18 @@ class NanoBananaService:
             client=client,
             messages=messages,
             tools=[DETECT_COMPONENTS_TOOL],
+            provider_options={
+                "gemini": {
+                    # Override the chat system prompt with a focused detection instruction
+                    "system_instruction": (
+                        "You are a vision analysis system that detects visual "
+                        "components in presentation slide images. "
+                        "Always call the provided tool with your results."
+                    ),
+                    # Disable thinking for faster, deterministic detection
+                    "thinking_config": None,
+                },
+            },
         )
 
         # Extract the structured payload from the tool call

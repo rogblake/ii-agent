@@ -14,33 +14,11 @@ from .schemas import DetectedComponent, Instruction, SelectionType
 # ============ Component Detection Prompt ============
 
 
-COMPONENT_DETECTION_PROMPT = """You are analyzing a presentation slide image to detect all visual components.
+COMPONENT_DETECTION_PROMPT = """Analyze this presentation slide image and detect all visual components.
 
 IMAGE DIMENSIONS: {width}px × {height}px
 
-Return ONLY a JSON array (no markdown, no explanation).
-
-For each detected component, return:
-{{
-  "component_type": "<type>",
-  "label": "<brief description>",
-  "text_content": "<exact text if readable, null otherwise>",
-  "bounding_box": {{
-    "left": <pixels from left edge>,
-    "top": <pixels from top edge>,
-    "width": <width in pixels>,
-    "height": <height in pixels>
-  }},
-  "z_index": <1 for background elements, 2+ for foreground>,
-  "confidence": <0.0 to 1.0>,
-  "styles": {{
-    "font_size": "<estimate in px>",
-    "font_weight": "normal|bold|light",
-    "color": "#RRGGBB",
-    "background_color": "#RRGGBB or null",
-    "text_align": "left|center|right"
-  }}
-}}
+You MUST call the submit_detected_components tool with every component you detect.
 
 COMPONENT TYPES (detect all that apply):
 - "title": Main heading/title text
@@ -67,7 +45,7 @@ DETECTION RULES:
 7. Detect characters/people as "character" type
 8. All bounding_box values are in PIXELS
 
-Return an empty array [] if no components detected."""
+If no components are detected, call the tool with an empty components array."""
 
 
 # ============ Slide Regeneration Prompt ============

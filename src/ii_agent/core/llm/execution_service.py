@@ -121,11 +121,14 @@ class LLMExecutionService:
         client: "LLMClient",
         messages: list[Message],
         tools: list[dict[str, Any]] | None = None,
+        provider_options: dict[str, Any] | None = None,
         billing_context: LLMBillingContext | None = None,
         usage_key: str = "send_once",
     ) -> RunResponseOutput:
         """Send one request and optionally bill based on returned usage."""
-        response = await client.send(messages=messages, tools=tools)
+        response = await client.send(
+            messages=messages, tools=tools, provider_options=provider_options
+        )
         await self._bill_usage_if_needed(
             usage=response.usage,
             billing_context=billing_context,

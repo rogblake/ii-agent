@@ -405,12 +405,20 @@ class GeminiProvider(LLMClient):
         messages: List[Message],
         tools: Optional[List[Any]] = None,
         is_code_interpreter_enabled: bool = False,
+        provider_options: Optional[Dict[str, Any]] = None,
     ) -> RunResponseOutput:
         """Send messages and get complete response.
 
         Files are preprocessed in the service layer and added as BinaryContent parts.
+
+        provider_options["gemini"]["system_instruction"] – override the default
+        system prompt.  Set to ``None`` to omit it entirely.
+
+        provider_options["gemini"]["thinking_config"] – override the default
+        thinking config.  Set to ``None`` to disable thinking.
         """
         gemini_messages = self._convert_messages(messages)
+        gemini_opts = (provider_options or {}).get("gemini", {})
 
         # Gemini doesn't support mixing code execution with function calling
         # When code execution is enabled, skip regular tools
@@ -427,14 +435,24 @@ class GeminiProvider(LLMClient):
         if gemini_tools:
             config_dict["tools"] = gemini_tools
 
-        config_dict["system_instruction"] = template.substitute(
-            current_date=datetime.now().strftime("%Y-%m-%d")
-        )
+        # System instruction: allow override / disable via provider_options
+        if "system_instruction" in gemini_opts:
+            if gemini_opts["system_instruction"] is not None:
+                config_dict["system_instruction"] = gemini_opts["system_instruction"]
+        else:
+            config_dict["system_instruction"] = template.substitute(
+                current_date=datetime.now().strftime("%Y-%m-%d")
+            )
 
-        config_dict["thinking_config"] = types.ThinkingConfig(
-            thinking_level=types.ThinkingLevel.LOW,
-            include_thoughts=True,
-        )
+        # Thinking config: allow override / disable via provider_options
+        if "thinking_config" in gemini_opts:
+            if gemini_opts["thinking_config"] is not None:
+                config_dict["thinking_config"] = gemini_opts["thinking_config"]
+        else:
+            config_dict["thinking_config"] = types.ThinkingConfig(
+                thinking_level=types.ThinkingLevel.LOW,
+                include_thoughts=True,
+            )
 
         config = types.GenerateContentConfig(**config_dict)
 

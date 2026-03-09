@@ -212,7 +212,6 @@ class ServiceContainer:
             publisher=NoopEventPublisher(),
         )
         mcp_setting_svc = get_mcp_setting_service(mcp_setting_repo)
-        sandbox_svc = get_sandbox_service(sandbox_repo)
         skill_svc = get_skill_service(skill_repo)
         storybook_svc = get_storybook_service(storybook_repo)
         connector_svc = get_connector_service(connector_repo)
@@ -231,6 +230,7 @@ class ServiceContainer:
         file_svc = get_file_service(file_repo, session_repo)
         llm_setting_svc = get_llm_setting_service(llm_setting_repo, session_repo)
         composio_svc = get_composio_service(mcp_setting_svc, composio_repo)
+        sandbox_svc = get_sandbox_service(sandbox_repo, mcp_setting_svc, composio_svc)
         billing_svc = get_billing_service(stripe_config, user_repo)
         project_svc = get_project_service(project_repo, session_repo)
         deployments_svc = get_deployments_service(project_repo, deployments_repo)

@@ -51,6 +51,8 @@ class SandboxProvider:
                 ):
                     self._sandbox = await E2BSandboxManager.init(
                         session_id=self._session_id,
+                        mcp_setting_service=self._container.mcp_setting_service,
+                        composio_service=self._container.composio_service,
                     )
                     await self._sandbox.configure_sandbox_mcp(self._user_id)
                     self._was_initialized = True

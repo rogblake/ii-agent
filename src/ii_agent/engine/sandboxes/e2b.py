@@ -1,11 +1,12 @@
 """E2B Sandbox implementation."""
 
-from ii_agent.auth.users.waitlist_repository import WaitlistRepository
+from __future__ import annotations
+
 from datetime import datetime, timedelta, timezone
 import json
 import logging
 from functools import wraps
-from typing import IO, AsyncIterator, Dict, Any, List, Literal, Optional
+from typing import IO, TYPE_CHECKING, AsyncIterator, Dict, Any, List, Literal, Optional
 
 from e2b import CommandResult, SandboxState
 from e2b_code_interpreter import AsyncSandbox
@@ -34,6 +35,10 @@ from ii_agent.engine.sandboxes.exceptions import (
 from ii_agent.engine.sandboxes.models import Sandbox
 from ii_agent.engine.sandboxes.sandbox_client import MCPClient
 from fastmcp import Client
+
+if TYPE_CHECKING:
+    from ii_agent.integrations.connectors.composio.service import ComposioService
+    from ii_agent.settings.mcp.service import MCPSettingService
 
 
 logger = logging.getLogger(__name__)
@@ -104,8 +109,8 @@ class E2BSandboxManager(SandboxManager):
         metadata: Optional[Dict[str, Any]] = None,
         sandbox: Optional[AsyncSandbox] = None,
         expired_at: Optional[datetime] = None,
-        user_service=None,
-        mcp_setting_service=None,
+        mcp_setting_service: Optional[MCPSettingService] = None,
+        composio_service: Optional[ComposioService] = None,
     ):
         """Initialize E2B sandbox manager.
 
@@ -117,8 +122,8 @@ class E2BSandboxManager(SandboxManager):
             metadata: Sandbox metadata.
             sandbox: E2B AsyncSandbox instance.
             expired_at: Sandbox expiration time.
-            user_service: UserService instance (injected).
             mcp_setting_service: MCPSettingService instance (injected).
+            composio_service: ComposioService instance (injected).
         """
         super().__init__(
             sandbox_id=sandbox_id,
@@ -130,8 +135,8 @@ class E2BSandboxManager(SandboxManager):
         self.sandbox = sandbox
         self.expired_at = expired_at
         self.mcp_client = None
-        self._user_service = user_service
         self._mcp_setting_service = mcp_setting_service
+        self._composio_service = composio_service
 
     def get_provider_id(self) -> str:
         return self.provider_sandbox_id
@@ -203,6 +208,8 @@ class E2BSandboxManager(SandboxManager):
         sandbox_id: str,
         session_id: str,
         metadata: Optional[Dict[str, Any]] = None,
+        mcp_setting_service: Optional[MCPSettingService] = None,
+        composio_service: Optional[ComposioService] = None,
     ) -> "E2BSandboxManager":
         """Create a new E2B sandbox with database persistence.
 
@@ -210,6 +217,8 @@ class E2BSandboxManager(SandboxManager):
             sandbox_id: Internal sandbox ID (from database).
             session_id: Session ID this sandbox belongs to.
             metadata: Optional metadata to attach.
+            mcp_setting_service: MCPSettingService instance (injected).
+            composio_service: ComposioService instance (injected).
 
         Returns:
             New E2BSandboxManager instance.
@@ -248,6 +257,8 @@ class E2BSandboxManager(SandboxManager):
             metadata=sandbox_metadata,
             status=SandboxStatus.RUNNING,
             expired_at=expired_at,
+            mcp_setting_service=mcp_setting_service,
+            composio_service=composio_service,
         )
 
         # Update database record (using common helper method)
@@ -319,6 +330,8 @@ class E2BSandboxManager(SandboxManager):
         sandbox_id: str,
         session_id: str,
         provider_sandbox_id: str,
+        mcp_setting_service: Optional[MCPSettingService] = None,
+        composio_service: Optional[ComposioService] = None,
     ) -> "E2BSandboxManager":
         """Connect to an existing E2B sandbox with database persistence.
 
@@ -326,6 +339,8 @@ class E2BSandboxManager(SandboxManager):
             sandbox_id: Internal sandbox ID (from database).
             session_id: Session ID this sandbox belongs to.
             provider_sandbox_id: E2B sandbox ID to connect to.
+            mcp_setting_service: MCPSettingService instance (injected).
+            composio_service: ComposioService instance (injected).
 
         Returns:
             Connected E2BSandboxManager instance.
@@ -349,6 +364,8 @@ class E2BSandboxManager(SandboxManager):
             metadata=sandbox_info.metadata,
             status=status,
             expired_at=sandbox_info.end_at,
+            mcp_setting_service=mcp_setting_service,
+            composio_service=composio_service,
         )
 
         # Update database record (using common helper method)
@@ -364,6 +381,8 @@ class E2BSandboxManager(SandboxManager):
         cls,
         session_id: str,
         metadata: Optional[Dict[str, Any]] = None,
+        mcp_setting_service: Optional[MCPSettingService] = None,
+        composio_service: Optional[ComposioService] = None,
     ) -> "E2BSandboxManager":
         """Get existing sandbox for session or create new one (database-first approach).
 
@@ -376,12 +395,19 @@ class E2BSandboxManager(SandboxManager):
         Args:
             session_id: Session ID this sandbox belongs to.
             metadata: Optional metadata to attach to new sandbox.
+            mcp_setting_service: MCPSettingService instance (injected).
+            composio_service: ComposioService instance (injected).
 
         Returns:
             E2BSandbox instance (either existing or newly created).
         """
         from ii_agent.core.db.manager import get_db_session_local
         from ii_agent.engine.sandboxes.repository import SandboxRepository
+
+        service_kwargs = dict(
+            mcp_setting_service=mcp_setting_service,
+            composio_service=composio_service,
+        )
 
         sandbox_repo = SandboxRepository()
 
@@ -417,6 +443,7 @@ class E2BSandboxManager(SandboxManager):
                     sandbox_id=str(sandbox_record.id),
                     session_id=sandbox_record.session_id,
                     provider_sandbox_id=sandbox_record.provider_sandbox_id,
+                    **service_kwargs,
                 )
             except (SandboxNotFoundException, SandboxOperationError) as e:
                 # Sandbox expired or was deleted by E2B - create a new one
@@ -429,6 +456,7 @@ class E2BSandboxManager(SandboxManager):
                     sandbox_id=str(sandbox_record.id),
                     session_id=sandbox_record.session_id,
                     metadata=metadata,
+                    **service_kwargs,
                 )
         else:
             # New sandbox - create it
@@ -437,6 +465,7 @@ class E2BSandboxManager(SandboxManager):
                 sandbox_id=str(sandbox_record.id),
                 session_id=sandbox_record.session_id,
                 metadata=metadata,
+                **service_kwargs,
             )
 
     @e2b_exception_handler
@@ -646,18 +675,9 @@ class E2BSandboxManager(SandboxManager):
         if self.sandbox is None:
             logger.warning(f"Sandbox is not yet initialized for session: {self.session_id}")
             return
-        from ii_agent.core.db.manager import get_db_session_local
-        user_svc = self._user_service
-        if user_svc is None:
-            from ii_agent.auth.users.service import UserService
-            from ii_agent.auth.users.repository import UserRepository, APIKeyRepository
-            user_svc = UserService(config=get_settings(), user_repo=UserRepository(), waitlist_repo=WaitlistRepository(), api_key_repo=APIKeyRepository())
-        async with get_db_session_local() as db:
-            user_api_key = await user_svc.get_active_api_key(db, user_id)
         sandbox_url = await self.expose_port(get_settings().mcp.port)
         credentials = {
             "session_id": str(self.session_id),
-            "user_api_key": user_api_key,
             "host_url": "-".join(sandbox_url.split("-")[1:])
         }
         self.get_mcp_client(sandbox_url=sandbox_url)
@@ -690,52 +710,99 @@ class E2BSandboxManager(SandboxManager):
         Returns:
             bool: True if registration succeeded or no servers to register, False on error
         """
+        if self._mcp_setting_service is None:
+            raise SandboxOperationError(
+                "_register_user_mcp_servers",
+                "mcp_setting_service is required but was not injected",
+            )
         from ii_agent.core.db.manager import get_db_session_local
         from ii_agent.settings.mcp.schemas import ClaudeCodeMetadata, CodexMetadata
-        mcp_svc = self._mcp_setting_service
-        if mcp_svc is None:
-            from ii_agent.settings.mcp.service import MCPSettingService
-            from ii_agent.settings.mcp.repository import MCPSettingRepository
-            mcp_svc = MCPSettingService(config=get_settings(), repo=MCPSettingRepository())
         # Query active MCP settings for user
         async with get_db_session_local() as db_session:
-            mcp_settings = await mcp_svc.list_mcp_settings(
+            mcp_settings = await self._mcp_setting_service.list_mcp_settings(
                 db_session, user_id=user_id, only_active=True
             )
-        if not mcp_settings.settings:
-            logger.info(f"No active MCP servers to register for user {user_id}")
-            return True  # No MCP servers to register
 
         # Get combined configuration using the new method
-        combined_config = mcp_settings.get_combined_active_config()
+        combined_config = mcp_settings.get_combined_active_config() if mcp_settings.settings else None
 
         # Convert to dict for registration
-        config_dict = combined_config.model_dump(exclude_none=True)
+        config_dict = combined_config.model_dump(exclude_none=True) if combined_config else {}
+
+        # Get Composio MCP servers
+        composio_mcp_servers = await self._get_composio_mcp_servers(user_id)
+
+        # Merge both MCP server configurations
+        merged_mcp_servers = {}
+        if config_dict.get("mcpServers"):
+            merged_mcp_servers.update(config_dict["mcpServers"])
+        if composio_mcp_servers:
+            merged_mcp_servers.update(composio_mcp_servers)
 
         # Register with sandbox using MCPClient
         settings = get_settings()
         async with MCPClient(sandbox_url) as client:
-            is_codex = any(
-                isinstance(metadata, CodexMetadata) for metadata in combined_config.metadatas
-            )
+            # Handle Codex and Claude Code metadata
+            if combined_config:
+                is_codex = any(
+                    isinstance(metadata, CodexMetadata) for metadata in combined_config.metadatas
+                )
 
-            for metadata in combined_config.metadatas:
-                if isinstance(metadata, CodexMetadata):
-                    store_path = f"{settings.sandbox.user}/.codex/auth.json"
-                    await self.write_file(json.dumps(metadata.auth_json), store_path)
-                if isinstance(metadata, ClaudeCodeMetadata):
-                    store_path = f"{settings.sandbox.user}/.claude/.credentials.json"
-                    await self.write_file(json.dumps(metadata.auth_json), store_path)
+                for metadata in combined_config.metadatas:
+                    if isinstance(metadata, CodexMetadata):
+                        store_path = f"{settings.sandbox.user}/.codex/auth.json"
+                        await self.write_file(store_path, json.dumps(metadata.auth_json))
+                    if isinstance(metadata, ClaudeCodeMetadata):
+                        store_path = f"{settings.sandbox.user}/.claude/.credentials.json"
+                        await self.write_file(store_path, json.dumps(metadata.auth_json))
 
-            if is_codex:
-                logger.info("Codex metadata found, ensuring Codex setup in sandbox")
-                await client.register_codex()
+                if is_codex:
+                    logger.info("Codex metadata found, ensuring Codex setup in sandbox")
+                    await client.register_codex()
+                else:
+                    logger.info("No Codex metadata found, skipping Codex setup")
+
+            # Register all MCP servers in a single call
+            if merged_mcp_servers:
+                logger.info(
+                    f"Registering {len(merged_mcp_servers)} MCP servers for user {user_id} "
+                    f"(custom: {len(config_dict.get('mcpServers', {}))}, "
+                    f"composio: {len(composio_mcp_servers or {})})"
+                )
+                merged_config_dict = {"mcpServers": merged_mcp_servers}
+                await client.register_custom_mcp(merged_config_dict)
             else:
-                logger.info("No Codex metadata found, skipping Codex setup")
-
-            # Only register if we have servers to register
-            if config_dict.get("mcpServers"):
-                logger.info(f"No MCP servers found in active settings for user {user_id}")
-                await client.register_custom_mcp(config_dict)
+                logger.info(f"No MCP servers to register for user {user_id}")
 
         return True
+
+    async def _get_composio_mcp_servers(self, user_id: str) -> Optional[Dict]:
+        """Get user's Composio MCP server configurations.
+
+        Returns:
+            Optional[Dict]: Dictionary of Composio MCP servers, or None if none found or on error
+        """
+        if self._composio_service is None:
+            logger.debug("composio_service not injected, skipping Composio MCP servers")
+            return None
+
+        try:
+            from ii_agent.core.db.manager import get_db_session_local
+
+            async with get_db_session_local() as db_session:
+                composio_mcp_servers = await self._composio_service.get_user_composio_mcp_configs(db_session, user_id)
+
+            if not composio_mcp_servers:
+                logger.debug(f"No Composio profiles found for user {user_id}")
+                return None
+
+            logger.info(f"Found {len(composio_mcp_servers)} Composio MCP servers for user {user_id}")
+            return composio_mcp_servers
+
+        except Exception as e:
+            logger.error(
+                f"Failed to get Composio MCP servers for user {user_id}: {e}",
+                exc_info=True
+            )
+            # Don't fail the entire sandbox setup if Composio fetch fails
+            return None

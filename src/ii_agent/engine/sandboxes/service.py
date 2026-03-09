@@ -1,9 +1,11 @@
 """Sandbox service wrapping SandboxManager for sandbox lifecycle management."""
 
+from __future__ import annotations
+
 import uuid
 import logging
 import asyncio
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +16,10 @@ from ii_agent.engine.sandboxes.schemas import SandboxStatus
 from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.engine.sandboxes.exceptions import SandboxNotFoundException
 from ii_agent.engine.sandboxes.repository import SandboxRepository
+
+if TYPE_CHECKING:
+    from ii_agent.integrations.connectors.composio.service import ComposioService
+    from ii_agent.settings.mcp.service import MCPSettingService
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +36,18 @@ class SandboxService:
     transaction is rolled back automatically.
     """
 
-    def __init__(self, *, sandbox_repo: SandboxRepository, config: Settings):
+    def __init__(
+        self,
+        *,
+        sandbox_repo: SandboxRepository,
+        config: Settings,
+        mcp_setting_service: Optional[MCPSettingService] = None,
+        composio_service: Optional[ComposioService] = None,
+    ):
         self._config = config
         self._repo = sandbox_repo
+        self._mcp_setting_service = mcp_setting_service
+        self._composio_service = composio_service
 
     # ── SandboxManager methods (DB + provider in one scope) ────────────
 
@@ -48,12 +63,17 @@ class SandboxService:
         then configures MCP servers if *user_id* is provided.
         """
         session_id_str = str(session_id)
+        service_kwargs = dict(
+            mcp_setting_service=self._mcp_setting_service,
+            composio_service=self._composio_service,
+        )
 
         last_error = None
         for attempt in range(MAX_ATTEMPT):
             try:
                 sandbox = await E2BSandboxManager.init(
-                    session_id=session_id_str
+                    session_id=session_id_str,
+                    **service_kwargs,
                 )
 
                 if user_id:

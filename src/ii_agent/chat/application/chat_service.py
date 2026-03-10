@@ -31,8 +31,8 @@ from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
 from ii_agent.chat.messages.history_service import ChatMessageHistoryService
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
-from ii_agent.agent.runs.models import RunStatus
-from ii_agent.agent.runs.service import AgentRunService
+from ii_agent.chat.runs.models import ChatRunStatus
+from ii_agent.chat.runs.service import ChatRunService
 from ii_agent.billing.credits.service import CreditService
 from ii_agent.settings.llm.service import get_system_llm_config
 from ii_agent.core.redis import cancel
@@ -58,7 +58,7 @@ class ChatService:
         message_history: ChatMessageHistoryService,
         message_service: MessageService,
         session_repo: SessionRepository,
-        agent_run_service: AgentRunService,
+        chat_run_service: ChatRunService,
         llm_setting_service,
         credit_service: CreditService | None = None,
         container: ServiceContainer,
@@ -69,7 +69,7 @@ class ChatService:
         self._message_history = message_history
         self._message_service = message_service
         self._session_repo = session_repo
-        self._agent_run_service = agent_run_service
+        self._chat_run_service = chat_run_service
         self._llm_setting_service = llm_setting_service
         self._credit_service = credit_service
         self._container = container
@@ -262,15 +262,15 @@ class ChatService:
             metadata=message_metadata,
         )
 
-        agent_task = await self._agent_run_service.create_task(
+        chat_run = await self._chat_run_service.create_run(
             db,
             session_id=uuid.UUID(session_id),
             user_message_id=user_message.id,
-            status=RunStatus.RUNNING,
+            status=ChatRunStatus.RUNNING,
         )
         await db.commit()
 
-        run_id = str(agent_task.id)
+        run_id = str(chat_run.id)
         await cancel.register_run(run_id)
         logger.info(f"Started chat run {run_id} for session {session_id}")
 
@@ -350,9 +350,9 @@ class ChatService:
             ):
                 yield event
 
-            # Update AgentRunTask status to COMPLETED
-            await db.refresh(agent_task)
-            agent_task.status = RunStatus.COMPLETED
+            # Update ChatRun status to COMPLETED
+            await db.refresh(chat_run)
+            chat_run.status = ChatRunStatus.COMPLETED
             await db.commit()
 
             await cancel.cleanup_run(run_id)
@@ -366,8 +366,8 @@ class ChatService:
             else:
                 logger.error(f"Chat streaming error: {e}", exc_info=True)
 
-            await db.refresh(agent_task)
-            agent_task.status = RunStatus.ABORTED if is_cancelled else RunStatus.FAILED
+            await db.refresh(chat_run)
+            chat_run.status = ChatRunStatus.ABORTED if is_cancelled else ChatRunStatus.FAILED
             await db.commit()
 
             await self._message_service.mark_messages_incomplete(
@@ -406,24 +406,24 @@ class ChatService:
         if not session:
             raise SessionNotFoundError("Session not found")
 
-        running_task = await self._agent_run_service.find_running_task_for_cancel(
+        running_run = await self._chat_run_service.find_running_for_cancel(
             db,
             session_id=uuid.UUID(session_id),
         )
 
-        if running_task:
-            task_id = str(running_task.id)
-            cancelled = await cancel.cancel_run(task_id)
+        if running_run:
+            run_id = str(running_run.id)
+            cancelled = await cancel.cancel_run(run_id)
             if cancelled:
-                await db.refresh(running_task)
-                if running_task.status == RunStatus.RUNNING:
-                    running_task.status = RunStatus.ABORTED
+                await db.refresh(running_run)
+                if running_run.status == ChatRunStatus.RUNNING:
+                    running_run.status = ChatRunStatus.ABORTED
                     logger.info(
-                        f"Cancelled running chat task {task_id} for session {session_id}"
+                        f"Cancelled running chat run {run_id} for session {session_id}"
                     )
                 else:
                     logger.info(
-                        f"Task {task_id} already finished with status {running_task.status}, skipping abort"
+                        f"Chat run {run_id} already finished with status {running_run.status}, skipping abort"
                     )
 
         last_message = await self._message_history._repo.get_last_by_session(db, session_id)

@@ -11,6 +11,7 @@ from ii_agent.agent.events.models import EventType, RealtimeEvent
 from ii_agent.agent.events.repository import EventRepository
 from ii_agent.core.db.manager import get_db
 from ii_agent.agent.runs.models import AgentRunTask, RunStatus
+from ii_agent.chat.runs.models import ChatRun, ChatRunStatus
 from ii_agent.core.logger import logger
 
 
@@ -101,6 +102,71 @@ async def cleanup_long_running_tasks():
         # Don't re-raise - we want the scheduler to continue running
 
 
+async def cleanup_long_running_chat_runs():
+    """
+    Clean up ChatRuns that have been running for more than 45 minutes.
+    Marks them as aborted.
+    """
+    try:
+        cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=45)
+        total_processed = 0
+        batch_size = 20
+        max_processed = 100
+
+        logger.info(f"Starting cleanup of ChatRuns older than {cutoff_time}")
+
+        async with get_db() as db:
+            while total_processed < max_processed:
+                stmt = (
+                    select(ChatRun)
+                    .where(
+                        ChatRun.created_at < cutoff_time,
+                        ChatRun.status == ChatRunStatus.RUNNING,
+                    )
+                    .order_by(ChatRun.created_at.desc())
+                    .limit(batch_size)
+                    .with_for_update(skip_locked=True)
+                )
+
+                result = await db.execute(stmt)
+                runs = result.scalars().all()
+
+                if not runs:
+                    logger.info("No more stale ChatRuns found")
+                    break
+
+                batch_count = len(runs)
+
+                for run in runs:
+                    run.status = ChatRunStatus.ABORTED
+                    run.updated_at = datetime.now(timezone.utc)
+
+                await db.commit()
+
+                total_processed += batch_count
+                logger.info(
+                    f"Marked {batch_count} stale ChatRuns as aborted. "
+                    f"Total processed: {total_processed}/{max_processed}"
+                )
+
+                if batch_count < batch_size:
+                    break
+
+                if total_processed >= max_processed:
+                    logger.info(
+                        f"Reached max processed limit ({max_processed}). "
+                        "Remaining chat runs will be processed in next run."
+                    )
+                    break
+
+        logger.info(
+            f"Chat run cleanup completed. Total ChatRuns marked as aborted: {total_processed}"
+        )
+
+    except Exception as e:
+        logger.error(f"Error during ChatRun cleanup: {e}", exc_info=True)
+
+
 def start_scheduler():
     """
     Start the scheduler and add the cleanup job.
@@ -117,10 +183,19 @@ def start_scheduler():
             max_instances=1,  # Ensure only one instance runs at a time
         )
 
+        scheduler.add_job(
+            cleanup_long_running_chat_runs,
+            trigger=IntervalTrigger(minutes=40),
+            id="cleanup_stale_chat_runs",
+            name="Cleanup stale ChatRuns (older than 45 mins)",
+            replace_existing=True,
+            max_instances=1,
+        )
+
         # Start the scheduler
         scheduler.start()
         logger.info(
-            "Scheduler started successfully. Cleanup task will run every 40 minutes."
+            "Scheduler started successfully. Cleanup tasks will run every 40 minutes."
         )
 
     except Exception as e:

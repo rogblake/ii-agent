@@ -231,7 +231,7 @@ class TestGetChatService:
             "llm_loop": MagicMock(),
             "message_history": MagicMock(),
             "message_service": MagicMock(),
-            "agent_run_service": MagicMock(),
+            "chat_run_service": MagicMock(),
             "session_repo": MagicMock(),
             "container": MagicMock(),
         }
@@ -251,7 +251,7 @@ class TestGetChatService:
         assert result._message_history is mocks["message_history"]
         assert result._message_service is mocks["message_service"]
         assert result._session_repo is mocks["session_repo"]
-        assert result._agent_run_service is mocks["agent_run_service"]
+        assert result._chat_run_service is mocks["chat_run_service"]
         assert result._llm_setting_service is mocks["llm_setting_service"]
         assert result._credit_service is mocks["credit_service"]
         assert result._container is mocks["container"]

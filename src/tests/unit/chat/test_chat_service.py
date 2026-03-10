@@ -27,7 +27,7 @@ def chat_service(settings_factory):
         message_history=SimpleNamespace(),
         message_service=SimpleNamespace(),
         session_repo=FakeSessionRepo(),
-        agent_run_service=SimpleNamespace(),
+        chat_run_service=SimpleNamespace(),
         llm_setting_service=SimpleNamespace(),
         credit_service=None,
         container=SimpleNamespace(),

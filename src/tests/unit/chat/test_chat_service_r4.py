@@ -628,7 +628,7 @@ class TestChatServiceTruncateSessionName:
             message_history=SimpleNamespace(),
             message_service=SimpleNamespace(),
             session_repo=SimpleNamespace(),
-            agent_run_service=SimpleNamespace(),
+            chat_run_service=SimpleNamespace(),
             llm_setting_service=SimpleNamespace(),
             credit_service=None,
             container=SimpleNamespace(),
@@ -680,7 +680,7 @@ class TestChatServiceValidateSessionAccess:
             message_history=SimpleNamespace(),
             message_service=SimpleNamespace(),
             session_repo=FakeRepo(session),
-            agent_run_service=SimpleNamespace(),
+            chat_run_service=SimpleNamespace(),
             llm_setting_service=SimpleNamespace(),
             credit_service=None,
             container=SimpleNamespace(),
@@ -733,7 +733,7 @@ class TestChatServiceCheckSufficientCredits:
             message_history=SimpleNamespace(),
             message_service=SimpleNamespace(),
             session_repo=SimpleNamespace(),
-            agent_run_service=SimpleNamespace(),
+            chat_run_service=SimpleNamespace(),
             llm_setting_service=SimpleNamespace(),
             credit_service=credit_service,
             container=SimpleNamespace(),
@@ -783,7 +783,7 @@ class TestChatServiceValidateModelForChat:
             message_history=SimpleNamespace(),
             message_service=SimpleNamespace(),
             session_repo=SimpleNamespace(),
-            agent_run_service=SimpleNamespace(),
+            chat_run_service=SimpleNamespace(),
             llm_setting_service=FakeLLMSettingService(),
             credit_service=None,
             container=SimpleNamespace(),
@@ -829,7 +829,7 @@ class TestChatServiceUpdateSessionNameIfUntitled:
             message_history=SimpleNamespace(),
             message_service=SimpleNamespace(),
             session_repo=FakeRepo(),
-            agent_run_service=SimpleNamespace(),
+            chat_run_service=SimpleNamespace(),
             llm_setting_service=SimpleNamespace(),
             credit_service=None,
             container=SimpleNamespace(),
@@ -875,8 +875,8 @@ class TestChatServiceStopConversation:
             async def get_by_id(self, db, session_id):
                 return session
 
-        class FakeAgentRunService:
-            async def find_running_task_for_cancel(self, db, session_id):
+        class FakeChatRunService:
+            async def find_running_for_cancel(self, db, *, session_id):
                 return running_task
 
         class FakeMsgHistoryRepo:
@@ -894,7 +894,7 @@ class TestChatServiceStopConversation:
             message_history=msg_history,
             message_service=SimpleNamespace(),
             session_repo=FakeRepo(),
-            agent_run_service=FakeAgentRunService(),
+            chat_run_service=FakeChatRunService(),
             llm_setting_service=SimpleNamespace(),
             credit_service=None,
             container=SimpleNamespace(),

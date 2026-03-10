@@ -19,6 +19,7 @@ MODEL_MODULES: tuple[str, ...] = (
     "ii_agent.billing.usage.models",
     "ii_agent.chat.messages.models",
     "ii_agent.chat.providers.models",
+    "ii_agent.chat.runs.models",
     "ii_agent.content.media.models",
     "ii_agent.content.skills.models",
     "ii_agent.content.slides.models",

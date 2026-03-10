@@ -7,7 +7,8 @@ from starlette.requests import Request
 
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.container import ServiceContainer
-from ii_agent.agent.dependencies import AgentRunServiceDep
+from ii_agent.chat.runs.repository import ChatRunRepository
+from ii_agent.chat.runs.service import ChatRunService
 from ii_agent.chat.messages.repository import ChatMessageRepository
 from ii_agent.chat.messages.service import MessageService
 from ii_agent.chat.application.chat_service import ChatService
@@ -101,6 +102,25 @@ def get_llm_loop_service(
 LLMTurnLoopServiceDep = Annotated[LLMTurnLoopService, Depends(get_llm_loop_service)]
 
 
+# ==================== Chat Run Dependencies ====================
+
+
+def get_chat_run_repository() -> ChatRunRepository:
+    """Provide ChatRunRepository instance."""
+    return ChatRunRepository()
+
+
+ChatRunRepositoryDep = Annotated[ChatRunRepository, Depends(get_chat_run_repository)]
+
+
+def get_chat_run_service(repo: ChatRunRepositoryDep) -> ChatRunService:
+    """Provide ChatRunService instance."""
+    return ChatRunService(repo=repo)
+
+
+ChatRunServiceDep = Annotated[ChatRunService, Depends(get_chat_run_service)]
+
+
 # ==================== Service Dependencies ====================
 
 
@@ -112,7 +132,7 @@ def get_chat_service(
     llm_loop: LLMTurnLoopServiceDep,
     message_history: ChatMessageHistoryServiceDep,
     message_service: MessageServiceDep,
-    agent_run_service: AgentRunServiceDep,
+    chat_run_service: ChatRunServiceDep,
     session_repo: SessionRepositoryDep,
     container: ContainerDep,
 ) -> ChatService:
@@ -124,7 +144,7 @@ def get_chat_service(
         message_history=message_history,
         message_service=message_service,
         session_repo=session_repo,
-        agent_run_service=agent_run_service,
+        chat_run_service=chat_run_service,
         llm_setting_service=llm_setting_service,
         credit_service=credit_service,
         container=container,

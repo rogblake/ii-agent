@@ -21,6 +21,9 @@ import {
     selectIsSandboxIframeAwake,
     selectIsMobileChatVisible,
     selectPreviewUrl,
+    selectMobileWebPreviewUrl,
+    selectHasMobileAppTools,
+    selectHasSlideTools,
     selectProjectId,
     selectWsConnectionState,
     setSelectedFeature,
@@ -39,6 +42,7 @@ import {
     WebSocketConnectionState
 } from '@/typings/agent'
 import AgentResult from '@/components/agent/agent-result'
+import PiPPreview from '@/components/agent/pip-preview'
 import AgentPopoverDone from '@/components/agent/agent-popover-done'
 import { useSocketIOContext } from '@/contexts/websocket-context'
 import AwakeMeUpScreen from '@/components/agent/awake-me-up-screen'
@@ -79,7 +83,11 @@ function AgentPageContent() {
     const isMobileChatVisible = useAppSelector(selectIsMobileChatVisible)
     // Use memoized selector for previewUrl to avoid subscribing to full messages array
     const previewUrl = useAppSelector(selectPreviewUrl)
+    const mobileWebPreviewUrl = useAppSelector(selectMobileWebPreviewUrl)
+    const hasMobileAppTools = useAppSelector(selectHasMobileAppTools)
+    const hasSlideTools = useAppSelector(selectHasSlideTools)
     const projectId = useAppSelector(selectProjectId)
+    const [isPiPDismissed, setIsPiPDismissed] = useState(false)
     const wsConnectionState = useAppSelector(selectWsConnectionState)
     const previousResultUrlRef = useRef<string>('')
     const isMobile = useIsMobile()
@@ -88,6 +96,27 @@ function AgentPageContent() {
         () => location.pathname.includes('/share/'),
         [location.pathname]
     )
+
+    // PiP preview URL (mobile takes priority over fullstack)
+    const pipUrl = mobileWebPreviewUrl || previewUrl
+    const showPiP =
+        !isMobile &&
+        activeTab !== TAB.RESULT &&
+        !!pipUrl &&
+        !isPiPDismissed &&
+        !hasSlideTools &&
+        !isShareMode
+
+    // Reset PiP dismissed state when switching to RESULT tab or when URL changes
+    useEffect(() => {
+        if (activeTab === TAB.RESULT) {
+            setIsPiPDismissed(false)
+        }
+    }, [activeTab])
+
+    useEffect(() => {
+        setIsPiPDismissed(false)
+    }, [pipUrl])
 
     const isChatBoxVisible = useMemo(
         () => !isMobile || (isMobile && isMobileChatVisible),
@@ -375,6 +404,13 @@ function AgentPageContent() {
                                     </div>
                                 </div>
                             </div>
+                            {showPiP && (
+                                <PiPPreview
+                                    url={pipUrl}
+                                    isMobile={hasMobileAppTools}
+                                    onClose={() => setIsPiPDismissed(true)}
+                                />
+                            )}
                             <ChatBox
                                 activeTab={mobileChatTab}
                                 onTabChange={(tab) => setMobileChatTab(tab)}

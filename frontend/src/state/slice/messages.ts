@@ -219,6 +219,54 @@ export const selectPreviewUrl = createSelector(
     }
 )
 
+// Memoized selector for mobile web preview URL
+export const selectMobileWebPreviewUrl = createSelector(
+    [selectMessages],
+    (messages) => {
+        const mobileAppToolResult = [...messages]
+            .reverse()
+            .find(
+                (message) =>
+                    (message.action?.type === 'mobile_app_init' ||
+                        message.action?.type === 'restart_mobile_server') &&
+                    message.action?.data?.result
+            )
+
+        const mobileAppResult = mobileAppToolResult?.action?.data?.result
+        if (mobileAppResult && typeof mobileAppResult === 'object') {
+            const webPreviewUrl = (
+                mobileAppResult as { web_preview_url?: string }
+            ).web_preview_url
+            if (webPreviewUrl) {
+                return webPreviewUrl
+            }
+        }
+        return ''
+    }
+)
+
+// Memoized selector for whether messages contain mobile app tools
+export const selectHasMobileAppTools = createSelector(
+    [selectMessages],
+    (messages) =>
+        messages.some(
+            (message) => message.action?.type === 'mobile_app_init'
+        )
+)
+
+// Memoized selector for whether messages contain slide tools
+export const selectHasSlideTools = createSelector(
+    [selectMessages],
+    (messages) =>
+        messages.some(
+            (message) =>
+                message.action?.type === 'SlideWrite' ||
+                message.action?.type === 'SlideEdit' ||
+                message.action?.type === 'slide_apply_patch' ||
+                message.action?.type === 'SlideGenerate'
+        )
+)
+
 // Memoized selector for last user message content (used in review)
 export const selectLastUserMessageContent = createSelector(
     [selectLatestUserMessage],

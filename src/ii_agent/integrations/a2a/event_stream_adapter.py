@@ -21,7 +21,7 @@ from a2a.types import (
 )
 from a2a.utils import new_text_artifact
 
-from ii_agent.core.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.models import EventType, RealtimeEvent
 
 logger = logging.getLogger("a2a_agent")
 

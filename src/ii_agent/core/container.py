@@ -78,11 +78,11 @@ from ii_agent.projects.deployments.dependencies import (
     get_deployments_repository,
     get_deployments_service,
 )
-from ii_agent.core.events.dependencies import (
+from ii_agent.agent.events.dependencies import (
     build_event_service,
     get_event_repository,
 )
-from ii_agent.core.events.publisher import NoopEventPublisher
+from ii_agent.agent.events.publisher import NoopEventPublisher
 from ii_agent.sessions.dependencies import (
     get_session_fork_service,
     get_session_repository,
@@ -113,7 +113,7 @@ if TYPE_CHECKING:
     from ii_agent.core.llm.billing_service import LLMBillingService
     from ii_agent.core.llm.execution_service import LLMExecutionService
     from ii_agent.core.llm.config_resolver import LLMConfigResolver
-    from ii_agent.core.events.service import EventService
+    from ii_agent.agent.events.service import EventService
     from ii_agent.files.service import FileService
     from ii_agent.settings.llm.service import LLMSettingService
     from ii_agent.settings.mcp.service import MCPSettingService

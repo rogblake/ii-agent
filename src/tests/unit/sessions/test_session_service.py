@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from ii_agent.core.events.models import EventType
+from ii_agent.agent.events.models import EventType
 from ii_agent.sessions.service import SessionService
 
 

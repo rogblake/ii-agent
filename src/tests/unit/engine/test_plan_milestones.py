@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 from ii_agent.agent.application.plan_service import PlanService
-from ii_agent.core.events.models import EventType
+from ii_agent.agent.events.models import EventType
 
 
 @pytest.mark.asyncio

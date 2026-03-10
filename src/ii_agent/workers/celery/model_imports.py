@@ -34,7 +34,7 @@ MODEL_MODULES: tuple[str, ...] = (
     "ii_agent.projects.databases.models",
     "ii_agent.projects.deployments.models",
     "ii_agent.projects.subdomains.models",
-    "ii_agent.core.events.models",
+    "ii_agent.agent.events.models",
     "ii_agent.sessions.models",
     "ii_agent.sessions.wishlist.models",
     "ii_agent.settings.llm.models",

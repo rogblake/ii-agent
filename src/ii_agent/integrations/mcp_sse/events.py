@@ -12,9 +12,9 @@ import socketio
 from fastmcp import FastMCP
 from mcp import types as mcp_types
 
-from ii_agent.core.events.models import EventType, RealtimeEvent
-from ii_agent.core.events.repository import EventRepository
-from ii_agent.core.events.stream import EventHookRegistry
+from ii_agent.agent.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.repository import EventRepository
+from ii_agent.agent.events.stream import EventHookRegistry
 
 logger = logging.getLogger(__name__)
 

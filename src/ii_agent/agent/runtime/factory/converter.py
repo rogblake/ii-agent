@@ -2,7 +2,7 @@
 
 import uuid
 from typing import Optional, Union
-from ii_agent.core.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.models import EventType, RealtimeEvent
 from ii_agent.agent.runs.models import RunStatus
 
 

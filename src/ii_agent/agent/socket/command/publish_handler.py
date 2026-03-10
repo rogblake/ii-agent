@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any, Dict
 
 from fastmcp.client.client import CallToolResult
 
-from ii_agent.core.events.models import EventType
-from ii_agent.core.events.stream import EventStream
+from ii_agent.agent.events.models import EventType
+from ii_agent.agent.events.stream import EventStream
 from ii_agent.core.logger import logger
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo

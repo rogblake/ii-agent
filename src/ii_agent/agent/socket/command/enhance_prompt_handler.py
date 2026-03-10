@@ -8,8 +8,8 @@ from pydantic import ValidationError
 
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.llm.execution_service import LLMBillingContext
-from ii_agent.core.events.models import EventType, RealtimeEvent
-from ii_agent.core.events.stream import EventStream
+from ii_agent.agent.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.stream import EventStream
 from ii_agent.settings.llm.store import FileSettingsStore
 from ii_agent.agent.socket.schemas import EnhancePromptContent
 from ii_agent.sessions.schemas import SessionInfo

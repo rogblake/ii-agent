@@ -6,7 +6,7 @@ import uuid
 from typing import TYPE_CHECKING, Dict, Any, cast
 
 from ii_agent.agent.types import AgentType
-from ii_agent.core.events.stream import EventStream
+from ii_agent.agent.events.stream import EventStream
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.agent.socket.schemas import StartForkContent, QueryCommandContent
 from ii_agent.sessions.schemas import SessionInfo

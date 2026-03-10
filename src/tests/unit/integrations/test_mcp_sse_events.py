@@ -14,7 +14,7 @@ import pytest
 import sys
 import types
 
-from ii_agent.core.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.models import EventType, RealtimeEvent
 
 
 # conftest.py has already stubbed the mcp_sse package import chain.
@@ -84,7 +84,7 @@ class TestMCPEventCollectorInit:
         assert collector._sio is sio
 
     def test_hook_registry_created(self):
-        from ii_agent.core.events.stream import EventHookRegistry
+        from ii_agent.agent.events.stream import EventHookRegistry
 
         collector = _make_collector()
         assert isinstance(collector._hook_registry, EventHookRegistry)

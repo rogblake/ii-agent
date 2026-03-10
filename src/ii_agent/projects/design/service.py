@@ -73,8 +73,8 @@ from ii_agent.projects.design.prompts import (
 )
 from ii_agent.agent.sandboxes.models import Sandbox
 from ii_agent.agent.sandboxes.service import SandboxService
-from ii_agent.core.events.models import EventType, RealtimeEvent
-from ii_agent.core.events.service import EventService
+from ii_agent.agent.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.service import EventService
 from ii_agent.settings.llm.service import LLMSettingService, get_system_llm_config
 
 if TYPE_CHECKING:

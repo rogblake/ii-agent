@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from ii_agent.core.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.models import EventType, RealtimeEvent
 from ii_agent.agent.subscribers.database_subscriber import DatabaseSubscriber
 
 

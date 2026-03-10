@@ -18,7 +18,7 @@ from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )
-from ii_agent.core.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.models import EventType, RealtimeEvent
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +236,7 @@ class StubPingHandler(CommandHandler):
         return UserCommandType.PING
 
     async def handle(self, content, session_info) -> None:
-        from ii_agent.core.events.models import RealtimeEvent, EventType
+        from ii_agent.agent.events.models import RealtimeEvent, EventType
         await self.send_event(
             RealtimeEvent(type=EventType.PONG, session_id=session_info.id, content={})
         )

@@ -14,12 +14,12 @@ from typing import TYPE_CHECKING, Any
 from ii_agent.agent.runs.models import RunStatus
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.core.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.models import EventType, RealtimeEvent
 
 if TYPE_CHECKING:
     from ii_agent.agent.runs.service import AgentRunService
-    from ii_agent.core.events.service import EventService
-    from ii_agent.core.events.stream import EventStream
+    from ii_agent.agent.events.service import EventService
+    from ii_agent.agent.events.stream import EventStream
     from ii_agent.sessions.schemas import SessionInfo
     from ii_agent.sessions.service import SessionService
 

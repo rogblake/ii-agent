@@ -50,8 +50,8 @@ from ii_agent.content.slides.design.schemas import (
     SlideSyncBatchResponse,
 )
 from ii_agent.agent.sandboxes.service import SandboxService
-from ii_agent.core.events.models import EventType, RealtimeEvent
-from ii_agent.core.events.service import EventService
+from ii_agent.agent.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.service import EventService
 
 
 class SlideDesignService:

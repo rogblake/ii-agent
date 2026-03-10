@@ -6,7 +6,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Set
 
-from ii_agent.core.events.models import RealtimeEvent
+from ii_agent.agent.events.models import RealtimeEvent
 from ii_agent.agent.subscribers.subscriber import EventSubscriber
 
 

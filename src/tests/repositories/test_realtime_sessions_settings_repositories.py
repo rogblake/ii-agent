@@ -7,8 +7,8 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.events.models import Event, EventType, RealtimeEvent
-from ii_agent.core.events.repository import EventRepository
+from ii_agent.agent.events.models import Event, EventType, RealtimeEvent
+from ii_agent.agent.events.repository import EventRepository
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.wishlist.models import SessionWishlist

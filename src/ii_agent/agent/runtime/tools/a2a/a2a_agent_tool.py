@@ -15,7 +15,7 @@ from a2a.types import (
 from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult
 
 from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-from ii_agent.core.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.models import EventType, RealtimeEvent
 
 logger = logging.getLogger(__name__)
 

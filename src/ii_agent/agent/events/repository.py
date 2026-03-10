@@ -7,7 +7,7 @@ from typing import List
 from sqlalchemy import asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.events.models import Event, EventType, RealtimeEvent
+from ii_agent.agent.events.models import Event, EventType, RealtimeEvent
 
 
 class EventRepository:

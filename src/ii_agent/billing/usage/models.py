@@ -4,7 +4,7 @@ This module contains:
 - SQLAlchemy models: SessionMetrics
 - Pydantic models: TokenUsage, LLMMetrics, ModelPricing, ToolUsage
 
-Note: The Event model has been moved to ii_agent.core.events.models.
+Note: The Event model has been moved to ii_agent.agent.events.models.
 """
 
 from typing import Dict, Optional

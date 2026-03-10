@@ -7,8 +7,8 @@ import uuid
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select
-from ii_agent.core.events.models import EventType, RealtimeEvent
-from ii_agent.core.events.repository import EventRepository
+from ii_agent.agent.events.models import EventType, RealtimeEvent
+from ii_agent.agent.events.repository import EventRepository
 from ii_agent.core.db.manager import get_db
 from ii_agent.agent.runs.models import AgentRunTask, RunStatus
 from ii_agent.core.logger import logger

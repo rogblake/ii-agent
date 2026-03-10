@@ -34,7 +34,7 @@ import ii_agent.projects.databases.models  # noqa: F401
 import ii_agent.projects.deployments.models  # noqa: F401
 import ii_agent.projects.models  # noqa: F401
 import ii_agent.projects.subdomains.models  # noqa: F401
-import ii_agent.core.events.models  # noqa: F401
+import ii_agent.agent.events.models  # noqa: F401
 import ii_agent.sessions.models  # noqa: F401
 import ii_agent.sessions.wishlist.models  # noqa: F401
 import ii_agent.settings.llm.models  # noqa: F401

@@ -2,7 +2,7 @@ import logging
 
 import socketio
 
-from ii_agent.core.events.models import RealtimeEvent
+from ii_agent.agent.events.models import RealtimeEvent
 from ii_agent.agent.subscribers.subscriber import EventSubscriber
 
 logger = logging.getLogger(__name__)

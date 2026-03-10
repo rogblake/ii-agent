@@ -6,13 +6,13 @@ from fastapi import Depends, Request
 
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.redis import session_manager
-from ii_agent.core.events.publisher import (
+from ii_agent.agent.events.publisher import (
     EventPublisher,
     NoopEventPublisher,
     SocketIOEventPublisher,
 )
-from ii_agent.core.events.repository import EventRepository
-from ii_agent.core.events.service import EventService
+from ii_agent.agent.events.repository import EventRepository
+from ii_agent.agent.events.service import EventService
 
 
 # ==================== Repository Dependencies ====================

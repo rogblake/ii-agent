@@ -10,7 +10,7 @@ Repository dependencies live in their owning domain:
     from ii_agent.sessions.dependencies import get_session_repository, SessionRepositoryDep
     from ii_agent.auth.users.dependencies import get_user_repository, UserRepositoryDep
     from ii_agent.projects.dependencies import get_project_repository, ProjectRepositoryDep
-    from ii_agent.core.events.dependencies import get_event_repository, EventRepositoryDep
+    from ii_agent.agent.events.dependencies import get_event_repository, EventRepositoryDep
     from ii_agent.agent.sandboxes.dependencies import get_sandbox_repository, SandboxRepositoryDep
 
 Service dependencies live in their owning domain:

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Dict
 
 import socketio
 
-from ii_agent.core.events.stream import AsyncEventStream
+from ii_agent.agent.events.stream import AsyncEventStream
 from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,

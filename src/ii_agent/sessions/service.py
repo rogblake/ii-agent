@@ -11,7 +11,7 @@ from typing import Optional, List
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.agent.agents.agent_run_service import AgentRunService
+from ii_agent.agent.runs.service import AgentRunService
 
 from ii_agent.realtime.events.models import EventType, Event
 from ii_agent.realtime.events.repository import EventRepository

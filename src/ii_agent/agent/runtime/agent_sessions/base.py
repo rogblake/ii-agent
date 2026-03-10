@@ -9,7 +9,7 @@ implementations must follow. This allows for different storage backends
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from ii_agent.agent.agents.models import AgentRunTask, RunStatus
+from ii_agent.agent.runs.models import AgentRunTask, RunStatus
 from ii_agent.agent.runtime.models.message import Message
 from ii_agent.agent.runtime.run.agent import RunOutput
 from ii_agent.agent.runtime.agent_sessions.agent import AgentSession

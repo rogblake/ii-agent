@@ -3,7 +3,7 @@
 import uuid
 from typing import Optional, Union
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
-from ii_agent.agent.agents.models import RunStatus
+from ii_agent.agent.runs.models import RunStatus
 
 
 from ii_agent.core.logger import logger

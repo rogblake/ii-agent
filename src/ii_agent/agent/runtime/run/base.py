@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional, Type
 
 from pydantic import BaseModel
 
-from ii_agent.agent.agents.models import RunStatus
+from ii_agent.agent.runs.models import RunStatus
 from ii_agent.agent.runtime.media import Audio, Image, Video
 from ii_agent.agent.runtime.models.message import Citations, Message, MessageReferences
 from ii_agent.agent.runtime.models.metrics import Metrics
@@ -241,5 +241,5 @@ class BaseRunOutputEvent:
         return False
 
 
-# RunStatus is now imported from ii_agent.agent.agents.models
+# RunStatus is now imported from ii_agent.agent.runs.models
 # This ensures a single source of truth for run statuses across the application

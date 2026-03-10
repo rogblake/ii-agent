@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
-from ii_agent.agent.agents.models import RunStatus
+from ii_agent.agent.runs.models import RunStatus
 
 pytestmark = pytest.mark.unit
 

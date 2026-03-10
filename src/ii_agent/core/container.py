@@ -45,7 +45,7 @@ from ii_agent.core.llm.dependencies import (
     get_llm_config_resolver,
     get_llm_execution_service,
 )
-from ii_agent.agent.agents.dependencies import (
+from ii_agent.agent.dependencies import (
     get_agent_run_service,
     get_agent_run_task_repository,
     get_agent_service,
@@ -101,10 +101,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ii_agent.agent.agents.agent_run_service import AgentRunService
-    from ii_agent.agent.agents.agent_service import AgentService
-    from ii_agent.agent.agents.execution_service import ExecutionService
-    from ii_agent.agent.agents.plan_service import PlanService
+    from ii_agent.agent.runs.service import AgentRunService
+    from ii_agent.agent.application.agent_service import AgentService
+    from ii_agent.agent.application.execution_service import ExecutionService
+    from ii_agent.agent.application.plan_service import PlanService
     from ii_agent.billing.service import BillingService
     from ii_agent.billing.credits.service import CreditService
     from ii_agent.integrations.connectors.composio.service import ComposioService

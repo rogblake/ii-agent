@@ -7,7 +7,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
-from ii_agent.agent.agents.models import RunStatus
+from ii_agent.agent.runs.models import RunStatus
 from ii_agent.core.db.manager import get_db_session_local
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ class EventSubscriber(ABC):
         if container is not None:
             return container.agent_run_service
         # Fallback for subscribers without a container (e.g., MetricsSubscriber)
-        from ii_agent.agent.agents.agent_run_service import AgentRunService
-        from ii_agent.agent.agents.repository import AgentRunTaskRepository
+        from ii_agent.agent.runs.service import AgentRunService
+        from ii_agent.agent.runs.repository import AgentRunTaskRepository
         from ii_agent.core.config.settings import get_settings
         return AgentRunService(config=get_settings(), repo=AgentRunTaskRepository())

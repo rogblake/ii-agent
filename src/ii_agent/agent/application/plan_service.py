@@ -11,13 +11,13 @@ import uuid
 import logging
 from typing import TYPE_CHECKING, Any
 
-from ii_agent.agent.agents.models import RunStatus
+from ii_agent.agent.runs.models import RunStatus
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
 
 if TYPE_CHECKING:
-    from ii_agent.agent.agents.agent_run_service import AgentRunService
+    from ii_agent.agent.runs.service import AgentRunService
     from ii_agent.realtime.events.service import EventService
     from ii_agent.realtime.events.stream import EventStream
     from ii_agent.sessions.schemas import SessionInfo

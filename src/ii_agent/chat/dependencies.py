@@ -7,7 +7,7 @@ from starlette.requests import Request
 
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.container import ServiceContainer
-from ii_agent.agent.agents.dependencies import AgentRunServiceDep
+from ii_agent.agent.dependencies import AgentRunServiceDep
 from ii_agent.chat.repository import ChatMessageRepository
 from ii_agent.chat.message_service import MessageService
 from ii_agent.chat.service import ChatService

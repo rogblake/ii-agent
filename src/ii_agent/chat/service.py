@@ -32,8 +32,8 @@ from ii_agent.chat.llm_loop_service import LLMTurnLoopService
 from ii_agent.chat.message_history_service import ChatMessageHistoryService
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
-from ii_agent.agent.agents.models import RunStatus
-from ii_agent.agent.agents.agent_run_service import AgentRunService
+from ii_agent.agent.runs.models import RunStatus
+from ii_agent.agent.runs.service import AgentRunService
 from ii_agent.billing.credits.service import CreditService
 from ii_agent.settings.llm.service import get_system_llm_config
 from ii_agent.core.redis import cancel

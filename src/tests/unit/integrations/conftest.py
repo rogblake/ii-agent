@@ -67,15 +67,15 @@ _mod_stub(
 )
 
 _mod_stub(
-    "ii_agent.agent.agents.beta",
+    "ii_agent.agent.application.beta",
     register_default_session_hooks=lambda *a, **kw: None,
 )
 _mod_stub(
-    "ii_agent.agent.agents.beta.hooks",
+    "ii_agent.agent.application.beta.hooks",
     register_default_session_hooks=lambda *a, **kw: None,
 )
 _mod_stub(
-    "ii_agent.agent.agents.beta.hooks.session_hooks",
+    "ii_agent.agent.application.beta.hooks.session_hooks",
     register_default_session_hooks=lambda *a, **kw: None,
 )
 

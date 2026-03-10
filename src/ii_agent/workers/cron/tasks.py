@@ -10,7 +10,7 @@ from sqlalchemy import select
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
 from ii_agent.realtime.events.repository import EventRepository
 from ii_agent.core.db.manager import get_db
-from ii_agent.agent.agents.models import AgentRunTask, RunStatus
+from ii_agent.agent.runs.models import AgentRunTask, RunStatus
 from ii_agent.core.logger import logger
 
 

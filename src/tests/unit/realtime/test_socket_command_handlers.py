@@ -285,7 +285,7 @@ class StubCancelHandler(CommandHandler):
             await self._send_error_event(session_info.id, message="Task Run not found")
             return
 
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
         if last_task.status not in [RunStatus.RUNNING.value, RunStatus.PAUSED.value]:
             return
 
@@ -311,7 +311,7 @@ class TestStubCancelHandler:
 
     @pytest.mark.asyncio
     async def test_no_action_when_task_not_running(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
         task = MagicMock()
         task.status = RunStatus.COMPLETED.value
         container = _mock_container()
@@ -324,7 +324,7 @@ class TestStubCancelHandler:
 
     @pytest.mark.asyncio
     async def test_marks_running_task_as_aborting(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
         task = MagicMock()
         task.id = uuid.uuid4()
         task.status = RunStatus.RUNNING.value

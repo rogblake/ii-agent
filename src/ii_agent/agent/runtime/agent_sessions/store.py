@@ -22,7 +22,7 @@ from sqlalchemy.orm.exc import StaleDataError
 
 from ii_agent.core.exceptions import NotFoundError
 from ii_agent.core.db.manager import get_db
-from ii_agent.agent.agents.models import AgentRunTask, RunStatus
+from ii_agent.agent.runs.models import AgentRunTask, RunStatus
 from ii_agent.sessions.models import Session
 from ii_agent.agent.runtime.db.message import AgentRunMessage
 from ii_agent.agent.runtime.db.summary import SessionSummary

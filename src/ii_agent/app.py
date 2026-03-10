@@ -27,7 +27,6 @@ from ii_agent.settings.llm import router as llm_settings_router
 from ii_agent.settings.mcp import router as mcp_settings_router
 from ii_agent.content.skills import router as skills_settings_router
 from ii_agent.chat.router import router as chat_router
-from ii_agent.agent.runtime.api import v1_router
 from ii_agent.projects.router import router as project_router
 from ii_agent.projects.subdomains import router as subdomains_router
 from ii_agent.content.media import router as media_router
@@ -230,7 +229,6 @@ def create_app():
     app.include_router(billing_router)  # /billing/*
     app.include_router(chat_router)  # /chat/*
     app.include_router(connectors_router)  # /connectors/*
-    app.include_router(v1_router)  # /v1/test/agent/*
     app.include_router(project_router)  # /project/*
     app.include_router(subdomains_router)  # /subdomains/*
     app.include_router(media_templates_router)  # /media-templates/*

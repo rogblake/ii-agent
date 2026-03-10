@@ -19,98 +19,98 @@ class TestRunStatus:
     """Tests for the RunStatus enum."""
 
     def test_pending_value(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.PENDING.value == "pending"
 
     def test_running_value(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.RUNNING.value == "running"
 
     def test_completed_value(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.COMPLETED.value == "completed"
 
     def test_paused_value(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.PAUSED.value == "paused"
 
     def test_aborted_value(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.ABORTED.value == "aborted"
 
     def test_failed_value(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.FAILED.value == "failed"
 
     def test_error_value(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.ERROR.value == "error"
 
     def test_aborting_value(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.ABORTING.value == "aborting"
 
     def test_system_interrupted_value(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.SYSTEM_INTERRUPTED.value == "system_interrupted"
 
     def test_from_string_case_insensitive(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.from_string("RUNNING") == RunStatus.RUNNING
         assert RunStatus.from_string("Running") == RunStatus.RUNNING
 
     def test_from_string_completed(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.from_string("completed") == RunStatus.COMPLETED
 
     def test_from_string_unknown_defaults_to_running(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.from_string("totally_unknown") == RunStatus.RUNNING
 
     def test_runable_states_contains_running(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.RUNNING in RunStatus.runable_states()
 
     def test_runable_states_contains_paused(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.PAUSED in RunStatus.runable_states()
 
     def test_runable_states_contains_aborting(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.ABORTING in RunStatus.runable_states()
 
     def test_runable_states_does_not_contain_completed(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.COMPLETED not in RunStatus.runable_states()
 
     def test_runable_states_does_not_contain_failed(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.FAILED not in RunStatus.runable_states()
 
     def test_is_string_enum(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         assert RunStatus.RUNNING == "running"
 
     def test_status_comparison_with_string(self):
-        from ii_agent.agent.agents.models import RunStatus
+        from ii_agent.agent.runs.models import RunStatus
 
         status = RunStatus.COMPLETED
         assert status == "completed"

@@ -167,8 +167,8 @@ class MCPEventCollector:
                 try:
                     from ii_agent.sessions.service import SessionService
                     from ii_agent.sessions.repository import SessionRepository
-                    from ii_agent.agent.agents.agent_run_service import AgentRunService
-                    from ii_agent.agent.agents.repository import AgentRunTaskRepository
+                    from ii_agent.agent.runs.service import AgentRunService
+                    from ii_agent.agent.runs.repository import AgentRunTaskRepository
                     from ii_agent.agent.sandboxes.repository import SandboxRepository
                     from ii_agent.core.storage.client import storage
                     from ii_agent.core.config.settings import get_settings

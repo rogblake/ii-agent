@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy.orm.exc import StaleDataError
 
 from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
-from ii_agent.agent.agents.models import AgentRunTask, RunStatus
+from ii_agent.agent.runs.models import AgentRunTask, RunStatus
 from ii_agent.agent.runtime.run.agent import RunOutput
 from ii_agent.agent.runtime.agent_sessions.agent import AgentSession
 

@@ -7,7 +7,7 @@ import uuid
 from ii_agent.agent.types import AgentType
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
 from ii_agent.realtime.events.stream import EventStream
-from ii_agent.agent.agents.models import RunStatus
+from ii_agent.agent.runs.models import RunStatus
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.realtime.socket.schemas import (

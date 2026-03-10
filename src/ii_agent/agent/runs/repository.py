@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.agent.agents.models import AgentRunTask, RunStatus
+from ii_agent.agent.runs.models import AgentRunTask, RunStatus
 
 
 class AgentRunTaskRepository:

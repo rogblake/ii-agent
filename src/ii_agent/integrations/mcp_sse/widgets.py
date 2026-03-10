@@ -27,8 +27,8 @@ from ii_agent.realtime.events.repository import EventRepository
 from ii_agent.integrations.connectors.service import ConnectorService
 from ii_agent.auth.users.service import UserService
 from ii_agent.auth.users.repository import UserRepository, APIKeyRepository
-from ii_agent.agent.agents.agent_run_service import AgentRunService
-from ii_agent.agent.agents.repository import AgentRunTaskRepository
+from ii_agent.agent.runs.service import AgentRunService
+from ii_agent.agent.runs.repository import AgentRunTaskRepository
 from ii_agent.agent.sandboxes.repository import SandboxRepository
 from ii_agent.core.storage.client import storage
 from ii_agent.auth.jwt_handler import jwt_handler

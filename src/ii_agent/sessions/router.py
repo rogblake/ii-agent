@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query
 
 from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.core.exceptions import InternalError
-from ii_agent.agent.agents.dependencies import AgentRunServiceDep
+from ii_agent.agent.dependencies import AgentRunServiceDep
 from ii_agent.files.dependencies import FileServiceDep
 from ii_agent.sessions.dependencies import SessionForkServiceDep, SessionServiceDep
 from ii_agent.sessions.exceptions import SessionNotFoundError, SessionValidationError

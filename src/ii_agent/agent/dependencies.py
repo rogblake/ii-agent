@@ -5,8 +5,8 @@ from typing import Annotated
 from fastapi import Depends
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.agent.agents.repository import AgentRunTaskRepository
-from ii_agent.agent.agents.agent_run_service import AgentRunService
+from ii_agent.agent.runs.repository import AgentRunTaskRepository
+from ii_agent.agent.runs.service import AgentRunService
 
 
 # ==================== Repository Dependencies ====================
@@ -43,21 +43,21 @@ AgentRunServiceDep = Annotated[AgentRunService, Depends(get_agent_run_service)]
 def get_agent_service():
     """Provide AgentService instance (container-only)."""
     from ii_agent.core.storage.client import storage
-    from ii_agent.agent.agents.agent_service import AgentService
+    from ii_agent.agent.application.agent_service import AgentService
 
     return AgentService(config=get_settings(), file_store=storage)
 
 
 def get_execution_service():
     """Provide ExecutionService instance (container-only)."""
-    from ii_agent.agent.agents.execution_service import ExecutionService
+    from ii_agent.agent.application.execution_service import ExecutionService
 
     return ExecutionService(config=get_settings())
 
 
 def get_plan_service():
     """Provide PlanService instance (container-only)."""
-    from ii_agent.agent.agents.plan_service import PlanService
+    from ii_agent.agent.application.plan_service import PlanService
 
     return PlanService(config=get_settings())
 

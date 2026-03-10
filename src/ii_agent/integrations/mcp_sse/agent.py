@@ -18,13 +18,13 @@ from sqlalchemy import select
 
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
 from ii_agent.realtime.events.repository import EventRepository
-from ii_agent.agent.agents.models import RunStatus
-from ii_agent.agent.agents.repository import AgentRunTaskRepository
+from ii_agent.agent.runs.models import RunStatus
+from ii_agent.agent.runs.repository import AgentRunTaskRepository
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.auth.users.models import User
 from ii_agent.agent.sandboxes.base import SandboxManager
 from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
-from ii_agent.agent.agents.beta.hooks.session_hooks import register_default_session_hooks
+from ii_agent.agent.application.beta.hooks.session_hooks import register_default_session_hooks
 from ii_agent.utils.workspace_manager import WorkspaceManager
 from ii_tool.mcp.client import MCPClient
 
@@ -271,8 +271,8 @@ async def init_agent(
         from ii_agent.core.config.settings import get_settings
         from ii_agent.sessions.service import SessionService
         from ii_agent.sessions.repository import SessionRepository
-        from ii_agent.agent.agents.agent_service import AgentService
-        from ii_agent.agent.agents.agent_run_service import AgentRunService
+        from ii_agent.agent.application.agent_service import AgentService
+        from ii_agent.agent.runs.service import AgentRunService
         from ii_agent.core.storage.client import storage
         from ii_agent.agent.sandboxes.repository import SandboxRepository
         _config = get_settings()

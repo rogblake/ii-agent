@@ -9,8 +9,8 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.agent.agents.repository import AgentRunTaskRepository
-from ii_agent.agent.agents.models import AgentRunTask, RunStatus
+from ii_agent.agent.runs.repository import AgentRunTaskRepository
+from ii_agent.agent.runs.models import AgentRunTask, RunStatus
 from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.core.redis import entity_cache
 

@@ -22,7 +22,7 @@ MODEL_MODULES: tuple[str, ...] = (
     "ii_agent.content.skills.models",
     "ii_agent.content.slides.models",
     "ii_agent.content.storybook.models",
-    "ii_agent.agent.agents.models",
+    "ii_agent.agent.runs.models",
     "ii_agent.agent.sandboxes.models",
     "ii_agent.agent.runtime.db.agent",
     "ii_agent.agent.runtime.db.config",

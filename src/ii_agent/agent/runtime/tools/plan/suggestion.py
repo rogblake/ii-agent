@@ -7,7 +7,7 @@ from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
-    from ii_agent.realtime.events.stream import EventStream
+    from ii_agent.core.events.stream import EventStream
     from ii_agent.sessions.schemas import SessionInfo
 
 class PlanModificationSuggestionsTool(BaseAgentTool):
@@ -105,7 +105,7 @@ class PlanModificationSuggestionsTool(BaseAgentTool):
 
             # Emit PLAN_MODIFICATION_OPTIONS event to clients
             if self._event_stream is not None:
-                from ii_agent.realtime.events.models import EventType, RealtimeEvent
+                from ii_agent.core.events.models import EventType, RealtimeEvent
 
                 await self._event_stream.publish(
                     RealtimeEvent(

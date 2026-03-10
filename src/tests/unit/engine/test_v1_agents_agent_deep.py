@@ -1276,7 +1276,7 @@ class TestConverterToolCallEventsDeep:
         return convert_agent_event_to_realtime(event, self.SESSION_STR)
 
     def test_tool_started_returns_tool_call_type(self):
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         tool = MagicMock()
         tool.tool_call_id = "tc-001"
@@ -1308,7 +1308,7 @@ class TestConverterToolCallEventsDeep:
         assert realtime is not None
 
     def test_tool_completed_returns_tool_result_type(self):
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         tool = MagicMock()
         tool.tool_call_id = "tc-001"
@@ -1394,7 +1394,7 @@ class TestConverterSandboxDeep:
 
     def test_sandbox_initialized_returns_sandbox_status_type(self):
         from ii_agent.agent.runtime.run.agent import SandboxInitializedEvent
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
 
         sandbox_info = MagicMock()

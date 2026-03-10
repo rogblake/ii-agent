@@ -540,7 +540,7 @@ async def _persist_event_to_db(
         db: Database session
     """
     try:
-        from ii_agent.agent.runtime.db.agent import AgentEvent
+        from ii_agent.agent.runs.event import AgentEvent
 
         async with get_db_session_local() as db:
             # Create database event record

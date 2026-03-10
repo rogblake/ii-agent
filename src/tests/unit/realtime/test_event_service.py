@@ -3,8 +3,8 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.realtime.events.models import EventType, RealtimeEvent
-from ii_agent.realtime.events.service import EventService
+from ii_agent.core.events.models import EventType, RealtimeEvent
+from ii_agent.core.events.service import EventService
 
 
 class FakeEventRepo:

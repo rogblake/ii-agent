@@ -306,7 +306,7 @@ class TestConvertAgentEventToRealtime:
     # --- RunOutput (non-aborted) ---
     def test_run_output_completed_returns_complete_event(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         output = _make_run_output()
         realtime = convert_agent_event_to_realtime(output, SESSION_STR)
@@ -330,7 +330,7 @@ class TestConvertAgentEventToRealtime:
     def test_run_output_aborted_returns_interrupted_event(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
         from ii_agent.agent.runtime.run.base import RunStatus
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         output = _make_run_output(status=RunStatus.ABORTED)
         realtime = convert_agent_event_to_realtime(output, SESSION_STR)
@@ -338,7 +338,7 @@ class TestConvertAgentEventToRealtime:
 
     def test_run_output_sub_agent_returns_sub_agent_complete(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         output = _make_run_output(delegated_from="ParentAgent")
         realtime = convert_agent_event_to_realtime(output, SESSION_STR)
@@ -347,7 +347,7 @@ class TestConvertAgentEventToRealtime:
     # --- RunStartedEvent ---
     def test_run_started_returns_processing_event(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_run_started()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -385,7 +385,7 @@ class TestConvertAgentEventToRealtime:
     # --- RunContentEvent ---
     def test_run_content_returns_agent_response(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_run_content()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -401,7 +401,7 @@ class TestConvertAgentEventToRealtime:
     # --- RunCompletedEvent ---
     def test_run_completed_returns_complete_type(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_run_completed()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -409,7 +409,7 @@ class TestConvertAgentEventToRealtime:
 
     def test_run_completed_as_sub_agent_returns_sub_agent_complete(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_run_completed(is_sub_agent_event=True)
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -418,7 +418,7 @@ class TestConvertAgentEventToRealtime:
     # --- RunErrorEvent ---
     def test_run_error_returns_error_type(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_run_error()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -455,7 +455,7 @@ class TestConvertAgentEventToRealtime:
     # --- RunCancelledEvent ---
     def test_run_cancelled_returns_interrupted_type(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_run_cancelled()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -478,7 +478,7 @@ class TestConvertAgentEventToRealtime:
     # --- RunPausedEvent ---
     def test_run_paused_returns_tool_confirmation_type(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_run_paused()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -494,7 +494,7 @@ class TestConvertAgentEventToRealtime:
     # --- RunContinuedEvent ---
     def test_run_continued_returns_processing_type(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_run_continued()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -510,7 +510,7 @@ class TestConvertAgentEventToRealtime:
     # --- ReasoningStartedEvent ---
     def test_reasoning_started_returns_agent_thinking_start(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_reasoning_started()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -519,7 +519,7 @@ class TestConvertAgentEventToRealtime:
     # --- ReasoningDeltaEvent ---
     def test_reasoning_delta_returns_agent_thinking_delta(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_reasoning_delta()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -546,7 +546,7 @@ class TestConvertAgentEventToRealtime:
     # --- ReasoningCompletedEvent ---
     def test_reasoning_completed_returns_agent_thinking_type(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_reasoning_completed()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -562,7 +562,7 @@ class TestConvertAgentEventToRealtime:
     # --- RunContentDeltaEvent ---
     def test_content_delta_returns_agent_response_delta(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_content_delta()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
@@ -586,7 +586,7 @@ class TestConvertAgentEventToRealtime:
     # --- SessionSummaryCompletedEvent ---
     def test_session_summary_completed_returns_model_compact(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         event = _make_session_summary_completed()
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)

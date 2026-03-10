@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.exc import IntegrityError
 
-from ii_agent.realtime.events.models import RealtimeEvent, EventType
-from ii_agent.realtime.events.repository import EventRepository
+from ii_agent.core.events.models import RealtimeEvent, EventType
+from ii_agent.core.events.repository import EventRepository
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.realtime.subscribers.subscriber import EventSubscriber
 

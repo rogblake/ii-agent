@@ -2,7 +2,7 @@
 
 import logging
 
-from ii_agent.realtime.events.models import RealtimeEvent, EventType
+from ii_agent.core.events.models import RealtimeEvent, EventType
 from ii_agent.realtime.subscribers.subscriber import EventSubscriber
 
 logger = logging.getLogger(__name__)

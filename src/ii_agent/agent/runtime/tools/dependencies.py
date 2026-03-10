@@ -13,7 +13,7 @@ from ii_agent.core.container import ServiceContainer
 from ii_agent.agent.runtime.tools.clients import _get_client
 
 if TYPE_CHECKING:
-    from ii_agent.realtime.events.service import EventService
+    from ii_agent.core.events.service import EventService
     from ii_agent.projects.service import ProjectService
     from ii_agent.sessions.service import SessionService
     from ii_agent.agent.runtime.tools.clients import IIToolClient

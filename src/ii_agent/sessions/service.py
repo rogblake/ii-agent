@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.agent.runs.service import AgentRunService
 
-from ii_agent.realtime.events.models import EventType, Event
-from ii_agent.realtime.events.repository import EventRepository
+from ii_agent.core.events.models import EventType, Event
+from ii_agent.core.events.repository import EventRepository
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository

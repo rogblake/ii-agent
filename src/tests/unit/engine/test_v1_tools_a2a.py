@@ -441,7 +441,7 @@ class TestSetEventStream:
 class TestMapTaskState:
     def test_working_state_maps_to_processing(self):
         from a2a.types import TaskState
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         tool = make_tool()
         result = tool._map_task_state(TaskState.working)
@@ -449,7 +449,7 @@ class TestMapTaskState:
 
     def test_other_state_maps_to_status_update(self):
         from a2a.types import TaskState
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
 
         tool = make_tool()
         result = tool._map_task_state(TaskState.completed)

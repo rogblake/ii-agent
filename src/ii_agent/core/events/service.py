@@ -7,9 +7,9 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.settings import Settings, get_settings
-from ii_agent.realtime.events.models import Event, RealtimeEvent
-from ii_agent.realtime.events.publisher import EventPublisher, NoopEventPublisher
-from ii_agent.realtime.events.repository import EventRepository
+from ii_agent.core.events.models import Event, RealtimeEvent
+from ii_agent.core.events.publisher import EventPublisher, NoopEventPublisher
+from ii_agent.core.events.repository import EventRepository
 
 logger = logging.getLogger(__name__)
 

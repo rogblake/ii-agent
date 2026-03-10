@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from ii_agent.realtime.events.models import EventType, RealtimeEvent
-from ii_agent.realtime.events.stream import EventStream
+from ii_agent.core.events.models import EventType, RealtimeEvent
+from ii_agent.core.events.stream import EventStream
 
 
 class SilentEventStream:

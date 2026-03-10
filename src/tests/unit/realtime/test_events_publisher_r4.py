@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.realtime.events.models import EventType, RealtimeEvent
+from ii_agent.core.events.models import EventType, RealtimeEvent
 
 pytestmark = pytest.mark.unit
 
@@ -46,7 +46,7 @@ def _make_event(
 class TestNoopEventPublisher:
     @pytest.mark.asyncio
     async def test_publish_does_nothing(self):
-        from ii_agent.realtime.events.publisher import NoopEventPublisher
+        from ii_agent.core.events.publisher import NoopEventPublisher
 
         pub = NoopEventPublisher()
         event = _make_event()
@@ -55,7 +55,7 @@ class TestNoopEventPublisher:
 
     @pytest.mark.asyncio
     async def test_publish_does_not_raise(self):
-        from ii_agent.realtime.events.publisher import NoopEventPublisher
+        from ii_agent.core.events.publisher import NoopEventPublisher
 
         pub = NoopEventPublisher()
         for et in EventType:
@@ -64,7 +64,7 @@ class TestNoopEventPublisher:
 
     @pytest.mark.asyncio
     async def test_publish_multiple_events_without_side_effects(self):
-        from ii_agent.realtime.events.publisher import NoopEventPublisher
+        from ii_agent.core.events.publisher import NoopEventPublisher
 
         pub = NoopEventPublisher()
         for _ in range(5):
@@ -79,7 +79,7 @@ class TestNoopEventPublisher:
 class TestSocketIOEventPublisherNoSessionId:
     @pytest.mark.asyncio
     async def test_returns_early_when_no_session_id(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_sio = AsyncMock()
         pub = SocketIOEventPublisher(sio=mock_sio)
@@ -100,7 +100,7 @@ class TestSocketIOEventPublisherNoSessionId:
 class TestSocketIOEventPublisherViaSio:
     @pytest.mark.asyncio
     async def test_emits_chat_event_to_session_room(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_sio = MagicMock()
         mock_sio.emit = AsyncMock()
@@ -117,7 +117,7 @@ class TestSocketIOEventPublisherViaSio:
 
     @pytest.mark.asyncio
     async def test_event_data_contains_type(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_sio = MagicMock()
         mock_sio.emit = AsyncMock()
@@ -132,7 +132,7 @@ class TestSocketIOEventPublisherViaSio:
 
     @pytest.mark.asyncio
     async def test_event_data_contains_session_id_string(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_sio = MagicMock()
         mock_sio.emit = AsyncMock()
@@ -147,7 +147,7 @@ class TestSocketIOEventPublisherViaSio:
 
     @pytest.mark.asyncio
     async def test_event_data_contains_run_id_when_set(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_sio = MagicMock()
         mock_sio.emit = AsyncMock()
@@ -163,7 +163,7 @@ class TestSocketIOEventPublisherViaSio:
 
     @pytest.mark.asyncio
     async def test_event_data_run_id_none_when_not_set(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_sio = MagicMock()
         mock_sio.emit = AsyncMock()
@@ -178,7 +178,7 @@ class TestSocketIOEventPublisherViaSio:
 
     @pytest.mark.asyncio
     async def test_event_data_run_status(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_sio = MagicMock()
         mock_sio.emit = AsyncMock()
@@ -193,7 +193,7 @@ class TestSocketIOEventPublisherViaSio:
 
     @pytest.mark.asyncio
     async def test_content_includes_session_id(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_sio = MagicMock()
         mock_sio.emit = AsyncMock()
@@ -213,7 +213,7 @@ class TestSocketIOEventPublisherViaSio:
 
     @pytest.mark.asyncio
     async def test_swallows_sio_emit_exception(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_sio = MagicMock()
         mock_sio.emit = AsyncMock(side_effect=Exception("emit failed"))
@@ -226,7 +226,7 @@ class TestSocketIOEventPublisherViaSio:
 
     @pytest.mark.asyncio
     async def test_uses_custom_namespace(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_sio = MagicMock()
         mock_sio.emit = AsyncMock()
@@ -248,7 +248,7 @@ class TestSocketIOEventPublisherViaSio:
 class TestSocketIOEventPublisherViaRedis:
     @pytest.mark.asyncio
     async def test_uses_redis_manager_when_available(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_redis = MagicMock()
         mock_redis.emit = AsyncMock()
@@ -264,7 +264,7 @@ class TestSocketIOEventPublisherViaRedis:
 
     @pytest.mark.asyncio
     async def test_redis_emit_includes_correct_event_name(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_redis = MagicMock()
         mock_redis.emit = AsyncMock()
@@ -279,7 +279,7 @@ class TestSocketIOEventPublisherViaRedis:
 
     @pytest.mark.asyncio
     async def test_falls_back_to_sio_when_redis_fails(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_redis = MagicMock()
         mock_redis.emit = AsyncMock(side_effect=Exception("redis down"))
@@ -298,7 +298,7 @@ class TestSocketIOEventPublisherViaRedis:
 
     @pytest.mark.asyncio
     async def test_redis_does_not_fall_back_to_sio_on_success(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_redis = MagicMock()
         mock_redis.emit = AsyncMock()
@@ -317,7 +317,7 @@ class TestSocketIOEventPublisherViaRedis:
 
     @pytest.mark.asyncio
     async def test_redis_namespace_passed_to_emit(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         mock_redis = MagicMock()
         mock_redis.emit = AsyncMock()
@@ -332,7 +332,7 @@ class TestSocketIOEventPublisherViaRedis:
 
     @pytest.mark.asyncio
     async def test_redis_both_missing_does_nothing(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         pub = SocketIOEventPublisher()  # No sio, no redis
 
@@ -349,19 +349,19 @@ class TestSocketIOEventPublisherViaRedis:
 
 class TestEventPublisherProtocol:
     def test_noop_has_publish_method(self):
-        from ii_agent.realtime.events.publisher import NoopEventPublisher
+        from ii_agent.core.events.publisher import NoopEventPublisher
 
         pub = NoopEventPublisher()
         assert callable(pub.publish)
 
     def test_socketio_has_publish_method(self):
-        from ii_agent.realtime.events.publisher import SocketIOEventPublisher
+        from ii_agent.core.events.publisher import SocketIOEventPublisher
 
         pub = SocketIOEventPublisher()
         assert callable(pub.publish)
 
     def test_all_exports_present(self):
-        from ii_agent.realtime.events import publisher
+        from ii_agent.core.events import publisher
 
         for name in ["EventPublisher", "NoopEventPublisher", "SocketIOEventPublisher"]:
             assert hasattr(publisher, name), f"Missing export: {name}"

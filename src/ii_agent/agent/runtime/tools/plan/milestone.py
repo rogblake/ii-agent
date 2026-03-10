@@ -7,10 +7,10 @@ from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
-    from ii_agent.realtime.events.stream import EventStream
+    from ii_agent.core.events.stream import EventStream
     from ii_agent.sessions.schemas import SessionInfo
     from ii_agent.sessions.service import SessionService
-    from ii_agent.realtime.events.service import EventService
+    from ii_agent.core.events.service import EventService
 
 class MilestoneTool(BaseAgentTool):
     """V1 Tool for submitting project plans with milestones.
@@ -147,7 +147,7 @@ class MilestoneTool(BaseAgentTool):
         Args:
             plan_data: Dictionary containing 'summary' and 'milestones'
         """
-        from ii_agent.realtime.events.models import EventType, RealtimeEvent
+        from ii_agent.core.events.models import EventType, RealtimeEvent
         from ii_agent.core.db.manager import get_db_session_local
 
         # Save plan to session metadata

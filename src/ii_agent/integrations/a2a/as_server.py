@@ -33,7 +33,7 @@ from ii_agent.agent.runs.repository import AgentRunTaskRepository
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.agent.runs.service import AgentRunService
-from ii_agent.realtime.events.repository import EventRepository
+from ii_agent.core.events.repository import EventRepository
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.service import SessionService
 from ii_agent.auth.users.models import User

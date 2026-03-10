@@ -13,7 +13,7 @@ from ii_agent.core.exceptions import IIAgentError, PermissionDeniedError, Valida
 from ii_agent.core.logger import logger
 from ii_agent.projects.exceptions import ProjectNotFoundError
 from ii_agent.projects.subdomains.exceptions import SubdomainNotFoundError, SubdomainServiceUnavailableError
-from ii_agent.realtime.events.models import EventType
+from ii_agent.core.events.models import EventType
 from ii_agent.projects.subdomains.dependencies import (
     BaseDomainDep,
     CloudflareKVServiceDep,

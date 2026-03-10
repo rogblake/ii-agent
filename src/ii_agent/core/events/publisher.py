@@ -8,7 +8,7 @@ from typing import Protocol
 import socketio
 from socketio import AsyncRedisManager
 
-from ii_agent.realtime.events.models import RealtimeEvent
+from ii_agent.core.events.models import RealtimeEvent
 
 logger = logging.getLogger(__name__)
 

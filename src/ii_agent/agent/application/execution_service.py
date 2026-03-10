@@ -15,13 +15,13 @@ from typing import TYPE_CHECKING, Any
 from ii_agent.agent.runs.models import AgentRunTask, RunStatus
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.redis import lock
-from ii_agent.realtime.events.models import EventType, RealtimeEvent
+from ii_agent.core.events.models import EventType, RealtimeEvent
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.agent.prompts.plan_mode_prompt import get_milestone_execution_prompt
 
 if TYPE_CHECKING:
     from ii_agent.agent.runs.service import AgentRunService
-    from ii_agent.realtime.events.service import EventService
+    from ii_agent.core.events.service import EventService
     from ii_agent.sessions.service import SessionService
     from ii_agent.sessions.schemas import SessionInfo
 

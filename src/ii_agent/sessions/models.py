@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from ii_agent.auth.users.models import User
     from ii_agent.settings.llm.models import LLMSetting
     from ii_agent.projects.models import Project
-    from ii_agent.realtime.events.models import Event
+    from ii_agent.core.events.models import Event
     from ii_agent.files.models import FileUpload
     from ii_agent.content.slides.models import SlideContent, SlideVersion
     from ii_agent.content.storybook.models import Storybook

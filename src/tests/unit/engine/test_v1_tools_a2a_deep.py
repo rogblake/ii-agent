@@ -283,7 +283,7 @@ class TestEmitStreamEventDeep:
     async def test_emit_stream_event_with_no_stream_does_nothing(self):
         tool = make_tool()
         tool._event_stream = None
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
         # Should not raise
         await tool._emit_stream_event(EventType.STATUS_UPDATE, {"message": "test"})
 
@@ -294,7 +294,7 @@ class TestEmitStreamEventDeep:
         mock_stream.add_event = AsyncMock()
         tool._event_stream = mock_stream
 
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
         await tool._emit_stream_event(EventType.STATUS_UPDATE, {"message": "test"})
         mock_stream.add_event.assert_awaited_once()
 
@@ -305,7 +305,7 @@ class TestEmitStreamEventDeep:
         mock_stream.add_event = AsyncMock(side_effect=RuntimeError("stream error"))
         tool._event_stream = mock_stream
 
-        from ii_agent.realtime.events.models import EventType
+        from ii_agent.core.events.models import EventType
         await tool._emit_stream_event(EventType.STATUS_UPDATE, {"key": "val"})  # Should not raise
 
 

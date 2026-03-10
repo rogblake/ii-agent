@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 import logging
 from typing import TYPE_CHECKING
 
-from ii_agent.realtime.events.models import EventType, RealtimeEvent
+from ii_agent.core.events.models import EventType, RealtimeEvent
 from ii_agent.agent.runs.models import RunStatus
 from ii_agent.core.db.manager import get_db_session_local
 

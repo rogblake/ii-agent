@@ -24,7 +24,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.realtime.events.models import EventType, RealtimeEvent
+from ii_agent.core.events.models import EventType, RealtimeEvent
 from ii_agent.sessions.schemas import SessionInfo
 
 pytestmark = pytest.mark.unit

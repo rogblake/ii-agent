@@ -7,8 +7,8 @@ import uuid
 
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
-from ii_agent.realtime.events.models import EventType, RealtimeEvent
-from ii_agent.realtime.events.stream import EventStream
+from ii_agent.core.events.models import EventType, RealtimeEvent
+from ii_agent.core.events.stream import EventStream
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.realtime.socket.schemas import QueryCommandContent

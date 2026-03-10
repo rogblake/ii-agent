@@ -8,7 +8,7 @@ import socketio
 from ii_agent.auth.jwt_handler import jwt_handler
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.logger import logger
-from ii_agent.realtime.events.models import EventType
+from ii_agent.core.events.models import EventType
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.realtime.socket.command.handler_factory import CommandHandlerFactory
 from ii_agent.realtime.socket.session_store import session_store

@@ -11,11 +11,11 @@ from ii_agent.chat.schemas import Message, TextContent, MessageRole
 from ii_agent.chat.message_service import MessageService
 from ii_agent.chat.models import ConversationSummary
 from ii_agent.sessions.models import Session
-from ii_agent.realtime.events.models import Event
+from ii_agent.core.events.models import Event
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.chat.llm import LLMProviderFactory
 from ii_agent.chat.prompts.context_prompts import PREVIOUS_SUMMARY, SUMMARY_PROMPT
-from ii_agent.realtime.events.models import EventType as CoreEventType
+from ii_agent.core.events.models import EventType as CoreEventType
 
 logger = logging.getLogger(__name__)
 

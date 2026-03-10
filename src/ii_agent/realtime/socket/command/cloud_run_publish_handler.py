@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict
 
-from ii_agent.realtime.events.models import EventType
-from ii_agent.realtime.events.stream import EventStream
+from ii_agent.core.events.models import EventType
+from ii_agent.core.events.stream import EventStream
 from ii_agent.core.logger import logger
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo

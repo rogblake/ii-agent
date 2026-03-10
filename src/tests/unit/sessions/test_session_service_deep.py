@@ -11,7 +11,7 @@ import pytest
 
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.service import SessionService
-from ii_agent.realtime.events.models import EventType
+from ii_agent.core.events.models import EventType
 
 
 # ---------------------------------------------------------------------------
@@ -457,7 +457,7 @@ class TestGetUserSessions:
 class TestGetSessionEventsWithDetails:
     @pytest.mark.asyncio
     async def test_enriches_file_url_events(self):
-        from ii_agent.realtime.events.models import EventType as ET
+        from ii_agent.core.events.models import EventType as ET
         event_repo = FakeEventRepo()
         event_repo.events = [
             SimpleNamespace(
@@ -482,7 +482,7 @@ class TestGetSessionEventsWithDetails:
 
     @pytest.mark.asyncio
     async def test_non_file_url_events_not_modified(self):
-        from ii_agent.realtime.events.models import EventType as ET
+        from ii_agent.core.events.models import EventType as ET
         event_repo = FakeEventRepo()
         event_repo.events = [
             SimpleNamespace(

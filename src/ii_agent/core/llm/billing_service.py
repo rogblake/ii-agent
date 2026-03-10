@@ -98,7 +98,7 @@ class LLMBillingService:
     def _calculate(record: TokenRecord, pricing: ModelPricing) -> float:
         """Pure math — USD cost converted to credits.
 
-        Mirrors the formula in ``engine/v1/utils/credit.py``.
+        Mirrors the formula in ``engine/runtime/utils/credit.py``.
         """
         input_cost = (
             record.input_tokens / 1_000_000

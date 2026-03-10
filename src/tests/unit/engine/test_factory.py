@@ -1,6 +1,6 @@
 from ii_agent.core.config.llm_config import APITypes
 from ii_agent.engine.types import Provider
-from ii_agent.engine.v1.factory.factory import PROVIDER_SPEC_MAP
+from ii_agent.engine.runtime.factory.factory import PROVIDER_SPEC_MAP
 
 
 def test_provider_spec_map_contains_expected_bindings():

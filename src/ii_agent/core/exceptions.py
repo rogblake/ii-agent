@@ -99,7 +99,7 @@ class RunCancelledException(IIAgentError):
 class AgentRunError(InternalError):
     """Exception raised when an agent run fails.
 
-    Note: This is distinct from ``engine.v1.exceptions.AgentRunException``
+    Note: This is distinct from ``engine.runtime.exceptions.AgentRunException``
     which is an internal flow-control signal inside the WebSocket-based
     agent loop and intentionally does **not** inherit from IIAgentError.
     """

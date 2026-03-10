@@ -1,4 +1,4 @@
-"""Unit tests for engine/v1/utils/prompts.py.
+"""Unit tests for engine/runtime/utils/prompts.py.
 
 Covers get_json_output_prompt and get_response_model_format_prompt.
 """
@@ -13,7 +13,7 @@ import pytest
 from pydantic import BaseModel, Field
 
 
-from ii_agent.engine.v1.utils.prompts import (
+from ii_agent.engine.runtime.utils.prompts import (
     get_json_output_prompt,
     get_response_model_format_prompt,
 )

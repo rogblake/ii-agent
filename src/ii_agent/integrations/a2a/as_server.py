@@ -26,7 +26,7 @@ from ii_agent.integrations.a2a.extension_utils import append_extension_issue
 from ii_agent.integrations.a2a.resource_pool import resource_pool
 from ii_agent.integrations.a2a.session_registry import A2ASessionRegistry, SessionRecord
 from ii_agent.engine.types import AgentType
-from ii_agent.engine.v1.factory.converter import convert_agent_event_to_realtime
+from ii_agent.engine.runtime.factory.converter import convert_agent_event_to_realtime
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.engine.agents.models import AgentRunTask
 from ii_agent.engine.agents.repository import AgentRunTaskRepository

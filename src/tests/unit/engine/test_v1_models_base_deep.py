@@ -1,5 +1,5 @@
 """
-Deep unit tests for ii_agent/engine/v1/models/base.py
+Deep unit tests for ii_agent/engine/runtime/models/base.py
 
 Covers previously untested branches:
 - MessageData dataclass
@@ -22,12 +22,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.engine.v1.models.base import MessageData, Model, _handle_agent_exception
-from ii_agent.engine.v1.models.message import Message
-from ii_agent.engine.v1.models.metrics import Metrics
-from ii_agent.engine.v1.models.response import ModelResponse
-from ii_agent.engine.v1.exceptions import AgentRunException, ModelProviderError
-from ii_agent.engine.v1.tools.function import Function
+from ii_agent.engine.runtime.models.base import MessageData, Model, _handle_agent_exception
+from ii_agent.engine.runtime.models.message import Message
+from ii_agent.engine.runtime.models.metrics import Metrics
+from ii_agent.engine.runtime.models.response import ModelResponse
+from ii_agent.engine.runtime.exceptions import AgentRunException, ModelProviderError
+from ii_agent.engine.runtime.tools.function import Function
 
 
 # ---------------------------------------------------------------------------

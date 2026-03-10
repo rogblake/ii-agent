@@ -8,7 +8,7 @@ from typing import Any, Dict
 
 from ii_agent.integrations.a2a.config import A2AConfig
 from ii_agent.integrations.a2a.exceptions import InvalidA2AAgentConfig
-from ii_agent.engine.v1.tools.a2a.a2a_agent_tool import A2AAgentTool
+from ii_agent.engine.runtime.tools.a2a.a2a_agent_tool import A2AAgentTool
 
 logger = logging.getLogger(__name__)
 

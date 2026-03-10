@@ -15,14 +15,14 @@ from ii_agent.realtime.socket.command.command_handler import (
     UserCommandType,
 )
 from ii_agent.utils.workspace_manager import WorkspaceManager
-from ii_agent.engine.v1.factory.converter import convert_agent_event_to_realtime
-from ii_agent.engine.v1.run.agent import RunOutput
+from ii_agent.engine.runtime.factory.converter import convert_agent_event_to_realtime
+from ii_agent.engine.runtime.run.agent import RunOutput
 from ii_agent.core.llm.token_record import TokenTracker
-from ii_agent.engine.v1.factory.factory import AgentFactory
+from ii_agent.engine.runtime.factory.factory import AgentFactory
 from ii_agent.engine.types import AgentType
-from ii_agent.engine.v1.factory.tools import echo_message, generate_random_number
-from ii_agent.engine.v1.agent_sessions.store import AgentSessionStore
-from ii_agent.engine.v1.tools.connectors import ConnectorTool
+from ii_agent.engine.runtime.factory.tools import echo_message, generate_random_number
+from ii_agent.engine.runtime.agent_sessions.store import AgentSessionStore
+from ii_agent.engine.runtime.tools.connectors import ConnectorTool
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:

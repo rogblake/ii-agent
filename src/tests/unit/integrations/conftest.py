@@ -2,7 +2,7 @@
 
 Pre-stubs broken import chains before any test module is collected.
 This prevents import errors from modules that have optional or missing
-dependencies (e.g. engine.v1.agent_controller, ii_tool, etc.).
+dependencies (e.g. engine.runtime.agent_controller, ii_tool, etc.).
 """
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ if not hasattr(_integrations_pkg, "mcp_sse"):
 # ---------------------------------------------------------------------------
 
 _mod_stub(
-    "ii_agent.engine.v1.agent_controller",
+    "ii_agent.engine.runtime.agent_controller",
     AgentController=type("AgentController", (), {}),
 )
 
@@ -95,12 +95,12 @@ _mod_stub("ii_tool.mcp.client", MCPClient=type("MCPClient", (), {}))
 # ---------------------------------------------------------------------------
 # Stub ii_agent.integrations.a2a package (broken import chain via as_server)
 #
-# as_server.py -> engine.v1.factory -> engine.v1.models.google.interactions
+# as_server.py -> engine.runtime.factory -> engine.runtime.models.google.interactions
 #              -> google.genai.interactions (missing InteractionEvent etc.)
 # ---------------------------------------------------------------------------
 
 # Stub the google.genai.interactions module with all names that are imported
-# in engine.v1.models.google.interactions.  We must do this BEFORE any a2a
+# in engine.runtime.models.google.interactions.  We must do this BEFORE any a2a
 # module is imported so the stub is in sys.modules and the real import is
 # never attempted.
 import google.genai as _google_genai  # real package – already loadable
@@ -119,24 +119,24 @@ _google_genai_interactions_stub = _mod_stub(
 if not hasattr(_google_genai, "interactions"):
     _google_genai.interactions = _google_genai_interactions_stub
 
-# Stub engine.v1.models.google so its __init__ (which imports .interactions) is bypassed
-_pkg_stub("ii_agent.engine.v1.models")
-_pkg_stub("ii_agent.engine.v1.models.google")
+# Stub engine.runtime.models.google so its __init__ (which imports .interactions) is bypassed
+_pkg_stub("ii_agent.engine.runtime.models")
+_pkg_stub("ii_agent.engine.runtime.models.google")
 _mod_stub(
-    "ii_agent.engine.v1.models.google.interactions",
+    "ii_agent.engine.runtime.models.google.interactions",
     GeminiInteractions=type("GeminiInteractions", (), {}),
 )
 
 # Stub the factory package and its submodules referenced by as_server.py
 # and engine.agents.agent_service
-_factory_pkg = _pkg_stub("ii_agent.engine.v1.factory")
+_factory_pkg = _pkg_stub("ii_agent.engine.runtime.factory")
 _factory_pkg.AgentFactory = type("AgentFactory", (), {})
 _mod_stub(
-    "ii_agent.engine.v1.factory.factory",
+    "ii_agent.engine.runtime.factory.factory",
     AgentFactory=type("AgentFactory", (), {}),
 )
 _mod_stub(
-    "ii_agent.engine.v1.factory.converter",
+    "ii_agent.engine.runtime.factory.converter",
     convert_agent_event_to_realtime=lambda *a, **kw: None,
 )
 

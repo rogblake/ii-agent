@@ -1,4 +1,4 @@
-"""Unit tests for ii_agent/engine/v1/models/base.py (actually run/base.py).
+"""Unit tests for ii_agent/engine/runtime/models/base.py (actually run/base.py).
 
 Tests cover:
 - RunStatus enum values and helper methods
@@ -124,7 +124,7 @@ class TestRunContext:
     """Tests for the RunContext dataclass."""
 
     def test_create_with_required_fields(self):
-        from ii_agent.engine.v1.run.base import RunContext
+        from ii_agent.engine.runtime.run.base import RunContext
 
         ctx = RunContext(run_id="r1", session_id="s1", user_id="u1")
         assert ctx.run_id == "r1"
@@ -132,37 +132,37 @@ class TestRunContext:
         assert ctx.user_id == "u1"
 
     def test_dependencies_defaults_to_none(self):
-        from ii_agent.engine.v1.run.base import RunContext
+        from ii_agent.engine.runtime.run.base import RunContext
 
         ctx = RunContext(run_id="r1", session_id="s1", user_id="u1")
         assert ctx.dependencies is None
 
     def test_metadata_defaults_to_none(self):
-        from ii_agent.engine.v1.run.base import RunContext
+        from ii_agent.engine.runtime.run.base import RunContext
 
         ctx = RunContext(run_id="r1", session_id="s1", user_id="u1")
         assert ctx.metadata is None
 
     def test_session_state_defaults_to_none(self):
-        from ii_agent.engine.v1.run.base import RunContext
+        from ii_agent.engine.runtime.run.base import RunContext
 
         ctx = RunContext(run_id="r1", session_id="s1", user_id="u1")
         assert ctx.session_state is None
 
     def test_output_schema_defaults_to_none(self):
-        from ii_agent.engine.v1.run.base import RunContext
+        from ii_agent.engine.runtime.run.base import RunContext
 
         ctx = RunContext(run_id="r1", session_id="s1", user_id="u1")
         assert ctx.output_schema is None
 
     def test_run_id_can_be_none(self):
-        from ii_agent.engine.v1.run.base import RunContext
+        from ii_agent.engine.runtime.run.base import RunContext
 
         ctx = RunContext(run_id=None, session_id="s1", user_id="u1")
         assert ctx.run_id is None
 
     def test_all_fields_can_be_none(self):
-        from ii_agent.engine.v1.run.base import RunContext
+        from ii_agent.engine.runtime.run.base import RunContext
 
         ctx = RunContext(run_id=None, session_id=None, user_id=None)
         assert ctx.run_id is None
@@ -170,7 +170,7 @@ class TestRunContext:
         assert ctx.user_id is None
 
     def test_create_with_metadata(self):
-        from ii_agent.engine.v1.run.base import RunContext
+        from ii_agent.engine.runtime.run.base import RunContext
 
         ctx = RunContext(
             run_id="r1",
@@ -181,7 +181,7 @@ class TestRunContext:
         assert ctx.metadata == {"source": "test"}
 
     def test_create_with_dependencies(self):
-        from ii_agent.engine.v1.run.base import RunContext
+        from ii_agent.engine.runtime.run.base import RunContext
 
         ctx = RunContext(
             run_id="r1",
@@ -192,7 +192,7 @@ class TestRunContext:
         assert ctx.dependencies == {"db": "mock_db"}
 
     def test_create_with_session_state(self):
-        from ii_agent.engine.v1.run.base import RunContext
+        from ii_agent.engine.runtime.run.base import RunContext
 
         ctx = RunContext(
             run_id="r1",
@@ -211,7 +211,7 @@ class TestBaseRunOutputEvent:
     """Tests for BaseRunOutputEvent.to_dict() / to_json() / properties."""
 
     def _make_event(self, **kwargs):
-        from ii_agent.engine.v1.run.agent import RunStartedEvent
+        from ii_agent.engine.runtime.run.agent import RunStartedEvent
 
         defaults = dict(agent_id="a1", agent_name="Agent")
         defaults.update(kwargs)
@@ -275,7 +275,7 @@ class TestBaseRunOutputEvent:
         assert result.get("run_id") == "run-abc"
 
     def test_to_dict_excludes_image_when_none(self):
-        from ii_agent.engine.v1.run.agent import RunContentEvent
+        from ii_agent.engine.runtime.run.agent import RunContentEvent
 
         ev = RunContentEvent(agent_id="a1", agent_name="A", image=None)
         result = ev.to_dict()

@@ -1,4 +1,4 @@
-"""Deep unit tests for ii_agent/engine/v1/tools/function.py.
+"""Deep unit tests for ii_agent/engine/runtime/tools/function.py.
 
 Focuses on uncovered paths:
 - Function.from_callable: parameter handling, special params excluded, strict mode
@@ -17,7 +17,7 @@ from typing import Optional, List
 from unittest.mock import AsyncMock, MagicMock, patch
 from functools import partial
 
-from ii_agent.engine.v1.tools.function import Function, FunctionCall, FunctionExecutionResult
+from ii_agent.engine.runtime.tools.function import Function, FunctionCall, FunctionExecutionResult
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +29,7 @@ def make_function(name="test_func", **kwargs) -> Function:
 
 
 def make_base_agent_tool(name="my_tool", description="Tool desc") -> MagicMock:
-    from ii_agent.engine.v1.tools.base import BaseAgentTool, ToolResult
+    from ii_agent.engine.runtime.tools.base import BaseAgentTool, ToolResult
     tool = MagicMock(spec=BaseAgentTool)
     tool.name = name
     tool.description = description
@@ -225,7 +225,7 @@ class TestFunctionFromToolDeep:
         assert fn.stop_after_tool_call is True
 
     def test_from_tool_with_user_input_fields_generates_schema(self):
-        from ii_agent.engine.v1.tools.base import BaseAgentTool
+        from ii_agent.engine.runtime.tools.base import BaseAgentTool
         tool = MagicMock(spec=BaseAgentTool)
         tool.name = "hitl_tool"
         tool.description = "HITL tool"
@@ -254,7 +254,7 @@ class TestFunctionFromToolDeep:
 
     @pytest.mark.asyncio
     async def test_tool_entrypoint_calls_execute(self):
-        from ii_agent.engine.v1.tools.base import ToolResult
+        from ii_agent.engine.runtime.tools.base import ToolResult
         tool = make_base_agent_tool()
         expected_result = ToolResult(llm_content="success", user_display_content="done")
         tool.execute = AsyncMock(return_value=expected_result)
@@ -266,7 +266,7 @@ class TestFunctionFromToolDeep:
 
     @pytest.mark.asyncio
     async def test_tool_entrypoint_handles_exception(self):
-        from ii_agent.engine.v1.tools.base import ToolResult
+        from ii_agent.engine.runtime.tools.base import ToolResult
         tool = make_base_agent_tool()
         tool.execute = AsyncMock(side_effect=RuntimeError("tool failed"))
 
@@ -277,7 +277,7 @@ class TestFunctionFromToolDeep:
         assert "Error" in result.llm_content
 
     def test_from_tool_with_none_input_schema_uses_default(self):
-        from ii_agent.engine.v1.tools.base import BaseAgentTool
+        from ii_agent.engine.runtime.tools.base import BaseAgentTool
         tool = MagicMock(spec=BaseAgentTool)
         tool.name = "no_schema_tool"
         tool.description = "Tool"
@@ -717,7 +717,7 @@ class TestFunctionCallHandlePreHookDeep:
         fc._handle_pre_hook()  # Should not propagate exception
 
     def test_pre_hook_agent_run_exception_sets_error_and_raises(self):
-        from ii_agent.engine.v1.exceptions import AgentRunException
+        from ii_agent.engine.runtime.exceptions import AgentRunException
 
         def hook():
             raise AgentRunException("run aborted")
@@ -782,7 +782,7 @@ class TestFunctionExecutionResultDeep:
         assert result.error == "something went wrong"
 
     def test_with_images(self):
-        from ii_agent.engine.v1.media import Image
+        from ii_agent.engine.runtime.media import Image
         img = Image(id="img-1", url="http://example.com/img.png")
         result = FunctionExecutionResult(status="success", images=[img])
         assert result.images is not None

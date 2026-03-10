@@ -1,5 +1,5 @@
 """
-Unit tests for src/ii_agent/engine/v1/models/google/gemini.py
+Unit tests for src/ii_agent/engine/runtime/models/google/gemini.py
 
 Tests cover:
 - Gemini dataclass defaults and field types
@@ -26,18 +26,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.engine.v1.models.google.gemini import (
+from ii_agent.engine.runtime.models.google.gemini import (
     Gemini,
     _normalize_function_definition,
     format_function_definitions,
     format_image_for_message,
     prepare_response_schema,
 )
-from ii_agent.engine.v1.models.message import Message, File
-from ii_agent.engine.v1.models.metrics import Metrics
-from ii_agent.engine.v1.models.response import ModelResponse
-from ii_agent.engine.v1.exceptions import ModelProviderError
-from ii_agent.engine.v1.media import Image
+from ii_agent.engine.runtime.models.message import Message, File
+from ii_agent.engine.runtime.models.metrics import Metrics
+from ii_agent.engine.runtime.models.response import ModelResponse
+from ii_agent.engine.runtime.exceptions import ModelProviderError
+from ii_agent.engine.runtime.media import Image
 from ii_agent.engine.types import Provider
 
 # Real SDK types used for building response mocks

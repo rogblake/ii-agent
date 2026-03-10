@@ -16,8 +16,8 @@ from ii_agent.content.skills.schemas import (
 )
 from ii_agent.core.exceptions import ValidationError as CoreValidationError
 from ii_agent.core.storage.client import storage
-from ii_agent.engine.v1.skills.github import GitHubSkillError
-from ii_agent.engine.v1.skills.skills_ref.errors import ParseError, ValidationError
+from ii_agent.engine.runtime.skills.github import GitHubSkillError
+from ii_agent.engine.runtime.skills.skills_ref.errors import ParseError, ValidationError
 
 logger = logging.getLogger(__name__)
 

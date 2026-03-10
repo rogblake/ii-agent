@@ -22,7 +22,7 @@ async def test_ensure_builtin_skills_synced_runs_once_for_successful_sync(monkey
     sync_mock = AsyncMock(return_value=1)
 
     monkeypatch.setattr(
-        "ii_agent.engine.v1.skills.loader.sync_builtin_to_db",
+        "ii_agent.engine.runtime.skills.loader.sync_builtin_to_db",
         sync_mock,
     )
     monkeypatch.setattr("ii_agent.core.db.manager.get_db", lambda: _FakeDbSession())
@@ -38,7 +38,7 @@ async def test_ensure_builtin_skills_synced_runs_once_for_successful_sync(monkey
 async def test_ensure_builtin_skills_sync_error_does_not_raise(monkeypatch):
     skills_seeding._skills_synced = False
     monkeypatch.setattr(
-        "ii_agent.engine.v1.skills.loader.sync_builtin_to_db",
+        "ii_agent.engine.runtime.skills.loader.sync_builtin_to_db",
         AsyncMock(side_effect=RuntimeError("boom")),
     )
     monkeypatch.setattr("ii_agent.core.db.manager.get_db", lambda: _FakeDbSession())

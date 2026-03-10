@@ -1,5 +1,5 @@
 """
-Deep unit tests for ii_agent/engine/v1/models/message.py
+Deep unit tests for ii_agent/engine/runtime/models/message.py
 
 Covers previously untested branches:
 - Message.from_dict() with images (content bytes and URL)
@@ -22,15 +22,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ii_agent.engine.v1.models.message import (
+from ii_agent.engine.runtime.models.message import (
     Citations,
     DocumentCitation,
     Message,
     MessageReferences,
     UrlCitation,
 )
-from ii_agent.engine.v1.models.metrics import Metrics
-from ii_agent.engine.v1.media import Audio, File, Image, Video
+from ii_agent.engine.runtime.models.metrics import Metrics
+from ii_agent.engine.runtime.media import Audio, File, Image, Video
 
 
 # ---------------------------------------------------------------------------

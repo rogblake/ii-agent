@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 import pytest
 from sqlalchemy.orm.exc import StaleDataError
 
-from ii_agent.engine.v1.agent_sessions.store import AgentSessionStore
+from ii_agent.engine.runtime.agent_sessions.store import AgentSessionStore
 from ii_agent.engine.agents.models import AgentRunTask, RunStatus
-from ii_agent.engine.v1.run.agent import RunOutput
-from ii_agent.engine.v1.agent_sessions.agent import AgentSession
+from ii_agent.engine.runtime.run.agent import RunOutput
+from ii_agent.engine.runtime.agent_sessions.agent import AgentSession
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +92,7 @@ class TestGetOrCreateRunTask:
         cm, db = make_db_context()
         setup_scalar_result(db, existing_task)
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             result = await store.get_or_create_run_task(
                 session_id="session-001",
                 run_id=run_id,
@@ -122,8 +122,8 @@ class TestGetOrCreateRunTask:
 
         db.execute = AsyncMock(side_effect=execute_side_effect)
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
-            with patch("ii_agent.engine.v1.agent_sessions.store.AgentRunTask", return_value=new_task) as MockTask:
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
+            with patch("ii_agent.engine.runtime.agent_sessions.store.AgentRunTask", return_value=new_task) as MockTask:
                 # When task is not found, the store creates a new one
                 # We patch AgentRunTask so it returns new_task
                 # Then after commit, we expect the method to return new_task
@@ -147,7 +147,7 @@ class TestGetOrCreateRunTask:
         db.execute = AsyncMock(side_effect=RuntimeError("db error"))
         db.rollback = AsyncMock()
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             with pytest.raises(RuntimeError, match="db error"):
                 await store.get_or_create_run_task(
                     session_id="session-001",
@@ -172,7 +172,7 @@ class TestUpdateRunStatus:
         db.refresh = AsyncMock()
 
         # Mock RunStatus.runable_states to include RUNNING
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             with patch.object(RunStatus, "runable_states", return_value=[RunStatus.RUNNING]):
                 result = await store.update_run_status(
                     run_id=run_id,
@@ -188,7 +188,7 @@ class TestUpdateRunStatus:
         cm, db = make_db_context()
         setup_scalar_result(db, None)  # Task not found
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             with pytest.raises(ValueError, match="not found"):
                 await store.update_run_status(
                     run_id=run_id,
@@ -204,7 +204,7 @@ class TestUpdateRunStatus:
         cm, db = make_db_context()
         setup_scalar_result(db, task)
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             with patch.object(RunStatus, "runable_states", return_value=[RunStatus.RUNNING]):
                 with pytest.raises(StaleDataError):
                     await store.update_run_status(
@@ -227,7 +227,7 @@ class TestGetRunTask:
         cm, db = make_db_context()
         setup_scalar_result(db, task)
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             result = await store.get_run_task(run_id)
         assert result is task
 
@@ -239,7 +239,7 @@ class TestGetRunTask:
         cm, db = make_db_context()
         setup_scalar_result(db, None)
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             result = await store.get_run_task(run_id)
         assert result is None
 
@@ -251,7 +251,7 @@ class TestGetRunTask:
         cm, db = make_db_context()
         db.execute = AsyncMock(side_effect=RuntimeError("connection error"))
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             with pytest.raises(RuntimeError):
                 await store.get_run_task(run_id)
 
@@ -282,7 +282,7 @@ class TestSaveRun:
         ])
 
         from ii_agent.core.exceptions import NotFoundError
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             with pytest.raises(NotFoundError):
                 await store.save_run(run)
 
@@ -312,9 +312,9 @@ class TestSaveRun:
         db.commit = AsyncMock()
 
         # Patch the store module to avoid SQLAlchemy select() with mocked class
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
-            with patch("ii_agent.engine.v1.agent_sessions.store.AgentRunMessage") as MockMsg, \
-                 patch("ii_agent.engine.v1.agent_sessions.store.select") as mock_select:
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
+            with patch("ii_agent.engine.runtime.agent_sessions.store.AgentRunMessage") as MockMsg, \
+                 patch("ii_agent.engine.runtime.agent_sessions.store.select") as mock_select:
                 mock_msg = MagicMock()
                 MockMsg.return_value = mock_msg
                 mock_select.return_value = MagicMock()  # stub select() call
@@ -340,7 +340,7 @@ class TestGetSessionMessages:
         msg_result.scalars.return_value.all.return_value = []
         db.execute = AsyncMock(return_value=msg_result)
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             result = await store.get_session_messages("session-001")
         assert result == []
 
@@ -368,7 +368,7 @@ class TestGetSessionMessages:
         msg_result.scalars.return_value.all.return_value = rows
         db.execute = AsyncMock(return_value=msg_result)
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             with patch.object(RunOutput, "from_dict", return_value=MagicMock(spec=RunOutput)):
                 result = await store.get_session_messages("session-001", last_n_runs=3)
         assert len(result) == 3
@@ -396,7 +396,7 @@ class TestGetSessionMessages:
         msg_result.scalars.return_value.all.return_value = rows
         db.execute = AsyncMock(return_value=msg_result)
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             with patch.object(RunOutput, "from_dict", return_value=MagicMock(spec=RunOutput)):
                 result = await store.get_session_messages("session-001", skip_parent_runs=True)
 
@@ -561,7 +561,7 @@ class TestDeleteSession:
         db.execute = AsyncMock(side_effect=execute_side_effect)
         db.commit = AsyncMock()
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             result = await store.delete_session("nonexistent-session")
         assert result is False
 
@@ -585,6 +585,6 @@ class TestDeleteSession:
         db.delete = AsyncMock()
         db.commit = AsyncMock()
 
-        with patch("ii_agent.engine.v1.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.engine.runtime.agent_sessions.store.get_db", return_value=cm):
             result = await store.delete_session("session-001")
         assert result is True

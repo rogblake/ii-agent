@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from ii_agent.engine.v1.tools.clients import _get_client
+from ii_agent.engine.runtime.tools.clients import _get_client
 from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.content.media.constants import IMAGE_MINI_TOOLS_TYPE
 from ii_agent.content.media.models import MediaTemplate

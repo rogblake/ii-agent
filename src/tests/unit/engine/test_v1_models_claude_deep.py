@@ -1,5 +1,5 @@
 """
-Deep unit tests for ii_agent/engine/v1/models/anthropic/claude.py
+Deep unit tests for ii_agent/engine/runtime/models/anthropic/claude.py
 
 Covers deeper branches not tested by the existing test file:
 - format_messages: developer role, images in messages, files in messages,
@@ -23,7 +23,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.engine.v1.models.anthropic.claude import (
+from ii_agent.engine.runtime.models.anthropic.claude import (
     ROLE_MAP,
     MCPServerConfiguration,
     Claude,
@@ -31,14 +31,14 @@ from ii_agent.engine.v1.models.anthropic.claude import (
     format_tools_for_model,
     format_messages,
 )
-from ii_agent.engine.v1.models.message import Message
-from ii_agent.engine.v1.models.metrics import Metrics
-from ii_agent.engine.v1.models.response import ModelResponse
-from ii_agent.engine.v1.exceptions import (
+from ii_agent.engine.runtime.models.message import Message
+from ii_agent.engine.runtime.models.metrics import Metrics
+from ii_agent.engine.runtime.models.response import ModelResponse
+from ii_agent.engine.runtime.exceptions import (
     ModelProviderError,
     ModelRateLimitError,
 )
-from ii_agent.engine.v1.media import Image, File
+from ii_agent.engine.runtime.media import Image, File
 from ii_agent.engine.types import Provider
 
 
@@ -472,7 +472,7 @@ class TestClaudeGetAsyncClient:
         c = Claude()
         c.api_key = None
         c.async_client = None
-        with patch("ii_agent.engine.v1.models.anthropic.claude.AsyncAnthropicClient") as MockClient:
+        with patch("ii_agent.engine.runtime.models.anthropic.claude.AsyncAnthropicClient") as MockClient:
             mock_instance = MagicMock()
             mock_instance.is_closed.return_value = False
             MockClient.return_value = mock_instance
@@ -482,7 +482,7 @@ class TestClaudeGetAsyncClient:
     def test_creates_async_client_with_provided_api_key(self):
         c = Claude(api_key="provided_key")
         c.async_client = None
-        with patch("ii_agent.engine.v1.models.anthropic.claude.AsyncAnthropicClient") as MockClient:
+        with patch("ii_agent.engine.runtime.models.anthropic.claude.AsyncAnthropicClient") as MockClient:
             mock_instance = MagicMock()
             mock_instance.is_closed.return_value = False
             MockClient.return_value = mock_instance

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 from fastmcp import FastMCP
 
-from ii_agent.engine.v1.agent_controller import AgentController
+from ii_agent.engine.runtime.agent_controller import AgentController
 from ii_agent.engine.types import AgentType
 from ii_agent.core.config.llm_config import LLMConfig
 from sqlalchemy import select

@@ -1,5 +1,5 @@
 """
-Unit tests for src/ii_agent/engine/v1/models/openai/completions.py
+Unit tests for src/ii_agent/engine/runtime/models/openai/completions.py
 
 Tests cover:
 - _format_file_for_message utility
@@ -22,18 +22,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.engine.v1.models.openai.completions import (
+from ii_agent.engine.runtime.models.openai.completions import (
     OpenAIChat,
     _format_file_for_message,
 )
-from ii_agent.engine.v1.models.message import Message
-from ii_agent.engine.v1.models.metrics import Metrics
-from ii_agent.engine.v1.models.response import ModelResponse
-from ii_agent.engine.v1.exceptions import (
+from ii_agent.engine.runtime.models.message import Message
+from ii_agent.engine.runtime.models.metrics import Metrics
+from ii_agent.engine.runtime.models.response import ModelResponse
+from ii_agent.engine.runtime.exceptions import (
     ModelAuthenticationError,
     ModelProviderError,
 )
-from ii_agent.engine.v1.media.media import File
+from ii_agent.engine.runtime.media.media import File
 
 
 # ---------------------------------------------------------------------------
@@ -376,7 +376,7 @@ class TestOpenAIChatFormatMessage:
         assert result.get("tool_calls") is not None
 
     def test_message_with_files_appends_paths(self):
-        from ii_agent.engine.v1.models.message import File as MessageFile
+        from ii_agent.engine.runtime.models.message import File as MessageFile
         m = _make_oai_chat(api_key="key")
         file_obj = MessageFile(filepath=Path("/tmp/report.pdf"))
         msg = Message(role="user", content="See attached", files=[file_obj])
@@ -384,7 +384,7 @@ class TestOpenAIChatFormatMessage:
         assert "Attached files" in result["content"]
 
     def test_message_with_images_adds_image_content(self):
-        from ii_agent.engine.v1.media import Image
+        from ii_agent.engine.runtime.media import Image
         m = _make_oai_chat(api_key="key")
         img = Image(url="https://example.com/img.png", mime_type="image/png")
         msg = Message(role="user", content="Look!", images=[img])
@@ -398,7 +398,7 @@ class TestOpenAIChatFormatMessage:
         assert result["role"] == "human"
 
     def test_audio_output_sets_audio_field(self):
-        from ii_agent.engine.v1.media.media import Audio
+        from ii_agent.engine.runtime.media.media import Audio
         m = _make_oai_chat(api_key="key")
         audio_output = Audio(id="audio_123", content=b"audio bytes")
         msg = Message(role="assistant", content="", audio_output=audio_output)

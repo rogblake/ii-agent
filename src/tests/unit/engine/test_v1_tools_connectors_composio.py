@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.engine.v1.tools.connectors.composio import (
+from ii_agent.engine.runtime.tools.connectors.composio import (
     ComposioAgentTool,
     ComposioActionTool,
     _to_dict,
@@ -107,7 +107,7 @@ class TestComposioAgentToolInit:
 class TestGetClient:
     def test_get_client_creates_composio_instance(self):
         tool = make_composio_tool()
-        with patch("ii_agent.engine.v1.tools.connectors.composio.Composio") as MockComposio:
+        with patch("ii_agent.engine.runtime.tools.connectors.composio.Composio") as MockComposio:
             mock_instance = MagicMock()
             MockComposio.return_value = mock_instance
             client = tool._get_client()
@@ -116,7 +116,7 @@ class TestGetClient:
 
     def test_get_client_cached_on_second_call(self):
         tool = make_composio_tool()
-        with patch("ii_agent.engine.v1.tools.connectors.composio.Composio") as MockComposio:
+        with patch("ii_agent.engine.runtime.tools.connectors.composio.Composio") as MockComposio:
             mock_instance = MagicMock()
             MockComposio.return_value = mock_instance
             client1 = tool._get_client()
@@ -136,7 +136,7 @@ class TestGetActions:
         tool = make_composio_tool()
         tool._actions = [{"name": "GMAIL_LIST", "description": "List", "parameters": {}}]
 
-        with patch("ii_agent.engine.v1.tools.connectors.composio.ComposioCacheService") as MockCache:
+        with patch("ii_agent.engine.runtime.tools.connectors.composio.ComposioCacheService") as MockCache:
             MockCache.get_toolkit_actions = AsyncMock()
             await tool._get_actions()
             MockCache.get_toolkit_actions.assert_not_called()
@@ -149,7 +149,7 @@ class TestGetActions:
         tool = make_composio_tool()
         cached = {"actions": [{"name": "GMAIL_LIST", "description": "List", "parameters": {}}]}
 
-        with patch("ii_agent.engine.v1.tools.connectors.composio.ComposioCacheService") as MockCache:
+        with patch("ii_agent.engine.runtime.tools.connectors.composio.ComposioCacheService") as MockCache:
             MockCache.get_toolkit_actions = AsyncMock(return_value=cached)
             await tool._get_actions()
 
@@ -167,9 +167,9 @@ class TestGetActions:
         mock_action.name = "GMAIL_SEND_EMAIL"
         mock_action.description = "Send email"
 
-        with patch("ii_agent.engine.v1.tools.connectors.composio.ComposioCacheService") as MockCache, \
-             patch("ii_agent.engine.v1.tools.connectors.composio.get_default_tools", return_value=[]), \
-             patch("ii_agent.engine.v1.tools.connectors.composio.ToolkitService") as MockService:
+        with patch("ii_agent.engine.runtime.tools.connectors.composio.ComposioCacheService") as MockCache, \
+             patch("ii_agent.engine.runtime.tools.connectors.composio.get_default_tools", return_value=[]), \
+             patch("ii_agent.engine.runtime.tools.connectors.composio.ToolkitService") as MockService:
             MockCache.get_toolkit_actions = AsyncMock(return_value=None)
             MockCache.set_toolkit_actions = AsyncMock()
             MockService.EXCEPT_TOOLKIT = {"gmail": []}

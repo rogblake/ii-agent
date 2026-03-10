@@ -1,6 +1,6 @@
 from google.genai import types
 
-from ii_agent.engine.v1.models.google.gemini_schema import _json_to_genai_schema, create_function_declaration
+from ii_agent.engine.runtime.models.google.gemini_schema import _json_to_genai_schema, create_function_declaration
 
 
 def test_json_to_genai_schema_handles_oneof_and_null_fallback():

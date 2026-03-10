@@ -1,0 +1,121 @@
+from typing import Any, Literal, Optional
+
+from fastmcp import Client
+from fastmcp.exceptions import ToolError
+
+from ii_agent.core.config.settings import get_settings
+from ii_agent.engine.runtime.agents.agent import IIAgent
+from ii_agent.engine.runtime.tools.base import ImageContent, TextContent, ToolResult
+from ii_agent.engine.runtime.tools.function import FunctionCall
+from ii_agent.engine.runtime.tools.sandbox.base import BaseSandboxTool
+
+DEFAULT_TIMEOUT = 1800
+
+
+class MCPTool(BaseSandboxTool):
+    # Regular class attributes (not ClassVar)
+    name: str
+    description: str
+    input_schema: dict[str, Any]
+    display_name: str
+    read_only: bool = False
+    type: Literal["function", "openai_custom"] = "function"
+    requires_confirmation: bool = False
+
+    def __init__(
+        self,
+        *,
+        name: str,
+        display_name: str,
+        description: str,
+        input_schema: dict[str, Any],
+        read_only: bool,
+        requires_confirmation: bool = False,
+        type: Literal[
+            "function", "openai_custom"
+        ] = "function",  # check https://platform.openai.com/docs/guides/function-calling#context-free-grammars
+    ):
+        # Tool information
+        self.name = name
+        self.display_name = display_name
+        self.description = description
+        self.read_only = read_only
+        if type == "function":
+            self.input_schema = input_schema
+        else:
+            self.format = input_schema
+        self.mcp_client: Optional[Client] = None
+        self.requires_confirmation = requires_confirmation
+
+    async def on_tool_start(self, agent: IIAgent, fc: FunctionCall):
+        await super().on_tool_start(agent, fc)
+        sandbox = agent.sandbox
+        if sandbox:
+            sandbox_url = await sandbox.expose_port(get_settings().mcp.port)
+            self.mcp_client = sandbox.get_mcp_client(sandbox_url)
+
+    async def execute(self, tool_input: dict[str, Any]) -> ToolResult:
+        if not self.mcp_client:
+            return ToolResult(
+                llm_content="MCP server is not ready, please report back to the user",
+                user_display_content="MCP server is not ready, please report back to the user",
+                is_error=True,
+            )
+
+        try:
+            async with self.mcp_client:
+                mcp_results = await self.mcp_client.call_tool(
+                    self.name,
+                    tool_input,
+                    timeout=DEFAULT_TIMEOUT,
+                )
+
+                llm_content: list[ImageContent | TextContent] = []
+                has_image_content = False
+                for mcp_result in mcp_results.content:
+                    if mcp_result.type == "text":
+                        llm_content.append(TextContent(type="text", text=mcp_result.text))
+                    elif mcp_result.type == "image":
+                        llm_content.append(
+                            ImageContent(
+                                type="image",
+                                data=mcp_result.data,
+                                mime_type=mcp_result.mimeType,
+                            )
+                        )
+                        has_image_content = True
+                    else:
+                        raise ValueError(f"Unknown result type: {mcp_result.type}")
+
+                user_display_content = None
+                is_error = False
+                # Logic for our internal tools
+                if mcp_results.structured_content is not None:
+                    user_display_content = mcp_results.structured_content.get(
+                        "user_display_content"
+                    )
+                    is_error = mcp_results.structured_content.get("is_error")
+                # For external tools (like MCP) or internal tools that don't have a user_display_content
+                if not user_display_content:
+                    if not has_image_content:
+                        user_display_content = "\n".join([content.text for content in llm_content])
+                    else:
+                        user_display_content = [content.model_dump() for content in llm_content]
+
+                return ToolResult(
+                    llm_content=llm_content,
+                    user_display_content=user_display_content,
+                    is_error=is_error,
+                )
+        except ToolError as e:
+            return ToolResult(
+                llm_content=f"Error while calling tool {self.name} with input {tool_input}: {str(e)}\n\nPlease analyze the error message to determine if it's due to incorrect input parameters or an internal tool issue. If the error is due to incorrect input, retry with the correct parameters. Otherwise, try an alternative approach and inform the user about the issue.",
+                user_display_content=f"Error while calling tool {self.name} with input {tool_input}: {str(e)}",
+                is_error=True,
+            )
+        except Exception as e:
+            return ToolResult(
+                llm_content=f"Error while calling tool {self.name} with input {tool_input}: {str(e)}\n\nPlease analyze the error message to determine if it's due to incorrect input parameters or an internal tool issue. If the error is due to incorrect input, retry with the correct parameters. Otherwise, try an alternative approach and inform the user about the issue.",
+                user_display_content=f"Error while calling tool {self.name} with input {tool_input}: {str(e)}",
+                is_error=True,
+            )

@@ -21,10 +21,10 @@ from ii_agent.realtime.socket.command.command_handler import (
     UserCommandType,
 )
 from ii_agent.utils.workspace_manager import WorkspaceManager
-from ii_agent.engine.v1.factory.converter import convert_agent_event_to_realtime
-from ii_agent.engine.v1.run.agent import RunCompletedEvent, RunOutput
-from ii_agent.engine.v1.media import Image, File as UrlFile
-from ii_agent.engine.v1.tools.plan import MilestoneTool, PlanModificationSuggestionsTool
+from ii_agent.engine.runtime.factory.converter import convert_agent_event_to_realtime
+from ii_agent.engine.runtime.run.agent import RunCompletedEvent, RunOutput
+from ii_agent.engine.runtime.media import Image, File as UrlFile
+from ii_agent.engine.runtime.tools.plan import MilestoneTool, PlanModificationSuggestionsTool
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -411,7 +411,7 @@ class PlanHandler(CommandHandler):
 
             if isinstance(event, RunOutput):
                 # Update task status based on RunStatus
-                from ii_agent.engine.v1.run.agent import RunStatus as V1RunStatus
+                from ii_agent.engine.runtime.run.agent import RunStatus as V1RunStatus
 
                 v1_status = getattr(event, "status", None)
                 status = (

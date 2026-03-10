@@ -1,5 +1,5 @@
 """
-Comprehensive unit tests for engine/v1 utility modules.
+Comprehensive unit tests for engine/runtime utility modules.
 
 Covers:
   - string.py
@@ -28,7 +28,7 @@ from pydantic import BaseModel
 # ---------------------------------------------------------------------------
 # Module imports
 # ---------------------------------------------------------------------------
-from ii_agent.engine.v1.utils.string import (
+from ii_agent.engine.runtime.utils.string import (
     _clean_json_content,
     _extract_json_objects,
     _parse_individual_json,
@@ -39,7 +39,7 @@ from ii_agent.engine.v1.utils.string import (
     parse_response_model_str,
     url_safe_string,
 )
-from ii_agent.engine.v1.utils.common import (
+from ii_agent.engine.runtime.utils.common import (
     check_type_compatibility,
     dataclass_to_dict,
     get_image_str,
@@ -49,26 +49,26 @@ from ii_agent.engine.v1.utils.common import (
     nested_model_dump,
     validate_typed_dict,
 )
-from ii_agent.engine.v1.utils.merge_dict import (
+from ii_agent.engine.runtime.utils.merge_dict import (
     merge_dictionaries,
     merge_parallel_session_states,
 )
-from ii_agent.engine.v1.utils.safe_formatter import SafeFormatter
-from ii_agent.engine.v1.utils.serialize import json_serializer
-from ii_agent.engine.v1.utils.timer import Timer
-from ii_agent.engine.v1.utils.tools import (
+from ii_agent.engine.runtime.utils.safe_formatter import SafeFormatter
+from ii_agent.engine.runtime.utils.serialize import json_serializer
+from ii_agent.engine.runtime.utils.timer import Timer
+from ii_agent.engine.runtime.utils.tools import (
     extract_tool_call_from_string,
     extract_tool_from_xml,
     remove_function_calls_from_string,
     remove_tool_calls_from_string,
 )
-from ii_agent.engine.v1.utils.functions import get_function_call
-from ii_agent.engine.v1.utils.message import filter_tool_calls, get_text_from_message
-from ii_agent.engine.v1.utils.response import escape_markdown_tags, format_tool_calls
+from ii_agent.engine.runtime.utils.functions import get_function_call
+from ii_agent.engine.runtime.utils.message import filter_tool_calls, get_text_from_message
+from ii_agent.engine.runtime.utils.response import escape_markdown_tags, format_tool_calls
 
-from ii_agent.engine.v1.models.message import Message
-from ii_agent.engine.v1.models.response import ToolExecution
-from ii_agent.engine.v1.tools.function import Function, FunctionCall
+from ii_agent.engine.runtime.models.message import Message
+from ii_agent.engine.runtime.models.response import ToolExecution
+from ii_agent.engine.runtime.tools.function import Function, FunctionCall
 
 
 # ===========================================================================

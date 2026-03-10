@@ -1,13 +1,13 @@
-"""Unit tests for engine/v1/skills/ - SkillCreator base, Skill model, SkillProperties, validator."""
+"""Unit tests for engine/runtime/skills/ - SkillCreator base, Skill model, SkillProperties, validator."""
 
 from pathlib import Path
 from typing import Optional
 
 import pytest
 
-from ii_agent.engine.v1.skills.base import SkillCreator
-from ii_agent.engine.v1.skills.skills_ref.models import Skill, SkillProperties, SkillSource
-from ii_agent.engine.v1.skills.skills_ref.validator import (
+from ii_agent.engine.runtime.skills.base import SkillCreator
+from ii_agent.engine.runtime.skills.skills_ref.models import Skill, SkillProperties, SkillSource
+from ii_agent.engine.runtime.skills.skills_ref.validator import (
     MAX_COMPATIBILITY_LENGTH,
     MAX_DESCRIPTION_LENGTH,
     MAX_SKILL_NAME_LENGTH,

@@ -1,4 +1,4 @@
-"""Deep unit tests for engine/v1 - focusing on uncovered branches.
+"""Deep unit tests for engine/runtime - focusing on uncovered branches.
 
 This module covers:
 1. ResponseHandler._handle_model_response_chunk: streaming event branches
@@ -19,12 +19,12 @@ from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from ii_agent.engine.v1.agents.response_handler import ResponseHandler
-from ii_agent.engine.v1.agents.tool_manager import ToolManager
-from ii_agent.engine.v1.models.response import ModelResponse, ModelResponseEvent, ToolExecution
-from ii_agent.engine.v1.run.agent import RunOutput, RunEvent, RunInput
-from ii_agent.engine.v1.run.messages import RunMessages
-from ii_agent.engine.v1.models.message import Message
+from ii_agent.engine.runtime.agents.response_handler import ResponseHandler
+from ii_agent.engine.runtime.agents.tool_manager import ToolManager
+from ii_agent.engine.runtime.models.response import ModelResponse, ModelResponseEvent, ToolExecution
+from ii_agent.engine.runtime.run.agent import RunOutput, RunEvent, RunInput
+from ii_agent.engine.runtime.run.messages import RunMessages
+from ii_agent.engine.runtime.models.message import Message
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ class TestHandleModelResponseChunkDeep:
         return ModelResponse(content="")
 
     def test_run_output_event_custom_event_sets_session_id(self):
-        from ii_agent.engine.v1.run.agent import CustomEvent
+        from ii_agent.engine.runtime.run.agent import CustomEvent
         handler = self._make_handler()
         run_output = make_run_output()
         model_response = self._make_model_response()
@@ -436,7 +436,7 @@ class TestHandleModelResponseChunkDeep:
         assert "new_key" in session_state
 
     def test_tool_call_completed_adds_images_to_run_response(self):
-        from ii_agent.engine.v1.media import Image
+        from ii_agent.engine.runtime.media import Image
         handler = self._make_handler()
         run_output = make_run_output()
         model_response = self._make_model_response()
@@ -471,7 +471,7 @@ class TestHandleModelResponseChunkDeep:
 
     def test_audio_content_base64_decoded(self):
         import base64
-        from ii_agent.engine.v1.media import Audio as AudioMedia
+        from ii_agent.engine.runtime.media import Audio as AudioMedia
 
         handler = self._make_handler()
         run_output = make_run_output()
@@ -544,7 +544,7 @@ class TestHandleModelResponseChunkDeep:
         assert b"raw_bytes" in model_response.audio.content
 
     def test_images_response_added_to_model_response(self):
-        from ii_agent.engine.v1.media import Image
+        from ii_agent.engine.runtime.media import Image
         handler = self._make_handler()
         run_output = make_run_output()
         model_response = self._make_model_response()
@@ -766,8 +766,8 @@ class TestDetermineToolsForModelDeep:
         return ToolManager(model=make_model())
 
     def test_processes_toolkit_tools(self):
-        from ii_agent.engine.v1.tools import Toolkit
-        from ii_agent.engine.v1.tools.function import Function
+        from ii_agent.engine.runtime.tools import Toolkit
+        from ii_agent.engine.runtime.tools.function import Function
 
         tm = self._make_tm()
         run_output = make_run_output()
@@ -800,7 +800,7 @@ class TestDetermineToolsForModelDeep:
         assert func1 in result
 
     def test_processes_function_tools(self):
-        from ii_agent.engine.v1.tools.function import Function
+        from ii_agent.engine.runtime.tools.function import Function
 
         tm = self._make_tm()
         run_output = make_run_output()
@@ -824,7 +824,7 @@ class TestDetermineToolsForModelDeep:
         )
 
     def test_skips_duplicate_function_tools(self):
-        from ii_agent.engine.v1.tools.function import Function
+        from ii_agent.engine.runtime.tools.function import Function
 
         tm = self._make_tm()
         run_output = make_run_output()
@@ -850,8 +850,8 @@ class TestDetermineToolsForModelDeep:
         assert names.count("duplicate_tool") == 1
 
     def test_skips_duplicate_toolkit_tools(self):
-        from ii_agent.engine.v1.tools import Toolkit
-        from ii_agent.engine.v1.tools.function import Function
+        from ii_agent.engine.runtime.tools import Toolkit
+        from ii_agent.engine.runtime.tools.function import Function
 
         tm = self._make_tm()
         run_output = make_run_output()
@@ -896,8 +896,8 @@ class TestDetermineToolsForModelDeep:
         assert func_names.count("shared_tool") == 1
 
     def test_tool_instructions_collected_from_base_agent_tools(self):
-        from ii_agent.engine.v1.tools.base import BaseAgentTool
-        from ii_agent.engine.v1.tools.function import Function
+        from ii_agent.engine.runtime.tools.base import BaseAgentTool
+        from ii_agent.engine.runtime.tools.function import Function
 
         tm = self._make_tm()
         run_output = make_run_output()
@@ -927,8 +927,8 @@ class TestDetermineToolsForModelDeep:
         assert "Always use this tool with care." in tm.tool_instructions
 
     def test_applies_tool_hooks_to_toolkit_functions(self):
-        from ii_agent.engine.v1.tools import Toolkit
-        from ii_agent.engine.v1.tools.function import Function
+        from ii_agent.engine.runtime.tools import Toolkit
+        from ii_agent.engine.runtime.tools.function import Function
 
         tm = self._make_tm()
         run_output = make_run_output()
@@ -961,8 +961,8 @@ class TestDetermineToolsForModelDeep:
         assert func.tool_hooks == [hook]
 
     def test_function_with_media_parameters_sets_media_on_func(self):
-        from ii_agent.engine.v1.tools.function import Function
-        from ii_agent.engine.v1.media import Image
+        from ii_agent.engine.runtime.tools.function import Function
+        from ii_agent.engine.runtime.media import Image
 
         tm = self._make_tm()
 
@@ -1002,7 +1002,7 @@ class TestDetermineToolsForModelDeep:
 class TestAwaitForThreadTasksStreamDeep:
     @pytest.mark.asyncio
     async def test_memory_task_yields_started_and_completed_events_when_streaming(self):
-        from ii_agent.engine.v1.utils.agent import await_for_thread_tasks_stream
+        from ii_agent.engine.runtime.utils.agent import await_for_thread_tasks_stream
 
         run_output = make_run_output()
 
@@ -1025,7 +1025,7 @@ class TestAwaitForThreadTasksStreamDeep:
 
     @pytest.mark.asyncio
     async def test_memory_task_exception_handled_gracefully(self):
-        from ii_agent.engine.v1.utils.agent import await_for_thread_tasks_stream
+        from ii_agent.engine.runtime.utils.agent import await_for_thread_tasks_stream
 
         run_output = make_run_output()
 
@@ -1045,7 +1045,7 @@ class TestAwaitForThreadTasksStreamDeep:
 
     @pytest.mark.asyncio
     async def test_no_tasks_yields_nothing(self):
-        from ii_agent.engine.v1.utils.agent import await_for_thread_tasks_stream
+        from ii_agent.engine.runtime.utils.agent import await_for_thread_tasks_stream
 
         run_output = make_run_output()
         events = []
@@ -1059,7 +1059,7 @@ class TestAwaitForThreadTasksStreamDeep:
 
     @pytest.mark.asyncio
     async def test_cultural_knowledge_task_handled(self):
-        from ii_agent.engine.v1.utils.agent import await_for_thread_tasks_stream
+        from ii_agent.engine.runtime.utils.agent import await_for_thread_tasks_stream
 
         run_output = make_run_output()
 
@@ -1079,7 +1079,7 @@ class TestAwaitForThreadTasksStreamDeep:
 
     @pytest.mark.asyncio
     async def test_cultural_knowledge_task_exception_handled(self):
-        from ii_agent.engine.v1.utils.agent import await_for_thread_tasks_stream
+        from ii_agent.engine.runtime.utils.agent import await_for_thread_tasks_stream
 
         run_output = make_run_output()
 
@@ -1105,7 +1105,7 @@ class TestAwaitForThreadTasksStreamDeep:
 class TestWaitForThreadTasksStreamDeep:
     def test_memory_future_yields_events_when_streaming(self):
         from asyncio import Future
-        from ii_agent.engine.v1.utils.agent import wait_for_thread_tasks_stream
+        from ii_agent.engine.runtime.utils.agent import wait_for_thread_tasks_stream
 
         run_output = make_run_output()
         future = Future()
@@ -1121,7 +1121,7 @@ class TestWaitForThreadTasksStreamDeep:
 
     def test_memory_future_exception_handled(self):
         from asyncio import Future
-        from ii_agent.engine.v1.utils.agent import wait_for_thread_tasks_stream
+        from ii_agent.engine.runtime.utils.agent import wait_for_thread_tasks_stream
 
         run_output = make_run_output()
         future = Future()
@@ -1136,7 +1136,7 @@ class TestWaitForThreadTasksStreamDeep:
 
     def test_cultural_future_exception_handled(self):
         from asyncio import Future
-        from ii_agent.engine.v1.utils.agent import wait_for_thread_tasks_stream
+        from ii_agent.engine.runtime.utils.agent import wait_for_thread_tasks_stream
 
         run_output = make_run_output()
         cultural_future = Future()
@@ -1150,7 +1150,7 @@ class TestWaitForThreadTasksStreamDeep:
         # Should not raise
 
     def test_no_futures_yields_nothing(self):
-        from ii_agent.engine.v1.utils.agent import wait_for_thread_tasks_stream
+        from ii_agent.engine.runtime.utils.agent import wait_for_thread_tasks_stream
 
         run_output = make_run_output()
         events = list(wait_for_thread_tasks_stream(
@@ -1168,11 +1168,11 @@ class TestConverterRunPausedDeep:
     SESSION_STR = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
     def _convert(self, event):
-        from ii_agent.engine.v1.factory.converter import convert_agent_event_to_realtime
+        from ii_agent.engine.runtime.factory.converter import convert_agent_event_to_realtime
         return convert_agent_event_to_realtime(event, self.SESSION_STR)
 
     def test_paused_with_tools_includes_tool_data(self):
-        from ii_agent.engine.v1.run.agent import RunPausedEvent
+        from ii_agent.engine.runtime.run.agent import RunPausedEvent
 
         tool = MagicMock()
         tool.tool_call_id = "tc-001"
@@ -1194,7 +1194,7 @@ class TestConverterRunPausedDeep:
         assert realtime.content["tools"][0]["tool_call_id"] == "tc-001"
 
     def test_paused_with_requirements_includes_req_data(self):
-        from ii_agent.engine.v1.run.agent import RunPausedEvent
+        from ii_agent.engine.runtime.run.agent import RunPausedEvent
 
         req = MagicMock()
         req.id = "req-001"
@@ -1221,8 +1221,8 @@ class TestConverterRunPausedDeep:
         assert len(realtime.content["requirements"]) == 1
 
     def test_paused_with_user_input_schema_in_tool(self):
-        from ii_agent.engine.v1.run.agent import RunPausedEvent
-        from ii_agent.engine.v1.tools.base import UserInputField
+        from ii_agent.engine.runtime.run.agent import RunPausedEvent
+        from ii_agent.engine.runtime.tools.base import UserInputField
 
         tool = MagicMock()
         tool.tool_call_id = "tc-002"
@@ -1254,7 +1254,7 @@ class TestConverterToolCallEventsDeep:
     RUN_ID = "11111111-2222-3333-4444-555555555555"
 
     def _make_tool_started(self, tool=None):
-        from ii_agent.engine.v1.run.agent import ToolCallStartedEvent
+        from ii_agent.engine.runtime.run.agent import ToolCallStartedEvent
         return ToolCallStartedEvent(
             agent_id="a1",
             agent_name="A",
@@ -1263,7 +1263,7 @@ class TestConverterToolCallEventsDeep:
         )
 
     def _make_tool_completed(self, tool=None):
-        from ii_agent.engine.v1.run.agent import ToolCallCompletedEvent
+        from ii_agent.engine.runtime.run.agent import ToolCallCompletedEvent
         return ToolCallCompletedEvent(
             agent_id="a1",
             agent_name="A",
@@ -1272,7 +1272,7 @@ class TestConverterToolCallEventsDeep:
         )
 
     def _convert(self, event):
-        from ii_agent.engine.v1.factory.converter import convert_agent_event_to_realtime
+        from ii_agent.engine.runtime.factory.converter import convert_agent_event_to_realtime
         return convert_agent_event_to_realtime(event, self.SESSION_STR)
 
     def test_tool_started_returns_tool_call_type(self):
@@ -1323,7 +1323,7 @@ class TestConverterToolCallEventsDeep:
         assert realtime.type == EventType.TOOL_RESULT
 
     def test_tool_completed_with_tool_result_object(self):
-        from ii_agent.engine.v1.tools.base import ToolResult
+        from ii_agent.engine.runtime.tools.base import ToolResult
 
         tool = MagicMock()
         tool.tool_call_id = "tc-002"
@@ -1343,7 +1343,7 @@ class TestConverterToolCallEventsDeep:
         assert realtime.content["result"] == "display text"
 
     def test_tool_completed_with_error_tool_result(self):
-        from ii_agent.engine.v1.tools.base import ToolResult
+        from ii_agent.engine.runtime.tools.base import ToolResult
 
         tool = MagicMock()
         tool.tool_call_id = "tc-003"
@@ -1363,7 +1363,7 @@ class TestConverterToolCallEventsDeep:
         assert realtime.content["is_error"] is True
 
     def test_tool_completed_with_list_llm_content(self):
-        from ii_agent.engine.v1.tools.base import ToolResult, TextContent
+        from ii_agent.engine.runtime.tools.base import ToolResult, TextContent
 
         tool = MagicMock()
         tool.tool_call_id = "tc-004"
@@ -1393,9 +1393,9 @@ class TestConverterSandboxDeep:
     RUN_ID = "11111111-2222-3333-4444-555555555555"
 
     def test_sandbox_initialized_returns_sandbox_status_type(self):
-        from ii_agent.engine.v1.run.agent import SandboxInitializedEvent
+        from ii_agent.engine.runtime.run.agent import SandboxInitializedEvent
         from ii_agent.realtime.events.models import EventType
-        from ii_agent.engine.v1.factory.converter import convert_agent_event_to_realtime
+        from ii_agent.engine.runtime.factory.converter import convert_agent_event_to_realtime
 
         sandbox_info = MagicMock()
         sandbox_info.status = "running"
@@ -1413,8 +1413,8 @@ class TestConverterSandboxDeep:
         assert realtime.content["vscode_url"] == "http://vscode.example.com"
 
     def test_sandbox_initialized_with_no_info(self):
-        from ii_agent.engine.v1.run.agent import SandboxInitializedEvent
-        from ii_agent.engine.v1.factory.converter import convert_agent_event_to_realtime
+        from ii_agent.engine.runtime.run.agent import SandboxInitializedEvent
+        from ii_agent.engine.runtime.factory.converter import convert_agent_event_to_realtime
 
         ev = SandboxInitializedEvent(
             agent_id="a1",

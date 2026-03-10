@@ -1,7 +1,7 @@
 import pytest
 from fastapi import FastAPI
 
-from ii_agent.engine.v1.api.test import router as engine_test_router
+from ii_agent.engine.runtime.api.test import router as engine_test_router
 from tests.api.contracts import assert_auth_contract, assert_routes_present
 
 pytestmark = pytest.mark.unit

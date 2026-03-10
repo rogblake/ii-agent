@@ -1,4 +1,4 @@
-"""Unit tests for engine/v1/media/media.py - Image, Audio, Video, File classes."""
+"""Unit tests for engine/runtime/media/media.py - Image, Audio, Video, File classes."""
 
 import base64
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from ii_agent.engine.v1.media.media import Audio, File, Image, Video
+from ii_agent.engine.runtime.media.media import Audio, File, Image, Video
 
 
 # ---------------------------------------------------------------------------

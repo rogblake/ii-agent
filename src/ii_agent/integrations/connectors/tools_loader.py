@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
-from ii_agent.engine.v1.tools.base import BaseAgentTool
-from ii_agent.engine.v1.tools.connectors.github import GitHubAgentTool
+from ii_agent.engine.runtime.tools.base import BaseAgentTool
+from ii_agent.engine.runtime.tools.connectors.github import GitHubAgentTool
 
 logger = logging.getLogger(__name__)
 

@@ -26,16 +26,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.engine.v1.models.openai.responses import OpenAIResponses
-from ii_agent.engine.v1.models.openai.completions import OpenAIChat, _format_file_for_message
-from ii_agent.engine.v1.models.message import Message
-from ii_agent.engine.v1.models.metrics import Metrics
-from ii_agent.engine.v1.models.response import ModelResponse
-from ii_agent.engine.v1.exceptions import (
+from ii_agent.engine.runtime.models.openai.responses import OpenAIResponses
+from ii_agent.engine.runtime.models.openai.completions import OpenAIChat, _format_file_for_message
+from ii_agent.engine.runtime.models.message import Message
+from ii_agent.engine.runtime.models.metrics import Metrics
+from ii_agent.engine.runtime.models.response import ModelResponse
+from ii_agent.engine.runtime.exceptions import (
     ModelAuthenticationError,
     ModelProviderError,
 )
-from ii_agent.engine.v1.media.media import File, Audio, Image
+from ii_agent.engine.runtime.media.media import File, Audio, Image
 from ii_agent.engine.types import Provider
 
 
@@ -694,7 +694,7 @@ class TestOpenAIChatDeepcopy:
 
 class TestOpenAIChatCreateFunctionCallResult:
     def _make_fc(self, name: str, call_id: str, args: dict):
-        from ii_agent.engine.v1.tools.function import FunctionCall, Function
+        from ii_agent.engine.runtime.tools.function import FunctionCall, Function
         fn = Function(name=name, description=f"{name} function", parameters={"type": "object", "properties": {}})
         return FunctionCall(function=fn, call_id=call_id, arguments=args)
 

@@ -13,7 +13,7 @@ import sys
 from unittest.mock import MagicMock
 
 # Ensure google.genai.interactions has the InteractionEvent attribute
-# that the engine/v1 source code expects
+# that the engine/runtime source code expects
 try:
     import google.genai.interactions as _gi_module
 

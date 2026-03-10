@@ -27,32 +27,32 @@ class TestSkillToolInit:
     """Test SkillTool.__init__."""
 
     def test_init_stores_description(self):
-        from ii_agent.engine.v1.tools.skill import SkillTool
+        from ii_agent.engine.runtime.tools.skill import SkillTool
 
         tool = SkillTool(description="Available skills: pdf, xlsx")
         assert tool.description == "Available skills: pdf, xlsx"
 
     def test_init_empty_registry_by_default(self):
-        from ii_agent.engine.v1.tools.skill import SkillTool
+        from ii_agent.engine.runtime.tools.skill import SkillTool
 
         tool = SkillTool(description="desc")
         assert tool._skills_registry == {}
 
     def test_init_with_registry(self):
-        from ii_agent.engine.v1.tools.skill import SkillTool
+        from ii_agent.engine.runtime.tools.skill import SkillTool
 
         skill_mock = MagicMock()
         tool = SkillTool(description="desc", skills_registry={"pdf": skill_mock})
         assert "pdf" in tool._skills_registry
 
     def test_tool_name_is_skill(self):
-        from ii_agent.engine.v1.tools.skill import SkillTool
+        from ii_agent.engine.runtime.tools.skill import SkillTool
 
         tool = SkillTool(description="desc")
         assert tool.name == "Skill"
 
     def test_input_schema_has_skill_key(self):
-        from ii_agent.engine.v1.tools.skill import SkillTool
+        from ii_agent.engine.runtime.tools.skill import SkillTool
 
         tool = SkillTool(description="desc")
         assert "skill" in tool.input_schema["properties"]
@@ -62,7 +62,7 @@ class TestSkillToolExecute:
     """Test SkillTool.execute."""
 
     def _make_tool(self, skills=None):
-        from ii_agent.engine.v1.tools.skill import SkillTool
+        from ii_agent.engine.runtime.tools.skill import SkillTool
 
         return SkillTool(description="desc", skills_registry=skills or {})
 
@@ -119,7 +119,7 @@ class TestSkillToolExecute:
         agent_mock.sandbox = MagicMock()
         tool._agent = agent_mock
 
-        with patch("ii_agent.engine.v1.tools.skill.skill_exists", AsyncMock(return_value=False)):
+        with patch("ii_agent.engine.runtime.tools.skill.skill_exists", AsyncMock(return_value=False)):
             result = await tool.execute({"skill": "pdf"})
 
         assert result.is_error is True
@@ -138,9 +138,9 @@ class TestSkillToolExecute:
         tool._agent = agent_mock
 
         with (
-            patch("ii_agent.engine.v1.tools.skill.skill_exists", AsyncMock(return_value=True)),
+            patch("ii_agent.engine.runtime.tools.skill.skill_exists", AsyncMock(return_value=True)),
             patch(
-                "ii_agent.engine.v1.tools.skill.copy_skill_to_sandbox",
+                "ii_agent.engine.runtime.tools.skill.copy_skill_to_sandbox",
                 AsyncMock(return_value="/workspace/.skills/pdf"),
             ),
         ):
@@ -161,9 +161,9 @@ class TestSkillToolExecute:
         tool._agent = agent_mock
 
         with (
-            patch("ii_agent.engine.v1.tools.skill.skill_exists", AsyncMock(return_value=True)),
+            patch("ii_agent.engine.runtime.tools.skill.skill_exists", AsyncMock(return_value=True)),
             patch(
-                "ii_agent.engine.v1.tools.skill.copy_skill_to_sandbox",
+                "ii_agent.engine.runtime.tools.skill.copy_skill_to_sandbox",
                 AsyncMock(side_effect=RuntimeError("Copy failed")),
             ),
         ):
@@ -174,7 +174,7 @@ class TestSkillToolExecute:
 
     @pytest.mark.asyncio
     async def test_on_tool_start_stores_agent(self):
-        from ii_agent.engine.v1.tools.skill import SkillTool
+        from ii_agent.engine.runtime.tools.skill import SkillTool
 
         tool = SkillTool(description="desc")
         agent_mock = MagicMock()
@@ -187,7 +187,7 @@ class TestSkillToolExecute:
         assert tool._agent is agent_mock
 
     def test_available_skills_listed_in_error(self):
-        from ii_agent.engine.v1.tools.skill import SkillTool
+        from ii_agent.engine.runtime.tools.skill import SkillTool
 
         skill1 = MagicMock()
         skill2 = MagicMock()
@@ -209,7 +209,7 @@ class TestSendUserFileExecute:
     """Test SendUserFile.execute."""
 
     def _make_tool(self):
-        from ii_agent.engine.v1.tools.agent.message_user import SendUserFile
+        from ii_agent.engine.runtime.tools.agent.message_user import SendUserFile
 
         return SendUserFile()
 
@@ -270,7 +270,7 @@ class TestMessageUserHelpers:
     """Test helper functions in message_user.py."""
 
     def test_determine_file_type_code(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _determine_file_type
+        from ii_agent.engine.runtime.tools.agent.message_user import _determine_file_type
 
         assert _determine_file_type("main.py") == "code"
         assert _determine_file_type("app.ts") == "code"
@@ -280,72 +280,72 @@ class TestMessageUserHelpers:
         assert _determine_file_type("README.md") == "code"
 
     def test_determine_file_type_spreadsheet(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _determine_file_type
+        from ii_agent.engine.runtime.tools.agent.message_user import _determine_file_type
 
         assert _determine_file_type("data.xlsx") == "xlsx"
         assert _determine_file_type("data.csv") == "xlsx"
         assert _determine_file_type("data.xls") == "xlsx"
 
     def test_determine_file_type_archive(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _determine_file_type
+        from ii_agent.engine.runtime.tools.agent.message_user import _determine_file_type
 
         assert _determine_file_type("archive.zip") == "archive"
         assert _determine_file_type("backup.tar.gz") == "archive"
         assert _determine_file_type("data.rar") == "archive"
 
     def test_determine_file_type_document(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _determine_file_type
+        from ii_agent.engine.runtime.tools.agent.message_user import _determine_file_type
 
         assert _determine_file_type("report.pdf") == "documents"
         assert _determine_file_type("letter.docx") == "documents"
         assert _determine_file_type("notes.txt") == "documents"
 
     def test_determine_file_type_unknown_defaults_to_documents(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _determine_file_type
+        from ii_agent.engine.runtime.tools.agent.message_user import _determine_file_type
 
         assert _determine_file_type("unknown.xyz") == "documents"
 
     def test_is_remote_url_http(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _is_remote_url
+        from ii_agent.engine.runtime.tools.agent.message_user import _is_remote_url
 
         assert _is_remote_url("http://example.com/file.pdf") is True
 
     def test_is_remote_url_https(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _is_remote_url
+        from ii_agent.engine.runtime.tools.agent.message_user import _is_remote_url
 
         assert _is_remote_url("https://secure.example.com/file.pdf") is True
 
     def test_is_remote_url_local_path(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _is_remote_url
+        from ii_agent.engine.runtime.tools.agent.message_user import _is_remote_url
 
         assert _is_remote_url("/local/path/file.pdf") is False
 
     def test_is_remote_url_relative_path(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _is_remote_url
+        from ii_agent.engine.runtime.tools.agent.message_user import _is_remote_url
 
         assert _is_remote_url("relative/path/file.pdf") is False
 
     def test_guess_name_from_path_url(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _guess_name_from_path
+        from ii_agent.engine.runtime.tools.agent.message_user import _guess_name_from_path
 
         result = _guess_name_from_path("http://example.com/path/to/file.pdf")
         assert result == "file.pdf"
 
     def test_guess_name_from_path_local(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _guess_name_from_path
+        from ii_agent.engine.runtime.tools.agent.message_user import _guess_name_from_path
 
         result = _guess_name_from_path("/some/local/path/file.txt")
         assert result == "file.txt"
 
     def test_guess_name_from_path_empty_returns_attachment(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _guess_name_from_path
+        from ii_agent.engine.runtime.tools.agent.message_user import _guess_name_from_path
 
         # Empty path or root returns fallback
         result = _guess_name_from_path("")
         assert isinstance(result, str)
 
     def test_generate_storage_path_includes_session(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _generate_storage_path
+        from ii_agent.engine.runtime.tools.agent.message_user import _generate_storage_path
 
         result = _generate_storage_path("file.pdf", "session-123")
         assert "session-123" in result
@@ -353,7 +353,7 @@ class TestMessageUserHelpers:
         assert result.startswith("sessions/")
 
     def test_generate_storage_path_no_session_uses_unknown(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _generate_storage_path
+        from ii_agent.engine.runtime.tools.agent.message_user import _generate_storage_path
 
         result = _generate_storage_path("file.pdf", None)
         assert "unknown-session" in result
@@ -368,7 +368,7 @@ class TestProcessAttachment:
 
     @pytest.mark.asyncio
     async def test_dict_with_url_returns_meta(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _process_attachment
+        from ii_agent.engine.runtime.tools.agent.message_user import _process_attachment
 
         storage = MagicMock()
         result = await _process_attachment(
@@ -383,7 +383,7 @@ class TestProcessAttachment:
 
     @pytest.mark.asyncio
     async def test_dict_without_url_returns_none(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _process_attachment
+        from ii_agent.engine.runtime.tools.agent.message_user import _process_attachment
 
         storage = MagicMock()
         result = await _process_attachment(
@@ -396,7 +396,7 @@ class TestProcessAttachment:
 
     @pytest.mark.asyncio
     async def test_remote_url_string_returns_meta(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _process_attachment
+        from ii_agent.engine.runtime.tools.agent.message_user import _process_attachment
 
         storage = MagicMock()
         result = await _process_attachment(
@@ -411,7 +411,7 @@ class TestProcessAttachment:
 
     @pytest.mark.asyncio
     async def test_non_string_non_dict_returns_none(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _process_attachment
+        from ii_agent.engine.runtime.tools.agent.message_user import _process_attachment
 
         storage = MagicMock()
         result = await _process_attachment(
@@ -424,7 +424,7 @@ class TestProcessAttachment:
 
     @pytest.mark.asyncio
     async def test_local_path_without_sandbox_returns_none(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _process_attachment
+        from ii_agent.engine.runtime.tools.agent.message_user import _process_attachment
 
         storage = MagicMock()
         result = await _process_attachment(
@@ -437,7 +437,7 @@ class TestProcessAttachment:
 
     @pytest.mark.asyncio
     async def test_local_path_with_sandbox_success(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _process_attachment
+        from ii_agent.engine.runtime.tools.agent.message_user import _process_attachment
 
         storage = MagicMock()
         storage.get_upload_signed_url = MagicMock(return_value="http://upload.example.com/url")
@@ -469,7 +469,7 @@ class TestProcessAttachment:
 
     @pytest.mark.asyncio
     async def test_local_path_upload_failure_returns_none(self):
-        from ii_agent.engine.v1.tools.agent.message_user import _process_attachment
+        from ii_agent.engine.runtime.tools.agent.message_user import _process_attachment
 
         storage = MagicMock()
         storage.get_upload_signed_url = MagicMock(return_value="http://upload.example.com/url")
@@ -506,7 +506,7 @@ class TestFullStackInitToolExecute:
     """Test FullStackInitTool.execute."""
 
     def _make_tool(self):
-        from ii_agent.engine.v1.tools.dev.init_tool import FullStackInitTool
+        from ii_agent.engine.runtime.tools.dev.init_tool import FullStackInitTool
 
         tool = FullStackInitTool.__new__(FullStackInitTool)
         tool.name = "fullstack_project_init"
@@ -548,7 +548,7 @@ class TestFullStackInitToolExecute:
 
     @pytest.mark.asyncio
     async def test_execute_with_database_and_session_uses_existing_db(self):
-        from ii_agent.engine.v1.tools.base import ToolResult
+        from ii_agent.engine.runtime.tools.base import ToolResult
 
         tool = self._make_tool()
         tool._session_id = "sess-1"
@@ -562,8 +562,8 @@ class TestFullStackInitToolExecute:
         mock_repo.get_active_by_session_id = AsyncMock(return_value=existing_db)
 
         with (
-            patch("ii_agent.engine.v1.tools.dev.init_tool.ProjectDatabaseRepository", return_value=mock_repo),
-            patch("ii_agent.engine.v1.tools.dev.init_tool.get_db_session_local") as mock_db,
+            patch("ii_agent.engine.runtime.tools.dev.init_tool.ProjectDatabaseRepository", return_value=mock_repo),
+            patch("ii_agent.engine.runtime.tools.dev.init_tool.get_db_session_local") as mock_db,
         ):
             mock_db_ctx = AsyncMock()
             mock_db_ctx.__aenter__ = AsyncMock(return_value=MagicMock())
@@ -590,7 +590,7 @@ class TestFullStackInitToolExecute:
 
     @pytest.mark.asyncio
     async def test_on_tool_start_sets_session_and_user_id(self):
-        from ii_agent.engine.v1.tools.dev.init_tool import FullStackInitTool
+        from ii_agent.engine.runtime.tools.dev.init_tool import FullStackInitTool
 
         tool = self._make_tool()
         agent_mock = MagicMock()
@@ -609,8 +609,8 @@ class TestFullStackInitToolOnToolEnd:
     """Test FullStackInitTool.on_tool_end."""
 
     def _make_tool(self):
-        from ii_agent.engine.v1.tools.dev.init_tool import FullStackInitTool
-        from ii_agent.engine.v1.tools.base import ToolResult
+        from ii_agent.engine.runtime.tools.dev.init_tool import FullStackInitTool
+        from ii_agent.engine.runtime.tools.base import ToolResult
 
         tool = FullStackInitTool.__new__(FullStackInitTool)
         tool.name = "fullstack_project_init"
@@ -642,7 +642,7 @@ class TestFullStackInitToolOnToolEnd:
 
     @pytest.mark.asyncio
     async def test_on_tool_end_tool_result_is_error_returns_early(self):
-        from ii_agent.engine.v1.tools.base import ToolResult
+        from ii_agent.engine.runtime.tools.base import ToolResult
 
         tool = self._make_tool()
         fc = MagicMock()
@@ -659,7 +659,7 @@ class TestFullStackInitToolOnToolEnd:
 
     @pytest.mark.asyncio
     async def test_on_tool_end_non_dict_display_content_returns_early(self):
-        from ii_agent.engine.v1.tools.base import ToolResult
+        from ii_agent.engine.runtime.tools.base import ToolResult
 
         tool = self._make_tool()
         fc = MagicMock()
@@ -674,7 +674,7 @@ class TestFullStackInitToolOnToolEnd:
 
     @pytest.mark.asyncio
     async def test_on_tool_end_no_project_name_returns_early(self):
-        from ii_agent.engine.v1.tools.base import ToolResult
+        from ii_agent.engine.runtime.tools.base import ToolResult
 
         tool = self._make_tool()
         fc = MagicMock()
@@ -693,7 +693,7 @@ class TestFullStackInitToolOnToolEnd:
 
     @pytest.mark.asyncio
     async def test_on_tool_end_success_persists_project(self):
-        from ii_agent.engine.v1.tools.base import ToolResult
+        from ii_agent.engine.runtime.tools.base import ToolResult
 
         tool = self._make_tool()
         fc = MagicMock()
@@ -744,12 +744,12 @@ class TestProcessSlideContent:
 
     @pytest.mark.asyncio
     async def test_returns_content_when_no_custom_domain(self):
-        from ii_agent.engine.v1.tools.slide_system.hook_utils import process_slide_content
+        from ii_agent.engine.runtime.tools.slide_system.hook_utils import process_slide_content
 
         settings = MagicMock()
         settings.storage.custom_domain = None
 
-        with patch("ii_agent.engine.v1.tools.slide_system.hook_utils.get_settings", return_value=settings):
+        with patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings):
             content = {"key": "value"}
             result = await process_slide_content(
                 agent=MagicMock(),
@@ -761,7 +761,7 @@ class TestProcessSlideContent:
 
     @pytest.mark.asyncio
     async def test_returns_content_when_no_sandbox(self):
-        from ii_agent.engine.v1.tools.slide_system.hook_utils import process_slide_content
+        from ii_agent.engine.runtime.tools.slide_system.hook_utils import process_slide_content
 
         settings = MagicMock()
         settings.storage.custom_domain = "custom.example.com"
@@ -769,7 +769,7 @@ class TestProcessSlideContent:
         agent = MagicMock()
         agent.sandbox = None
 
-        with patch("ii_agent.engine.v1.tools.slide_system.hook_utils.get_settings", return_value=settings):
+        with patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings):
             content = {"key": "value"}
             result = await process_slide_content(
                 agent=agent,
@@ -781,7 +781,7 @@ class TestProcessSlideContent:
 
     @pytest.mark.asyncio
     async def test_returns_content_when_storage_build_fails(self):
-        from ii_agent.engine.v1.tools.slide_system.hook_utils import process_slide_content
+        from ii_agent.engine.runtime.tools.slide_system.hook_utils import process_slide_content
 
         settings = MagicMock()
         settings.storage.custom_domain = "custom.example.com"
@@ -792,7 +792,7 @@ class TestProcessSlideContent:
 
         agent = self._make_agent_with_sandbox()
 
-        with patch("ii_agent.engine.v1.tools.slide_system.hook_utils.get_settings", return_value=settings):
+        with patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings):
             content = {"key": "value"}
             result = await process_slide_content(
                 agent=agent,
@@ -804,7 +804,7 @@ class TestProcessSlideContent:
 
     @pytest.mark.asyncio
     async def test_processes_slide_apply_patch(self):
-        from ii_agent.engine.v1.tools.slide_system.hook_utils import process_slide_content
+        from ii_agent.engine.runtime.tools.slide_system.hook_utils import process_slide_content
 
         settings = MagicMock()
         settings.storage.custom_domain = "custom.example.com"
@@ -824,9 +824,9 @@ class TestProcessSlideContent:
         ]
 
         with (
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils.get_settings", return_value=settings),
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
         ):
             result = await process_slide_content(
                 agent=agent,
@@ -838,7 +838,7 @@ class TestProcessSlideContent:
 
     @pytest.mark.asyncio
     async def test_processes_dict_with_content_key(self):
-        from ii_agent.engine.v1.tools.slide_system.hook_utils import process_slide_content
+        from ii_agent.engine.runtime.tools.slide_system.hook_utils import process_slide_content
 
         settings = MagicMock()
         settings.storage.custom_domain = "custom.example.com"
@@ -856,9 +856,9 @@ class TestProcessSlideContent:
         content = {"content": "<html>original</html>", "filepath": "/slides/slide1.html"}
 
         with (
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils.get_settings", return_value=settings),
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
         ):
             result = await process_slide_content(
                 agent=agent,
@@ -870,7 +870,7 @@ class TestProcessSlideContent:
 
     @pytest.mark.asyncio
     async def test_processes_list_with_new_content_key(self):
-        from ii_agent.engine.v1.tools.slide_system.hook_utils import process_slide_content
+        from ii_agent.engine.runtime.tools.slide_system.hook_utils import process_slide_content
 
         settings = MagicMock()
         settings.storage.custom_domain = "custom.example.com"
@@ -891,9 +891,9 @@ class TestProcessSlideContent:
         ]
 
         with (
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils.get_settings", return_value=settings),
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
         ):
             result = await process_slide_content(
                 agent=agent,
@@ -907,7 +907,7 @@ class TestProcessSlideContent:
 
     @pytest.mark.asyncio
     async def test_returns_content_unchanged_for_non_matching_format(self):
-        from ii_agent.engine.v1.tools.slide_system.hook_utils import process_slide_content
+        from ii_agent.engine.runtime.tools.slide_system.hook_utils import process_slide_content
 
         settings = MagicMock()
         settings.storage.custom_domain = "custom.example.com"
@@ -920,9 +920,9 @@ class TestProcessSlideContent:
         mock_processor = AsyncMock()
 
         with (
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils.get_settings", return_value=settings),
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
-            patch("ii_agent.engine.v1.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
+            patch("ii_agent.engine.runtime.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
         ):
             plain_string = "just a string"
             result = await process_slide_content(
@@ -942,78 +942,78 @@ class TestSanitizeSkillName:
     """Test sanitize_skill_name function."""
 
     def test_simple_name_passes_through(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("my-skill")
         assert result == "my-skill"
 
     def test_uppercase_converted_to_lowercase(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("MySkill")
         assert result == "myskill"
 
     def test_spaces_converted_to_hyphens(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("my skill name")
         assert result == "my-skill-name"
 
     def test_underscores_converted_to_hyphens(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("my_skill_name")
         assert result == "my-skill-name"
 
     def test_special_chars_removed(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("my-skill!@#$")
         assert result == "my-skill"
 
     def test_empty_string_raises_validation_error(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
-        from ii_agent.engine.v1.skills.skills_ref.errors import ValidationError
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ValidationError
 
         with pytest.raises(ValidationError):
             sanitize_skill_name("")
 
     def test_none_raises_validation_error(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
-        from ii_agent.engine.v1.skills.skills_ref.errors import ValidationError
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ValidationError
 
         with pytest.raises(ValidationError):
             sanitize_skill_name(None)
 
     def test_only_special_chars_raises_validation_error(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
-        from ii_agent.engine.v1.skills.skills_ref.errors import ValidationError
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ValidationError
 
         with pytest.raises(ValidationError):
             sanitize_skill_name("!@#$%")
 
     def test_long_name_truncated(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name, MAX_SKILL_NAME_LENGTH
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name, MAX_SKILL_NAME_LENGTH
 
         long_name = "a" * 100
         result = sanitize_skill_name(long_name)
         assert len(result) <= MAX_SKILL_NAME_LENGTH
 
     def test_unicode_name_handled(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("café skill")
         assert isinstance(result, str)
         assert len(result) > 0
 
     def test_multiple_hyphens_collapsed(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("my---skill")
         assert "--" not in result
 
     def test_leading_trailing_hyphens_stripped(self):
-        from ii_agent.engine.v1.skills.github import sanitize_skill_name
+        from ii_agent.engine.runtime.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("-my-skill-")
         assert not result.startswith("-")
@@ -1024,7 +1024,7 @@ class TestGitHubDownloadServiceParseURL:
     """Test GitHubDownloadService.parse_url."""
 
     def _make_service(self):
-        from ii_agent.engine.v1.skills.github import GitHubDownloadService
+        from ii_agent.engine.runtime.skills.github import GitHubDownloadService
 
         return GitHubDownloadService()
 
@@ -1037,7 +1037,7 @@ class TestGitHubDownloadServiceParseURL:
         assert result.path == "skills/brand"
 
     def test_invalid_url_raises_parse_error(self):
-        from ii_agent.engine.v1.skills.github import GitHubURLParseError
+        from ii_agent.engine.runtime.skills.github import GitHubURLParseError
 
         service = self._make_service()
         with pytest.raises(GitHubURLParseError):

@@ -15,7 +15,7 @@ import pytest
 from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ii_agent.engine.v1.tools.a2a.a2a_agent_tool import A2AAgentTool
+from ii_agent.engine.runtime.tools.a2a.a2a_agent_tool import A2AAgentTool
 
 
 # ---------------------------------------------------------------------------
@@ -49,8 +49,8 @@ class TestGetSubAgentInfo:
     """Test the internal helper function that extracts sub-agent info."""
 
     def test_no_sub_agent_fields_returns_empty(self):
-        from ii_agent.engine.v1.factory.converter import _get_sub_agent_info
-        from ii_agent.engine.v1.run.agent import RunStartedEvent
+        from ii_agent.engine.runtime.factory.converter import _get_sub_agent_info
+        from ii_agent.engine.runtime.run.agent import RunStartedEvent
 
         ev = RunStartedEvent(agent_id="a1", agent_name="A")
         info = _get_sub_agent_info(ev)
@@ -58,24 +58,24 @@ class TestGetSubAgentInfo:
         assert "delegated_from" not in info or not info.get("delegated_from")
 
     def test_delegated_from_included(self):
-        from ii_agent.engine.v1.factory.converter import _get_sub_agent_info
-        from ii_agent.engine.v1.run.agent import RunStartedEvent
+        from ii_agent.engine.runtime.factory.converter import _get_sub_agent_info
+        from ii_agent.engine.runtime.run.agent import RunStartedEvent
 
         ev = RunStartedEvent(agent_id="a1", agent_name="A", delegated_from="ParentAgent")
         info = _get_sub_agent_info(ev)
         assert info.get("delegated_from") == "ParentAgent"
 
     def test_is_sub_agent_event_included(self):
-        from ii_agent.engine.v1.factory.converter import _get_sub_agent_info
-        from ii_agent.engine.v1.run.agent import RunStartedEvent
+        from ii_agent.engine.runtime.factory.converter import _get_sub_agent_info
+        from ii_agent.engine.runtime.run.agent import RunStartedEvent
 
         ev = RunStartedEvent(agent_id="a1", agent_name="A", is_sub_agent_event=True)
         info = _get_sub_agent_info(ev)
         assert info.get("is_sub_agent_event") is True
 
     def test_run_output_sub_agent_response(self):
-        from ii_agent.engine.v1.factory.converter import _get_sub_agent_info
-        from ii_agent.engine.v1.run.agent import RunOutput
+        from ii_agent.engine.runtime.factory.converter import _get_sub_agent_info
+        from ii_agent.engine.runtime.run.agent import RunOutput
 
         output = RunOutput(
             run_id="run-1",
@@ -89,16 +89,16 @@ class TestGetSubAgentInfo:
         assert info.get("is_sub_agent_response") is True
 
     def test_parent_run_id_included(self):
-        from ii_agent.engine.v1.factory.converter import _get_sub_agent_info
-        from ii_agent.engine.v1.run.agent import RunStartedEvent
+        from ii_agent.engine.runtime.factory.converter import _get_sub_agent_info
+        from ii_agent.engine.runtime.run.agent import RunStartedEvent
 
         ev = RunStartedEvent(agent_id="a1", agent_name="A", parent_run_id="parent-123")
         info = _get_sub_agent_info(ev)
         assert info.get("parent_run_id") == "parent-123"
 
     def test_agent_name_included(self):
-        from ii_agent.engine.v1.factory.converter import _get_sub_agent_info
-        from ii_agent.engine.v1.run.agent import RunStartedEvent
+        from ii_agent.engine.runtime.factory.converter import _get_sub_agent_info
+        from ii_agent.engine.runtime.run.agent import RunStartedEvent
 
         ev = RunStartedEvent(agent_id="a1", agent_name="MyAgent")
         info = _get_sub_agent_info(ev)
@@ -233,7 +233,7 @@ class TestGetClientDeep:
 
         with patch.object(tool, "_resolve_headers", return_value={}), \
              patch(
-                 "ii_agent.engine.v1.tools.a2a.a2a_agent_tool.IIAgentA2AClient",
+                 "ii_agent.engine.runtime.tools.a2a.a2a_agent_tool.IIAgentA2AClient",
              ) as MockClient:
             client = await tool._get_client("http://test.com")
             # Should NOT create a new client - uses cache
@@ -252,7 +252,7 @@ class TestGetClientDeep:
         new_client = make_mock_client()
         with patch.object(tool, "_resolve_headers", return_value={"x-new-header": "new"}), \
              patch(
-                 "ii_agent.engine.v1.tools.a2a.a2a_agent_tool.IIAgentA2AClient",
+                 "ii_agent.engine.runtime.tools.a2a.a2a_agent_tool.IIAgentA2AClient",
                  return_value=new_client,
              ) as MockClient:
             client = await tool._get_client("http://test.com")
@@ -266,7 +266,7 @@ class TestGetClientDeep:
         new_client = make_mock_client()
 
         with patch(
-            "ii_agent.engine.v1.tools.a2a.a2a_agent_tool.IIAgentA2AClient",
+            "ii_agent.engine.runtime.tools.a2a.a2a_agent_tool.IIAgentA2AClient",
             return_value=new_client,
         ) as MockClient:
             client = await tool._get_client("http://new.example.com")

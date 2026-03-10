@@ -27,20 +27,20 @@ import pytest
 
 class TestSkillErrors:
     def test_parse_error_is_skill_error(self):
-        from ii_agent.engine.v1.skills.skills_ref.errors import ParseError, SkillError
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ParseError, SkillError
 
         err = ParseError("Bad parse")
         assert isinstance(err, SkillError)
         assert str(err) == "Bad parse"
 
     def test_validation_error_stores_errors_list(self):
-        from ii_agent.engine.v1.skills.skills_ref.errors import ValidationError
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ValidationError
 
         err = ValidationError("Missing name", errors=["Missing name", "Also wrong"])
         assert err.errors == ["Missing name", "Also wrong"]
 
     def test_validation_error_defaults_errors_from_message(self):
-        from ii_agent.engine.v1.skills.skills_ref.errors import ValidationError
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ValidationError
 
         err = ValidationError("Oops")
         assert err.errors == ["Oops"]
@@ -53,7 +53,7 @@ class TestSkillErrors:
 
 class TestSkillProperties:
     def test_to_dict_basic(self):
-        from ii_agent.engine.v1.skills.skills_ref.models import SkillProperties
+        from ii_agent.engine.runtime.skills.skills_ref.models import SkillProperties
 
         props = SkillProperties(name="my-skill", description="Does stuff")
         d = props.to_dict()
@@ -61,42 +61,42 @@ class TestSkillProperties:
         assert d["description"] == "Does stuff"
 
     def test_to_dict_excludes_none_license(self):
-        from ii_agent.engine.v1.skills.skills_ref.models import SkillProperties
+        from ii_agent.engine.runtime.skills.skills_ref.models import SkillProperties
 
         props = SkillProperties(name="s", description="d")
         d = props.to_dict()
         assert "license" not in d
 
     def test_to_dict_includes_license_when_set(self):
-        from ii_agent.engine.v1.skills.skills_ref.models import SkillProperties
+        from ii_agent.engine.runtime.skills.skills_ref.models import SkillProperties
 
         props = SkillProperties(name="s", description="d", license="MIT")
         d = props.to_dict()
         assert d["license"] == "MIT"
 
     def test_to_dict_includes_compatibility_when_set(self):
-        from ii_agent.engine.v1.skills.skills_ref.models import SkillProperties
+        from ii_agent.engine.runtime.skills.skills_ref.models import SkillProperties
 
         props = SkillProperties(name="s", description="d", compatibility=">=1.0")
         d = props.to_dict()
         assert d["compatibility"] == ">=1.0"
 
     def test_to_dict_excludes_empty_metadata(self):
-        from ii_agent.engine.v1.skills.skills_ref.models import SkillProperties
+        from ii_agent.engine.runtime.skills.skills_ref.models import SkillProperties
 
         props = SkillProperties(name="s", description="d")
         d = props.to_dict()
         assert "metadata" not in d
 
     def test_to_dict_includes_non_empty_metadata(self):
-        from ii_agent.engine.v1.skills.skills_ref.models import SkillProperties
+        from ii_agent.engine.runtime.skills.skills_ref.models import SkillProperties
 
         props = SkillProperties(name="s", description="d", metadata={"key": "val"})
         d = props.to_dict()
         assert d["metadata"] == {"key": "val"}
 
     def test_to_dict_allowed_tools_key_with_hyphen(self):
-        from ii_agent.engine.v1.skills.skills_ref.models import SkillProperties
+        from ii_agent.engine.runtime.skills.skills_ref.models import SkillProperties
 
         props = SkillProperties(name="s", description="d", allowed_tools="Bash Read")
         d = props.to_dict()
@@ -111,7 +111,7 @@ class TestSkillProperties:
 
 class TestParseFrontmatter:
     def test_valid_frontmatter_returns_metadata_and_body(self):
-        from ii_agent.engine.v1.skills.skills_ref.parser import parse_frontmatter
+        from ii_agent.engine.runtime.skills.skills_ref.parser import parse_frontmatter
 
         content = "---\nname: my-skill\ndescription: Does stuff\n---\nBody content"
         metadata, body = parse_frontmatter(content)
@@ -119,28 +119,28 @@ class TestParseFrontmatter:
         assert body == "Body content"
 
     def test_missing_frontmatter_raises_parse_error(self):
-        from ii_agent.engine.v1.skills.skills_ref.errors import ParseError
-        from ii_agent.engine.v1.skills.skills_ref.parser import parse_frontmatter
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ParseError
+        from ii_agent.engine.runtime.skills.skills_ref.parser import parse_frontmatter
 
         with pytest.raises(ParseError, match="frontmatter"):
             parse_frontmatter("No frontmatter here")
 
     def test_unclosed_frontmatter_raises_parse_error(self):
-        from ii_agent.engine.v1.skills.skills_ref.errors import ParseError
-        from ii_agent.engine.v1.skills.skills_ref.parser import parse_frontmatter
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ParseError
+        from ii_agent.engine.runtime.skills.skills_ref.parser import parse_frontmatter
 
         with pytest.raises(ParseError, match="frontmatter"):
             parse_frontmatter("---\nname: my-skill\n")
 
     def test_invalid_yaml_raises_parse_error(self):
-        from ii_agent.engine.v1.skills.skills_ref.errors import ParseError
-        from ii_agent.engine.v1.skills.skills_ref.parser import parse_frontmatter
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ParseError
+        from ii_agent.engine.runtime.skills.skills_ref.parser import parse_frontmatter
 
         with pytest.raises(ParseError, match="YAML"):
             parse_frontmatter("---\n: invalid: yaml: content\n---\nBody")
 
     def test_metadata_nested_dict_converted_to_str_values(self):
-        from ii_agent.engine.v1.skills.skills_ref.parser import parse_frontmatter
+        from ii_agent.engine.runtime.skills.skills_ref.parser import parse_frontmatter
 
         # metadata field is a nested dict whose values must be strings
         content = "---\nname: s\ndescription: d\nmetadata:\n  key: value\n---\n"
@@ -156,7 +156,7 @@ class TestParseFrontmatter:
 
 class TestFindSkillMd:
     def test_returns_path_when_skill_md_exists(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.parser import find_skill_md
+        from ii_agent.engine.runtime.skills.skills_ref.parser import find_skill_md
 
         skill_dir = tmp_path / "my-skill"
         skill_dir.mkdir()
@@ -167,7 +167,7 @@ class TestFindSkillMd:
         assert result == skill_md
 
     def test_returns_lowercase_skill_md_if_no_uppercase(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.parser import find_skill_md
+        from ii_agent.engine.runtime.skills.skills_ref.parser import find_skill_md
 
         skill_dir = tmp_path / "my-skill"
         skill_dir.mkdir()
@@ -178,7 +178,7 @@ class TestFindSkillMd:
         assert result == skill_md
 
     def test_returns_none_when_no_skill_md(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.parser import find_skill_md
+        from ii_agent.engine.runtime.skills.skills_ref.parser import find_skill_md
 
         skill_dir = tmp_path / "empty-skill"
         skill_dir.mkdir()
@@ -200,7 +200,7 @@ class TestReadProperties:
         return skill_dir
 
     def test_reads_name_and_description(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.parser import read_properties
+        from ii_agent.engine.runtime.skills.skills_ref.parser import read_properties
 
         content = "---\nname: test-skill\ndescription: A test skill\n---\nBody"
         skill_dir = self._make_skill_dir(tmp_path, content)
@@ -209,8 +209,8 @@ class TestReadProperties:
         assert props.description == "A test skill"
 
     def test_missing_skill_md_raises_parse_error(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.errors import ParseError
-        from ii_agent.engine.v1.skills.skills_ref.parser import read_properties
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ParseError
+        from ii_agent.engine.runtime.skills.skills_ref.parser import read_properties
 
         skill_dir = tmp_path / "empty"
         skill_dir.mkdir()
@@ -218,8 +218,8 @@ class TestReadProperties:
             read_properties(skill_dir)
 
     def test_missing_name_raises_validation_error(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.errors import ValidationError
-        from ii_agent.engine.v1.skills.skills_ref.parser import read_properties
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ValidationError
+        from ii_agent.engine.runtime.skills.skills_ref.parser import read_properties
 
         content = "---\ndescription: No name here\n---\n"
         skill_dir = self._make_skill_dir(tmp_path, content)
@@ -227,8 +227,8 @@ class TestReadProperties:
             read_properties(skill_dir)
 
     def test_missing_description_raises_validation_error(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.errors import ValidationError
-        from ii_agent.engine.v1.skills.skills_ref.parser import read_properties
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ValidationError
+        from ii_agent.engine.runtime.skills.skills_ref.parser import read_properties
 
         content = "---\nname: skill-name\n---\n"
         skill_dir = self._make_skill_dir(tmp_path, content)
@@ -236,8 +236,8 @@ class TestReadProperties:
             read_properties(skill_dir)
 
     def test_empty_name_raises_validation_error(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.errors import ValidationError
-        from ii_agent.engine.v1.skills.skills_ref.parser import read_properties
+        from ii_agent.engine.runtime.skills.skills_ref.errors import ValidationError
+        from ii_agent.engine.runtime.skills.skills_ref.parser import read_properties
 
         content = "---\nname: '   '\ndescription: ok\n---\n"
         skill_dir = self._make_skill_dir(tmp_path, content)
@@ -245,7 +245,7 @@ class TestReadProperties:
             read_properties(skill_dir)
 
     def test_reads_optional_license(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.parser import read_properties
+        from ii_agent.engine.runtime.skills.skills_ref.parser import read_properties
 
         content = "---\nname: sk\ndescription: d\nlicense: MIT\n---\n"
         skill_dir = self._make_skill_dir(tmp_path, content)
@@ -253,7 +253,7 @@ class TestReadProperties:
         assert props.license == "MIT"
 
     def test_reads_optional_compatibility(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.parser import read_properties
+        from ii_agent.engine.runtime.skills.skills_ref.parser import read_properties
 
         content = "---\nname: sk\ndescription: d\ncompatibility: '>=2.0'\n---\n"
         skill_dir = self._make_skill_dir(tmp_path, content)
@@ -261,7 +261,7 @@ class TestReadProperties:
         assert props.compatibility == ">=2.0"
 
     def test_reads_allowed_tools(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.parser import read_properties
+        from ii_agent.engine.runtime.skills.skills_ref.parser import read_properties
 
         content = "---\nname: sk\ndescription: d\nallowed-tools: Bash Read\n---\n"
         skill_dir = self._make_skill_dir(tmp_path, content)
@@ -269,7 +269,7 @@ class TestReadProperties:
         assert props.allowed_tools == "Bash Read"
 
     def test_trims_whitespace_from_name_description(self, tmp_path):
-        from ii_agent.engine.v1.skills.skills_ref.parser import read_properties
+        from ii_agent.engine.runtime.skills.skills_ref.parser import read_properties
 
         content = "---\nname: '  my-skill  '\ndescription: '  My desc  '\n---\n"
         skill_dir = self._make_skill_dir(tmp_path, content)
@@ -285,7 +285,7 @@ class TestReadProperties:
 
 class TestBuiltinSkillsDirectory:
     def test_get_builtin_skill_dirs_returns_directories_with_skill_md(self):
-        from ii_agent.engine.v1.skills.builtin import get_builtin_skill_dirs
+        from ii_agent.engine.runtime.skills.builtin import get_builtin_skill_dirs
 
         dirs = get_builtin_skill_dirs()
         # Should return a non-empty list
@@ -293,7 +293,7 @@ class TestBuiltinSkillsDirectory:
         assert len(dirs) > 0
 
     def test_all_returned_dirs_have_skill_md(self):
-        from ii_agent.engine.v1.skills.builtin import get_builtin_skill_dirs
+        from ii_agent.engine.runtime.skills.builtin import get_builtin_skill_dirs
 
         for skill_dir in get_builtin_skill_dirs():
             assert (skill_dir / "SKILL.md").exists(), (
@@ -301,7 +301,7 @@ class TestBuiltinSkillsDirectory:
             )
 
     def test_get_builtin_skill_upath_returns_correct_path(self):
-        from ii_agent.engine.v1.skills.builtin import get_builtin_skill_upath
+        from ii_agent.engine.runtime.skills.builtin import get_builtin_skill_upath
 
         path = get_builtin_skill_upath("pdf")
         assert "pdf" in str(path)
@@ -314,14 +314,14 @@ class TestBuiltinSkillsDirectory:
 
 class TestLoadBuiltinSkills:
     def test_returns_non_empty_list(self):
-        from ii_agent.engine.v1.skills.loader import load_builtin_skills
+        from ii_agent.engine.runtime.skills.loader import load_builtin_skills
 
         skills = load_builtin_skills()
         assert isinstance(skills, list)
         assert len(skills) > 0
 
     def test_each_skill_has_required_keys(self):
-        from ii_agent.engine.v1.skills.loader import load_builtin_skills
+        from ii_agent.engine.runtime.skills.loader import load_builtin_skills
 
         skills = load_builtin_skills()
         required_keys = {"name", "description", "skill_md_content", "source", "sandbox_path", "storage_uri"}
@@ -330,7 +330,7 @@ class TestLoadBuiltinSkills:
             assert not missing, f"Skill {skill.get('name')} missing keys: {missing}"
 
     def test_storage_uri_uses_builtin_prefix(self):
-        from ii_agent.engine.v1.skills.loader import load_builtin_skills
+        from ii_agent.engine.runtime.skills.loader import load_builtin_skills
 
         skills = load_builtin_skills()
         for skill in skills:
@@ -339,14 +339,14 @@ class TestLoadBuiltinSkills:
             )
 
     def test_sandbox_path_starts_with_workspace_skills(self):
-        from ii_agent.engine.v1.skills.loader import load_builtin_skills
+        from ii_agent.engine.runtime.skills.loader import load_builtin_skills
 
         skills = load_builtin_skills()
         for skill in skills:
             assert "/workspace/.skills/" in skill["sandbox_path"]
 
     def test_skill_md_content_is_non_empty_string(self):
-        from ii_agent.engine.v1.skills.loader import load_builtin_skills
+        from ii_agent.engine.runtime.skills.loader import load_builtin_skills
 
         skills = load_builtin_skills()
         for skill in skills:
@@ -354,7 +354,7 @@ class TestLoadBuiltinSkills:
             assert len(skill["skill_md_content"]) > 0
 
     def test_skill_names_are_strings(self):
-        from ii_agent.engine.v1.skills.loader import load_builtin_skills
+        from ii_agent.engine.runtime.skills.loader import load_builtin_skills
 
         skills = load_builtin_skills()
         for skill in skills:
@@ -362,7 +362,7 @@ class TestLoadBuiltinSkills:
             assert len(skill["name"]) > 0
 
     def test_allowed_tools_is_list(self):
-        from ii_agent.engine.v1.skills.loader import load_builtin_skills
+        from ii_agent.engine.runtime.skills.loader import load_builtin_skills
 
         skills = load_builtin_skills()
         for skill in skills:
@@ -385,7 +385,7 @@ class TestGetUserSkills:
         return s
 
     async def test_user_skill_overrides_builtin(self):
-        from ii_agent.engine.v1.skills.loader import get_user_skills
+        from ii_agent.engine.runtime.skills.loader import get_user_skills
 
         builtin = self._make_skill("pdf", user_id=None, is_enabled=True)
         user_override = self._make_skill("pdf", user_id="u1", is_enabled=True)
@@ -402,7 +402,7 @@ class TestGetUserSkills:
         assert pdf_skills[0].user_id == "u1"
 
     async def test_disabled_user_skill_hidden_when_enabled_only(self):
-        from ii_agent.engine.v1.skills.loader import get_user_skills
+        from ii_agent.engine.runtime.skills.loader import get_user_skills
 
         builtin = self._make_skill("docx", user_id=None, is_enabled=True)
         user_disabled = self._make_skill("docx", user_id="u1", is_enabled=False)
@@ -418,7 +418,7 @@ class TestGetUserSkills:
         assert len(docx_skills) == 0
 
     async def test_enabled_only_false_returns_disabled_skills(self):
-        from ii_agent.engine.v1.skills.loader import get_user_skills
+        from ii_agent.engine.runtime.skills.loader import get_user_skills
 
         builtin = self._make_skill("docx", user_id=None, is_enabled=False)
 
@@ -431,7 +431,7 @@ class TestGetUserSkills:
         assert len(skills) == 1
 
     async def test_multiple_builtin_skills_all_returned(self):
-        from ii_agent.engine.v1.skills.loader import get_user_skills
+        from ii_agent.engine.runtime.skills.loader import get_user_skills
 
         skills_list = [
             self._make_skill("pdf", user_id=None),
@@ -462,7 +462,7 @@ class TestGetSkillByName:
         return s
 
     async def test_returns_enabled_user_skill(self):
-        from ii_agent.engine.v1.skills.loader import get_skill_by_name
+        from ii_agent.engine.runtime.skills.loader import get_skill_by_name
 
         user_skill = self._make_skill("pdf", user_id="u1", is_enabled=True)
 
@@ -476,7 +476,7 @@ class TestGetSkillByName:
         assert result.user_id == "u1"
 
     async def test_returns_none_for_disabled_user_skill(self):
-        from ii_agent.engine.v1.skills.loader import get_skill_by_name
+        from ii_agent.engine.runtime.skills.loader import get_skill_by_name
 
         user_disabled = self._make_skill("pdf", user_id="u1", is_enabled=False)
 
@@ -489,7 +489,7 @@ class TestGetSkillByName:
         assert result is None
 
     async def test_falls_back_to_builtin_when_no_user_override(self):
-        from ii_agent.engine.v1.skills.loader import get_skill_by_name
+        from ii_agent.engine.runtime.skills.loader import get_skill_by_name
 
         builtin_skill = self._make_skill("docx", user_id=None, is_enabled=True)
 

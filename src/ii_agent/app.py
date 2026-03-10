@@ -41,7 +41,7 @@ from ii_agent.content.slides.nano_banana.router import router as nano_banana_rou
 from ii_agent.billing.credits.router import router as credits_router
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.container import ServiceContainer
-from ii_agent.realtime.socket.socketio import SocketIOManager
+from ii_agent.agent.socket.socketio import SocketIOManager
 
 logger = logging.getLogger(__name__)
 

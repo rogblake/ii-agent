@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from ii_agent.agent.types import AgentType
-from ii_agent.realtime.socket.schemas import (
+from ii_agent.agent.socket.schemas import (
     EditQueryContent,
     EnhancePromptContent,
     EventInfo,

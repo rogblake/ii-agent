@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.realtime.socket.socketio import SocketIOManager
+from ii_agent.agent.socket.socketio import SocketIOManager
 
 
 class FakeSio:
@@ -60,7 +60,7 @@ async def test_connect_stores_authenticated_session(monkeypatch):
     manager = SocketIOManager(sio)
 
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.socketio.jwt_handler.verify_access_token",
+        "ii_agent.agent.socket.socketio.jwt_handler.verify_access_token",
         lambda token: {"user_id": "u1"},
     )
 
@@ -103,7 +103,7 @@ async def test_chat_message_emits_unknown_message_type_error(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr("ii_agent.realtime.socket.socketio.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.agent.socket.socketio.get_db_session_local", _db_cm)
 
     session_id = str(uuid4())
 

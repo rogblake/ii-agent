@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.realtime.socket.socketio import SocketIOManager
+from ii_agent.agent.socket.socketio import SocketIOManager
 
 pytestmark = pytest.mark.integration
 
@@ -63,8 +63,8 @@ async def test_realtime_connect_and_join_flow(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr("ii_agent.realtime.socket.socketio.get_db_session_local", _db_cm)
-    monkeypatch.setattr("ii_agent.realtime.socket.socketio.jwt_handler.verify_access_token", lambda token: {"user_id": "u1"})
+    monkeypatch.setattr("ii_agent.agent.socket.socketio.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.agent.socket.socketio.jwt_handler.verify_access_token", lambda token: {"user_id": "u1"})
 
     connected = await manager.connect("sid-1", {}, auth={"token": "ok"})
     await manager.join_session("sid-1", {"session_uuid": str(session_id)})

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.realtime.socket.session_store import (
+from ii_agent.agent.socket.session_store import (
     MemorySessionStore,
     RedisSessionStore,
     SessionStore,

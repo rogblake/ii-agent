@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.realtime.socket.command.command_handler import (
+from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )

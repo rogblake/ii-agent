@@ -68,7 +68,7 @@ class TestEventSubscriberShouldHandle:
 
     def _make_subscriber(self):
         """Create a concrete EventSubscriber for testing."""
-        from ii_agent.realtime.subscribers.subscriber import EventSubscriber
+        from ii_agent.agent.subscribers.subscriber import EventSubscriber
 
         class _Concrete(EventSubscriber):
             async def handle_event(self, event):
@@ -117,7 +117,7 @@ class TestEventSubscriberShouldHandle:
         mock_agent_run_service.get_task_by_id = AsyncMock(return_value=mock_task)
 
         with patch(
-            "ii_agent.realtime.subscribers.subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ), patch.object(sub, "_get_agent_run_service", return_value=mock_agent_run_service):
             result = await sub.should_handle(event)
@@ -136,7 +136,7 @@ class TestEventSubscriberShouldHandle:
         mock_agent_run_service.get_task_by_id = AsyncMock(return_value=mock_task)
 
         with patch(
-            "ii_agent.realtime.subscribers.subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ), patch.object(sub, "_get_agent_run_service", return_value=mock_agent_run_service):
             result = await sub.should_handle(event)
@@ -153,7 +153,7 @@ class TestEventSubscriberShouldHandle:
         mock_agent_run_service.get_task_by_id = AsyncMock(return_value=None)
 
         with patch(
-            "ii_agent.realtime.subscribers.subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ), patch.object(sub, "_get_agent_run_service", return_value=mock_agent_run_service):
             with pytest.raises(ValueError, match="Task run not found"):
@@ -201,7 +201,7 @@ class TestEventTypeIsAllowedWhenAborted:
 
 class TestMetricsSubscriber:
     def _make_subscriber(self):
-        from ii_agent.realtime.subscribers.metrics_subscriber import MetricsSubscriber
+        from ii_agent.agent.subscribers.metrics_subscriber import MetricsSubscriber
 
         return MetricsSubscriber()
 
@@ -267,7 +267,7 @@ class TestMetricsSubscriber:
         mock_agent_run_service.get_task_by_id = AsyncMock(return_value=mock_task)
 
         with patch(
-            "ii_agent.realtime.subscribers.subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ), patch.object(sub, "_get_agent_run_service", return_value=mock_agent_run_service):
             await sub.handle_event(event)  # Should return early
@@ -280,7 +280,7 @@ class TestMetricsSubscriber:
 
 class TestDatabaseSubscriber:
     def _make_subscriber(self):
-        from ii_agent.realtime.subscribers.database_subscriber import DatabaseSubscriber
+        from ii_agent.agent.subscribers.database_subscriber import DatabaseSubscriber
 
         container = MagicMock()
         container.agent_run_service = MagicMock()
@@ -295,7 +295,7 @@ class TestDatabaseSubscriber:
         event = _make_event(EventType.USER_MESSAGE, run_id=None)
         # Should not save to DB (USER_MESSAGE is skipped)
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ):
             await sub.handle_event(event)
@@ -305,7 +305,7 @@ class TestDatabaseSubscriber:
         sub = self._make_subscriber()
         event = _make_event(EventType.PLAN_GENERATED, run_id=None)
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ):
             await sub.handle_event(event)
@@ -315,7 +315,7 @@ class TestDatabaseSubscriber:
         sub = self._make_subscriber()
         event = _make_event(EventType.MILESTONE_UPDATE, run_id=None)
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ):
             await sub.handle_event(event)
@@ -325,7 +325,7 @@ class TestDatabaseSubscriber:
         sub = self._make_subscriber()
         event = _make_event(EventType.AGENT_THINKING_DELTA, run_id=None)
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ):
             await sub.handle_event(event)
@@ -335,7 +335,7 @@ class TestDatabaseSubscriber:
         sub = self._make_subscriber()
         event = _make_event(EventType.AGENT_RESPONSE_DELTA, run_id=None)
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ):
             await sub.handle_event(event)
@@ -350,7 +350,7 @@ class TestDatabaseSubscriber:
         )
         # No session_id: should skip
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ):
             await sub.handle_event(event)
@@ -364,10 +364,10 @@ class TestDatabaseSubscriber:
         mock_repo.save = AsyncMock()
 
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ), patch(
-            "ii_agent.realtime.subscribers.database_subscriber.EventRepository",
+            "ii_agent.agent.subscribers.database_subscriber.EventRepository",
             return_value=mock_repo,
         ):
             await sub.handle_event(event)
@@ -405,10 +405,10 @@ class TestDatabaseSubscriber:
         # Use side_effect (not return_value) so each call creates a fresh CM
         db_factory = _make_db_cm_factory()
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             side_effect=db_factory,
         ), patch(
-            "ii_agent.realtime.subscribers.database_subscriber.EventRepository",
+            "ii_agent.agent.subscribers.database_subscriber.EventRepository",
             return_value=mock_repo,
         ):
             await sub.handle_event(event)
@@ -429,10 +429,10 @@ class TestDatabaseSubscriber:
         )
 
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ), patch(
-            "ii_agent.realtime.subscribers.database_subscriber.EventRepository",
+            "ii_agent.agent.subscribers.database_subscriber.EventRepository",
             return_value=mock_repo,
         ):
             # Should NOT raise – IntegrityError is swallowed
@@ -447,10 +447,10 @@ class TestDatabaseSubscriber:
         mock_repo.save = AsyncMock()
 
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ), patch(
-            "ii_agent.realtime.subscribers.database_subscriber.EventRepository",
+            "ii_agent.agent.subscribers.database_subscriber.EventRepository",
             return_value=mock_repo,
         ):
             await sub.handle_event(event)
@@ -470,10 +470,10 @@ class TestDatabaseSubscriber:
         mock_repo.save = AsyncMock()
 
         with patch(
-            "ii_agent.realtime.subscribers.database_subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.database_subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ), patch(
-            "ii_agent.realtime.subscribers.database_subscriber.EventRepository",
+            "ii_agent.agent.subscribers.database_subscriber.EventRepository",
             return_value=mock_repo,
         ):
             await sub.handle_event(event)
@@ -498,7 +498,7 @@ class FakeSio:
 
 class TestSocketIOSubscriber:
     def _make_subscriber(self, sio=None):
-        from ii_agent.realtime.subscribers.socketio_subscriber import SocketIOSubscriber
+        from ii_agent.agent.subscribers.socketio_subscriber import SocketIOSubscriber
 
         return SocketIOSubscriber(sio=sio or FakeSio())
 
@@ -545,7 +545,7 @@ class TestSocketIOSubscriber:
         mock_svc.get_task_by_id = AsyncMock(return_value=mock_task)
 
         with patch(
-            "ii_agent.realtime.subscribers.subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.subscriber.get_db_session_local",
             side_effect=_make_db_cm_factory(),
         ), patch.object(sub, "_get_agent_run_service", return_value=mock_svc):
             await sub.handle_event(event)
@@ -619,7 +619,7 @@ class TestSocketIOSubscriber:
         mock_agent_run_service.get_task_by_id = AsyncMock(return_value=mock_task)
 
         with patch(
-            "ii_agent.realtime.subscribers.subscriber.get_db_session_local",
+            "ii_agent.agent.subscribers.subscriber.get_db_session_local",
             return_value=_fake_db_cm(),
         ), patch.object(sub, "_get_agent_run_service", return_value=mock_agent_run_service):
             await sub.handle_event(event)

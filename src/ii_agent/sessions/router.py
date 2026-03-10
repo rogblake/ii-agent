@@ -23,7 +23,7 @@ from ii_agent.sessions.schemas import (
     SessionPlanUpdate,
     SessionUpdate,
 )
-from ii_agent.realtime.socket.schemas import EventInfo, EventResponse
+from ii_agent.agent.socket.schemas import EventInfo, EventResponse
 
 logger = logging.getLogger(__name__)
 

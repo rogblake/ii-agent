@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from ii_agent.realtime.socket.command.command_handler import UserCommandType
-from ii_agent.realtime.socket.command.handler_factory import CommandHandlerFactory
+from ii_agent.agent.socket.command.command_handler import UserCommandType
+from ii_agent.agent.socket.command.handler_factory import CommandHandlerFactory
 
 
 @pytest.mark.asyncio

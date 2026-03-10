@@ -13,7 +13,7 @@ from ii_agent.projects.cloud_run.schemas import CloudRunConfig, DeploymentResult
 from ii_agent.projects.cloud_run.service import CloudRunPublisher
 from ii_agent.agent.sandboxes.base import SandboxManager
 from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
-from ii_agent.realtime.socket.command.command_handler import (
+from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )

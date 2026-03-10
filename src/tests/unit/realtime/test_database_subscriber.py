@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from ii_agent.core.events.models import EventType, RealtimeEvent
-from ii_agent.realtime.subscribers.database_subscriber import DatabaseSubscriber
+from ii_agent.agent.subscribers.database_subscriber import DatabaseSubscriber
 
 
 @pytest.mark.asyncio
@@ -23,8 +23,8 @@ async def test_database_subscriber_skips_ignored_event_types(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr("ii_agent.realtime.subscribers.database_subscriber.get_db_session_local", _db_cm)
-    monkeypatch.setattr("ii_agent.realtime.subscribers.database_subscriber.EventRepository.save", _fake_save)
+    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.EventRepository.save", _fake_save)
 
     event = RealtimeEvent(type=EventType.USER_MESSAGE, session_id=uuid4(), content={"text": "hi"})
     await subscriber.handle_event(event)
@@ -51,8 +51,8 @@ async def test_database_subscriber_converts_file_url_tool_result(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr("ii_agent.realtime.subscribers.database_subscriber.get_db_session_local", _db_cm)
-    monkeypatch.setattr("ii_agent.realtime.subscribers.database_subscriber.EventRepository.save", _fake_save)
+    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.EventRepository.save", _fake_save)
 
     event = RealtimeEvent(
         type=EventType.TOOL_RESULT,
@@ -88,8 +88,8 @@ async def test_database_subscriber_ignores_integrity_errors(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr("ii_agent.realtime.subscribers.database_subscriber.get_db_session_local", _db_cm)
-    monkeypatch.setattr("ii_agent.realtime.subscribers.database_subscriber.EventRepository.save", _raise_integrity)
+    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.EventRepository.save", _raise_integrity)
 
     event = RealtimeEvent(type=EventType.SYSTEM, session_id=uuid4(), content={"message": "ok"})
 

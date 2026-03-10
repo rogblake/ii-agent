@@ -8,7 +8,7 @@ import pytest
 
 from ii_agent.mobile.apple import AppleAuthStateEnum
 from ii_agent.core.events.models import EventType
-from ii_agent.realtime.socket.command.submit_testflight_handler import (
+from ii_agent.agent.socket.command.submit_testflight_handler import (
     SubmitTestflightHandler,
 )
 
@@ -36,7 +36,7 @@ async def test_handle_requires_apple_authentication(fake_event_stream, monkeypat
     handler._send_error_event = AsyncMock()
 
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
         AsyncMock(return_value=None),
     )
 
@@ -55,7 +55,7 @@ async def test_handle_rejects_incomplete_apple_auth(fake_event_stream, monkeypat
 
     credential = SimpleNamespace(auth_state="pending")
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
         AsyncMock(return_value=credential),
     )
 
@@ -77,23 +77,23 @@ async def test_handle_requires_expo_token(fake_event_stream, monkeypatch):
         selected_team_id="TEAM1",
     )
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
         AsyncMock(return_value=credential),
     )
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_session_data",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_session_data",
         lambda cred: {"_temp_password": "pw"},
     )
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_expo_token",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_expo_token",
         lambda cred: "",
     )
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.clear_session_password",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.clear_session_password",
         AsyncMock(),
     )
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_app_specific_password",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_app_specific_password",
         lambda cred: "app-pass",
     )
 
@@ -117,23 +117,23 @@ async def test_handle_sandbox_missing_path(fake_event_stream, monkeypatch):
         selected_team_id="TEAM1",
     )
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
         AsyncMock(return_value=credential),
     )
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_session_data",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_session_data",
         lambda cred: {"_temp_password": "pw"},
     )
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_expo_token",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_expo_token",
         lambda cred: "expo-token",
     )
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.clear_session_password",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.clear_session_password",
         AsyncMock(),
     )
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_app_specific_password",
+        "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_app_specific_password",
         lambda cred: "app-pass",
     )
 
@@ -178,7 +178,7 @@ async def test_get_sandbox_url_and_manager_paths(fake_event_stream, monkeypatch)
             return False
 
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.get_db_session_local",
+        "ii_agent.agent.socket.command.submit_testflight_handler.get_db_session_local",
         lambda: _DBCM(),
     )
 
@@ -195,7 +195,7 @@ async def test_get_sandbox_url_and_manager_paths(fake_event_stream, monkeypatch)
     )
     fake_manager = SimpleNamespace(expose_port=AsyncMock(return_value="https://sandbox.local"))
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.E2BSandboxManager.connect",
+        "ii_agent.agent.socket.command.submit_testflight_handler.E2BSandboxManager.connect",
         AsyncMock(return_value=fake_manager),
     )
 
@@ -216,7 +216,7 @@ async def test_get_project_path_and_send_log_event(fake_event_stream, monkeypatc
             return False
 
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.command.submit_testflight_handler.get_db_session_local",
+        "ii_agent.agent.socket.command.submit_testflight_handler.get_db_session_local",
         lambda: _DBCM(),
     )
     handler.container.project_service.get_session_project_or_none = AsyncMock(

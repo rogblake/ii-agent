@@ -11,9 +11,9 @@ from ii_agent.core.llm.execution_service import LLMBillingContext
 from ii_agent.core.events.models import EventType, RealtimeEvent
 from ii_agent.core.events.stream import EventStream
 from ii_agent.settings.llm.store import FileSettingsStore
-from ii_agent.realtime.socket.schemas import EnhancePromptContent
+from ii_agent.agent.socket.schemas import EnhancePromptContent
 from ii_agent.sessions.schemas import SessionInfo
-from ii_agent.realtime.socket.command.command_handler import (
+from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )

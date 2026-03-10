@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Set
 
 from ii_agent.core.events.models import RealtimeEvent
-from ii_agent.realtime.subscribers.subscriber import EventSubscriber
+from ii_agent.agent.subscribers.subscriber import EventSubscriber
 
 
 class EventStream(ABC):

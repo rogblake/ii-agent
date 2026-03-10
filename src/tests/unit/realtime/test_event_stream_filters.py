@@ -1,7 +1,7 @@
 import pytest
 
 from ii_agent.core.events.models import EventType, RealtimeEvent
-from ii_agent.realtime.socket.event_stream_filters import SilentEventStream
+from ii_agent.agent.socket.event_stream_filters import SilentEventStream
 
 
 class FakeInnerStream:

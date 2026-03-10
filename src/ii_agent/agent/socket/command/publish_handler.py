@@ -12,7 +12,7 @@ from ii_agent.core.logger import logger
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
-from ii_agent.realtime.socket.command.command_handler import (
+from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )

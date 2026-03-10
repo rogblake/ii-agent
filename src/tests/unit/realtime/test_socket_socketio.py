@@ -1,4 +1,4 @@
-"""Unit tests for ii_agent.realtime.socket.socketio – SocketIOManager.
+"""Unit tests for ii_agent.agent.socket.socketio – SocketIOManager.
 
 Note: SocketIOManager transitively imports google.genai models with APIs that
 may not be available in all dev environments. We therefore test the observable

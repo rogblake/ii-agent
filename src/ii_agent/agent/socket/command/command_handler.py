@@ -11,7 +11,7 @@ from ii_agent.core.events.models import EventType, RealtimeEvent
 from ii_agent.core.events.stream import EventStream
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.sessions.schemas import SessionInfo
-from ii_agent.realtime.socket.schemas import QueryCommandContent
+from ii_agent.agent.socket.schemas import QueryCommandContent
 from ii_agent.agent.runs.models import AgentRunTask
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.logger import logger

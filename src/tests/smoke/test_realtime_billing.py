@@ -4,7 +4,7 @@ import pytest
 
 from ii_agent.billing.exceptions import StripeConfigError
 from ii_agent.billing.stripe_config import StripeConfig
-from ii_agent.realtime.socket.socketio import SocketIOManager
+from ii_agent.agent.socket.socketio import SocketIOManager
 
 pytestmark = pytest.mark.smoke
 
@@ -25,7 +25,7 @@ async def test_realtime_connect_sanity(monkeypatch):
     manager = SocketIOManager(FakeSio())
 
     monkeypatch.setattr(
-        "ii_agent.realtime.socket.socketio.jwt_handler.verify_access_token",
+        "ii_agent.agent.socket.socketio.jwt_handler.verify_access_token",
         lambda token: {"user_id": "u1"},
     )
 

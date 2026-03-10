@@ -7,47 +7,47 @@ from typing import TYPE_CHECKING, Dict
 import socketio
 
 from ii_agent.core.events.stream import AsyncEventStream
-from ii_agent.realtime.socket.command.command_handler import (
+from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )
-from ii_agent.realtime.socket.command.query_handler import UserQueryHandler
-from ii_agent.realtime.socket.command.plan_handler import PlanHandler
-from ii_agent.realtime.socket.command.publish_handler import PublishProjectHandler
-from ii_agent.realtime.socket.command.cloud_run_publish_handler import (
+from ii_agent.agent.socket.command.query_handler import UserQueryHandler
+from ii_agent.agent.socket.command.plan_handler import PlanHandler
+from ii_agent.agent.socket.command.publish_handler import PublishProjectHandler
+from ii_agent.agent.socket.command.cloud_run_publish_handler import (
     CloudRunPublishHandler,
 )
-from ii_agent.realtime.socket.command.sandbox_status_handler import (
+from ii_agent.agent.socket.command.sandbox_status_handler import (
     SandboxStatusHandler,
 )
-from ii_agent.realtime.socket.command.awake_sandbox_handler import AwakeSandboxHandler
-from ii_agent.realtime.socket.command.workspace_info_handler import (
+from ii_agent.agent.socket.command.awake_sandbox_handler import AwakeSandboxHandler
+from ii_agent.agent.socket.command.workspace_info_handler import (
     WorkspaceInfoHandler,
 )
-from ii_agent.realtime.socket.command.ping_handler import PingHandler
-from ii_agent.realtime.socket.command.cancel_handler import CancelHandler
-from ii_agent.realtime.socket.command.continue_run_handler import ContinueRunHandler
-from ii_agent.realtime.socket.command.enhance_prompt_handler import (
+from ii_agent.agent.socket.command.ping_handler import PingHandler
+from ii_agent.agent.socket.command.cancel_handler import CancelHandler
+from ii_agent.agent.socket.command.continue_run_handler import ContinueRunHandler
+from ii_agent.agent.socket.command.enhance_prompt_handler import (
     EnhancePromptHandler,
 )
-from ii_agent.realtime.socket.command.start_fork_handler import StartForkHandler
-from ii_agent.realtime.socket.command.submit_testflight_handler import (
+from ii_agent.agent.socket.command.start_fork_handler import StartForkHandler
+from ii_agent.agent.socket.command.submit_testflight_handler import (
     SubmitTestflightHandler,
 )
-from ii_agent.realtime.socket.command.apple_auth_handler import (
+from ii_agent.agent.socket.command.apple_auth_handler import (
     AppleAuthLoginHandler,
     AppleAuth2FAHandler,
     AppleAuthSelectTeamHandler,
     AppleCheckAuthHandler,
     SaveExpoTokenHandler,
 )
-from ii_agent.realtime.socket.command.apple_app_setup_handler import (
+from ii_agent.agent.socket.command.apple_app_setup_handler import (
     AppleAppSetupHandler,
     AppleListAppsHandler,
 )
-from ii_agent.realtime.subscribers.database_subscriber import DatabaseSubscriber
-from ii_agent.realtime.subscribers.metrics_subscriber import MetricsSubscriber
-from ii_agent.realtime.subscribers.socketio_subscriber import SocketIOSubscriber
+from ii_agent.agent.subscribers.database_subscriber import DatabaseSubscriber
+from ii_agent.agent.subscribers.metrics_subscriber import MetricsSubscriber
+from ii_agent.agent.subscribers.socketio_subscriber import SocketIOSubscriber
 
 if TYPE_CHECKING:
     from ii_agent.core.container import ServiceContainer

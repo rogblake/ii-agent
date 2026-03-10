@@ -1,4 +1,4 @@
-"""Unit tests for ii_agent.realtime.socket.session_store."""
+"""Unit tests for ii_agent.agent.socket.session_store."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.realtime.socket.session_store import (
+from ii_agent.agent.socket.session_store import (
     MemorySessionStore,
     RedisSessionStore,
     SessionStore,
@@ -20,25 +20,25 @@ from ii_agent.realtime.socket.session_store import (
 
 class TestRedisSessionStoreInit:
     def test_default_prefix(self):
-        with patch("ii_agent.realtime.socket.session_store.redis_client", MagicMock()):
+        with patch("ii_agent.agent.socket.session_store.redis_client", MagicMock()):
             store = RedisSessionStore()
         assert store.redis_key_prefix == "session_sids:"
 
     def test_custom_prefix(self):
-        with patch("ii_agent.realtime.socket.session_store.redis_client", MagicMock()):
+        with patch("ii_agent.agent.socket.session_store.redis_client", MagicMock()):
             store = RedisSessionStore(redis_key_prefix="custom:")
         assert store.redis_key_prefix == "custom:"
 
 
 class TestRedisSessionStoreGetRedisKey:
     def test_key_format(self):
-        with patch("ii_agent.realtime.socket.session_store.redis_client", MagicMock()):
+        with patch("ii_agent.agent.socket.session_store.redis_client", MagicMock()):
             store = RedisSessionStore()
         key = store._get_redis_key("sess-abc")
         assert key == "session_sids:sess-abc"
 
     def test_key_with_custom_prefix(self):
-        with patch("ii_agent.realtime.socket.session_store.redis_client", MagicMock()):
+        with patch("ii_agent.agent.socket.session_store.redis_client", MagicMock()):
             store = RedisSessionStore(redis_key_prefix="sids:")
         key = store._get_redis_key("xyz")
         assert key == "sids:xyz"
@@ -51,7 +51,7 @@ class TestRedisSessionStoreAddSid:
         mock_redis.sadd = AsyncMock()
         mock_redis.expire = AsyncMock()
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             await store.add_sid_to_session("sess1", "sid1")
 
@@ -63,7 +63,7 @@ class TestRedisSessionStoreAddSid:
         mock_redis = AsyncMock()
         mock_redis.sadd = AsyncMock(side_effect=Exception("redis down"))
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             await store.add_sid_to_session("sess1", "sid1")  # Should not raise
 
@@ -77,7 +77,7 @@ class TestRedisSessionStoreRemoveSid:
         mock_redis.delete = AsyncMock()
         mock_redis.expire = AsyncMock()
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             await store.remove_sid_from_session("sess1", "sid1")
 
@@ -90,7 +90,7 @@ class TestRedisSessionStoreRemoveSid:
         mock_redis.scard = AsyncMock(return_value=2)
         mock_redis.expire = AsyncMock()
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             await store.remove_sid_from_session("sess1", "sid1")
 
@@ -101,7 +101,7 @@ class TestRedisSessionStoreRemoveSid:
         mock_redis = AsyncMock()
         mock_redis.srem = AsyncMock(side_effect=Exception("redis down"))
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             await store.remove_sid_from_session("sess1", "sid1")
 
@@ -112,7 +112,7 @@ class TestRedisSessionStoreGetSessionSids:
         mock_redis = AsyncMock()
         mock_redis.smembers = AsyncMock(return_value={b"sid1", b"sid2"})
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             result = await store.get_session_sids("sess1")
 
@@ -124,7 +124,7 @@ class TestRedisSessionStoreGetSessionSids:
         mock_redis = AsyncMock()
         mock_redis.smembers = AsyncMock(side_effect=Exception("error"))
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             result = await store.get_session_sids("sess1")
 
@@ -135,7 +135,7 @@ class TestRedisSessionStoreGetSessionSids:
         mock_redis = AsyncMock()
         mock_redis.smembers = AsyncMock(return_value={"sid1", "sid2"})
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             result = await store.get_session_sids("sess1")
 
@@ -148,7 +148,7 @@ class TestRedisSessionStoreIsSessionEmpty:
         mock_redis = AsyncMock()
         mock_redis.exists = AsyncMock(return_value=0)
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             result = await store.is_session_empty("sess1")
 
@@ -160,7 +160,7 @@ class TestRedisSessionStoreIsSessionEmpty:
         mock_redis.exists = AsyncMock(return_value=1)
         mock_redis.scard = AsyncMock(return_value=3)
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             result = await store.is_session_empty("sess1")
 
@@ -171,7 +171,7 @@ class TestRedisSessionStoreIsSessionEmpty:
         mock_redis = AsyncMock()
         mock_redis.exists = AsyncMock(side_effect=Exception("redis down"))
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             result = await store.is_session_empty("sess1")
 
@@ -185,7 +185,7 @@ class TestRedisSessionStoreGetAllSessionSids:
         mock_redis.keys = AsyncMock(return_value=[b"session_sids:sess1", b"session_sids:sess2"])
         mock_redis.smembers = AsyncMock(return_value={b"sid-a"})
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             result = await store.get_all_session_sids()
 
@@ -197,7 +197,7 @@ class TestRedisSessionStoreGetAllSessionSids:
         mock_redis = AsyncMock()
         mock_redis.keys = AsyncMock(side_effect=Exception("error"))
 
-        with patch("ii_agent.realtime.socket.session_store.redis_client", mock_redis):
+        with patch("ii_agent.agent.socket.session_store.redis_client", mock_redis):
             store = RedisSessionStore()
             result = await store.get_all_session_sids()
 
@@ -348,9 +348,9 @@ class TestCreateSessionStore:
         mock_settings = MagicMock()
         mock_settings.redis.session_enabled = True
         with patch(
-            "ii_agent.realtime.socket.session_store.get_settings",
+            "ii_agent.agent.socket.session_store.get_settings",
             return_value=mock_settings,
-        ), patch("ii_agent.realtime.socket.session_store.redis_client", MagicMock()):
+        ), patch("ii_agent.agent.socket.session_store.redis_client", MagicMock()):
             store = create_session_store()
         assert isinstance(store, RedisSessionStore)
 
@@ -358,7 +358,7 @@ class TestCreateSessionStore:
         mock_settings = MagicMock()
         mock_settings.redis.session_enabled = False
         with patch(
-            "ii_agent.realtime.socket.session_store.get_settings",
+            "ii_agent.agent.socket.session_store.get_settings",
             return_value=mock_settings,
         ):
             store = create_session_store()

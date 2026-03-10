@@ -15,8 +15,8 @@ from ii_agent.agent.prompts.plan_mode_prompt import (
     get_plan_modification_suggestions_prompt,
     get_plan_modification_execute_prompt,
 )
-from ii_agent.realtime.socket.schemas import QueryCommandContent
-from ii_agent.realtime.socket.command.command_handler import (
+from ii_agent.agent.socket.schemas import QueryCommandContent
+from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )

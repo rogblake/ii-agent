@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.engine.runtime.utils.agent import (
+from ii_agent.agent.runtime.utils.agent import (
     DEFAULT_ABORT_REASON,
     get_tool_abort_message,
     get_tool_error_message,
@@ -26,9 +26,9 @@ from ii_agent.engine.runtime.utils.agent import (
     aexecute_instructions,
     aexecute_system_message,
 )
-from ii_agent.engine.runtime.media import Audio, File, Image, Video
-from ii_agent.engine.runtime.models.message import Message
-from ii_agent.engine.runtime.run.agent import RunOutput, RunInput
+from ii_agent.agent.runtime.media import Audio, File, Image, Video
+from ii_agent.agent.runtime.models.message import Message
+from ii_agent.agent.runtime.run.agent import RunOutput, RunInput
 
 
 # ---------------------------------------------------------------------------

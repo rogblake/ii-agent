@@ -1,4 +1,4 @@
-"""Unit tests for ii_agent.engine.runtime.run.events module.
+"""Unit tests for ii_agent.agent.runtime.run.events module.
 
 Tests cover all create_*_event() factory functions and handle_event().
 Each factory maps fields from a RunOutput to a specific event dataclass.
@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.engine.runtime.models.message import Citations, Message, MessageReferences, UrlCitation
-from ii_agent.engine.runtime.models.metrics import Metrics
-from ii_agent.engine.runtime.models.response import ToolExecution
-from ii_agent.engine.runtime.run.agent import (
+from ii_agent.agent.runtime.models.message import Citations, Message, MessageReferences, UrlCitation
+from ii_agent.agent.runtime.models.metrics import Metrics
+from ii_agent.agent.runtime.models.response import ToolExecution
+from ii_agent.agent.runtime.run.agent import (
     MemoryUpdateCompletedEvent,
     MemoryUpdateStartedEvent,
     PostHookCompletedEvent,
@@ -37,8 +37,8 @@ from ii_agent.engine.runtime.run.agent import (
     ToolCallCompletedEvent,
     ToolCallStartedEvent,
 )
-from ii_agent.engine.runtime.run.base import RunStatus
-from ii_agent.engine.runtime.run.events import (
+from ii_agent.agent.runtime.run.base import RunStatus
+from ii_agent.agent.runtime.run.events import (
     create_memory_update_completed_event,
     create_memory_update_started_event,
     create_post_hook_completed_event,
@@ -842,7 +842,7 @@ class TestCreateRunOutputContentEvent:
         assert event.model_provider_data == {"usage": {"tokens": 100}}
 
     def test_references_from_run_output(self, mock_run_output):
-        from ii_agent.engine.runtime.models.message import MessageReferences
+        from ii_agent.agent.runtime.models.message import MessageReferences
         refs = [MessageReferences(query="q")]
         mock_run_output.references = refs
         event = create_run_output_content_event(mock_run_output)
@@ -898,21 +898,21 @@ class TestHandleEvent:
     def test_store_events_false_does_not_create_task(self, mock_run_output):
         """When store_events=False, asyncio.create_task should not be called."""
         event = create_run_started_event(mock_run_output)
-        with patch("ii_agent.engine.runtime.run.events.asyncio.create_task") as mock_create_task:
+        with patch("ii_agent.agent.runtime.run.events.asyncio.create_task") as mock_create_task:
             handle_event(event, mock_run_output, store_events=False)
             mock_create_task.assert_not_called()
 
     def test_store_events_true_creates_task_when_not_skipped(self, mock_run_output):
         """When store_events=True and event not in skip list, asyncio.create_task is called."""
         event = create_run_started_event(mock_run_output)
-        with patch("ii_agent.engine.runtime.run.events.asyncio.create_task") as mock_create_task:
+        with patch("ii_agent.agent.runtime.run.events.asyncio.create_task") as mock_create_task:
             handle_event(event, mock_run_output, store_events=True)
             mock_create_task.assert_called_once()
 
     def test_store_events_true_skips_task_when_event_in_skip_list(self, mock_run_output):
         """When event is in skip list, asyncio.create_task should not be called even with store_events=True."""
         event = create_run_started_event(mock_run_output)
-        with patch("ii_agent.engine.runtime.run.events.asyncio.create_task") as mock_create_task:
+        with patch("ii_agent.agent.runtime.run.events.asyncio.create_task") as mock_create_task:
             handle_event(
                 event,
                 mock_run_output,
@@ -949,30 +949,30 @@ class TestHandleEvent:
 
 class TestSessionSummaryEvents:
     def test_create_session_summary_started_event_type(self, mock_run_output):
-        from ii_agent.engine.runtime.run.events import create_session_summary_started_event
+        from ii_agent.agent.runtime.run.events import create_session_summary_started_event
         event = create_session_summary_started_event(mock_run_output)
         assert isinstance(event, SessionSummaryStartedEvent)
         assert event.event == RunEvent.session_summary_started.value
 
     def test_create_session_summary_started_copies_session_id(self, mock_run_output):
-        from ii_agent.engine.runtime.run.events import create_session_summary_started_event
+        from ii_agent.agent.runtime.run.events import create_session_summary_started_event
         event = create_session_summary_started_event(mock_run_output)
         assert event.session_id == "session-abc"
 
     def test_create_session_summary_completed_event_type(self, mock_run_output):
-        from ii_agent.engine.runtime.run.events import create_session_summary_completed_event
+        from ii_agent.agent.runtime.run.events import create_session_summary_completed_event
         event = create_session_summary_completed_event(mock_run_output)
         assert isinstance(event, SessionSummaryCompletedEvent)
         assert event.event == RunEvent.session_summary_completed.value
 
     def test_create_session_summary_completed_with_summary(self, mock_run_output):
-        from ii_agent.engine.runtime.run.events import create_session_summary_completed_event
+        from ii_agent.agent.runtime.run.events import create_session_summary_completed_event
         mock_summary = MagicMock()
         event = create_session_summary_completed_event(mock_run_output, session_summary=mock_summary)
         assert event.session_summary is mock_summary
 
     def test_create_session_summary_completed_none_summary_by_default(self, mock_run_output):
-        from ii_agent.engine.runtime.run.events import create_session_summary_completed_event
+        from ii_agent.agent.runtime.run.events import create_session_summary_completed_event
         event = create_session_summary_completed_event(mock_run_output)
         assert event.session_summary is None
 

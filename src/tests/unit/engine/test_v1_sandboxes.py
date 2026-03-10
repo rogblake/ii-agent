@@ -7,15 +7,15 @@ from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
 import pytest
 
-from ii_agent.engine.sandboxes.e2b import E2BSandboxManager, e2b_exception_handler
-from ii_agent.engine.sandboxes.exceptions import (
+from ii_agent.agent.sandboxes.e2b import E2BSandboxManager, e2b_exception_handler
+from ii_agent.agent.sandboxes.exceptions import (
     SandboxAuthenticationError,
     SandboxNotFoundException,
     SandboxNotInitializedError,
     SandboxOperationError,
     SandboxTimeoutException,
 )
-from ii_agent.engine.sandboxes.schemas import SandboxFileInfo, SandboxStatus, FileUpload
+from ii_agent.agent.sandboxes.schemas import SandboxFileInfo, SandboxStatus, FileUpload
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +165,7 @@ class TestEnsureSandboxConnection:
         fake_settings.sandbox.e2b_api_key = "key"
         fake_settings.sandbox.timeout_seconds = 3600
 
-        with patch("ii_agent.engine.sandboxes.e2b.get_settings", return_value=fake_settings):
+        with patch("ii_agent.agent.sandboxes.e2b.get_settings", return_value=fake_settings):
             await mgr._ensure_sandbox_connection()
 
         sb.get_info.assert_called_once()

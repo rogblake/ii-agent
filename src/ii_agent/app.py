@@ -27,7 +27,7 @@ from ii_agent.settings.llm import router as llm_settings_router
 from ii_agent.settings.mcp import router as mcp_settings_router
 from ii_agent.content.skills import router as skills_settings_router
 from ii_agent.chat.router import router as chat_router
-from ii_agent.engine.runtime.api import v1_router
+from ii_agent.agent.runtime.api import v1_router
 from ii_agent.projects.router import router as project_router
 from ii_agent.projects.subdomains import router as subdomains_router
 from ii_agent.content.media import router as media_router

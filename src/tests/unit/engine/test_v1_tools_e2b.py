@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 
 import pytest
 
-from ii_agent.engine.runtime.tools.e2b import E2BTools
+from ii_agent.agent.runtime.tools.e2b import E2BTools
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ class TestE2BToolsCreate:
     async def test_create_uses_env_api_key(self):
         mock_sandbox = make_sandbox()
         with patch.dict("os.environ", {"E2B_API_KEY": "env-api-key"}):
-            with patch("ii_agent.engine.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
+            with patch("ii_agent.agent.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
                 MockSandbox.create = AsyncMock(return_value=mock_sandbox)
                 tools = await E2BTools.create()
                 MockSandbox.create.assert_awaited_once()
@@ -88,7 +88,7 @@ class TestE2BToolsCreate:
     @pytest.mark.asyncio
     async def test_create_with_explicit_api_key(self):
         mock_sandbox = make_sandbox()
-        with patch("ii_agent.engine.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
+        with patch("ii_agent.agent.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
             MockSandbox.create = AsyncMock(return_value=mock_sandbox)
             tools = await E2BTools.create(api_key="explicit-key", timeout=120)
             MockSandbox.create.assert_awaited_once_with(
@@ -97,7 +97,7 @@ class TestE2BToolsCreate:
 
     @pytest.mark.asyncio
     async def test_create_propagates_sandbox_error(self):
-        with patch("ii_agent.engine.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
+        with patch("ii_agent.agent.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
             MockSandbox.create = AsyncMock(side_effect=RuntimeError("sandbox unavailable"))
             with pytest.raises(RuntimeError, match="sandbox unavailable"):
                 await E2BTools.create(api_key="key")
@@ -105,7 +105,7 @@ class TestE2BToolsCreate:
     @pytest.mark.asyncio
     async def test_create_with_sandbox_options(self):
         mock_sandbox = make_sandbox()
-        with patch("ii_agent.engine.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
+        with patch("ii_agent.agent.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
             MockSandbox.create = AsyncMock(return_value=mock_sandbox)
             await E2BTools.create(api_key="key", sandbox_options={"template": "custom"})
             call_kwargs = MockSandbox.create.call_args[1]

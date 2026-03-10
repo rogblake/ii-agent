@@ -49,7 +49,7 @@ from ii_agent.content.slides.design.schemas import (
     SlideSyncBatchRequest,
     SlideSyncBatchResponse,
 )
-from ii_agent.engine.sandboxes.service import SandboxService
+from ii_agent.agent.sandboxes.service import SandboxService
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
 from ii_agent.realtime.events.service import EventService
 

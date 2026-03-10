@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ii_agent.engine.runtime.models.metrics import Metrics
+    from ii_agent.agent.runtime.models.metrics import Metrics
     from ii_agent.billing.usage.models import TokenUsage
 
 

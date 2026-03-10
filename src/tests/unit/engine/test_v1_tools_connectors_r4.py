@@ -23,7 +23,7 @@ pytestmark = pytest.mark.unit
 # ---------------------------------------------------------------------------
 
 def _make_github_tool(token="test-token", default_repo=None, github_metadata=None):
-    from ii_agent.engine.runtime.tools.connectors.github import GitHubAgentTool
+    from ii_agent.agent.runtime.tools.connectors.github import GitHubAgentTool
 
     workspace = MagicMock()
     workspace.container_workspace = "/workspace"
@@ -323,7 +323,7 @@ class TestMCPTool:
     """Test MCPTool class."""
 
     def _make_mcp_tool(self, **kwargs):
-        from ii_agent.engine.runtime.tools.mcp.base import MCPTool
+        from ii_agent.agent.runtime.tools.mcp.base import MCPTool
 
         defaults = dict(
             name="test_mcp",
@@ -344,7 +344,7 @@ class TestMCPTool:
         assert tool.mcp_client is None
 
     def test_init_openai_custom_type_sets_format(self):
-        from ii_agent.engine.runtime.tools.mcp.base import MCPTool
+        from ii_agent.agent.runtime.tools.mcp.base import MCPTool
 
         schema = {"type": "object", "properties": {}}
         tool = MCPTool(
@@ -503,7 +503,7 @@ class TestComposioMCPTool:
     """Test ComposioMCPTool."""
 
     def _make_composio_tool(self):
-        from ii_agent.engine.runtime.tools.mcp.composio_mcp import ComposioMCPTool
+        from ii_agent.agent.runtime.tools.mcp.composio_mcp import ComposioMCPTool
 
         return ComposioMCPTool(
             name="github_STARS",
@@ -569,7 +569,7 @@ class TestComposioMCPTool:
         assert tool.tool_logo is None
 
     def test_init_with_logo(self):
-        from ii_agent.engine.runtime.tools.mcp.composio_mcp import ComposioMCPTool
+        from ii_agent.agent.runtime.tools.mcp.composio_mcp import ComposioMCPTool
 
         tool = ComposioMCPTool(
             name="test",
@@ -591,8 +591,8 @@ class TestMCPToolLoader:
 
     @pytest.mark.asyncio
     async def test_loads_tools_from_mcp_server(self):
-        from ii_agent.engine.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
-        from ii_agent.engine.runtime.tools.mcp.user_mcp_tool import UserMCPTool
+        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agent.runtime.tools.mcp.user_mcp_tool import UserMCPTool
 
         tool1 = MagicMock()
         tool1.name = "tool_one"
@@ -616,7 +616,7 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch("ii_agent.engine.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert len(tools) == 2
@@ -624,7 +624,7 @@ class TestMCPToolLoader:
 
     @pytest.mark.asyncio
     async def test_skips_tool_without_description(self):
-        from ii_agent.engine.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 
         tool_no_desc = MagicMock()
         tool_no_desc.name = "no_desc_tool"
@@ -637,27 +637,27 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch("ii_agent.engine.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert len(tools) == 0
 
     @pytest.mark.asyncio
     async def test_returns_empty_on_connection_error(self):
-        from ii_agent.engine.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(side_effect=ConnectionError("Cannot connect"))
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("ii_agent.engine.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert tools == []
 
     @pytest.mark.asyncio
     async def test_tool_annotations_read_only_hint(self):
-        from ii_agent.engine.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 
         tool = MagicMock()
         tool.name = "readonly_tool"
@@ -675,7 +675,7 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch("ii_agent.engine.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp", mcp_server_id="server-1")
 
         assert len(tools) == 1
@@ -684,7 +684,7 @@ class TestMCPToolLoader:
 
     @pytest.mark.asyncio
     async def test_tool_no_read_only_hint_defaults_to_false(self):
-        from ii_agent.engine.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 
         tool = MagicMock()
         tool.name = "normal_tool"
@@ -702,7 +702,7 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch("ii_agent.engine.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert len(tools) == 1
@@ -710,7 +710,7 @@ class TestMCPToolLoader:
 
     @pytest.mark.asyncio
     async def test_inner_transport_closed_after_loading(self):
-        from ii_agent.engine.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 
         inner_transport = MagicMock()
         inner_transport.close = AsyncMock()
@@ -724,7 +724,7 @@ class TestMCPToolLoader:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.transport = outer_transport
 
-        with patch("ii_agent.engine.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             await load_tools_from_mcp("http://localhost:8080/mcp")
 
         inner_transport.close.assert_called_once()

@@ -71,8 +71,8 @@ from ii_agent.projects.design.prompts import (
     build_design_mode_iframe_plan_prompt,
     build_design_mode_style_change_prompt,
 )
-from ii_agent.engine.sandboxes.models import Sandbox
-from ii_agent.engine.sandboxes.service import SandboxService
+from ii_agent.agent.sandboxes.models import Sandbox
+from ii_agent.agent.sandboxes.service import SandboxService
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
 from ii_agent.realtime.events.service import EventService
 from ii_agent.settings.llm.service import LLMSettingService, get_system_llm_config

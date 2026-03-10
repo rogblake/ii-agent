@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 import pytest
 
-from ii_agent.engine.runtime.tools.a2a.a2a_agent_tool import A2AAgentTool
+from ii_agent.agent.runtime.tools.a2a.a2a_agent_tool import A2AAgentTool
 
 
 # ---------------------------------------------------------------------------

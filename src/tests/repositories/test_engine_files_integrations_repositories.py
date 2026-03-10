@@ -9,10 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.content.media.models import MediaTemplate
 from ii_agent.core.db.repository import BaseRepository
-from ii_agent.engine.agents.models import RunStatus
-from ii_agent.engine.agents.repository import AgentRunTaskRepository
-from ii_agent.engine.sandboxes.models import Sandbox
-from ii_agent.engine.sandboxes.repository import SandboxRepository
+from ii_agent.agent.agents.models import RunStatus
+from ii_agent.agent.agents.repository import AgentRunTaskRepository
+from ii_agent.agent.sandboxes.models import Sandbox
+from ii_agent.agent.sandboxes.repository import SandboxRepository
 from ii_agent.files.models import FileUpload
 from ii_agent.files.repository import FileRepository
 from ii_agent.integrations.connectors.models import ComposioProfile, Connector

@@ -19,12 +19,12 @@ from ii_agent.content.skills.repository import SkillRepository
 from ii_agent.content.skills.schemas import SkillInfo, SkillList
 from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.core.storage import BaseStorage
-from ii_agent.engine.runtime.skills.github import (
+from ii_agent.agent.runtime.skills.github import (
     GitHubDownloadService,
     GitHubSkillError,
 )
-from ii_agent.engine.runtime.skills.skills_ref.errors import ParseError, ValidationError
-from ii_agent.engine.runtime.skills.storage import upload_skill_to_gcs
+from ii_agent.agent.runtime.skills.skills_ref.errors import ParseError, ValidationError
+from ii_agent.agent.runtime.skills.storage import upload_skill_to_gcs
 
 logger = logging.getLogger(__name__)
 

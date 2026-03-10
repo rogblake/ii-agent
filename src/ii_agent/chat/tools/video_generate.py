@@ -358,7 +358,7 @@ class VideoGenerationTool(BaseTool):
                 person_generation = "allow_adult"
 
             # Get tool client
-            from ii_agent.engine.runtime.tools.clients import _get_client
+            from ii_agent.agent.runtime.tools.clients import _get_client
             tool_client = _get_client()
 
             # EXTENSION MODE: Extend existing video

@@ -62,20 +62,20 @@ if not hasattr(_integrations_pkg, "mcp_sse"):
 # ---------------------------------------------------------------------------
 
 _mod_stub(
-    "ii_agent.engine.runtime.agent_controller",
+    "ii_agent.agent.runtime.agent_controller",
     AgentController=type("AgentController", (), {}),
 )
 
 _mod_stub(
-    "ii_agent.engine.agents.beta",
+    "ii_agent.agent.agents.beta",
     register_default_session_hooks=lambda *a, **kw: None,
 )
 _mod_stub(
-    "ii_agent.engine.agents.beta.hooks",
+    "ii_agent.agent.agents.beta.hooks",
     register_default_session_hooks=lambda *a, **kw: None,
 )
 _mod_stub(
-    "ii_agent.engine.agents.beta.hooks.session_hooks",
+    "ii_agent.agent.agents.beta.hooks.session_hooks",
     register_default_session_hooks=lambda *a, **kw: None,
 )
 
@@ -120,23 +120,23 @@ if not hasattr(_google_genai, "interactions"):
     _google_genai.interactions = _google_genai_interactions_stub
 
 # Stub engine.runtime.models.google so its __init__ (which imports .interactions) is bypassed
-_pkg_stub("ii_agent.engine.runtime.models")
-_pkg_stub("ii_agent.engine.runtime.models.google")
+_pkg_stub("ii_agent.agent.runtime.models")
+_pkg_stub("ii_agent.agent.runtime.models.google")
 _mod_stub(
-    "ii_agent.engine.runtime.models.google.interactions",
+    "ii_agent.agent.runtime.models.google.interactions",
     GeminiInteractions=type("GeminiInteractions", (), {}),
 )
 
 # Stub the factory package and its submodules referenced by as_server.py
 # and engine.agents.agent_service
-_factory_pkg = _pkg_stub("ii_agent.engine.runtime.factory")
+_factory_pkg = _pkg_stub("ii_agent.agent.runtime.factory")
 _factory_pkg.AgentFactory = type("AgentFactory", (), {})
 _mod_stub(
-    "ii_agent.engine.runtime.factory.factory",
+    "ii_agent.agent.runtime.factory.factory",
     AgentFactory=type("AgentFactory", (), {}),
 )
 _mod_stub(
-    "ii_agent.engine.runtime.factory.converter",
+    "ii_agent.agent.runtime.factory.converter",
     convert_agent_event_to_realtime=lambda *a, **kw: None,
 )
 

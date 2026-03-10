@@ -1,5 +1,5 @@
 """
-Unit tests for src/ii_agent/engine/runtime/models/anthropic/claude.py
+Unit tests for src/ii_agent/agent/runtime/models/anthropic/claude.py
 
 Tests cover:
 - ROLE_MAP constant
@@ -25,7 +25,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.engine.runtime.models.anthropic.claude import (
+from ii_agent.agent.runtime.models.anthropic.claude import (
     ROLE_MAP,
     MCPServerConfiguration,
     Claude,
@@ -33,14 +33,14 @@ from ii_agent.engine.runtime.models.anthropic.claude import (
     format_tools_for_model,
     format_messages,
 )
-from ii_agent.engine.runtime.models.message import Message
-from ii_agent.engine.runtime.models.metrics import Metrics
-from ii_agent.engine.runtime.models.response import ModelResponse
-from ii_agent.engine.runtime.exceptions import (
+from ii_agent.agent.runtime.models.message import Message
+from ii_agent.agent.runtime.models.metrics import Metrics
+from ii_agent.agent.runtime.models.response import ModelResponse
+from ii_agent.agent.runtime.exceptions import (
     ModelProviderError,
     ModelRateLimitError,
 )
-from ii_agent.engine.types import Provider
+from ii_agent.agent.types import Provider
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.engine.agents.plan_service import PlanService
+from ii_agent.agent.agents.plan_service import PlanService
 from ii_agent.realtime.events.models import EventType
 
 
@@ -23,7 +23,7 @@ async def test_has_existing_plan_detects_populated_milestones(settings_factory, 
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr("ii_agent.engine.agents.plan_service.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.agent.agents.plan_service.get_db_session_local", _db_cm)
 
     assert await service.has_existing_plan(uuid4(), session_service=session_service) is True
 
@@ -51,7 +51,7 @@ async def test_save_and_emit_plan_persists_plan_event(settings_factory, monkeypa
     async def _db_cm():
         yield db_obj
 
-    monkeypatch.setattr("ii_agent.engine.agents.plan_service.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.agent.agents.plan_service.get_db_session_local", _db_cm)
 
     async def _get_session_by_id(db, session_id):
         return session

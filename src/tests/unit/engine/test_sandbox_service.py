@@ -3,8 +3,8 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.engine.sandboxes.schemas import SandboxStatus
-from ii_agent.engine.sandboxes.service import SandboxService
+from ii_agent.agent.sandboxes.schemas import SandboxStatus
+from ii_agent.agent.sandboxes.service import SandboxService
 
 
 class FakeSandboxRepo:

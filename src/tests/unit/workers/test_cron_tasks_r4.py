@@ -406,7 +406,7 @@ class TestCleanupLongRunningTasks:
     @pytest.mark.asyncio
     async def test_marks_tasks_as_system_interrupted(self):
         from ii_agent.workers.cron.tasks import cleanup_long_running_tasks
-        from ii_agent.engine.agents.models import RunStatus
+        from ii_agent.agent.agents.models import RunStatus
 
         mock_task = MagicMock()
         mock_task.status = RunStatus.RUNNING

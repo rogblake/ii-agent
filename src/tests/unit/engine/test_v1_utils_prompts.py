@@ -13,7 +13,7 @@ import pytest
 from pydantic import BaseModel, Field
 
 
-from ii_agent.engine.runtime.utils.prompts import (
+from ii_agent.agent.runtime.utils.prompts import (
     get_json_output_prompt,
     get_response_model_format_prompt,
 )

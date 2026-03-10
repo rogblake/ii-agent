@@ -387,7 +387,7 @@ class TestA2AManagerGetPrompt:
         }
 
         with patch(
-            "ii_agent.engine.prompts.a2a_agents_prompt.build_a2a_agents_prompt",
+            "ii_agent.agent.prompts.a2a_agents_prompt.build_a2a_agents_prompt",
             return_value="A2A prompt text",
         ):
             manager = A2AManager(config=mock_config)

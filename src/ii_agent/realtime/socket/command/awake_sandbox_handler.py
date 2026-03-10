@@ -13,8 +13,8 @@ from ii_agent.realtime.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )
-from ii_agent.engine.sandboxes.schemas import SandboxStatus
-from ii_agent.engine.sandboxes.exceptions import SandboxNotFoundException
+from ii_agent.agent.sandboxes.schemas import SandboxStatus
+from ii_agent.agent.sandboxes.exceptions import SandboxNotFoundException
 
 if TYPE_CHECKING:
     from ii_agent.core.container import ServiceContainer

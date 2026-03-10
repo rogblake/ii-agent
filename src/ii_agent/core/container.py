@@ -45,14 +45,14 @@ from ii_agent.core.llm.dependencies import (
     get_llm_config_resolver,
     get_llm_execution_service,
 )
-from ii_agent.engine.agents.dependencies import (
+from ii_agent.agent.agents.dependencies import (
     get_agent_run_service,
     get_agent_run_task_repository,
     get_agent_service,
     get_execution_service,
     get_plan_service,
 )
-from ii_agent.engine.sandboxes.dependencies import (
+from ii_agent.agent.sandboxes.dependencies import (
     get_sandbox_repository,
     get_sandbox_service,
 )
@@ -101,10 +101,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ii_agent.engine.agents.agent_run_service import AgentRunService
-    from ii_agent.engine.agents.agent_service import AgentService
-    from ii_agent.engine.agents.execution_service import ExecutionService
-    from ii_agent.engine.agents.plan_service import PlanService
+    from ii_agent.agent.agents.agent_run_service import AgentRunService
+    from ii_agent.agent.agents.agent_service import AgentService
+    from ii_agent.agent.agents.execution_service import ExecutionService
+    from ii_agent.agent.agents.plan_service import PlanService
     from ii_agent.billing.service import BillingService
     from ii_agent.billing.credits.service import CreditService
     from ii_agent.integrations.connectors.composio.service import ComposioService
@@ -123,7 +123,7 @@ if TYPE_CHECKING:
     )
     from ii_agent.projects.deployments.service import DeploymentsService
     from ii_agent.projects.service import ProjectService
-    from ii_agent.engine.sandboxes.service import SandboxService
+    from ii_agent.agent.sandboxes.service import SandboxService
     from ii_agent.sessions.service import SessionService
     from ii_agent.sessions.fork_service import SessionForkService
     from ii_agent.sessions.validation_service import SessionValidationService

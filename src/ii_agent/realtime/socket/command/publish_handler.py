@@ -11,12 +11,12 @@ from ii_agent.realtime.events.stream import EventStream
 from ii_agent.core.logger import logger
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo
-from ii_agent.engine.sandboxes.e2b import E2BSandboxManager
+from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
 from ii_agent.realtime.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )
-from ii_agent.engine.sandboxes.sandbox_client import MCPClient
+from ii_agent.agent.sandboxes.sandbox_client import MCPClient
 
 if TYPE_CHECKING:
     from ii_agent.core.container import ServiceContainer

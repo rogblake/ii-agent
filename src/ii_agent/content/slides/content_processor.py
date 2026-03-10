@@ -10,7 +10,7 @@ import logging
 from urllib.parse import unquote
 
 from ii_agent.core.storage.base import BaseStorage
-from ii_agent.engine.sandboxes.base import SandboxManager
+from ii_agent.agent.sandboxes.base import SandboxManager
 
 logger = logging.getLogger(__name__)
 

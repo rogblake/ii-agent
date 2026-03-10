@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
-from ii_agent.engine.agents.agent_service import AgentService
+from ii_agent.agent.agents.agent_service import AgentService
 
 
 @pytest.mark.asyncio

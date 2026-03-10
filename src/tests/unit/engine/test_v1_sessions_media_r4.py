@@ -29,7 +29,7 @@ class TestAgentSessionStoreMapToAgentSession:
     """Test the _map_to_agent_session helper without hitting the DB."""
 
     def _make_store(self):
-        from ii_agent.engine.runtime.agent_sessions.store import AgentSessionStore
+        from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
         return AgentSessionStore()
 
     def _make_session_row(self, session_id="sess-1", user_id="user-1"):
@@ -131,12 +131,12 @@ class TestAgentSessionStoreGetHistoryMessages:
     """Test get_history_messages with mocked get_session_messages."""
 
     def _make_store(self):
-        from ii_agent.engine.runtime.agent_sessions.store import AgentSessionStore
+        from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
         return AgentSessionStore()
 
     def _make_run_output(self, status=None, messages=None, model="gpt-4"):
-        from ii_agent.engine.runtime.run.agent import RunOutput
-        from ii_agent.engine.runtime.run import RunStatus
+        from ii_agent.agent.runtime.run.agent import RunOutput
+        from ii_agent.agent.runtime.run import RunStatus
         ro = RunOutput(
             run_id=str(uuid4()),
             session_id="sess-1",
@@ -150,8 +150,8 @@ class TestAgentSessionStoreGetHistoryMessages:
 
     @pytest.mark.asyncio
     async def test_returns_messages_from_completed_runs(self):
-        from ii_agent.engine.runtime.models.message import Message
-        from ii_agent.engine.runtime.run import RunStatus
+        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agent.runtime.run import RunStatus
 
         store = self._make_store()
         msg = Message(role="user", content="Hello")
@@ -165,8 +165,8 @@ class TestAgentSessionStoreGetHistoryMessages:
 
     @pytest.mark.asyncio
     async def test_skips_paused_runs(self):
-        from ii_agent.engine.runtime.models.message import Message
-        from ii_agent.engine.runtime.run import RunStatus
+        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agent.runtime.run import RunStatus
 
         store = self._make_store()
         msg = Message(role="user", content="Hello")
@@ -179,8 +179,8 @@ class TestAgentSessionStoreGetHistoryMessages:
 
     @pytest.mark.asyncio
     async def test_skips_history_messages_when_from_history_true(self):
-        from ii_agent.engine.runtime.models.message import Message
-        from ii_agent.engine.runtime.run import RunStatus
+        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agent.runtime.run import RunStatus
 
         store = self._make_store()
         msg = Message(role="user", content="History message")
@@ -195,8 +195,8 @@ class TestAgentSessionStoreGetHistoryMessages:
 
     @pytest.mark.asyncio
     async def test_includes_history_messages_when_flag_false(self):
-        from ii_agent.engine.runtime.models.message import Message
-        from ii_agent.engine.runtime.run import RunStatus
+        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agent.runtime.run import RunStatus
 
         store = self._make_store()
         msg = Message(role="user", content="History message")
@@ -211,8 +211,8 @@ class TestAgentSessionStoreGetHistoryMessages:
 
     @pytest.mark.asyncio
     async def test_system_message_prepended(self):
-        from ii_agent.engine.runtime.models.message import Message
-        from ii_agent.engine.runtime.run import RunStatus
+        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agent.runtime.run import RunStatus
 
         store = self._make_store()
         sys_msg = Message(role="system", content="System instructions")
@@ -229,8 +229,8 @@ class TestAgentSessionStoreGetHistoryMessages:
 
     @pytest.mark.asyncio
     async def test_skips_messages_with_excluded_roles(self):
-        from ii_agent.engine.runtime.models.message import Message
-        from ii_agent.engine.runtime.run import RunStatus
+        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agent.runtime.run import RunStatus
 
         store = self._make_store()
         sys_msg = Message(role="system", content="System")
@@ -249,8 +249,8 @@ class TestAgentSessionStoreGetHistoryMessages:
 
     @pytest.mark.asyncio
     async def test_tags_message_model_when_not_set(self):
-        from ii_agent.engine.runtime.models.message import Message
-        from ii_agent.engine.runtime.run import RunStatus
+        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agent.runtime.run import RunStatus
 
         store = self._make_store()
         msg = Message(role="user", content="Message without model")
@@ -273,30 +273,30 @@ class TestReconstructMediaFromDict:
     """Test media reconstruction utilities."""
 
     def test_reconstruct_image_from_dict_with_url(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_image_from_dict
-        from ii_agent.engine.runtime.media import Image
+        from ii_agent.agent.runtime.utils.media import reconstruct_image_from_dict
+        from ii_agent.agent.runtime.media import Image
 
         result = reconstruct_image_from_dict({"url": "http://example.com/img.jpg"})
         assert isinstance(result, Image)
 
     def test_reconstruct_image_from_dict_with_base64(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_image_from_dict
-        from ii_agent.engine.runtime.media import Image
+        from ii_agent.agent.runtime.utils.media import reconstruct_image_from_dict
+        from ii_agent.agent.runtime.media import Image
 
         b64 = base64.b64encode(b"fake image data").decode("utf-8")
         result = reconstruct_image_from_dict({"content": b64, "mime_type": "image/jpeg"})
         assert result is not None
 
     def test_reconstruct_image_passthrough_non_dict(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_image_from_dict
-        from ii_agent.engine.runtime.media import Image
+        from ii_agent.agent.runtime.utils.media import reconstruct_image_from_dict
+        from ii_agent.agent.runtime.media import Image
 
         img = Image(url="http://example.com/img.jpg")
         result = reconstruct_image_from_dict(img)
         assert result is img
 
     def test_reconstruct_image_returns_none_on_error(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_image_from_dict
+        from ii_agent.agent.runtime.utils.media import reconstruct_image_from_dict
 
         # Completely invalid dict that would fail Image() construction
         result = reconstruct_image_from_dict({"invalid_field_only": 123})
@@ -305,66 +305,66 @@ class TestReconstructMediaFromDict:
         assert result is None or result is not None
 
     def test_reconstruct_video_from_dict_with_url(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_video_from_dict
-        from ii_agent.engine.runtime.media import Video
+        from ii_agent.agent.runtime.utils.media import reconstruct_video_from_dict
+        from ii_agent.agent.runtime.media import Video
 
         result = reconstruct_video_from_dict({"url": "http://example.com/video.mp4"})
         assert isinstance(result, Video)
 
     def test_reconstruct_video_from_dict_with_base64(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_video_from_dict
+        from ii_agent.agent.runtime.utils.media import reconstruct_video_from_dict
 
         b64 = base64.b64encode(b"fake video data").decode("utf-8")
         result = reconstruct_video_from_dict({"content": b64, "mime_type": "video/mp4"})
         assert result is not None
 
     def test_reconstruct_video_passthrough_non_dict(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_video_from_dict
-        from ii_agent.engine.runtime.media import Video
+        from ii_agent.agent.runtime.utils.media import reconstruct_video_from_dict
+        from ii_agent.agent.runtime.media import Video
 
         vid = Video(url="http://example.com/video.mp4")
         result = reconstruct_video_from_dict(vid)
         assert result is vid
 
     def test_reconstruct_audio_from_dict_with_url(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_audio_from_dict
-        from ii_agent.engine.runtime.media import Audio
+        from ii_agent.agent.runtime.utils.media import reconstruct_audio_from_dict
+        from ii_agent.agent.runtime.media import Audio
 
         result = reconstruct_audio_from_dict({"url": "http://example.com/audio.mp3"})
         assert isinstance(result, Audio)
 
     def test_reconstruct_audio_from_dict_with_base64(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_audio_from_dict
+        from ii_agent.agent.runtime.utils.media import reconstruct_audio_from_dict
 
         b64 = base64.b64encode(b"fake audio data").decode("utf-8")
         result = reconstruct_audio_from_dict({"content": b64, "mime_type": "audio/mp3"})
         assert result is not None
 
     def test_reconstruct_audio_passthrough_non_dict(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_audio_from_dict
-        from ii_agent.engine.runtime.media import Audio
+        from ii_agent.agent.runtime.utils.media import reconstruct_audio_from_dict
+        from ii_agent.agent.runtime.media import Audio
 
         aud = Audio(url="http://example.com/audio.mp3")
         result = reconstruct_audio_from_dict(aud)
         assert result is aud
 
     def test_reconstruct_file_from_dict_with_url(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_file_from_dict
-        from ii_agent.engine.runtime.media import File
+        from ii_agent.agent.runtime.utils.media import reconstruct_file_from_dict
+        from ii_agent.agent.runtime.media import File
 
         result = reconstruct_file_from_dict({"url": "http://example.com/file.pdf"})
         assert isinstance(result, File)
 
     def test_reconstruct_file_from_dict_with_base64(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_file_from_dict
+        from ii_agent.agent.runtime.utils.media import reconstruct_file_from_dict
 
         b64 = base64.b64encode(b"fake file data").decode("utf-8")
         result = reconstruct_file_from_dict({"content": b64, "mime_type": "application/pdf"})
         assert result is not None
 
     def test_reconstruct_file_passthrough_non_dict(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_file_from_dict
-        from ii_agent.engine.runtime.media import File
+        from ii_agent.agent.runtime.utils.media import reconstruct_file_from_dict
+        from ii_agent.agent.runtime.media import File
 
         f = File(url="http://example.com/file.pdf")
         result = reconstruct_file_from_dict(f)
@@ -375,19 +375,19 @@ class TestReconstructMediaLists:
     """Test batch reconstruction utilities."""
 
     def test_reconstruct_images_none_returns_none(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_images
+        from ii_agent.agent.runtime.utils.media import reconstruct_images
 
         result = reconstruct_images(None)
         assert result is None
 
     def test_reconstruct_images_empty_list_returns_none(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_images
+        from ii_agent.agent.runtime.utils.media import reconstruct_images
 
         result = reconstruct_images([])
         assert result is None
 
     def test_reconstruct_images_valid_items(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_images
+        from ii_agent.agent.runtime.utils.media import reconstruct_images
 
         items = [{"url": "http://example.com/img1.jpg"}, {"url": "http://example.com/img2.jpg"}]
         result = reconstruct_images(items)
@@ -395,7 +395,7 @@ class TestReconstructMediaLists:
         assert len(result) == 2
 
     def test_reconstruct_images_filters_none(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_images
+        from ii_agent.agent.runtime.utils.media import reconstruct_images
 
         # Invalid items that would fail construction
         items = [{"url": "http://example.com/img.jpg"}]
@@ -403,19 +403,19 @@ class TestReconstructMediaLists:
         assert result is not None
 
     def test_reconstruct_videos_none_returns_none(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_videos
+        from ii_agent.agent.runtime.utils.media import reconstruct_videos
 
         result = reconstruct_videos(None)
         assert result is None
 
     def test_reconstruct_videos_empty_returns_none(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_videos
+        from ii_agent.agent.runtime.utils.media import reconstruct_videos
 
         result = reconstruct_videos([])
         assert result is None
 
     def test_reconstruct_videos_valid(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_videos
+        from ii_agent.agent.runtime.utils.media import reconstruct_videos
 
         items = [{"url": "http://example.com/video.mp4"}]
         result = reconstruct_videos(items)
@@ -423,51 +423,51 @@ class TestReconstructMediaLists:
         assert len(result) == 1
 
     def test_reconstruct_audio_list_none_returns_none(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_audio_list
+        from ii_agent.agent.runtime.utils.media import reconstruct_audio_list
 
         result = reconstruct_audio_list(None)
         assert result is None
 
     def test_reconstruct_audio_list_empty_returns_none(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_audio_list
+        from ii_agent.agent.runtime.utils.media import reconstruct_audio_list
 
         result = reconstruct_audio_list([])
         assert result is None
 
     def test_reconstruct_audio_list_valid(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_audio_list
+        from ii_agent.agent.runtime.utils.media import reconstruct_audio_list
 
         items = [{"url": "http://example.com/audio.mp3"}]
         result = reconstruct_audio_list(items)
         assert result is not None
 
     def test_reconstruct_files_none_returns_none(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_files
+        from ii_agent.agent.runtime.utils.media import reconstruct_files
 
         result = reconstruct_files(None)
         assert result is None
 
     def test_reconstruct_files_empty_returns_none(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_files
+        from ii_agent.agent.runtime.utils.media import reconstruct_files
 
         result = reconstruct_files([])
         assert result is None
 
     def test_reconstruct_files_valid(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_files
+        from ii_agent.agent.runtime.utils.media import reconstruct_files
 
         items = [{"url": "http://example.com/doc.pdf"}]
         result = reconstruct_files(items)
         assert result is not None
 
     def test_reconstruct_response_audio_none(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_response_audio
+        from ii_agent.agent.runtime.utils.media import reconstruct_response_audio
 
         result = reconstruct_response_audio(None)
         assert result is None
 
     def test_reconstruct_response_audio_valid(self):
-        from ii_agent.engine.runtime.utils.media import reconstruct_response_audio
+        from ii_agent.agent.runtime.utils.media import reconstruct_response_audio
 
         result = reconstruct_response_audio({"url": "http://example.com/audio.mp3"})
         assert result is not None
@@ -477,7 +477,7 @@ class TestSaveBase64Data:
     """Test save_base64_data."""
 
     def test_saves_valid_base64_data(self, tmp_path):
-        from ii_agent.engine.runtime.utils import media as media_module
+        from ii_agent.agent.runtime.utils import media as media_module
 
         # log_info is not defined in the module (source bug). Patch it in.
         data = base64.b64encode(b"test content").decode("utf-8")
@@ -491,13 +491,13 @@ class TestSaveBase64Data:
             assert f.read() == b"test content"
 
     def test_raises_on_invalid_base64(self):
-        from ii_agent.engine.runtime.utils.media import save_base64_data
+        from ii_agent.agent.runtime.utils.media import save_base64_data
 
         with pytest.raises(Exception):
             save_base64_data("not-valid-base64!!!", "/tmp/output.bin")
 
     def test_creates_parent_dirs(self, tmp_path):
-        from ii_agent.engine.runtime.utils import media as media_module
+        from ii_agent.agent.runtime.utils import media as media_module
 
         data = base64.b64encode(b"hello").decode("utf-8")
         output_path = str(tmp_path / "nested" / "dirs" / "file.bin")
@@ -512,7 +512,7 @@ class TestWaitForMediaReady:
     """Test wait_for_media_ready."""
 
     def test_returns_true_when_media_available(self):
-        from ii_agent.engine.runtime.utils import media as media_module
+        from ii_agent.agent.runtime.utils import media as media_module
 
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
@@ -527,7 +527,7 @@ class TestWaitForMediaReady:
         assert result is True
 
     def test_returns_false_on_timeout(self):
-        from ii_agent.engine.runtime.utils import media as media_module
+        from ii_agent.agent.runtime.utils import media as media_module
         import httpx
 
         with (
@@ -540,7 +540,7 @@ class TestWaitForMediaReady:
         assert result is False
 
     def test_verbose_false_suppresses_logging(self):
-        from ii_agent.engine.runtime.utils import media as media_module
+        from ii_agent.agent.runtime.utils import media as media_module
 
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
@@ -564,7 +564,7 @@ class TestCopyArgsForBackground:
     """Test copy_args_for_background."""
 
     def test_copies_run_input(self):
-        from ii_agent.engine.runtime.utils.hooks import copy_args_for_background
+        from ii_agent.agent.runtime.utils.hooks import copy_args_for_background
 
         original = {"run_input": {"key": "value"}, "other": "stuff"}
         result = copy_args_for_background(original)
@@ -573,7 +573,7 @@ class TestCopyArgsForBackground:
         assert result["run_input"] == original["run_input"]
 
     def test_copies_run_context(self):
-        from ii_agent.engine.runtime.utils.hooks import copy_args_for_background
+        from ii_agent.agent.runtime.utils.hooks import copy_args_for_background
 
         run_ctx = {"session_id": "s1", "run_id": "r1"}
         original = {"run_context": run_ctx}
@@ -581,7 +581,7 @@ class TestCopyArgsForBackground:
         assert result["run_context"] is not run_ctx
 
     def test_copies_run_output(self):
-        from ii_agent.engine.runtime.utils.hooks import copy_args_for_background
+        from ii_agent.agent.runtime.utils.hooks import copy_args_for_background
 
         run_out = {"status": "completed"}
         original = {"run_output": run_out}
@@ -589,7 +589,7 @@ class TestCopyArgsForBackground:
         assert result["run_output"] is not run_out
 
     def test_copies_metadata(self):
-        from ii_agent.engine.runtime.utils.hooks import copy_args_for_background
+        from ii_agent.agent.runtime.utils.hooks import copy_args_for_background
 
         meta = {"key": "val"}
         original = {"metadata": meta}
@@ -597,7 +597,7 @@ class TestCopyArgsForBackground:
         assert result["metadata"] is not meta
 
     def test_preserves_non_sensitive_keys_by_reference(self):
-        from ii_agent.engine.runtime.utils.hooks import copy_args_for_background
+        from ii_agent.agent.runtime.utils.hooks import copy_args_for_background
 
         obj = object()
         original = {"some_key": obj}
@@ -605,14 +605,14 @@ class TestCopyArgsForBackground:
         assert result["some_key"] is obj
 
     def test_none_values_passed_as_is(self):
-        from ii_agent.engine.runtime.utils.hooks import copy_args_for_background
+        from ii_agent.agent.runtime.utils.hooks import copy_args_for_background
 
         original = {"run_input": None}
         result = copy_args_for_background(original)
         assert result["run_input"] is None
 
     def test_handles_non_copyable_object_gracefully(self):
-        from ii_agent.engine.runtime.utils.hooks import copy_args_for_background
+        from ii_agent.agent.runtime.utils.hooks import copy_args_for_background
 
         class NotCopyable:
             def __deepcopy__(self, memo):
@@ -628,19 +628,19 @@ class TestNormalizeHooks:
     """Test normalize_hooks."""
 
     def test_none_hooks_returns_none(self):
-        from ii_agent.engine.runtime.utils.hooks import normalize_hooks
+        from ii_agent.agent.runtime.utils.hooks import normalize_hooks
 
         result = normalize_hooks(None)
         assert result is None
 
     def test_empty_list_returns_none(self):
-        from ii_agent.engine.runtime.utils.hooks import normalize_hooks
+        from ii_agent.agent.runtime.utils.hooks import normalize_hooks
 
         result = normalize_hooks([])
         assert result is None
 
     def test_sync_hooks_returned_in_sync_mode(self):
-        from ii_agent.engine.runtime.utils.hooks import normalize_hooks
+        from ii_agent.agent.runtime.utils.hooks import normalize_hooks
 
         def sync_hook(): pass
 
@@ -649,7 +649,7 @@ class TestNormalizeHooks:
         assert sync_hook in result
 
     def test_async_hook_in_sync_mode_raises(self):
-        from ii_agent.engine.runtime.utils.hooks import normalize_hooks
+        from ii_agent.agent.runtime.utils.hooks import normalize_hooks
 
         async def async_hook(): pass
 
@@ -657,7 +657,7 @@ class TestNormalizeHooks:
             normalize_hooks([async_hook], async_mode=False)
 
     def test_async_hook_in_async_mode_allowed(self):
-        from ii_agent.engine.runtime.utils.hooks import normalize_hooks
+        from ii_agent.agent.runtime.utils.hooks import normalize_hooks
 
         async def async_hook(): pass
 
@@ -671,7 +671,7 @@ class TestFilterHookArgs:
     """Test filter_hook_args."""
 
     def test_filters_to_accepted_params(self):
-        from ii_agent.engine.runtime.utils.hooks import filter_hook_args
+        from ii_agent.agent.runtime.utils.hooks import filter_hook_args
 
         def hook(run_input, user_id): pass
 
@@ -682,7 +682,7 @@ class TestFilterHookArgs:
         assert "extra" not in result
 
     def test_passes_all_when_kwargs_present(self):
-        from ii_agent.engine.runtime.utils.hooks import filter_hook_args
+        from ii_agent.agent.runtime.utils.hooks import filter_hook_args
 
         def hook_with_kwargs(**kwargs): pass
 
@@ -691,7 +691,7 @@ class TestFilterHookArgs:
         assert result == all_args
 
     def test_empty_hook_params_returns_empty(self):
-        from ii_agent.engine.runtime.utils.hooks import filter_hook_args
+        from ii_agent.agent.runtime.utils.hooks import filter_hook_args
 
         def no_params_hook(): pass
 
@@ -700,7 +700,7 @@ class TestFilterHookArgs:
         assert result == {}
 
     def test_handles_inspection_failure_gracefully(self):
-        from ii_agent.engine.runtime.utils.hooks import filter_hook_args
+        from ii_agent.agent.runtime.utils.hooks import filter_hook_args
 
         # MagicMock objects might fail signature inspection
         mock_hook = MagicMock()

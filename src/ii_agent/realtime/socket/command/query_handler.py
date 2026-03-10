@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 import uuid
 
-from ii_agent.engine.types import AgentType
+from ii_agent.agent.types import AgentType
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
 from ii_agent.realtime.events.stream import EventStream
-from ii_agent.engine.agents.models import RunStatus
+from ii_agent.agent.agents.models import RunStatus
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.realtime.socket.schemas import (
@@ -19,9 +19,9 @@ from ii_agent.realtime.socket.command.command_handler import (
     UserCommandType,
 )
 from ii_agent.utils.workspace_manager import WorkspaceManager
-from ii_agent.engine.runtime.run.agent import RunCompletedEvent, RunOutput
-from ii_agent.engine.runtime.factory.converter import convert_agent_event_to_realtime
-from ii_agent.engine.runtime.media import Image, File as UrlFile
+from ii_agent.agent.runtime.run.agent import RunCompletedEvent, RunOutput
+from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
+from ii_agent.agent.runtime.media import Image, File as UrlFile
 from ii_agent.core.llm.token_record import TokenTracker
 from ii_agent.core.logger import logger
 

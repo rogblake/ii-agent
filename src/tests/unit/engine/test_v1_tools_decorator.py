@@ -4,7 +4,7 @@ import inspect
 import pytest
 from unittest.mock import MagicMock, patch
 
-from ii_agent.engine.runtime.tools.decorator import tool, _is_async_function
+from ii_agent.agent.runtime.tools.decorator import tool, _is_async_function
 
 
 # ---------------------------------------------------------------------------

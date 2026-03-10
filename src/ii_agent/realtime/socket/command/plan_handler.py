@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Dict, Any
 
 from ii_agent.realtime.events.models import EventType, RealtimeEvent
 from ii_agent.realtime.events.stream import EventStream
-from ii_agent.engine.agents.models import AgentRunTask, RunStatus
+from ii_agent.agent.agents.models import AgentRunTask, RunStatus
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo
-from ii_agent.engine.prompts.plan_mode_prompt import (
+from ii_agent.agent.prompts.plan_mode_prompt import (
     get_plan_modification_suggestions_prompt,
     get_plan_modification_execute_prompt,
 )
@@ -21,10 +21,10 @@ from ii_agent.realtime.socket.command.command_handler import (
     UserCommandType,
 )
 from ii_agent.utils.workspace_manager import WorkspaceManager
-from ii_agent.engine.runtime.factory.converter import convert_agent_event_to_realtime
-from ii_agent.engine.runtime.run.agent import RunCompletedEvent, RunOutput
-from ii_agent.engine.runtime.media import Image, File as UrlFile
-from ii_agent.engine.runtime.tools.plan import MilestoneTool, PlanModificationSuggestionsTool
+from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
+from ii_agent.agent.runtime.run.agent import RunCompletedEvent, RunOutput
+from ii_agent.agent.runtime.media import Image, File as UrlFile
+from ii_agent.agent.runtime.tools.plan import MilestoneTool, PlanModificationSuggestionsTool
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -411,7 +411,7 @@ class PlanHandler(CommandHandler):
 
             if isinstance(event, RunOutput):
                 # Update task status based on RunStatus
-                from ii_agent.engine.runtime.run.agent import RunStatus as V1RunStatus
+                from ii_agent.agent.runtime.run.agent import RunStatus as V1RunStatus
 
                 v1_status = getattr(event, "status", None)
                 status = (

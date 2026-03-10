@@ -5,13 +5,13 @@ from typing import Annotated
 from fastapi import Depends
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.engine.sandboxes.dependencies import SandboxRepositoryDep
+from ii_agent.agent.sandboxes.dependencies import SandboxRepositoryDep
 from ii_agent.projects.repository import ProjectRepository
 from ii_agent.projects.service import ProjectService
 from ii_agent.projects.deployment_orchestration_service import DeploymentOrchestrationService
 from ii_agent.projects.databases.service import DatabaseService
 from ii_agent.projects.secrets.service import SecretService
-from ii_agent.engine.sandboxes.env_sync_service import SandboxEnvSyncService
+from ii_agent.agent.sandboxes.env_sync_service import SandboxEnvSyncService
 from ii_agent.sessions.dependencies import SessionRepositoryDep
 
 

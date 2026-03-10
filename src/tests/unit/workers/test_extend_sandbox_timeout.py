@@ -391,11 +391,11 @@ class TestSandboxTimeoutExtenderConstructor:
                 return_value=mock_settings,
             ),
             patch(
-                "ii_agent.engine.sandboxes.service.SandboxService",
+                "ii_agent.agent.sandboxes.service.SandboxService",
                 return_value=mock_sandbox_service,
             ),
             patch(
-                "ii_agent.engine.sandboxes.repository.SandboxRepository",
+                "ii_agent.agent.sandboxes.repository.SandboxRepository",
                 return_value=MagicMock(),
             ),
         ):

@@ -4,7 +4,7 @@ from typing import Dict, List, Any, Literal, Optional
 import uuid
 from pydantic import BaseModel
 
-from ii_agent.engine.types import AgentType
+from ii_agent.agent.types import AgentType
 from ii_agent.settings.llm.persisted_settings import PersistedSettings
 
 

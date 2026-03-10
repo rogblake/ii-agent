@@ -8,7 +8,7 @@ from typing import Any, Dict
 
 from ii_agent.integrations.a2a.config import A2AConfig
 from ii_agent.integrations.a2a.exceptions import InvalidA2AAgentConfig
-from ii_agent.engine.runtime.tools.a2a.a2a_agent_tool import A2AAgentTool
+from ii_agent.agent.runtime.tools.a2a.a2a_agent_tool import A2AAgentTool
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class A2AManager:
         logger.info("📝 Adding A2A agents description to system prompt")
         logger.info(f"   A2A agents: {list(a2a_agents_config.keys())}")
 
-        from ii_agent.engine.prompts.a2a_agents_prompt import build_a2a_agents_prompt
+        from ii_agent.agent.prompts.a2a_agents_prompt import build_a2a_agents_prompt
 
         a2a_prompt = build_a2a_agents_prompt(temp_tool_args)
         logger.info(

@@ -4,8 +4,8 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.engine.agents.execution_service import ExecutionService
-from ii_agent.engine.agents.models import RunStatus
+from ii_agent.agent.agents.execution_service import ExecutionService
+from ii_agent.agent.agents.models import RunStatus
 
 
 class FakeEventService:
@@ -60,7 +60,7 @@ async def test_update_milestones_after_run_completed_updates_only_requested(sett
     async def _db_cm():
         yield FakeDB()
 
-    monkeypatch.setattr("ii_agent.engine.agents.execution_service.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.agent.agents.execution_service.get_db_session_local", _db_cm)
 
     service = ExecutionService(config=settings_factory())
     event_service = FakeEventService()

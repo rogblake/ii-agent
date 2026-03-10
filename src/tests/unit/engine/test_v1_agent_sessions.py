@@ -6,16 +6,16 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from ii_agent.engine.runtime.agent_sessions.agent import AgentSession
-from ii_agent.engine.runtime.agent_sessions.base import NoOpSessionStore
-from ii_agent.engine.runtime.agent_sessions.summary import (
+from ii_agent.agent.runtime.agent_sessions.agent import AgentSession
+from ii_agent.agent.runtime.agent_sessions.base import NoOpSessionStore
+from ii_agent.agent.runtime.agent_sessions.summary import (
     DEFAULT_TOKEN_THRESHOLD,
     MODEL_TOKEN_THRESHOLDS,
     SessionSummary,
     SessionSummaryManager,
     SessionSummaryResponse,
 )
-from ii_agent.engine.runtime.run.base import RunStatus
+from ii_agent.agent.runtime.run.base import RunStatus
 
 
 # ---------------------------------------------------------------------------
@@ -472,7 +472,7 @@ class TestNoOpSessionStore:
     @pytest.mark.asyncio
     async def test_get_or_create_run_task_returns_task(self, monkeypatch):
         from types import SimpleNamespace
-        from ii_agent.engine.runtime.agent_sessions import base as base_module
+        from ii_agent.agent.runtime.agent_sessions import base as base_module
 
         # Patch AgentRunTask to avoid SQLAlchemy mapper initialization during unit test
         FakeTask = SimpleNamespace
@@ -490,7 +490,7 @@ class TestNoOpSessionStore:
     @pytest.mark.asyncio
     async def test_get_or_create_run_task_version_zero(self, monkeypatch):
         from types import SimpleNamespace
-        from ii_agent.engine.runtime.agent_sessions import base as base_module
+        from ii_agent.agent.runtime.agent_sessions import base as base_module
 
         FakeTask = SimpleNamespace
         monkeypatch.setattr(base_module, "AgentRunTask", FakeTask)

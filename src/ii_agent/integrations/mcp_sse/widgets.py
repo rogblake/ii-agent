@@ -19,7 +19,7 @@ from .models import (
     get_widget_html,
     get_widget_tool_meta,
 )
-from ii_agent.engine.types import AgentType
+from ii_agent.agent.types import AgentType
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.service import SessionService
 from ii_agent.sessions.repository import SessionRepository
@@ -27,9 +27,9 @@ from ii_agent.realtime.events.repository import EventRepository
 from ii_agent.integrations.connectors.service import ConnectorService
 from ii_agent.auth.users.service import UserService
 from ii_agent.auth.users.repository import UserRepository, APIKeyRepository
-from ii_agent.engine.agents.agent_run_service import AgentRunService
-from ii_agent.engine.agents.repository import AgentRunTaskRepository
-from ii_agent.engine.sandboxes.repository import SandboxRepository
+from ii_agent.agent.agents.agent_run_service import AgentRunService
+from ii_agent.agent.agents.repository import AgentRunTaskRepository
+from ii_agent.agent.sandboxes.repository import SandboxRepository
 from ii_agent.core.storage.client import storage
 from ii_agent.auth.jwt_handler import jwt_handler
 from ii_agent.core.config.settings import get_settings

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.engine.runtime.tools.connectors.github import GitHubAgentTool
+from ii_agent.agent.runtime.tools.connectors.github import GitHubAgentTool
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 """
-Deep unit tests for ii_agent/engine/runtime/models/google/gemini.py
+Deep unit tests for ii_agent/agent/runtime/models/google/gemini.py
 
 Covers deeper branches not tested by the existing test file:
 - Gemini.get_client() paths (API key, Vertex AI)
@@ -24,19 +24,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.engine.runtime.models.google.gemini import (
+from ii_agent.agent.runtime.models.google.gemini import (
     Gemini,
     _normalize_function_definition,
     format_function_definitions,
     format_image_for_message,
     prepare_response_schema,
 )
-from ii_agent.engine.runtime.models.message import Message
-from ii_agent.engine.runtime.models.metrics import Metrics
-from ii_agent.engine.runtime.models.response import ModelResponse
-from ii_agent.engine.runtime.exceptions import ModelProviderError
-from ii_agent.engine.runtime.media import Image, File, Audio, Video
-from ii_agent.engine.types import Provider
+from ii_agent.agent.runtime.models.message import Message
+from ii_agent.agent.runtime.models.metrics import Metrics
+from ii_agent.agent.runtime.models.response import ModelResponse
+from ii_agent.agent.runtime.exceptions import ModelProviderError
+from ii_agent.agent.runtime.media import Image, File, Audio, Video
+from ii_agent.agent.types import Provider
 
 from google.genai.types import Content, Part
 

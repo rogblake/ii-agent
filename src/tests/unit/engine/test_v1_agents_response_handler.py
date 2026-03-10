@@ -6,12 +6,12 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.engine.runtime.agents.response_handler import ResponseHandler
-from ii_agent.engine.runtime.models.metrics import Metrics
-from ii_agent.engine.runtime.models.response import ModelResponse, ModelResponseEvent
-from ii_agent.engine.runtime.run.agent import RunOutput
-from ii_agent.engine.runtime.run.messages import RunMessages
-from ii_agent.engine.runtime.models.message import Message
+from ii_agent.agent.runtime.agents.response_handler import ResponseHandler
+from ii_agent.agent.runtime.models.metrics import Metrics
+from ii_agent.agent.runtime.models.response import ModelResponse, ModelResponseEvent
+from ii_agent.agent.runtime.run.agent import RunOutput
+from ii_agent.agent.runtime.run.messages import RunMessages
+from ii_agent.agent.runtime.models.message import Message
 
 
 # ---------------------------------------------------------------------------

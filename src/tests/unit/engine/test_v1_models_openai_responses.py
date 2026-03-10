@@ -1,5 +1,5 @@
 """
-Unit tests for src/ii_agent/engine/runtime/models/openai/responses.py
+Unit tests for src/ii_agent/agent/runtime/models/openai/responses.py
 
 Tests cover:
 - OpenAIResponses class defaults and instantiation
@@ -23,15 +23,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.engine.runtime.models.openai.responses import OpenAIResponses
-from ii_agent.engine.runtime.models.message import Message
-from ii_agent.engine.runtime.models.metrics import Metrics
-from ii_agent.engine.runtime.models.response import ModelResponse
-from ii_agent.engine.runtime.exceptions import (
+from ii_agent.agent.runtime.models.openai.responses import OpenAIResponses
+from ii_agent.agent.runtime.models.message import Message
+from ii_agent.agent.runtime.models.metrics import Metrics
+from ii_agent.agent.runtime.models.response import ModelResponse
+from ii_agent.agent.runtime.exceptions import (
     ModelAuthenticationError,
     ModelProviderError,
 )
-from ii_agent.engine.types import Provider
+from ii_agent.agent.types import Provider
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +397,7 @@ class TestOpenAIResponsesFormatMessages:
 
     def test_user_with_files(self):
         from pathlib import Path
-        from ii_agent.engine.runtime.models.message import File
+        from ii_agent.agent.runtime.models.message import File
         m = _make_openai_responses(api_key="key")
         file_obj = File(filepath=Path("/tmp/doc.pdf"))
         msgs = [Message(role="user", content="See doc", files=[file_obj])]

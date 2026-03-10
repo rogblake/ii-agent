@@ -1,5 +1,5 @@
 from ii_agent.billing.credits.pricing import ModelPricing
-from ii_agent.engine.types import Provider
+from ii_agent.agent.types import Provider
 
 
 def test_pricing_exact_and_prefix_model_match():

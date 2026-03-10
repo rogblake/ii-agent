@@ -9,7 +9,7 @@ Model IDs follow the v1 models convention from src/ii_agent/v1/models/:
 from typing import Dict, Optional
 from pydantic import BaseModel, Field
 
-from ii_agent.engine.types import Provider
+from ii_agent.agent.types import Provider
 
 
 class ModelPricing(BaseModel):

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, Dict, Any, cast
 
-from ii_agent.engine.types import AgentType
+from ii_agent.agent.types import AgentType
 from ii_agent.realtime.events.stream import EventStream
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.realtime.socket.schemas import StartForkContent, QueryCommandContent
@@ -15,7 +15,7 @@ from ii_agent.realtime.socket.command.command_handler import (
     UserCommandType,
 )
 from ii_agent.realtime.socket.command.query_handler import UserQueryHandler
-from ii_agent.engine.prompts.research_to_website_prompt import format_fork_user_message
+from ii_agent.agent.prompts.research_to_website_prompt import format_fork_user_message
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:

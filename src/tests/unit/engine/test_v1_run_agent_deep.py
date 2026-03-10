@@ -1,4 +1,4 @@
-"""Deep unit tests for ii_agent/engine/runtime/run/agent.py.
+"""Deep unit tests for ii_agent/agent/runtime/run/agent.py.
 
 Focuses on previously uncovered branches:
 - RunInput: to_dict with various input types (Message, list of Messages, list of dicts with media)
@@ -17,7 +17,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-from ii_agent.engine.runtime.run.agent import (
+from ii_agent.agent.runtime.run.agent import (
     RunInput,
     RunOutput,
     RunEvent,
@@ -38,8 +38,8 @@ from ii_agent.engine.runtime.run.agent import (
     run_output_event_from_dict,
     RUN_EVENT_TYPE_REGISTRY,
 )
-from ii_agent.engine.runtime.run.base import RunStatus
-from ii_agent.engine.runtime.models.message import Message
+from ii_agent.agent.runtime.run.base import RunStatus
+from ii_agent.agent.runtime.models.message import Message
 
 
 # ---------------------------------------------------------------------------
@@ -87,28 +87,28 @@ class TestRunInputToDictDeep:
         assert isinstance(d["input_content"], list)
 
     def test_to_dict_with_list_of_dicts_containing_images(self):
-        from ii_agent.engine.runtime.media import Image
+        from ii_agent.agent.runtime.media import Image
         img = Image(id="img-1", url="http://example.com/img.png")
         ri = RunInput(input_content=[{"images": [img], "text": "hello"}])
         d = ri.to_dict()
         assert "input_content" in d
 
     def test_to_dict_with_list_of_dicts_containing_videos(self):
-        from ii_agent.engine.runtime.media import Video
+        from ii_agent.agent.runtime.media import Video
         vid = Video(id="vid-1", url="http://example.com/vid.mp4")
         ri = RunInput(input_content=[{"videos": [vid], "text": "hello"}])
         d = ri.to_dict()
         assert "input_content" in d
 
     def test_to_dict_with_list_of_dicts_containing_audios(self):
-        from ii_agent.engine.runtime.media import Audio
+        from ii_agent.agent.runtime.media import Audio
         aud = Audio(id="aud-1", content=b"audio", transcript="")
         ri = RunInput(input_content=[{"audios": [aud], "text": "hello"}])
         d = ri.to_dict()
         assert "input_content" in d
 
     def test_to_dict_with_list_of_dicts_containing_files(self):
-        from ii_agent.engine.runtime.media import File
+        from ii_agent.agent.runtime.media import File
         f = File(id="file-1", name="test.txt", content=b"data")
         ri = RunInput(input_content=[{"files": [f], "text": "hello"}])
         d = ri.to_dict()
@@ -126,7 +126,7 @@ class TestRunInputToDictDeep:
         assert "input_content" in d
 
     def test_to_dict_includes_images_when_present(self):
-        from ii_agent.engine.runtime.media import Image
+        from ii_agent.agent.runtime.media import Image
         img = Image(id="img-1", url="http://example.com/img.png")
         ri = RunInput(input_content="test", images=[img])
         d = ri.to_dict()
@@ -134,21 +134,21 @@ class TestRunInputToDictDeep:
         assert len(d["images"]) == 1
 
     def test_to_dict_includes_videos_when_present(self):
-        from ii_agent.engine.runtime.media import Video
+        from ii_agent.agent.runtime.media import Video
         vid = Video(id="vid-1", url="http://example.com/vid.mp4")
         ri = RunInput(input_content="test", videos=[vid])
         d = ri.to_dict()
         assert "videos" in d
 
     def test_to_dict_includes_audios_when_present(self):
-        from ii_agent.engine.runtime.media import Audio
+        from ii_agent.agent.runtime.media import Audio
         aud = Audio(id="aud-1", content=b"audio", transcript="")
         ri = RunInput(input_content="test", audios=[aud])
         d = ri.to_dict()
         assert "audios" in d
 
     def test_to_dict_includes_files_when_present(self):
-        from ii_agent.engine.runtime.media import File
+        from ii_agent.agent.runtime.media import File
         f = File(id="file-1", name="test.txt", content=b"data")
         ri = RunInput(input_content="test", files=[f])
         d = ri.to_dict()
@@ -211,49 +211,49 @@ class TestRunOutputToDictDeep:
         tool = MagicMock()
         tool.to_dict.return_value = {"name": "test_tool"}
         # Simulate ToolExecution-like object
-        from ii_agent.engine.runtime.models.response import ToolExecution
+        from ii_agent.agent.runtime.models.response import ToolExecution
         te = ToolExecution(tool_name="my_tool")
         output.tools = [te]
         d = output.to_dict()
         assert "tools" in d
 
     def test_to_dict_serializes_images(self):
-        from ii_agent.engine.runtime.media import Image
+        from ii_agent.agent.runtime.media import Image
         output = make_run_output()
         output.images = [Image(id="img-1", url="http://example.com/img.png")]
         d = output.to_dict()
         assert "images" in d
 
     def test_to_dict_serializes_videos(self):
-        from ii_agent.engine.runtime.media import Video
+        from ii_agent.agent.runtime.media import Video
         output = make_run_output()
         output.videos = [Video(id="vid-1", url="http://example.com/vid.mp4")]
         d = output.to_dict()
         assert "videos" in d
 
     def test_to_dict_serializes_audio_list(self):
-        from ii_agent.engine.runtime.media import Audio
+        from ii_agent.agent.runtime.media import Audio
         output = make_run_output()
         output.audio = [Audio(id="aud-1", content=b"data", transcript="")]
         d = output.to_dict()
         assert "audio" in d
 
     def test_to_dict_serializes_files(self):
-        from ii_agent.engine.runtime.media import File
+        from ii_agent.agent.runtime.media import File
         output = make_run_output()
         output.files = [File(id="file-1", name="test.txt", content=b"data")]
         d = output.to_dict()
         assert "files" in d
 
     def test_to_dict_serializes_response_audio(self):
-        from ii_agent.engine.runtime.media import Audio
+        from ii_agent.agent.runtime.media import Audio
         output = make_run_output()
         output.response_audio = Audio(id="ra-1", content=b"audio", transcript="hello")
         d = output.to_dict()
         assert "response_audio" in d
 
     def test_to_dict_serializes_citations(self):
-        from ii_agent.engine.runtime.models.message import Citations
+        from ii_agent.agent.runtime.models.message import Citations
         output = make_run_output()
         output.citations = MagicMock()
         output.citations.model_dump.return_value = {"items": []}
@@ -293,7 +293,7 @@ class TestRunOutputToDictDeep:
         assert "input" in d
 
     def test_to_dict_includes_references(self):
-        from ii_agent.engine.runtime.run.base import MessageReferences
+        from ii_agent.agent.runtime.run.base import MessageReferences
         output = make_run_output()
         ref = MagicMock(spec=MessageReferences)
         ref.model_dump.return_value = {"url": "http://example.com"}
@@ -377,7 +377,7 @@ class TestRunOutputFromDictDeep:
         assert recovered.reasoning_messages is not None
 
     def test_from_dict_handles_metrics(self):
-        from ii_agent.engine.runtime.models.metrics import Metrics
+        from ii_agent.agent.runtime.models.metrics import Metrics
         output = make_run_output()
         m = Metrics()
         m.input_tokens = 100
@@ -407,7 +407,7 @@ class TestRunOutputFromDictDeep:
 
 class TestRunOutputAddMemberRunDeep:
     def test_add_member_run_aggregates_videos(self):
-        from ii_agent.engine.runtime.media import Video
+        from ii_agent.agent.runtime.media import Video
         parent = make_run_output()
         child = make_run_output(run_id="child-run")
         child.videos = [Video(id="vid-1", url="http://example.com/vid.mp4")]
@@ -416,7 +416,7 @@ class TestRunOutputAddMemberRunDeep:
         assert len(parent.videos) == 1
 
     def test_add_member_run_aggregates_audio(self):
-        from ii_agent.engine.runtime.media import Audio
+        from ii_agent.agent.runtime.media import Audio
         parent = make_run_output()
         child = make_run_output(run_id="child-run")
         child.audio = [Audio(id="aud-1", content=b"data", transcript="")]
@@ -424,7 +424,7 @@ class TestRunOutputAddMemberRunDeep:
         assert parent.audio is not None
 
     def test_add_member_run_aggregates_files(self):
-        from ii_agent.engine.runtime.media import File
+        from ii_agent.agent.runtime.media import File
         parent = make_run_output()
         child = make_run_output(run_id="child-run")
         child.files = [File(id="file-1", name="test.txt", content=b"data")]
@@ -432,7 +432,7 @@ class TestRunOutputAddMemberRunDeep:
         assert parent.files is not None
 
     def test_add_member_run_accumulates_multiple_children(self):
-        from ii_agent.engine.runtime.media import Image
+        from ii_agent.agent.runtime.media import Image
         parent = make_run_output()
         child1 = make_run_output(run_id="child-1")
         child1.images = [Image(id="img-1", url="http://example.com/1.png")]
@@ -583,7 +583,7 @@ class TestRunOutputEventFromDictAllTypes:
 
 class TestSandboxInitializedEventDeep:
     def test_to_dict_with_sandbox_info(self):
-        from ii_agent.engine.sandboxes.schemas import SandboxInfo
+        from ii_agent.agent.sandboxes.schemas import SandboxInfo
         sandbox_info = MagicMock(spec=SandboxInfo)
         sandbox_info.model_dump.return_value = {"status": "running", "vscode_url": "http://vscode.example.com"}
 

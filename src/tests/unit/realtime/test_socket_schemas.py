@@ -5,7 +5,7 @@ import uuid
 import pytest
 from pydantic import ValidationError
 
-from ii_agent.engine.types import AgentType
+from ii_agent.agent.types import AgentType
 from ii_agent.realtime.socket.schemas import (
     EditQueryContent,
     EnhancePromptContent,

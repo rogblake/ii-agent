@@ -5,8 +5,8 @@ from typing import Annotated
 from fastapi import Depends
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.engine.agents.dependencies import AgentRunServiceDep
-from ii_agent.engine.sandboxes.dependencies import SandboxRepositoryDep
+from ii_agent.agent.agents.dependencies import AgentRunServiceDep
+from ii_agent.agent.sandboxes.dependencies import SandboxRepositoryDep
 from ii_agent.realtime.events.dependencies import EventRepositoryDep
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.service import SessionService

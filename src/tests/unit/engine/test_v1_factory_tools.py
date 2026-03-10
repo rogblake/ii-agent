@@ -32,7 +32,7 @@ def _stub_google_genai_interactions():
 _stub_google_genai_interactions()
 
 # Now the factory can be imported.
-from ii_agent.engine.runtime.factory.tools import (  # noqa: E402
+from ii_agent.agent.runtime.factory.tools import (  # noqa: E402
     AgentConfigManager,
     AgentToolConfig,
     AgentConfig,
@@ -41,7 +41,7 @@ from ii_agent.engine.runtime.factory.tools import (  # noqa: E402
     TOOL_CONFIRM_MAP,
     COMMON_TOOLS,
 )
-from ii_agent.engine.types import AgentType, Provider
+from ii_agent.agent.types import AgentType, Provider
 
 
 # ---------------------------------------------------------------------------
@@ -308,7 +308,7 @@ class TestGetToolsForAgent:
         )
         config = AgentConfigManager.get_config(AgentType.GENERAL)
         assert config.supports_browser is True
-        from ii_agent.engine.runtime.tools.browser import BrowserClickTool
+        from ii_agent.agent.runtime.tools.browser import BrowserClickTool
         assert BrowserClickTool.name in tools
 
     def test_default_tool_args_as_none(self):
@@ -328,7 +328,7 @@ class TestGetToolsForAgent:
         )
         config = AgentConfigManager.get_config(AgentType.GENERAL)
         assert config.supports_media is True
-        from ii_agent.engine.runtime.tools.media import ImageGenerateTool
+        from ii_agent.agent.runtime.tools.media import ImageGenerateTool
         assert ImageGenerateTool.name in tools
 
 
@@ -421,7 +421,7 @@ class TestGlobalConfigConstants:
 
     def test_browser_agent_has_browser_tools(self):
         config = AGENT_CONFIGS[AgentType.BROWSER]
-        from ii_agent.engine.runtime.tools.browser import BrowserClickTool
+        from ii_agent.agent.runtime.tools.browser import BrowserClickTool
         assert BrowserClickTool.name in config.tool_config.core_tools
 
     def test_all_agent_configs_have_descriptions(self):

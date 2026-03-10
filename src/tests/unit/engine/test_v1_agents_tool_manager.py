@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.engine.runtime.agents.tool_manager import ToolManager
-from ii_agent.engine.runtime.tools.base import BaseAgentTool, ToolResult
-from ii_agent.engine.runtime.tools.function import Function
-from ii_agent.engine.runtime.run.agent import RunOutput
-from ii_agent.engine.runtime.run.messages import RunMessages
+from ii_agent.agent.runtime.agents.tool_manager import ToolManager
+from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult
+from ii_agent.agent.runtime.tools.function import Function
+from ii_agent.agent.runtime.run.agent import RunOutput
+from ii_agent.agent.runtime.run.messages import RunMessages
 
 
 # ---------------------------------------------------------------------------

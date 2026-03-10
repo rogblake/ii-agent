@@ -1,4 +1,4 @@
-"""Unit tests for ii_agent.engine.runtime.models.message module.
+"""Unit tests for ii_agent.agent.runtime.models.message module.
 
 Tests cover:
 - Message creation with defaults
@@ -15,14 +15,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ii_agent.engine.runtime.models.message import (
+from ii_agent.agent.runtime.models.message import (
     Citations,
     DocumentCitation,
     Message,
     MessageReferences,
     UrlCitation,
 )
-from ii_agent.engine.runtime.models.metrics import Metrics
+from ii_agent.agent.runtime.models.metrics import Metrics
 
 
 # ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@ from ii_agent.core.llm.dependencies import (
     LLMBillingServiceDep,
     LLMExecutionServiceDep,
 )
-from ii_agent.engine.sandboxes.dependencies import SandboxServiceDep
+from ii_agent.agent.sandboxes.dependencies import SandboxServiceDep
 from ii_agent.realtime.events.dependencies import EventServiceDep
 from ii_agent.sessions.dependencies import SessionRepositoryDep
 from ii_agent.settings.llm.dependencies import LLMSettingServiceDep

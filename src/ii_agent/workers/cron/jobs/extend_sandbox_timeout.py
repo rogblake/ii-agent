@@ -15,7 +15,7 @@ from ii_agent.core.db.manager import get_db
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
-    from ii_agent.engine.sandboxes.service import SandboxService
+    from ii_agent.agent.sandboxes.service import SandboxService
 
 # Constants
 TIMEOUT_EXTENSION_SECONDS = 7200  # 2 hours extension
@@ -27,8 +27,8 @@ class SandboxTimeoutExtender:
 
     def __init__(self, sandbox_service: Optional[SandboxService] = None):
         if sandbox_service is None:
-            from ii_agent.engine.sandboxes.service import SandboxService
-            from ii_agent.engine.sandboxes.repository import SandboxRepository
+            from ii_agent.agent.sandboxes.service import SandboxService
+            from ii_agent.agent.sandboxes.repository import SandboxRepository
             from ii_agent.core.config.settings import get_settings
             sandbox_service = SandboxService(
                 config=get_settings(),

@@ -25,8 +25,8 @@ import ii_agent.content.media.models  # noqa: F401
 import ii_agent.content.skills.models  # noqa: F401
 import ii_agent.content.slides.models  # noqa: F401
 import ii_agent.content.storybook.models  # noqa: F401
-import ii_agent.engine.agents.models  # noqa: F401
-import ii_agent.engine.sandboxes.models  # noqa: F401
+import ii_agent.agent.agents.models  # noqa: F401
+import ii_agent.agent.sandboxes.models  # noqa: F401
 import ii_agent.files.models  # noqa: F401
 import ii_agent.integrations.connectors.models  # noqa: F401
 import ii_agent.mobile.apple.models  # noqa: F401

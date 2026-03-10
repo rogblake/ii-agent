@@ -1,5 +1,5 @@
 """
-Deep unit tests for ii_agent/engine/runtime/models/base.py
+Deep unit tests for ii_agent/agent/runtime/models/base.py
 
 Covers previously untested branches:
 - MessageData dataclass
@@ -22,12 +22,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.engine.runtime.models.base import MessageData, Model, _handle_agent_exception
-from ii_agent.engine.runtime.models.message import Message
-from ii_agent.engine.runtime.models.metrics import Metrics
-from ii_agent.engine.runtime.models.response import ModelResponse
-from ii_agent.engine.runtime.exceptions import AgentRunException, ModelProviderError
-from ii_agent.engine.runtime.tools.function import Function
+from ii_agent.agent.runtime.models.base import MessageData, Model, _handle_agent_exception
+from ii_agent.agent.runtime.models.message import Message
+from ii_agent.agent.runtime.models.metrics import Metrics
+from ii_agent.agent.runtime.models.response import ModelResponse
+from ii_agent.agent.runtime.exceptions import AgentRunException, ModelProviderError
+from ii_agent.agent.runtime.tools.function import Function
 
 
 # ---------------------------------------------------------------------------
@@ -239,7 +239,7 @@ class TestModelToDict:
         assert "name" not in d
 
     def test_get_provider_returns_provider_when_set(self):
-        from ii_agent.engine.types import Provider
+        from ii_agent.agent.types import Provider
         m = _ConcreteModel(id="gpt-4", name="Test", provider=Provider.OPENAI)
         assert m.get_provider() == Provider.OPENAI
 

@@ -20,8 +20,8 @@ class TestE2bExceptionHandlerR4:
     @pytest.mark.asyncio
     async def test_reraises_sandbox_not_found_exception(self):
         from e2b.exceptions import NotFoundException
-        from ii_agent.engine.sandboxes.e2b import e2b_exception_handler
-        from ii_agent.engine.sandboxes.exceptions import SandboxNotFoundException
+        from ii_agent.agent.sandboxes.e2b import e2b_exception_handler
+        from ii_agent.agent.sandboxes.exceptions import SandboxNotFoundException
 
         @e2b_exception_handler
         async def failing_func(self):
@@ -36,8 +36,8 @@ class TestE2bExceptionHandlerR4:
     @pytest.mark.asyncio
     async def test_reraises_authentication_exception(self):
         from e2b.exceptions import AuthenticationException
-        from ii_agent.engine.sandboxes.e2b import e2b_exception_handler
-        from ii_agent.engine.sandboxes.exceptions import SandboxAuthenticationError
+        from ii_agent.agent.sandboxes.e2b import e2b_exception_handler
+        from ii_agent.agent.sandboxes.exceptions import SandboxAuthenticationError
 
         @e2b_exception_handler
         async def failing_func():
@@ -49,8 +49,8 @@ class TestE2bExceptionHandlerR4:
     @pytest.mark.asyncio
     async def test_reraises_timeout_exception(self):
         from e2b.exceptions import TimeoutException
-        from ii_agent.engine.sandboxes.e2b import e2b_exception_handler
-        from ii_agent.engine.sandboxes.exceptions import SandboxTimeoutException
+        from ii_agent.agent.sandboxes.e2b import e2b_exception_handler
+        from ii_agent.agent.sandboxes.exceptions import SandboxTimeoutException
 
         @e2b_exception_handler
         async def failing_func(self):
@@ -63,8 +63,8 @@ class TestE2bExceptionHandlerR4:
 
     @pytest.mark.asyncio
     async def test_wraps_generic_exception_in_sandbox_operation_error(self):
-        from ii_agent.engine.sandboxes.e2b import e2b_exception_handler
-        from ii_agent.engine.sandboxes.exceptions import SandboxOperationError
+        from ii_agent.agent.sandboxes.e2b import e2b_exception_handler
+        from ii_agent.agent.sandboxes.exceptions import SandboxOperationError
 
         @e2b_exception_handler
         async def failing_func():
@@ -76,8 +76,8 @@ class TestE2bExceptionHandlerR4:
 
     @pytest.mark.asyncio
     async def test_reraises_sandbox_exceptions_without_wrapping(self):
-        from ii_agent.engine.sandboxes.e2b import e2b_exception_handler
-        from ii_agent.engine.sandboxes.exceptions import SandboxNotInitializedError
+        from ii_agent.agent.sandboxes.e2b import e2b_exception_handler
+        from ii_agent.agent.sandboxes.exceptions import SandboxNotInitializedError
 
         @e2b_exception_handler
         async def func():
@@ -88,7 +88,7 @@ class TestE2bExceptionHandlerR4:
 
     @pytest.mark.asyncio
     async def test_passes_through_successful_return(self):
-        from ii_agent.engine.sandboxes.e2b import e2b_exception_handler
+        from ii_agent.agent.sandboxes.e2b import e2b_exception_handler
 
         @e2b_exception_handler
         async def success_func():
@@ -100,8 +100,8 @@ class TestE2bExceptionHandlerR4:
     @pytest.mark.asyncio
     async def test_sandbox_id_unknown_when_no_self_attr(self):
         from e2b.exceptions import NotFoundException
-        from ii_agent.engine.sandboxes.e2b import e2b_exception_handler
-        from ii_agent.engine.sandboxes.exceptions import SandboxNotFoundException
+        from ii_agent.agent.sandboxes.e2b import e2b_exception_handler
+        from ii_agent.agent.sandboxes.exceptions import SandboxNotFoundException
 
         @e2b_exception_handler
         async def func():
@@ -118,8 +118,8 @@ class TestE2bExceptionHandlerR4:
 
 class TestE2BSandboxManagerInitR4:
     def _make_manager(self, **overrides):
-        from ii_agent.engine.sandboxes.e2b import E2BSandboxManager
-        from ii_agent.engine.sandboxes.schemas import SandboxStatus
+        from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
+        from ii_agent.agent.sandboxes.schemas import SandboxStatus
         defaults = {
             "sandbox_id": "internal-sandbox-1",
             "session_id": "session-1",
@@ -162,7 +162,7 @@ class TestE2BSandboxManagerInitR4:
         assert manager.get_provider_id() == "e2b-sandbox-123"
 
     def test_provider_is_e2b(self):
-        from ii_agent.engine.sandboxes.e2b import E2BSandboxManager
+        from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
         assert E2BSandboxManager.PROVIDER == "e2b"
 
 
@@ -173,8 +173,8 @@ class TestE2BSandboxManagerInitR4:
 class TestE2BSandboxManagerToSandboxStateR4:
     def test_running_maps_to_running(self):
         from e2b import SandboxState
-        from ii_agent.engine.sandboxes.e2b import E2BSandboxManager
-        from ii_agent.engine.sandboxes.schemas import SandboxStatus
+        from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
+        from ii_agent.agent.sandboxes.schemas import SandboxStatus
         result = E2BSandboxManager._to_sandbox_state(SandboxState.RUNNING)
         assert result == SandboxStatus.RUNNING
 
@@ -183,22 +183,22 @@ class TestE2BSandboxManagerToSandboxStateR4:
         # class attribute lookup (always truthy), so PAUSED also maps to RUNNING.
         # This test documents the actual current behavior.
         from e2b import SandboxState
-        from ii_agent.engine.sandboxes.e2b import E2BSandboxManager
-        from ii_agent.engine.sandboxes.schemas import SandboxStatus
+        from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
+        from ii_agent.agent.sandboxes.schemas import SandboxStatus
         result = E2BSandboxManager._to_sandbox_state(SandboxState.PAUSED)
         assert result == SandboxStatus.RUNNING
 
     def test_none_input_raises_attribute_error(self):
         # The implementation does sandbox_state.RUNNING which raises AttributeError
         # when sandbox_state is None.
-        from ii_agent.engine.sandboxes.e2b import E2BSandboxManager
+        from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
         with pytest.raises(AttributeError):
             E2BSandboxManager._to_sandbox_state(None)
 
     def test_string_input_raises_attribute_error(self):
         # The implementation does sandbox_state.RUNNING which raises AttributeError
         # when sandbox_state is a plain string not having a RUNNING attribute.
-        from ii_agent.engine.sandboxes.e2b import E2BSandboxManager
+        from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
         with pytest.raises(AttributeError):
             E2BSandboxManager._to_sandbox_state("some_unknown_state")
 
@@ -210,15 +210,15 @@ class TestE2BSandboxManagerToSandboxStateR4:
 class TestE2BSandboxManagerGetInfoR4:
     @pytest.mark.asyncio
     async def test_get_info_returns_sandbox_info(self):
-        from ii_agent.engine.sandboxes.e2b import E2BSandboxManager
-        from ii_agent.engine.sandboxes.schemas import SandboxStatus
+        from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
+        from ii_agent.agent.sandboxes.schemas import SandboxStatus
         manager = E2BSandboxManager(
             sandbox_id="sb-1",
             session_id="sess-1",
             provider_sandbox_id="e2b-abc",
             status=SandboxStatus.NOT_INITIALIZED,
         )
-        with patch("ii_agent.engine.sandboxes.e2b.get_settings") as mock_settings:
+        with patch("ii_agent.agent.sandboxes.e2b.get_settings") as mock_settings:
             mock_settings.return_value.vscode_port = 8080
             info = await manager.get_info()
         assert info.id == "sb-1"
@@ -226,8 +226,8 @@ class TestE2BSandboxManagerGetInfoR4:
 
     @pytest.mark.asyncio
     async def test_get_info_includes_vscode_url_when_running(self):
-        from ii_agent.engine.sandboxes.e2b import E2BSandboxManager
-        from ii_agent.engine.sandboxes.schemas import SandboxStatus
+        from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
+        from ii_agent.agent.sandboxes.schemas import SandboxStatus
         mock_sandbox = AsyncMock()
         manager = E2BSandboxManager(
             sandbox_id="sb-1",
@@ -236,7 +236,7 @@ class TestE2BSandboxManagerGetInfoR4:
             status=SandboxStatus.RUNNING,
             sandbox=mock_sandbox,
         )
-        with patch("ii_agent.engine.sandboxes.e2b.get_settings") as mock_settings, \
+        with patch("ii_agent.agent.sandboxes.e2b.get_settings") as mock_settings, \
              patch.object(manager, "expose_port", new=AsyncMock(return_value="https://vscode.e2b.app")):
             mock_settings.return_value.vscode_port = 8080
             info = await manager.get_info()
@@ -249,22 +249,22 @@ class TestE2BSandboxManagerGetInfoR4:
 
 class TestMCPClientR4:
     def test_init_sets_server_url(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None):
             client = MCPClient("http://sandbox-server:8080")
             assert client.server_url == "http://sandbox-server:8080"
 
     def test_init_appends_mcp_path(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None) as mock_init:
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None) as mock_init:
             client = MCPClient("http://sandbox-server:8080")
             # Verify parent called with /mcp/ appended
             mock_init.assert_called_once_with("http://sandbox-server:8080/mcp/")
 
     @pytest.mark.asyncio
     async def test_register_custom_mcp_raises_when_not_initialized(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None):
             client = MCPClient("http://server:8080")
             client.http_session = None
         with pytest.raises(Exception, match="not initialized"):
@@ -272,8 +272,8 @@ class TestMCPClientR4:
 
     @pytest.mark.asyncio
     async def test_register_custom_mcp_raises_on_non_200(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None):
             client = MCPClient("http://server:8080")
         mock_http = AsyncMock()
         mock_response = MagicMock()
@@ -286,8 +286,8 @@ class TestMCPClientR4:
 
     @pytest.mark.asyncio
     async def test_register_custom_mcp_returns_json_on_200(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None):
             client = MCPClient("http://server:8080")
         mock_http = AsyncMock()
         mock_response = MagicMock()
@@ -300,8 +300,8 @@ class TestMCPClientR4:
 
     @pytest.mark.asyncio
     async def test_register_codex_raises_on_non_200(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None):
             client = MCPClient("http://server:8080")
         mock_http = AsyncMock()
         mock_response = MagicMock()
@@ -314,8 +314,8 @@ class TestMCPClientR4:
 
     @pytest.mark.asyncio
     async def test_register_codex_returns_json_on_200(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None):
             client = MCPClient("http://server:8080")
         mock_http = AsyncMock()
         mock_response = MagicMock()
@@ -328,8 +328,8 @@ class TestMCPClientR4:
 
     @pytest.mark.asyncio
     async def test_set_tool_server_url_raises_on_non_200(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None):
             client = MCPClient("http://server:8080")
         mock_http = AsyncMock()
         mock_response = MagicMock()
@@ -342,8 +342,8 @@ class TestMCPClientR4:
 
     @pytest.mark.asyncio
     async def test_set_tool_server_url_returns_json_on_200(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None):
             client = MCPClient("http://server:8080")
         mock_http = AsyncMock()
         mock_response = MagicMock()
@@ -356,8 +356,8 @@ class TestMCPClientR4:
 
     @pytest.mark.asyncio
     async def test_set_credential_raises_on_non_200(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None):
             client = MCPClient("http://server:8080")
         mock_http = AsyncMock()
         mock_response = MagicMock()
@@ -370,8 +370,8 @@ class TestMCPClientR4:
 
     @pytest.mark.asyncio
     async def test_set_credential_returns_json_on_200(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None):
             client = MCPClient("http://server:8080")
         mock_http = AsyncMock()
         mock_response = MagicMock()
@@ -390,9 +390,9 @@ class TestMCPClientR4:
 class TestMCPClientContextManagerR4:
     @pytest.mark.asyncio
     async def test_aenter_creates_http_session(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None), \
-             patch("ii_agent.engine.sandboxes.sandbox_client.Client.__aenter__", new=AsyncMock(return_value=MagicMock())):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None), \
+             patch("ii_agent.agent.sandboxes.sandbox_client.Client.__aenter__", new=AsyncMock(return_value=MagicMock())):
             client = MCPClient("http://server:8080")
             client.http_session = None
             await client.__aenter__()
@@ -400,9 +400,9 @@ class TestMCPClientContextManagerR4:
 
     @pytest.mark.asyncio
     async def test_aexit_closes_http_session(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None), \
-             patch("ii_agent.engine.sandboxes.sandbox_client.Client.__aexit__", new=AsyncMock(return_value=None)):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None), \
+             patch("ii_agent.agent.sandboxes.sandbox_client.Client.__aexit__", new=AsyncMock(return_value=None)):
             client = MCPClient("http://server:8080")
             mock_http = AsyncMock()
             mock_http.aclose = AsyncMock()
@@ -412,9 +412,9 @@ class TestMCPClientContextManagerR4:
 
     @pytest.mark.asyncio
     async def test_aexit_handles_none_http_session(self):
-        from ii_agent.engine.sandboxes.sandbox_client import MCPClient
-        with patch("ii_agent.engine.sandboxes.sandbox_client.Client.__init__", return_value=None), \
-             patch("ii_agent.engine.sandboxes.sandbox_client.Client.__aexit__", new=AsyncMock(return_value=None)):
+        from ii_agent.agent.sandboxes.sandbox_client import MCPClient
+        with patch("ii_agent.agent.sandboxes.sandbox_client.Client.__init__", return_value=None), \
+             patch("ii_agent.agent.sandboxes.sandbox_client.Client.__aexit__", new=AsyncMock(return_value=None)):
             client = MCPClient("http://server:8080")
             client.http_session = None
             # Should not raise
@@ -427,30 +427,30 @@ class TestMCPClientContextManagerR4:
 
 class TestSandboxExceptionsR4:
     def test_sandbox_not_initialized_error_message(self):
-        from ii_agent.engine.sandboxes.exceptions import SandboxNotInitializedError
+        from ii_agent.agent.sandboxes.exceptions import SandboxNotInitializedError
         err = SandboxNotInitializedError("my-sandbox")
         assert "my-sandbox" in str(err)
         assert err.sandbox_id == "my-sandbox"
 
     def test_sandbox_not_found_error(self):
-        from ii_agent.engine.sandboxes.exceptions import SandboxNotFoundException
+        from ii_agent.agent.sandboxes.exceptions import SandboxNotFoundException
         err = SandboxNotFoundException("my-sandbox")
         assert "my-sandbox" in str(err)
         assert err.sandbox_id == "my-sandbox"
 
     def test_sandbox_timeout_error(self):
-        from ii_agent.engine.sandboxes.exceptions import SandboxTimeoutException
+        from ii_agent.agent.sandboxes.exceptions import SandboxTimeoutException
         err = SandboxTimeoutException("my-sandbox", "create")
         assert "my-sandbox" in str(err)
         assert "create" in str(err)
 
     def test_sandbox_operation_error(self):
-        from ii_agent.engine.sandboxes.exceptions import SandboxOperationError
+        from ii_agent.agent.sandboxes.exceptions import SandboxOperationError
         err = SandboxOperationError("run_code", "something went wrong")
         assert "run_code" in str(err)
         assert "something went wrong" in str(err)
 
     def test_sandbox_authentication_error(self):
-        from ii_agent.engine.sandboxes.exceptions import SandboxAuthenticationError
+        from ii_agent.agent.sandboxes.exceptions import SandboxAuthenticationError
         err = SandboxAuthenticationError("bad API key")
         assert err.status_code == 401

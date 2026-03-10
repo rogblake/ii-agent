@@ -8,16 +8,16 @@ import pytest
 
 from e2b.exceptions import NotFoundException
 
-from ii_agent.engine.sandboxes.e2b import (
+from ii_agent.agent.sandboxes.e2b import (
     E2BSandboxManager,
     e2b_exception_handler,
 )
-from ii_agent.engine.sandboxes.exceptions import (
+from ii_agent.agent.sandboxes.exceptions import (
     SandboxNotFoundException,
     SandboxNotInitializedError,
     SandboxOperationError,
 )
-from ii_agent.engine.sandboxes.schemas import SandboxStatus
+from ii_agent.agent.sandboxes.schemas import SandboxStatus
 
 
 def _manager() -> E2BSandboxManager:
@@ -53,7 +53,7 @@ async def test_run_command_success_and_error(monkeypatch):
             self.stdout = stdout
             self.stderr = stderr
 
-    monkeypatch.setattr("ii_agent.engine.sandboxes.e2b.CommandResult", _FakeCommandResult)
+    monkeypatch.setattr("ii_agent.agent.sandboxes.e2b.CommandResult", _FakeCommandResult)
 
     manager.sandbox = SimpleNamespace(
         commands=SimpleNamespace(run=AsyncMock(return_value=_FakeCommandResult(0, "ok"))),
@@ -80,7 +80,7 @@ async def test_run_python_code_success_and_error(monkeypatch):
             self.results = [SimpleNamespace(text=text)]
             self.error = error
 
-    monkeypatch.setattr("ii_agent.engine.sandboxes.e2b.Execution", _FakeExecution)
+    monkeypatch.setattr("ii_agent.agent.sandboxes.e2b.Execution", _FakeExecution)
 
     manager.sandbox = SimpleNamespace(
         run_code=AsyncMock(return_value=_FakeExecution(text="42")),
@@ -157,9 +157,9 @@ async def test_create_lifecycle_calls_provider_and_updates_db(monkeypatch):
             timeout_seconds=60,
         ),
     )
-    monkeypatch.setattr("ii_agent.engine.sandboxes.e2b.get_settings", lambda: fake_settings)
+    monkeypatch.setattr("ii_agent.agent.sandboxes.e2b.get_settings", lambda: fake_settings)
     monkeypatch.setattr(
-        "ii_agent.engine.sandboxes.e2b.AsyncSandbox.beta_create",
+        "ii_agent.agent.sandboxes.e2b.AsyncSandbox.beta_create",
         AsyncMock(return_value=SimpleNamespace(sandbox_id="provider-123")),
     )
     update_mock = AsyncMock()
@@ -199,7 +199,7 @@ async def test_ensure_connection_and_directory_helpers(monkeypatch):
     )
     manager._connect = AsyncMock(return_value=manager)
     monkeypatch.setattr(
-        "ii_agent.engine.sandboxes.e2b.get_settings",
+        "ii_agent.agent.sandboxes.e2b.get_settings",
         lambda: SimpleNamespace(sandbox=SimpleNamespace(e2b_api_key="k", timeout_seconds=30)),
     )
 

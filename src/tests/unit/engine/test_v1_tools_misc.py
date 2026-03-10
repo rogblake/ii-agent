@@ -49,7 +49,7 @@ class TestWebSearchTool:
     """Tests for WebSearchTool.execute()."""
 
     async def _run(self, tool_input, *, search_response=None, side_effect=None):
-        from ii_agent.engine.runtime.tools.web.web_search_tool import WebSearchTool
+        from ii_agent.agent.runtime.tools.web.web_search_tool import WebSearchTool
 
         tool = WebSearchTool()
         deps = _make_tool_deps()
@@ -100,7 +100,7 @@ class TestWebSearchTool:
         assert result.cost == 0.05
 
     async def test_tool_attributes(self):
-        from ii_agent.engine.runtime.tools.web.web_search_tool import WebSearchTool
+        from ii_agent.agent.runtime.tools.web.web_search_tool import WebSearchTool
 
         t = WebSearchTool()
         assert t.name == "web_search"
@@ -111,7 +111,7 @@ class TestWebVisitTool:
     """Tests for WebVisitTool.execute()."""
 
     async def _run(self, tool_input, *, visit_response=None, side_effect=None):
-        from ii_agent.engine.runtime.tools.web.web_visit_tool import WebVisitTool
+        from ii_agent.agent.runtime.tools.web.web_visit_tool import WebVisitTool
 
         tool = WebVisitTool()
         deps = _make_tool_deps()
@@ -158,7 +158,7 @@ class TestWebVisitTool:
             captured_url["url"] = url
             return _make_visit_response("content", 0.0)
 
-        from ii_agent.engine.runtime.tools.web.web_visit_tool import WebVisitTool
+        from ii_agent.agent.runtime.tools.web.web_visit_tool import WebVisitTool
 
         tool = WebVisitTool()
         deps = _make_tool_deps()
@@ -181,7 +181,7 @@ class TestWebVisitTool:
             captured["prompt"] = prompt
             return _make_visit_response("ok", 0.0)
 
-        from ii_agent.engine.runtime.tools.web.web_visit_tool import WebVisitTool
+        from ii_agent.agent.runtime.tools.web.web_visit_tool import WebVisitTool
 
         tool = WebVisitTool()
         deps = _make_tool_deps()
@@ -196,7 +196,7 @@ class TestWebBatchSearchTool:
     """Tests for WebBatchSearchTool.execute()."""
 
     async def _run(self, tool_input, *, responses=None, side_effect=None):
-        from ii_agent.engine.runtime.tools.web.web_batch_search_tool import WebBatchSearchTool
+        from ii_agent.agent.runtime.tools.web.web_batch_search_tool import WebBatchSearchTool
 
         tool = WebBatchSearchTool()
         deps = _make_tool_deps()
@@ -246,7 +246,7 @@ class TestWebVisitCompressTool:
     """Tests for WebVisitCompressTool.execute()."""
 
     async def _run(self, tool_input, *, visit_response=None, side_effect=None):
-        from ii_agent.engine.runtime.tools.web.web_visit_compress import WebVisitCompressTool
+        from ii_agent.agent.runtime.tools.web.web_visit_compress import WebVisitCompressTool
 
         tool = WebVisitCompressTool()
         deps = _make_tool_deps()
@@ -273,7 +273,7 @@ class TestWebVisitCompressTool:
             captured["urls"] = urls
             return SimpleNamespace(content="ok", cost=0.0)
 
-        from ii_agent.engine.runtime.tools.web.web_visit_compress import WebVisitCompressTool
+        from ii_agent.agent.runtime.tools.web.web_visit_compress import WebVisitCompressTool
 
         tool = WebVisitCompressTool()
         deps = _make_tool_deps()
@@ -307,7 +307,7 @@ class TestMilestoneTool:
     """Tests for MilestoneTool.execute()."""
 
     def _make_tool(self, *, on_plan_submit=None, event_stream=None):
-        from ii_agent.engine.runtime.tools.plan.milestone import MilestoneTool
+        from ii_agent.agent.runtime.tools.plan.milestone import MilestoneTool
 
         session_svc = MagicMock()
         event_svc = MagicMock()
@@ -416,7 +416,7 @@ class TestMilestoneTool:
         session_svc = MagicMock()
         session_svc.get_session_by_id = AsyncMock(return_value=None)
 
-        from ii_agent.engine.runtime.tools.plan.milestone import MilestoneTool
+        from ii_agent.agent.runtime.tools.plan.milestone import MilestoneTool
         import ii_agent.core.db.manager as db_manager_module
 
         tool = MilestoneTool(
@@ -447,7 +447,7 @@ class TestPlanModificationSuggestionsTool:
     """Tests for PlanModificationSuggestionsTool.execute()."""
 
     def _make_tool(self, event_stream=None):
-        from ii_agent.engine.runtime.tools.plan.suggestion import (
+        from ii_agent.agent.runtime.tools.plan.suggestion import (
             PlanModificationSuggestionsTool,
         )
 
@@ -519,7 +519,7 @@ class TestPlanModificationSuggestionsTool:
         assert result.is_error is True
 
     async def test_stop_after_tool_call_is_true(self):
-        from ii_agent.engine.runtime.tools.plan.suggestion import (
+        from ii_agent.agent.runtime.tools.plan.suggestion import (
             PlanModificationSuggestionsTool,
         )
 
@@ -535,7 +535,7 @@ class TestValidateTodos:
     """Tests for _validate_todos() function."""
 
     def _validate(self, todos):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         _validate_todos(todos)
 
@@ -545,43 +545,43 @@ class TestValidateTodos:
         )
 
     def test_invalid_not_a_list(self):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="list"):
             _validate_todos("not a list")
 
     def test_invalid_todo_not_dict(self):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError):
             _validate_todos(["a string"])
 
     def test_missing_content_raises(self):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="content"):
             _validate_todos([{"id": "1", "status": "pending", "priority": "high"}])
 
     def test_missing_status_raises(self):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="status"):
             _validate_todos([{"id": "1", "content": "c", "priority": "high"}])
 
     def test_missing_priority_raises(self):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="priority"):
             _validate_todos([{"id": "1", "content": "c", "status": "pending"}])
 
     def test_missing_id_raises(self):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="id"):
             _validate_todos([{"content": "c", "status": "pending", "priority": "high"}])
 
     def test_invalid_status_raises(self):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="status"):
             _validate_todos(
@@ -589,7 +589,7 @@ class TestValidateTodos:
             )
 
     def test_invalid_priority_raises(self):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="priority"):
             _validate_todos(
@@ -597,7 +597,7 @@ class TestValidateTodos:
             )
 
     def test_empty_content_raises(self):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="empty"):
             _validate_todos(
@@ -605,7 +605,7 @@ class TestValidateTodos:
             )
 
     def test_multiple_in_progress_raises(self):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import _validate_todos
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="in_progress"):
             _validate_todos(
@@ -646,7 +646,7 @@ class TestTodoWriteTool:
     """Tests for TodoWriteTool.execute()."""
 
     def _make_tool(self, session_id="sess-1"):
-        from ii_agent.engine.runtime.tools.productivity.todo_write_tool import TodoWriteTool
+        from ii_agent.agent.runtime.tools.productivity.todo_write_tool import TodoWriteTool
 
         tool = TodoWriteTool()
         tool._session_id = session_id
@@ -673,7 +673,7 @@ class TestTodoWriteTool:
         tool.dependencies = deps
 
         with patch(
-            "ii_agent.engine.runtime.tools.productivity.todo_write_tool.get_db_session_local"
+            "ii_agent.agent.runtime.tools.productivity.todo_write_tool.get_db_session_local"
         ) as mock_db:
             mock_ctx = MagicMock()
             mock_db_session = AsyncMock()
@@ -701,7 +701,7 @@ class TestTodoWriteTool:
         tool.dependencies = deps
 
         with patch(
-            "ii_agent.engine.runtime.tools.productivity.todo_write_tool.get_db_session_local"
+            "ii_agent.agent.runtime.tools.productivity.todo_write_tool.get_db_session_local"
         ) as mock_db:
             mock_ctx = MagicMock()
             mock_db_session = AsyncMock()
@@ -724,7 +724,7 @@ class TestTodoReadTool:
     """Tests for TodoReadTool.execute()."""
 
     def _make_tool(self, session_id="sess-1"):
-        from ii_agent.engine.runtime.tools.productivity.todo_read_tool import TodoReadTool
+        from ii_agent.agent.runtime.tools.productivity.todo_read_tool import TodoReadTool
 
         tool = TodoReadTool()
         tool._session_id = session_id
@@ -745,7 +745,7 @@ class TestTodoReadTool:
         tool.dependencies = deps
 
         with patch(
-            "ii_agent.engine.runtime.tools.productivity.todo_read_tool.get_db_session_local"
+            "ii_agent.agent.runtime.tools.productivity.todo_read_tool.get_db_session_local"
         ) as mock_db:
             mock_ctx = MagicMock()
             mock_db_session = AsyncMock()
@@ -764,7 +764,7 @@ class TestTodoReadTool:
         tool.dependencies = deps
 
         with patch(
-            "ii_agent.engine.runtime.tools.productivity.todo_read_tool.get_db_session_local"
+            "ii_agent.agent.runtime.tools.productivity.todo_read_tool.get_db_session_local"
         ) as mock_db:
             mock_ctx = MagicMock()
             mock_db_session = AsyncMock()
@@ -785,7 +785,7 @@ class TestTodoReadTool:
         tool.dependencies = deps
 
         with patch(
-            "ii_agent.engine.runtime.tools.productivity.todo_read_tool.get_db_session_local"
+            "ii_agent.agent.runtime.tools.productivity.todo_read_tool.get_db_session_local"
         ) as mock_db:
             mock_ctx = MagicMock()
             mock_db_session = AsyncMock()
@@ -805,7 +805,7 @@ class TestTodoReadTool:
         tool.dependencies = deps
 
         with patch(
-            "ii_agent.engine.runtime.tools.productivity.todo_read_tool.get_db_session_local"
+            "ii_agent.agent.runtime.tools.productivity.todo_read_tool.get_db_session_local"
         ) as mock_db:
             mock_ctx = MagicMock()
             mock_db_session = AsyncMock()
@@ -827,7 +827,7 @@ class TestImageGenerateTool:
     """Tests for ImageGenerateTool.execute()."""
 
     def _make_tool(self, session_id="sess-1"):
-        from ii_agent.engine.runtime.tools.media.image_generate import ImageGenerateTool
+        from ii_agent.agent.runtime.tools.media.image_generate import ImageGenerateTool
 
         tool = ImageGenerateTool()
         tool.session_id = session_id
@@ -947,25 +947,25 @@ class TestDevToolAttributes:
     """Verify dev tool class attributes are properly defined."""
 
     def test_restart_server_tool_name(self):
-        from ii_agent.engine.runtime.tools.dev.restart_server import RestartServerTool
+        from ii_agent.agent.runtime.tools.dev.restart_server import RestartServerTool
 
         assert RestartServerTool.name == "restart_fullstack_servers"
         assert RestartServerTool.read_only is False
 
     def test_get_server_status_tool_name(self):
-        from ii_agent.engine.runtime.tools.dev.server_status import GetServerStatusTool
+        from ii_agent.agent.runtime.tools.dev.server_status import GetServerStatusTool
 
         assert GetServerStatusTool.name == "get_server_status"
         assert GetServerStatusTool.read_only is True
 
     def test_save_checkpoint_tool_name(self):
-        from ii_agent.engine.runtime.tools.dev.save_checkpoint import SaveCheckpointTool
+        from ii_agent.agent.runtime.tools.dev.save_checkpoint import SaveCheckpointTool
 
         assert SaveCheckpointTool.name == "save_checkpoint"
         assert SaveCheckpointTool.read_only is False
 
     def test_save_checkpoint_required_fields(self):
-        from ii_agent.engine.runtime.tools.dev.save_checkpoint import SaveCheckpointTool
+        from ii_agent.agent.runtime.tools.dev.save_checkpoint import SaveCheckpointTool
 
         required = SaveCheckpointTool.input_schema["required"]
         assert "project_directory" in required
@@ -976,7 +976,7 @@ class TestRegisterPort:
     """Tests for RegisterPort.execute()."""
 
     async def test_no_sandbox_returns_error(self):
-        from ii_agent.engine.runtime.tools.dev.register_port import RegisterPort
+        from ii_agent.agent.runtime.tools.dev.register_port import RegisterPort
 
         tool = RegisterPort()
         tool.sandbox = None
@@ -986,7 +986,7 @@ class TestRegisterPort:
         assert "Sandbox" in result.llm_content
 
     async def test_no_port_returns_error(self):
-        from ii_agent.engine.runtime.tools.dev.register_port import RegisterPort
+        from ii_agent.agent.runtime.tools.dev.register_port import RegisterPort
 
         tool = RegisterPort()
         tool.sandbox = AsyncMock()
@@ -996,7 +996,7 @@ class TestRegisterPort:
         assert "port" in result.llm_content
 
     async def test_success_returns_url(self):
-        from ii_agent.engine.runtime.tools.dev.register_port import RegisterPort
+        from ii_agent.agent.runtime.tools.dev.register_port import RegisterPort
 
         tool = RegisterPort()
         tool.sandbox = AsyncMock()
@@ -1016,23 +1016,23 @@ class TestBrowserToolAttributes:
     """Verify browser tool class attribute correctness."""
 
     def test_browser_navigation_tool_name(self):
-        from ii_agent.engine.runtime.tools.browser.navigate import BrowserNavigationTool
+        from ii_agent.agent.runtime.tools.browser.navigate import BrowserNavigationTool
 
         assert BrowserNavigationTool.name == "browser_navigation"
         assert BrowserNavigationTool.read_only is False
 
     def test_browser_restart_tool_name(self):
-        from ii_agent.engine.runtime.tools.browser.navigate import BrowserRestartTool
+        from ii_agent.agent.runtime.tools.browser.navigate import BrowserRestartTool
 
         assert BrowserRestartTool.name == "browser_restart"
 
     def test_browser_view_tool_name(self):
-        from ii_agent.engine.runtime.tools.browser.view import BrowserViewTool
+        from ii_agent.agent.runtime.tools.browser.view import BrowserViewTool
 
         assert BrowserViewTool.name == "browser_view_interactive_elements"
 
     def test_browser_navigation_url_required(self):
-        from ii_agent.engine.runtime.tools.browser.navigate import BrowserNavigationTool
+        from ii_agent.agent.runtime.tools.browser.navigate import BrowserNavigationTool
 
         assert "url" in BrowserNavigationTool.input_schema["required"]
 
@@ -1046,7 +1046,7 @@ class TestBaseAgentTool:
     """Tests for BaseAgentTool abstract class methods."""
 
     def test_should_confirm_execute_returns_false_by_default(self):
-        from ii_agent.engine.runtime.tools.base import BaseAgentTool
+        from ii_agent.agent.runtime.tools.base import BaseAgentTool
 
         class MinimalTool(BaseAgentTool):
             name = "minimal"
@@ -1062,7 +1062,7 @@ class TestBaseAgentTool:
         assert tool.should_confirm_execute({}) is False
 
     async def test_on_tool_start_is_no_op(self):
-        from ii_agent.engine.runtime.tools.base import BaseAgentTool
+        from ii_agent.agent.runtime.tools.base import BaseAgentTool
 
         class MinimalTool(BaseAgentTool):
             name = "minimal"
@@ -1079,7 +1079,7 @@ class TestBaseAgentTool:
         await tool.on_tool_start(MagicMock(), MagicMock())
 
     async def test_on_tool_end_is_no_op(self):
-        from ii_agent.engine.runtime.tools.base import BaseAgentTool
+        from ii_agent.agent.runtime.tools.base import BaseAgentTool
 
         class MinimalTool(BaseAgentTool):
             name = "minimal"
@@ -1100,7 +1100,7 @@ class TestAgentAsTool:
     """Tests for AgentAsTool wrapper."""
 
     async def test_execute_calls_agent_arun(self):
-        from ii_agent.engine.runtime.tools.base import AgentAsTool
+        from ii_agent.agent.runtime.tools.base import AgentAsTool
 
         mock_agent = MagicMock()
         mock_agent.name = "sub_agent"
@@ -1120,7 +1120,7 @@ class TestAgentAsTool:
         assert "agent output" in result.llm_content
 
     async def test_execute_handles_agent_exception(self):
-        from ii_agent.engine.runtime.tools.base import AgentAsTool
+        from ii_agent.agent.runtime.tools.base import AgentAsTool
 
         mock_agent = MagicMock()
         mock_agent.name = "broken_agent"
@@ -1138,7 +1138,7 @@ class TestAgentAsTool:
         assert "agent crashed" in result.llm_content
 
     def test_name_defaults_to_agent_name(self):
-        from ii_agent.engine.runtime.tools.base import AgentAsTool
+        from ii_agent.agent.runtime.tools.base import AgentAsTool
 
         mock_agent = MagicMock()
         mock_agent.name = "my_agent"
@@ -1147,7 +1147,7 @@ class TestAgentAsTool:
         assert tool.name == "my_agent"
 
     def test_custom_name_overrides_agent_name(self):
-        from ii_agent.engine.runtime.tools.base import AgentAsTool
+        from ii_agent.agent.runtime.tools.base import AgentAsTool
 
         mock_agent = MagicMock()
         mock_agent.name = "original"

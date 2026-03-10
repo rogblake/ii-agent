@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Dict, Any
 
 from ii_agent.core.redis import cancel
 from ii_agent.realtime.events.stream import EventStream
-from ii_agent.engine.agents.models import AgentRunTask, RunStatus
+from ii_agent.agent.agents.models import AgentRunTask, RunStatus
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.realtime.socket.command.command_handler import (

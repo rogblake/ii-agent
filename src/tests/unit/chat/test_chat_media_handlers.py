@@ -21,7 +21,7 @@ import pytest
 
 
 def _make_prefs(**kwargs):
-    from ii_agent.chat.schemas import MediaPreferences
+    from ii_agent.chat.types import MediaPreferences
 
     defaults = dict(
         enabled=True,
@@ -40,13 +40,13 @@ def _make_prefs(**kwargs):
 
 
 def _make_mini_tools(id_="tool-1", name="My Tool"):
-    from ii_agent.chat.schemas import MiniTools
+    from ii_agent.chat.types import MiniTools
 
     return MiniTools(id=id_, name=name)
 
 
 def _make_reference(file_id, ref_type):
-    from ii_agent.chat.schemas import MediaReference
+    from ii_agent.chat.types import MediaReference
 
     return MediaReference(file_id=file_id, type=ref_type)
 

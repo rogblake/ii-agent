@@ -11,7 +11,7 @@ import pytest
 
 from ii_agent.chat.tools.github import GitHubTool
 from ii_agent.chat.tools.base import ToolCallInput
-from ii_agent.chat.schemas import ErrorTextContent, TextResultContent
+from ii_agent.chat.types import ErrorTextContent, TextResultContent
 
 
 # ---------------------------------------------------------------------------

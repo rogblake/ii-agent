@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from ii_agent.files.models import FileUpload
-from ii_agent.chat.schemas import BinaryContent, TextContent
+from ii_agent.chat.types import BinaryContent, TextContent
 from ii_agent.core.storage.client import media_storage
 from ii_agent.core.config.llm_config import APITypes
 from ii_agent.core.logger import logger

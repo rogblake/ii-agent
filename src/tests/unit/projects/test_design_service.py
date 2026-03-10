@@ -572,7 +572,7 @@ class TestBuildLlmMessages:
         assert len(messages) == 1
 
     def test_message_contains_prompt(self):
-        from ii_agent.chat.schemas import TextContent, MessageRole
+        from ii_agent.chat.types import TextContent, MessageRole
         svc = _make_service()
 
         mock_message = MagicMock()

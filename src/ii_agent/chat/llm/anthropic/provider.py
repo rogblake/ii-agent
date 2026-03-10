@@ -37,7 +37,7 @@ from ii_agent.core.config.llm_config import APITypes, LLMConfig
 from ii_agent.core.storage.locations import get_session_file_path
 from ii_agent.files.models import FileUpload
 from ii_agent.sessions.models import Session
-from ii_agent.chat.models import ProviderFile
+from ii_agent.chat.providers.models import ProviderFile
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.billing.usage.models import TokenUsage
 from ii_agent.chat.prompts.anthropic_system_prompt import system_prompt_template
@@ -45,7 +45,7 @@ from ii_agent.core.storage.client import storage
 from ii_agent.chat.base import (
     LLMClient,
 )
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     BinaryContent,
     ContentPart,
     JsonResultContent,

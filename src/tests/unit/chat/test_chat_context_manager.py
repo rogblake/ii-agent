@@ -9,12 +9,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.chat.context_manager import (
+from ii_agent.chat.application.context_service import (
     CONTEXT_WINDOWS,
     ContextWindowManager,
     SummarizationService,
 )
-from ii_agent.chat.schemas import Message, MessageRole, TextContent
+from ii_agent.chat.types import Message, MessageRole, TextContent
 
 
 # ---------------------------------------------------------------------------
@@ -148,7 +148,7 @@ class TestLoadContextForLlm:
 
         with (
             patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)),
-            patch("ii_agent.chat.context_manager.MessageService") as mock_svc_cls,
+            patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
         ):
             mock_svc = MagicMock()
             mock_svc.list_by_session = AsyncMock(return_value=messages)
@@ -168,7 +168,7 @@ class TestLoadContextForLlm:
 
         with (
             patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=summary)),
-            patch("ii_agent.chat.context_manager.MessageService") as mock_svc_cls,
+            patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
         ):
             mock_svc = MagicMock()
             mock_svc.list_messages_after_id = AsyncMock(return_value=messages)
@@ -190,7 +190,7 @@ class TestLoadContextForLlm:
 
         with (
             patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=summary)),
-            patch("ii_agent.chat.context_manager.MessageService") as mock_svc_cls,
+            patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
         ):
             mock_svc = MagicMock()
             mock_svc.list_messages_after_id = AsyncMock(return_value=messages)
@@ -289,7 +289,7 @@ class TestCheckAndSummarizeAfterResponse:
 
         with (
             patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)),
-            patch("ii_agent.chat.context_manager.MessageService") as mock_svc_cls,
+            patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
             patch.object(ContextWindowManager, "create_chained_summary", new=AsyncMock()) as mock_summarize,
         ):
             mock_svc = MagicMock()
@@ -319,7 +319,7 @@ class TestCheckAndSummarizeAfterResponse:
 
         with (
             patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)),
-            patch("ii_agent.chat.context_manager.MessageService") as mock_svc_cls,
+            patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
             patch.object(ContextWindowManager, "create_chained_summary", new=AsyncMock(return_value=new_summary)) as mock_summarize,
         ):
             mock_svc = MagicMock()
@@ -346,7 +346,7 @@ class TestCheckAndSummarizeAfterResponse:
 
         with (
             patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)),
-            patch("ii_agent.chat.context_manager.MessageService") as mock_svc_cls,
+            patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
             patch.object(ContextWindowManager, "create_chained_summary", new=AsyncMock()) as mock_summarize,
         ):
             mock_svc = MagicMock()
@@ -458,7 +458,7 @@ class TestGenerateSummary:
         response.usage = MagicMock(total_tokens=30)
         mock_provider.send = AsyncMock(return_value=response)
 
-        with patch("ii_agent.chat.context_manager.LLMProviderFactory.create_provider", return_value=mock_provider):
+        with patch("ii_agent.chat.application.context_service.LLMProviderFactory.create_provider", return_value=mock_provider):
             summary, tokens = await SummarizationService.generate_summary(
                 messages=messages,
                 llm_config=llm_config,
@@ -479,7 +479,7 @@ class TestGenerateSummary:
         mock_provider = MagicMock()
         mock_provider.send = AsyncMock(side_effect=Exception("send error"))
 
-        with patch("ii_agent.chat.context_manager.LLMProviderFactory.create_provider", return_value=mock_provider):
+        with patch("ii_agent.chat.application.context_service.LLMProviderFactory.create_provider", return_value=mock_provider):
             summary, tokens = await SummarizationService.generate_summary(
                 messages=messages,
                 llm_config=llm_config,
@@ -501,7 +501,7 @@ class TestGenerateSummary:
         response.usage = MagicMock(total_tokens=20)
         mock_provider.send = AsyncMock(return_value=response)
 
-        with patch("ii_agent.chat.context_manager.LLMProviderFactory.create_provider", return_value=mock_provider):
+        with patch("ii_agent.chat.application.context_service.LLMProviderFactory.create_provider", return_value=mock_provider):
             summary, _ = await SummarizationService.generate_summary(
                 messages=messages,
                 llm_config=llm_config,
@@ -536,7 +536,7 @@ class TestCreateChainedSummary:
 
         with (
             patch.object(SummarizationService, "generate_summary", new=AsyncMock(return_value=("Summary text", 50))),
-            patch("ii_agent.chat.context_manager.ConversationSummary", return_value=mock_summary),
+            patch("ii_agent.chat.application.context_service.ConversationSummary", return_value=mock_summary),
         ):
             summary = await ContextWindowManager.create_chained_summary(
                 db_session=db,
@@ -566,7 +566,7 @@ class TestCreateChainedSummary:
 
         with (
             patch.object(SummarizationService, "generate_summary", new=AsyncMock(return_value=("Chained summary", 30))),
-            patch("ii_agent.chat.context_manager.ConversationSummary", return_value=mock_summary),
+            patch("ii_agent.chat.application.context_service.ConversationSummary", return_value=mock_summary),
         ):
             summary = await ContextWindowManager.create_chained_summary(
                 db_session=db,
@@ -592,7 +592,7 @@ class TestCreateChainedSummary:
 
         with (
             patch.object(SummarizationService, "generate_summary", new=AsyncMock(return_value=("Summary", 50))),
-            patch("ii_agent.chat.context_manager.ConversationSummary", return_value=mock_summary),
+            patch("ii_agent.chat.application.context_service.ConversationSummary", return_value=mock_summary),
         ):
             summary = await ContextWindowManager.create_chained_summary(
                 db_session=db,

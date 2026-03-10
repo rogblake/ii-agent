@@ -336,7 +336,7 @@ class TestIframeListIconsToolR4:
         tool_call.id = "tc-1"
         tool_call.input = "not valid json {{"
         response = await tool.run(tool_call)
-        from ii_agent.chat.schemas import ErrorTextContent
+        from ii_agent.chat.types import ErrorTextContent
         assert isinstance(response.output, ErrorTextContent)
 
 
@@ -406,7 +406,7 @@ class TestIframeGetIconSvgToolR4:
         tool_call.id = "tc-1"
         tool_call.input = "{{not valid json"
         response = await tool.run(tool_call)
-        from ii_agent.chat.schemas import ErrorTextContent
+        from ii_agent.chat.types import ErrorTextContent
         assert isinstance(response.output, ErrorTextContent)
 
     @pytest.mark.asyncio

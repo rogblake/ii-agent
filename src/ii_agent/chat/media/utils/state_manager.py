@@ -6,7 +6,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.sessions.models import Session
-from ii_agent.chat.schemas import MediaReference, AdvancedModeState
+from ii_agent.chat.types import MediaReference
+from ii_agent.chat.api.schemas import AdvancedModeState
 from .reference_resolver import ReferenceResolver
 
 

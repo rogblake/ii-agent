@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.schemas import MediaPreferences
+from ii_agent.chat.types import MediaPreferences
 from ..utils import PromptBuilder
 from .base import BaseModeStrategy
 

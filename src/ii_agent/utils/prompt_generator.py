@@ -7,7 +7,7 @@ from ii_agent.core.llm.execution_service import (
     LLMBillingContext,
     LLMExecutionService,
 )
-from ii_agent.chat.schemas import Message, MessageRole, TextContent
+from ii_agent.chat.types import Message, MessageRole, TextContent
 
 logger = logging.getLogger("prompt_generator")
 logger.setLevel(logging.INFO)

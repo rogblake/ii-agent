@@ -4,7 +4,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.schemas import MediaPreferences
+from ii_agent.chat.types import MediaPreferences
 from ii_agent.content.media.repository import MediaTemplateRepository
 from ii_agent.content.media.service import MediaTemplateService
 from ii_agent.core.config.settings import get_settings

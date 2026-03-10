@@ -19,7 +19,7 @@ from ii_agent.chat.llm.gemini import (
     get_tool_call_from_parts,
     map_googe_finish_reason,
 )
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     BinaryContent,
     EventType,
     FinishReason,

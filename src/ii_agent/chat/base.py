@@ -9,8 +9,7 @@ from typing import (
     Dict,
     Any,
 )
-from ii_agent.chat.message_service import Message
-from ii_agent.chat.schemas import RunResponseEvent, RunResponseOutput
+from ii_agent.chat.types import Message, RunResponseEvent, RunResponseOutput
 
 
 class LLMClient(ABC):

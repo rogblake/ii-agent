@@ -347,7 +347,7 @@ class ComposioActionTool(BaseAgentTool):
 
     async def run(self, tool_call):
         """Execute tool for chat service compatibility."""
-        from ii_agent.chat.schemas import ErrorTextContent, TextResultContent
+        from ii_agent.chat.types import ErrorTextContent, TextResultContent
         from ii_agent.chat.tools.base import ToolResponse
 
         try:

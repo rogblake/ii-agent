@@ -9,12 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.storage.client import storage
-from ii_agent.chat.schemas import TextContent
-from ii_agent.chat.file_processor import process_files_for_message
+from ii_agent.chat.types import TextContent
+from ii_agent.chat.application.file_processor import process_files_for_message
 from ii_agent.chat.vectorstore import openai_vector_store
 
 if TYPE_CHECKING:
-    from ii_agent.chat.schemas import Message
+    from ii_agent.chat.types import Message
 
 logger = logging.getLogger(__name__)
 

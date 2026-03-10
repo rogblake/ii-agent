@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from ii_agent.billing.usage.models import TokenUsage
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     FinishReason,
     Message,
     MessageRole,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ii_agent.chat.schemas import ErrorTextContent, JsonResultContent
+from ii_agent.chat.types import ErrorTextContent, JsonResultContent
 from ii_agent.projects.design.schemas import IframeDocumentSnapshotNode
 
 from ii_agent.chat.tools.base import BaseTool, ToolCallInput, ToolInfo, ToolResponse

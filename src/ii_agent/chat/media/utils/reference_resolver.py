@@ -7,7 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.files.models import FileUpload
-from ii_agent.chat.schemas import MediaReference, AdvancedModeReference
+from ii_agent.chat.types import MediaReference
+from ii_agent.chat.api.schemas import AdvancedModeReference
 from ii_agent.core.storage.client import storage, media_storage
 
 logger = logging.getLogger(__name__)

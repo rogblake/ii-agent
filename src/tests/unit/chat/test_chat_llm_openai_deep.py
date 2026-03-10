@@ -11,7 +11,7 @@ import pytest
 from pydantic import SecretStr
 
 from ii_agent.core.config.llm_config import LLMConfig
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ArrayResultContent,
     BinaryContent,
     ErrorJsonContent,

@@ -19,7 +19,7 @@ import httpx
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.schemas import BinaryContent, MessageRole, TextContent, ToolCall
+from ii_agent.chat.types import BinaryContent, MessageRole, TextContent, ToolCall
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.llm.execution_service import LLMExecutionService
 from ii_agent.projects.design.utils.constants import (

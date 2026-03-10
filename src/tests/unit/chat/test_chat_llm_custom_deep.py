@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from ii_agent.chat.llm.custom import CustomProvider
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ArrayResultContent,
     BinaryContent,
     ErrorJsonContent,
@@ -295,7 +295,7 @@ class TestConvertMessagesToolDeep:
 
     def test_storybook_result_content_serialized(self):
         """StorybookResultContent should be serialized to JSON."""
-        from ii_agent.chat.schemas import StorybookPageResult
+        from ii_agent.chat.types import StorybookPageResult
 
         provider = _make_provider()
         page = StorybookPageResult(page_number=1, image_url="https://example.com/p1.jpg", text_content="Page 1 text")

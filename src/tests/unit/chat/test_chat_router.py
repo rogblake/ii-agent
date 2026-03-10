@@ -13,8 +13,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from ii_agent.auth.dependencies import get_current_user
-from ii_agent.chat.dependencies import get_chat_service
-from ii_agent.chat.router import router
+from ii_agent.chat.api.dependencies import get_chat_service
+from ii_agent.chat.api.router import router
 from ii_agent.core.dependencies import _db_session_dependency
 from ii_agent.core.exceptions import IIAgentError, PaymentRequiredError
 from ii_agent.core.middleware import ii_agent_error_handler
@@ -115,7 +115,7 @@ def test_get_advanced_mode_settings_success():
     svc = _make_chat_service()
 
     with patch(
-        "ii_agent.chat.router.MediaOrchestrator.get_advanced_mode_state",
+        "ii_agent.chat.api.router.MediaOrchestrator.get_advanced_mode_state",
         new=AsyncMock(return_value=state),
     ):
         app = _build_app(svc)
@@ -133,7 +133,7 @@ def test_get_advanced_mode_validates_session_access():
     svc = _make_chat_service()
 
     with patch(
-        "ii_agent.chat.router.MediaOrchestrator.get_advanced_mode_state",
+        "ii_agent.chat.api.router.MediaOrchestrator.get_advanced_mode_state",
         new=AsyncMock(return_value=state),
     ):
         app = _build_app(svc)
@@ -155,7 +155,7 @@ def test_update_advanced_mode_settings_success():
     svc = _make_chat_service()
 
     with patch(
-        "ii_agent.chat.router.MediaOrchestrator.update_advanced_mode_state",
+        "ii_agent.chat.api.router.MediaOrchestrator.update_advanced_mode_state",
         new=AsyncMock(return_value=updated_state),
     ):
         app = _build_app(svc)
@@ -175,7 +175,7 @@ def test_update_advanced_mode_validates_session_access():
     svc = _make_chat_service()
 
     with patch(
-        "ii_agent.chat.router.MediaOrchestrator.update_advanced_mode_state",
+        "ii_agent.chat.api.router.MediaOrchestrator.update_advanced_mode_state",
         new=AsyncMock(return_value={"enabled": False, "references": []}),
     ):
         app = _build_app(svc)
@@ -424,7 +424,7 @@ def _make_history_response(messages=None):
 
 def test_get_message_history_success():
     """Arrange: valid session; Act: GET conversation; Assert: 200."""
-    from ii_agent.chat.schemas import MessageHistoryResponse
+    from ii_agent.chat.api.schemas import MessageHistoryResponse
 
     hist = MessageHistoryResponse(messages=[], has_more=False, total_count=0)
     svc = _make_chat_service(history_response=hist)
@@ -441,7 +441,7 @@ def test_get_message_history_success():
 
 def test_get_message_history_with_pagination():
     """Arrange: limit and before params; Assert: 200 and service called with params."""
-    from ii_agent.chat.schemas import MessageHistoryResponse
+    from ii_agent.chat.api.schemas import MessageHistoryResponse
 
     hist = MessageHistoryResponse(messages=[], has_more=False, total_count=0)
     svc = _make_chat_service(history_response=hist)
@@ -463,7 +463,7 @@ def test_get_message_history_with_pagination():
 
 def test_get_public_message_history_no_auth_required():
     """Arrange: no auth override needed; Act: GET public; Assert: 200."""
-    from ii_agent.chat.schemas import MessageHistoryResponse
+    from ii_agent.chat.api.schemas import MessageHistoryResponse
 
     hist = MessageHistoryResponse(messages=[], has_more=False, total_count=0)
     svc = _make_chat_service(history_response=hist)

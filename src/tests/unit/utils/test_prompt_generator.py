@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from ii_agent.billing.usage.models import TokenUsage
-from ii_agent.chat.schemas import FinishReason, RunResponseOutput, TextContent
+from ii_agent.chat.types import FinishReason, RunResponseOutput, TextContent
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
 from ii_agent.utils import prompt_generator
 

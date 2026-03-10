@@ -4,7 +4,7 @@ import json
 import httpx
 from typing import Optional
 
-from ii_agent.chat.schemas import ErrorTextContent, TextResultContent
+from ii_agent.chat.types import ErrorTextContent, TextResultContent
 
 from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
 

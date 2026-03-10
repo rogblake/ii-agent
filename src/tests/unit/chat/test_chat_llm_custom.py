@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch, AsyncMock
 import pytest
 
 from ii_agent.chat.llm.custom import CustomProvider
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ArrayResultContent,
     BinaryContent,
     ErrorJsonContent,

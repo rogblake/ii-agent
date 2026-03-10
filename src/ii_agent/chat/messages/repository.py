@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.models import ChatMessage
+from ii_agent.chat.messages.models import ChatMessage
 
 logger = logging.getLogger(__name__)
 

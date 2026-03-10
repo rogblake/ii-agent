@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.chat.llm import get_client
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ContentPart,
     FinishReason,
     Message,
@@ -21,7 +21,7 @@ from ii_agent.chat.schemas import (
     TextContent,
     ToolCall,
 )
-from ii_agent.chat.tool_service import ChatToolService
+from ii_agent.chat.application.tool_service import ChatToolService
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.exceptions import PaymentRequiredError
 from ii_agent.core.llm.token_record import TokenTracker

@@ -19,7 +19,7 @@ from ii_agent.chat.tools import (
     ToolCallInput,
     ImageGenerationTool,
 )
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ErrorTextContent,
     ToolResult,
 )
@@ -27,7 +27,7 @@ from ii_agent.chat.media import MediaOrchestrator
 
 if TYPE_CHECKING:
     from ii_agent.chat.tools.base import BaseTool
-    from ii_agent.chat.schemas import ChatMessageRequest
+    from ii_agent.chat.api.schemas import ChatMessageRequest
     from ii_agent.core.container import ServiceContainer
 
 logger = logging.getLogger(__name__)

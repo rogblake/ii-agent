@@ -187,8 +187,8 @@ async def _create_storybook_tool_result(
         return
 
     from ii_agent.core.db.manager import get_db_session_local
-    from ii_agent.chat.message_service import MessageService
-    from ii_agent.chat.schemas import (
+    from ii_agent.chat.messages.service import MessageService
+    from ii_agent.chat.types import (
         MessageRole,
         StorybookPageResult,
         StorybookResultContent,
@@ -271,8 +271,8 @@ async def _create_storybook_tool_error(
         return
 
     from ii_agent.core.db.manager import get_db_session_local
-    from ii_agent.chat.message_service import MessageService
-    from ii_agent.chat.schemas import ErrorTextContent, MessageRole, ToolResult
+    from ii_agent.chat.messages.service import MessageService
+    from ii_agent.chat.types import ErrorTextContent, MessageRole, ToolResult
 
     tool_result = ToolResult(
         tool_call_id=tool_call_id,

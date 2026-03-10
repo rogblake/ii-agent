@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional, TYPE_CHECKING
 
-from ii_agent.chat.schemas import MediaPreferences
+from ii_agent.chat.types import MediaPreferences
 from .storybook_generate import StorybookGenerationTool
 
 if TYPE_CHECKING:

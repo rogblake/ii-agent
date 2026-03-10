@@ -2,8 +2,8 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.chat.context_manager import ContextWindowManager
-from ii_agent.chat.schemas import Message, MessageRole, TextContent
+from ii_agent.chat.application.context_service import ContextWindowManager
+from ii_agent.chat.types import Message, MessageRole, TextContent
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
 
 

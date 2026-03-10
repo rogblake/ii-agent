@@ -16,7 +16,7 @@ from ii_agent.workers.celery.utils import queue_task
 from ii_agent.core.db.manager import get_db_session_local
 
 from ii_agent.content.media.service import _generate_image
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ErrorTextContent,
     MediaPreferences,
     StorybookProgressContent,

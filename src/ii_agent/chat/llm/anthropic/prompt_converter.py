@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel
 
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ArrayResultContent,
     BinaryContent,
     ErrorJsonContent,

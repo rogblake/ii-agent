@@ -6,7 +6,7 @@ from typing import List
 from openai import AsyncOpenAI
 from openai.types.shared_params.comparison_filter import ComparisonFilter
 from openai.types.shared_params.compound_filter import CompoundFilter
-from ii_agent.chat.schemas import ErrorTextContent, JsonResultContent
+from ii_agent.chat.types import ErrorTextContent, JsonResultContent
 from ii_agent.core.config.settings import get_settings
 from ii_agent.settings.llm.service import get_system_llm_config
 

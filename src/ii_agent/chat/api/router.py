@@ -11,8 +11,8 @@ from fastapi.responses import StreamingResponse
 
 from ii_agent.auth.dependencies import DBSession, CurrentUser
 from ii_agent.core.exceptions import InternalError, PaymentRequiredError
-from ii_agent.chat.dependencies import ChatServiceDep
-from ii_agent.chat.schemas import (
+from ii_agent.chat.api.dependencies import ChatServiceDep
+from ii_agent.chat.api.schemas import (
     ChatMessageRequest,
     MessageHistoryResponse,
     ClearHistoryResponse,

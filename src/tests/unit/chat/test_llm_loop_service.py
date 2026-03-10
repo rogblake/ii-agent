@@ -4,8 +4,8 @@ from uuid import uuid4
 import pytest
 
 from ii_agent.billing.usage.models import TokenUsage
-from ii_agent.chat.llm_loop_service import LLMTurnLoopService
-from ii_agent.chat.schemas import (
+from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
+from ii_agent.chat.types import (
     EventType,
     FinishReason,
     Message,
@@ -69,13 +69,13 @@ async def test_llm_turn_loop_emits_usage_and_complete(monkeypatch):
     async def _compress_context(**kwargs):
         return kwargs["messages"]
 
-    monkeypatch.setattr("ii_agent.chat.llm_loop_service.cancel.raise_if_cancelled", _noop)
+    monkeypatch.setattr("ii_agent.chat.application.turn_loop_service.cancel.raise_if_cancelled", _noop)
     monkeypatch.setattr(
-        "ii_agent.chat.llm_loop_service.ContextWindowManager.compress_context_if_needed",
+        "ii_agent.chat.application.turn_loop_service.ContextWindowManager.compress_context_if_needed",
         _compress_context,
     )
     monkeypatch.setattr(
-        "ii_agent.chat.llm_loop_service.ContextWindowManager.check_and_summarize_after_response",
+        "ii_agent.chat.application.turn_loop_service.ContextWindowManager.check_and_summarize_after_response",
         _noop,
     )
 

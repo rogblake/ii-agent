@@ -21,11 +21,11 @@ from openai.types.responses.response_output_text import (
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from ii_agent.chat.schemas import ErrorTextContent
+from ii_agent.chat.types import ErrorTextContent
 
 
 from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
-from ii_agent.chat.models import ChatMessage
+from ii_agent.chat.messages.models import ChatMessage
 from ii_agent.files.models import FileUpload
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.storage import BaseStorage

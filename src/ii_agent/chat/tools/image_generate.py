@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 from urllib.parse import urlparse
 
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ArrayResultContent,
     ErrorTextContent,
     ImageUrlContentPart,

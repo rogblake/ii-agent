@@ -7,9 +7,9 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from ii_agent.chat.schemas import Message, TextContent, MessageRole
-from ii_agent.chat.message_service import MessageService
-from ii_agent.chat.models import ConversationSummary
+from ii_agent.chat.types import Message, TextContent, MessageRole
+from ii_agent.chat.messages.service import MessageService
+from ii_agent.chat.messages.models import ConversationSummary
 from ii_agent.sessions.models import Session
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.chat.llm import LLMProviderFactory
@@ -450,7 +450,7 @@ class SummarizationService:
         Focus on USER input and ASSISTANT final responses only.
         Skip: tool calls, tool results, reasoning/thinking, images, etc.
         """
-        from ii_agent.chat.schemas import TextContent
+        from ii_agent.chat.types import TextContent
 
         lines = []
         for msg in messages:

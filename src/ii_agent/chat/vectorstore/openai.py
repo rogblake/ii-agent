@@ -15,7 +15,7 @@ from ii_agent.core.config.llm_config import APITypes
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.config.settings import get_settings
 from ii_agent.settings.llm.service import get_system_llm_config
-from ii_agent.chat.models import ProviderVectorStore
+from ii_agent.chat.providers.models import ProviderVectorStore
 from ii_agent.files.models import FileUpload
 from ii_agent.chat.vectorstore.base import (
     VectorStore,

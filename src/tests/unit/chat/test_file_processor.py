@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from ii_agent.chat.file_processor import (
+from ii_agent.chat.application.file_processor import (
     ContentExtractorFactory,
     CodeExtractor,
     CSVExtractor,

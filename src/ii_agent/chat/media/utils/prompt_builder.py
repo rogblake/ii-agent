@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Tuple
 
-from ii_agent.chat.schemas import MediaReference
+from ii_agent.chat.types import MediaReference
 
 
 class PromptBuilder:

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.schemas import MediaPreferences
+from ii_agent.chat.types import MediaPreferences
 
 
 class BaseModeStrategy(ABC):

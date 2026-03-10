@@ -13,7 +13,7 @@ from google.genai import types
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.chat.base import LLMClient
 from ii_agent.billing.usage.models import TokenUsage
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     Message,
     MessageRole,
     RunResponseEvent,

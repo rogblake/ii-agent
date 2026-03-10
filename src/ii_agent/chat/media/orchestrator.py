@@ -8,12 +8,14 @@ from typing import TYPE_CHECKING, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     BinaryContent,
     TextContent,
-    ChatMessageRequest,
     MediaPreferences,
     MediaReference,
+)
+from ii_agent.chat.api.schemas import (
+    ChatMessageRequest,
     AdvancedModeState,
 )
 from ii_agent.chat.tools import BaseTool

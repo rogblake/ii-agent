@@ -22,7 +22,7 @@ from ii_agent.content.storybook.ai_edit_service import (
     _extract_text_position_from_html,
     _get_optimal_aspect_ratio,
 )
-from ii_agent.chat.schemas import ImageURLContent, MessageRole, TextContent
+from ii_agent.chat.types import ImageURLContent, MessageRole, TextContent
 from ii_agent.core.exceptions import ValidationError
 
 

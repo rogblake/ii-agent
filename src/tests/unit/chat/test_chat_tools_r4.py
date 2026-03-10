@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from ii_agent.chat.tools.base import ToolCallInput, ToolResponse
-from ii_agent.chat.schemas import ErrorTextContent, MediaPreferences
+from ii_agent.chat.types import ErrorTextContent, MediaPreferences
 
 pytestmark = pytest.mark.unit
 

@@ -11,7 +11,7 @@ import pytest
 from pydantic import SecretStr
 
 from ii_agent.core.config.llm_config import LLMConfig
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ArrayResultContent,
     BinaryContent,
     ErrorJsonContent,
@@ -197,7 +197,7 @@ class TestConvertToolResultContentDeep:
     def test_storybook_result_with_pages(self):
         """StorybookResultContent with pages should serialize correctly."""
         from ii_agent.chat.llm.anthropic.prompt_converter import convert_tool_result_content
-        from ii_agent.chat.schemas import StorybookPageResult
+        from ii_agent.chat.types import StorybookPageResult
 
         page = StorybookPageResult(page_number=1, image_url="https://example.com/img.png", text_content="Once upon a time")
         result = ToolResult(
@@ -716,7 +716,7 @@ class TestExtractContentPartFromMessageDeep:
 
     def test_beta_text_block_creates_text_content(self):
         from anthropic.types.beta import BetaTextBlock
-        from ii_agent.chat.schemas import TextContent
+        from ii_agent.chat.types import TextContent
 
         provider = _make_provider()
         block = MagicMock(spec=BetaTextBlock)
@@ -733,7 +733,7 @@ class TestExtractContentPartFromMessageDeep:
 
     def test_beta_tool_use_block_creates_tool_call(self):
         from anthropic.types.beta import BetaToolUseBlock
-        from ii_agent.chat.schemas import ToolCall
+        from ii_agent.chat.types import ToolCall
 
         provider = _make_provider()
         block = MagicMock(spec=BetaToolUseBlock)
@@ -753,7 +753,7 @@ class TestExtractContentPartFromMessageDeep:
 
     def test_thinking_block_creates_reasoning_content(self):
         from anthropic.types import ThinkingBlock
-        from ii_agent.chat.schemas import ReasoningContent
+        from ii_agent.chat.types import ReasoningContent
 
         provider = _make_provider()
         block = MagicMock(spec=ThinkingBlock)
@@ -771,7 +771,7 @@ class TestExtractContentPartFromMessageDeep:
 
     def test_beta_thinking_block_creates_reasoning_content(self):
         from anthropic.types.beta import BetaThinkingBlock
-        from ii_agent.chat.schemas import ReasoningContent
+        from ii_agent.chat.types import ReasoningContent
 
         provider = _make_provider()
         block = MagicMock(spec=BetaThinkingBlock)
@@ -800,7 +800,7 @@ class TestExtractContentPartFromMessageDeep:
 
     def test_server_tool_use_bash_creates_tool_call(self):
         from anthropic.types.beta import BetaServerToolUseBlock
-        from ii_agent.chat.schemas import ToolCall
+        from ii_agent.chat.types import ToolCall
 
         provider = _make_provider()
         block = MagicMock(spec=BetaServerToolUseBlock)
@@ -820,7 +820,7 @@ class TestExtractContentPartFromMessageDeep:
 
     def test_server_tool_use_text_editor_creates_tool_call(self):
         from anthropic.types.beta import BetaServerToolUseBlock
-        from ii_agent.chat.schemas import ToolCall
+        from ii_agent.chat.types import ToolCall
 
         provider = _make_provider()
         block = MagicMock(spec=BetaServerToolUseBlock)
@@ -856,7 +856,7 @@ class TestExtractContentPartFromMessageDeep:
 
     def test_mixed_content_blocks(self):
         from anthropic.types import TextBlock, ToolUseBlock
-        from ii_agent.chat.schemas import TextContent, ToolCall
+        from ii_agent.chat.types import TextContent, ToolCall
 
         provider = _make_provider()
 

@@ -20,7 +20,7 @@ from ii_agent.chat.tools.storybook_generate import (
     StorybookGenerationTool,
 )
 from ii_agent.chat.tools.base import ToolCallInput
-from ii_agent.chat.schemas import MediaPreferences
+from ii_agent.chat.types import MediaPreferences
 
 
 # ---------------------------------------------------------------------------
@@ -408,7 +408,7 @@ class TestCalculateSafeZones:
 class TestStorybookGenerationToolRun:
     @pytest.mark.asyncio
     async def test_run_returns_disabled_error(self):
-        from ii_agent.chat.schemas import ErrorTextContent
+        from ii_agent.chat.types import ErrorTextContent
         tool = _make_tool()
         call = ToolCallInput(id="c1", name="generate_storybook", input="{}")
         response = await tool.run(call)
@@ -423,7 +423,7 @@ class TestStorybookGenerationToolRun:
 class TestStartCeleryGeneration:
     @pytest.mark.asyncio
     async def test_returns_error_for_invalid_json_input(self):
-        from ii_agent.chat.schemas import ErrorTextContent
+        from ii_agent.chat.types import ErrorTextContent
         import uuid
         tool = _make_tool()
         call = ToolCallInput(id="c1", name="generate_storybook", input="invalid json")
@@ -434,7 +434,7 @@ class TestStartCeleryGeneration:
 
     @pytest.mark.asyncio
     async def test_returns_error_when_no_scenes(self):
-        from ii_agent.chat.schemas import ErrorTextContent
+        from ii_agent.chat.types import ErrorTextContent
         import uuid
         tool = _make_tool()
         call = ToolCallInput(

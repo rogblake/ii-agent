@@ -15,7 +15,7 @@ from ii_agent.auth.users.service import UserService
 from ii_agent.billing.credits.service import CreditService
 from ii_agent.billing.credits.utils import usd_to_credits
 from ii_agent.chat.llm.factory import get_client
-from ii_agent.chat.schemas import ImageURLContent, MessageRole, TextContent
+from ii_agent.chat.types import ImageURLContent, MessageRole, TextContent
 from ii_agent.content.media.service import _generate_image
 from ii_agent.content.storybook.schemas import StorybookDetail
 from ii_agent.core.config.settings import Settings

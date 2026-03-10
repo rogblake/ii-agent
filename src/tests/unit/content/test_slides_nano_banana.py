@@ -36,7 +36,7 @@ from ii_agent.content.slides.nano_banana.schemas import (
     Selection,
     SelectionType,
 )
-from ii_agent.chat.schemas import ToolCall
+from ii_agent.chat.types import ToolCall
 
 
 # ---------------------------------------------------------------------------

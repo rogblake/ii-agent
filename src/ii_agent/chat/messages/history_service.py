@@ -8,16 +8,16 @@ from typing import List, Optional, Tuple, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.models import ChatMessage
-from ii_agent.chat.repository import ChatMessageRepository
+from ii_agent.chat.messages.models import ChatMessage
+from ii_agent.chat.messages.repository import ChatMessageRepository
 from ii_agent.files.repository import FileRepository
 from ii_agent.billing.usage.models import TokenUsage
-from ii_agent.chat.schemas import (
+from ii_agent.chat.api.schemas import (
     ChatMessageResponse,
     FileAttachmentResponse,
     MessageHistoryResponse,
-    MessageRoleType,
 )
+from ii_agent.chat.types import MessageRoleType
 
 logger = logging.getLogger(__name__)
 

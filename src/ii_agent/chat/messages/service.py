@@ -7,12 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import TypeAdapter
 
-from ii_agent.chat.models import ChatMessage
-from ii_agent.chat.repository import ChatMessageRepository
+from ii_agent.chat.messages.models import ChatMessage
+from ii_agent.chat.messages.repository import ChatMessageRepository
 from ii_agent.files.models import FileUpload
 
 from ii_agent.billing.usage.models import TokenUsage
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ContentPart,
     Message,
     MessageRole,

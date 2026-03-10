@@ -8,7 +8,7 @@ from litellm import acompletion
 
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
 from ii_agent.billing.usage.models import TokenUsage
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ImageUrlContentPart,
     MessageRole,
     ToolCall,
@@ -34,7 +34,7 @@ from ii_agent.chat.schemas import (
 from ii_agent.chat.base import (
     LLMClient,
 )
-from ii_agent.chat.schemas import Message
+from ii_agent.chat.types import Message
 from ii_agent.chat.prompts.custom_system_prompt import template
 
 logger = logging.getLogger(__name__)

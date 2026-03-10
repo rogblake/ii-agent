@@ -732,7 +732,7 @@ class TestBuildBillingContextR4:
 
 class TestBuildLlmMessagesR4:
     def test_returns_single_user_message(self):
-        from ii_agent.chat.schemas import TextContent
+        from ii_agent.chat.types import TextContent
         svc = _make_service()
         mock_message = MagicMock()
         svc._llm_execution_service.new_message = MagicMock(return_value=mock_message)
@@ -741,7 +741,7 @@ class TestBuildLlmMessagesR4:
         assert messages[0] is mock_message
 
     def test_passes_correct_prompt_to_new_message(self):
-        from ii_agent.chat.schemas import TextContent
+        from ii_agent.chat.types import TextContent
         svc = _make_service()
         svc._llm_execution_service.new_message = MagicMock(return_value=MagicMock())
         svc._build_llm_messages(session_id="sess-1", user_prompt="Design this")

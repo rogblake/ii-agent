@@ -3,7 +3,7 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.chat.service import ChatService
+from ii_agent.chat.application.chat_service import ChatService
 from ii_agent.sessions.exceptions import SessionNotFoundError
 
 

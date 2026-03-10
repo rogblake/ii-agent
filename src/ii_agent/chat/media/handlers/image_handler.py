@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     BinaryContent,
     TextContent,
     MediaPreferences,
 )
 from ii_agent.chat.tools import ImageGenerationTool
-from ii_agent.chat.file_processor import process_files_for_message
+from ii_agent.chat.application.file_processor import process_files_for_message
 from ii_agent.core.storage.client import storage
 from ..modes.base import BaseModeStrategy
 from ..modes.advanced_mode import AdvancedModeStrategy

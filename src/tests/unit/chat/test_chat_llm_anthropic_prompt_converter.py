@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ArrayResultContent,
     BinaryContent,
     ErrorJsonContent,

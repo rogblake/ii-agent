@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from ii_agent.chat.schemas import ErrorTextContent, ToolResult
-from ii_agent.chat.tool_service import ChatToolService
+from ii_agent.chat.types import ErrorTextContent, ToolResult
+from ii_agent.chat.application.tool_service import ChatToolService
 
 
 @pytest.mark.asyncio

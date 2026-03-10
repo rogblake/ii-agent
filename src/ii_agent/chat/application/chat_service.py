@@ -11,25 +11,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.config.llm_config import LLMConfig
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     BinaryContent,
-    ChatMessageRequest,
     Message,
-    SessionMetadata,
     TextContent,
     MessageRole,
     EventType,
     FinishReason,
 )
+from ii_agent.chat.api.schemas import ChatMessageRequest, SessionMetadata
 from ii_agent.chat.exceptions import AnthropicImageTooLargeError
 from ii_agent.chat.llm import LLMProviderFactory
-from ii_agent.chat.message_service import MessageService
+from ii_agent.chat.messages.service import MessageService
 from ii_agent.chat.media import MediaOrchestrator
-from ii_agent.chat.context_manager import ContextWindowManager
-from ii_agent.chat.file_processing_service import ChatFileProcessor
-from ii_agent.chat.tool_service import ChatToolService
-from ii_agent.chat.llm_loop_service import LLMTurnLoopService
-from ii_agent.chat.message_history_service import ChatMessageHistoryService
+from ii_agent.chat.application.context_service import ContextWindowManager
+from ii_agent.chat.application.file_processing_service import ChatFileProcessor
+from ii_agent.chat.application.tool_service import ChatToolService
+from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
+from ii_agent.chat.messages.history_service import ChatMessageHistoryService
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.agent.runs.models import RunStatus
@@ -41,7 +40,7 @@ from ii_agent.chat.exceptions import ModelNotFoundError
 from ii_agent.sessions.exceptions import SessionNotFoundError
 
 if TYPE_CHECKING:
-    from ii_agent.chat.repository import ChatMessageRepository
+    from ii_agent.chat.messages.repository import ChatMessageRepository
     from ii_agent.core.container import ServiceContainer
 
 logger = logging.getLogger(__name__)

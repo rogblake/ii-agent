@@ -10,7 +10,7 @@ import pytest
 from pydantic import SecretStr
 
 from ii_agent.core.config.llm_config import LLMConfig
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     BinaryContent,
     Message,
     MessageRole,
@@ -544,7 +544,7 @@ class TestExtractContentPartFromMessage:
 
     def test_text_block_creates_text_content(self):
         from anthropic.types import TextBlock, Message as AnthropicMessage
-        from ii_agent.chat.schemas import TextContent
+        from ii_agent.chat.types import TextContent
 
         provider = self._make_provider()
         text_block = MagicMock(spec=TextBlock)
@@ -562,7 +562,7 @@ class TestExtractContentPartFromMessage:
 
     def test_tool_use_block_creates_tool_call(self):
         from anthropic.types import ToolUseBlock
-        from ii_agent.chat.schemas import ToolCall
+        from ii_agent.chat.types import ToolCall
 
         provider = self._make_provider()
         tool_block = MagicMock(spec=ToolUseBlock)

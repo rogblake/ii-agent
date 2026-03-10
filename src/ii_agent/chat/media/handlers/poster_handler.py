@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, List
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     BinaryContent,
     MediaPreferences,
     TextContent,

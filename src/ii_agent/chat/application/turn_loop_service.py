@@ -7,10 +7,10 @@ from typing import AsyncIterator, Dict, List, Any, TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.context_manager import ContextWindowManager
-from ii_agent.chat.message_service import MessageService
+from ii_agent.chat.application.context_service import ContextWindowManager
+from ii_agent.chat.messages.service import MessageService
 from ii_agent.chat.tools.base import ToolCallInput
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ToolCall,
     FinishReason,
     EventType,
@@ -22,8 +22,9 @@ from ii_agent.core.llm.token_record import TokenTracker
 from ii_agent.core.redis import cancel
 
 if TYPE_CHECKING:
-    from ii_agent.chat.schemas import ChatMessageRequest, Message, RunResponseOutput
-    from ii_agent.chat.tool_service import ChatToolService
+    from ii_agent.chat.api.schemas import ChatMessageRequest
+    from ii_agent.chat.types import Message, RunResponseOutput
+    from ii_agent.chat.application.tool_service import ChatToolService
     from ii_agent.core.config.llm_config import LLMConfig
     from ii_agent.chat.tools.base import BaseTool
 

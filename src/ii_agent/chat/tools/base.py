@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 from pydantic import BaseModel
 
-from ii_agent.chat.schemas import ToolResultContent
+from ii_agent.chat.types import ToolResultContent
 
 
 class ToolInfo(BaseModel):

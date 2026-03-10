@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ii_agent.chat.dependencies import (
+from ii_agent.chat.api.dependencies import (
     get_chat_file_processor,
     get_chat_message_history,
     get_chat_message_repository,
@@ -20,13 +20,13 @@ from ii_agent.chat.dependencies import (
     get_llm_loop_service,
     get_message_service,
 )
-from ii_agent.chat.file_processing_service import ChatFileProcessor
-from ii_agent.chat.llm_loop_service import LLMTurnLoopService
-from ii_agent.chat.message_history_service import ChatMessageHistoryService
-from ii_agent.chat.message_service import MessageService
-from ii_agent.chat.repository import ChatMessageRepository
-from ii_agent.chat.service import ChatService
-from ii_agent.chat.tool_service import ChatToolService
+from ii_agent.chat.application.file_processing_service import ChatFileProcessor
+from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
+from ii_agent.chat.messages.history_service import ChatMessageHistoryService
+from ii_agent.chat.messages.service import MessageService
+from ii_agent.chat.messages.repository import ChatMessageRepository
+from ii_agent.chat.application.chat_service import ChatService
+from ii_agent.chat.application.tool_service import ChatToolService
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +98,7 @@ class TestGetChatFileProcessor:
     def test_returns_chat_file_processor_instance(self):
         mock_settings = MagicMock()
         with patch(
-            "ii_agent.chat.dependencies.get_settings", return_value=mock_settings
+            "ii_agent.chat.api.dependencies.get_settings", return_value=mock_settings
         ):
             result = get_chat_file_processor()
         assert isinstance(result, ChatFileProcessor)
@@ -106,7 +106,7 @@ class TestGetChatFileProcessor:
     def test_settings_injected_into_processor(self):
         mock_settings = MagicMock()
         with patch(
-            "ii_agent.chat.dependencies.get_settings", return_value=mock_settings
+            "ii_agent.chat.api.dependencies.get_settings", return_value=mock_settings
         ):
             result = get_chat_file_processor()
         assert result._config is mock_settings
@@ -125,7 +125,7 @@ class TestGetChatToolService:
         mock_settings = MagicMock()
 
         with patch(
-            "ii_agent.chat.dependencies.get_settings", return_value=mock_settings
+            "ii_agent.chat.api.dependencies.get_settings", return_value=mock_settings
         ):
             result = get_chat_tool_service(
                 user_service=mock_user_service,
@@ -142,7 +142,7 @@ class TestGetChatToolService:
         mock_settings = MagicMock()
 
         with patch(
-            "ii_agent.chat.dependencies.get_settings", return_value=mock_settings
+            "ii_agent.chat.api.dependencies.get_settings", return_value=mock_settings
         ):
             result = get_chat_tool_service(
                 user_service=mock_user_service,

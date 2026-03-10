@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from ii_agent.auth.users.service import UserService
-from ii_agent.chat.service import ChatService
+from ii_agent.chat.application.chat_service import ChatService
 from ii_agent.sessions.service import SessionService
 
 pytestmark = pytest.mark.integration

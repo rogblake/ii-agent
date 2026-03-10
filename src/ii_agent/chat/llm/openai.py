@@ -51,9 +51,9 @@ from sqlalchemy import or_, select
 
 from ii_agent.billing.usage.models import TokenUsage
 from ii_agent.chat.base import LLMClient
-from ii_agent.chat.models import ProviderContainer, ProviderFile
+from ii_agent.chat.providers.models import ProviderContainer, ProviderFile
 from ii_agent.chat.prompts.openai_system_prompt import template
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ArrayResultContent,
     BinaryContent,
     CodeBlockContent,

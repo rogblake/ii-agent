@@ -14,13 +14,13 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     Message,
     MessageRole,
     TextContent,
     ToolResult,
 )
-from ii_agent.chat.tool_service import ChatToolService
+from ii_agent.chat.application.tool_service import ChatToolService
 from ii_agent.projects.design.tools import (
     DesignModeAIChangeTool,
     DesignModeIframeAIGetIconSvgTool,

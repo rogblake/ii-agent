@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 import anyio
 import httpx
 
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     ArrayResultContent,
     ErrorTextContent,
     FileUrlContentPart,

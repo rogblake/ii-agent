@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, List, Optional
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.chat.schemas import (
+from ii_agent.chat.types import (
     BinaryContent,
     TextContent,
     MediaPreferences,
@@ -26,7 +26,7 @@ from ii_agent.chat.prompts.video_prompts import (
     build_audio_guidance_hint,
     build_frame_transition_hint,
 )
-from ii_agent.chat.file_processor import (
+from ii_agent.chat.application.file_processor import (
     compress_image_for_provider,
     DEFAULT_IMAGE_LIMIT,
 )

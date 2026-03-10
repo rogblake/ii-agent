@@ -536,7 +536,7 @@ class TestCreateChainedSummary:
 
         with (
             patch.object(SummarizationService, "generate_summary", new=AsyncMock(return_value=("Summary text", 50))),
-            patch("ii_agent.chat.application.context_service.ConversationSummary", return_value=mock_summary),
+            patch("ii_agent.chat.application.context_service.ChatSummary", return_value=mock_summary),
         ):
             summary = await ContextWindowManager.create_chained_summary(
                 db_session=db,
@@ -566,7 +566,7 @@ class TestCreateChainedSummary:
 
         with (
             patch.object(SummarizationService, "generate_summary", new=AsyncMock(return_value=("Chained summary", 30))),
-            patch("ii_agent.chat.application.context_service.ConversationSummary", return_value=mock_summary),
+            patch("ii_agent.chat.application.context_service.ChatSummary", return_value=mock_summary),
         ):
             summary = await ContextWindowManager.create_chained_summary(
                 db_session=db,
@@ -592,7 +592,7 @@ class TestCreateChainedSummary:
 
         with (
             patch.object(SummarizationService, "generate_summary", new=AsyncMock(return_value=("Summary", 50))),
-            patch("ii_agent.chat.application.context_service.ConversationSummary", return_value=mock_summary),
+            patch("ii_agent.chat.application.context_service.ChatSummary", return_value=mock_summary),
         ):
             summary = await ContextWindowManager.create_chained_summary(
                 db_session=db,

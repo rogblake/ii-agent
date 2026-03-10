@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Mapping, Optional
 
 from ii_agent.agent.runtime.run.agent import RunOutput
 from ii_agent.agent.runtime.run.base import RunStatus
-from ii_agent.agent.runtime.agent_sessions.summary import SessionSummary
+from ii_agent.agent.runtime.agent_sessions.summary import AgentSummary
 from ii_agent.agent.runtime.models.message import Message
 from ii_agent.core.logger import logger
 
@@ -30,7 +30,7 @@ class AgentSession:
     # List of all runs in the session
     runs: Optional[List[RunOutput]] = None
     # Summary of the session
-    summary: Optional["SessionSummary"] = None
+    summary: Optional["AgentSummary"] = None
 
     # The unix timestamp when this session was created
     created_at: Optional[int] = None
@@ -67,7 +67,7 @@ class AgentSession:
 
         summary = data.get("summary")
         if summary is not None and isinstance(summary, dict):
-            summary = SessionSummary.from_dict(summary)
+            summary = AgentSummary.from_dict(summary)
 
         metadata = data.get("metadata")
 
@@ -239,7 +239,7 @@ class AgentSession:
                                     return tool_calls
         return tool_calls
 
-    def get_session_summary(self) -> Optional[SessionSummary]:
+    def get_session_summary(self) -> Optional[AgentSummary]:
         """Get the session summary for the session"""
 
         if self.summary is None:

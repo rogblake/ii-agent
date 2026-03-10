@@ -71,7 +71,7 @@ from ii_agent.projects.design.prompts import (
     build_design_mode_iframe_plan_prompt,
     build_design_mode_style_change_prompt,
 )
-from ii_agent.agent.sandboxes.models import Sandbox
+from ii_agent.agent.sandboxes.models import AgentSandbox
 from ii_agent.agent.sandboxes.service import SandboxService
 from ii_agent.agent.events.models import EventType, RealtimeEvent
 from ii_agent.agent.events.service import EventService
@@ -138,7 +138,7 @@ class ProjectDesignService:
         parsed = self._validate_proxy_url(url)
         requested_hostname = (parsed.hostname or "").lower()
 
-        sandbox_record: Sandbox | None = None
+        sandbox_record: AgentSandbox | None = None
         try:
             sandbox_record = await self._sandbox_service.get_by_session_id(
                 db, session_id=uuid.UUID(session_id)
@@ -687,7 +687,7 @@ class ProjectDesignService:
         session_public_url: Optional[str],
         session_sandbox_id: Optional[str],
         requested_hostname: str,
-        sandbox_record: Optional[Sandbox],
+        sandbox_record: Optional[AgentSandbox],
     ) -> Callable[[str], bool]:
         allowed_public_hostname = ""
         if isinstance(session_public_url, str) and session_public_url.strip():

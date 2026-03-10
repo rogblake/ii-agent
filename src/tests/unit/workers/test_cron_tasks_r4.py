@@ -446,7 +446,7 @@ class TestCleanupLongRunningTasks:
 
 
 class TestStartScheduler:
-    def test_scheduler_adds_job_and_starts(self):
+    def test_scheduler_adds_jobs_and_starts(self):
         from ii_agent.workers.cron.tasks import start_scheduler, scheduler
 
         mock_scheduler = MagicMock()
@@ -454,7 +454,10 @@ class TestStartScheduler:
 
         with patch("ii_agent.workers.cron.tasks.scheduler", mock_scheduler):
             start_scheduler()
-            mock_scheduler.add_job.assert_called_once()
+            assert mock_scheduler.add_job.call_count == 2
+            job_ids = [c.kwargs["id"] for c in mock_scheduler.add_job.call_args_list]
+            assert "cleanup_stale_agent_run_tasks" in job_ids
+            assert "cleanup_stale_chat_runs" in job_ids
             mock_scheduler.start.assert_called_once()
 
 

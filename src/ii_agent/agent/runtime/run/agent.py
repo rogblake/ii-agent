@@ -23,7 +23,7 @@ from ii_agent.agent.runtime.utils.media import (
 )
 
 if TYPE_CHECKING:
-    from ii_agent.agent.runtime.agent_sessions.summary import SessionSummary
+    from ii_agent.agent.runtime.agent_sessions.summary import AgentSummary
 
 @dataclass
 class RunInput:
@@ -386,14 +386,14 @@ class MemoryUpdateCompletedEvent(BaseAgentRunEvent):
 
 
 @dataclass
-class SessionSummaryStartedEvent(BaseAgentRunEvent):
+class AgentSummaryStartedEvent(BaseAgentRunEvent):
     event: str = RunEvent.session_summary_started.value
 
 
 @dataclass
-class SessionSummaryCompletedEvent(BaseAgentRunEvent):
+class AgentSummaryCompletedEvent(BaseAgentRunEvent):
     event: str = RunEvent.session_summary_completed.value
-    session_summary: Optional["SessionSummary"] = None
+    session_summary: Optional["AgentSummary"] = None
 
 
 @dataclass
@@ -506,8 +506,8 @@ RunOutputEvent = Union[
     ReasoningCompletedEvent,
     MemoryUpdateStartedEvent,
     MemoryUpdateCompletedEvent,
-    SessionSummaryStartedEvent,
-    SessionSummaryCompletedEvent,
+    AgentSummaryStartedEvent,
+    AgentSummaryCompletedEvent,
     ToolCallStartedEvent,
     ToolCallCompletedEvent,
     ParserModelResponseStartedEvent,
@@ -539,8 +539,8 @@ RUN_EVENT_TYPE_REGISTRY = {
     RunEvent.reasoning_completed.value: ReasoningCompletedEvent,
     RunEvent.memory_update_started.value: MemoryUpdateStartedEvent,
     RunEvent.memory_update_completed.value: MemoryUpdateCompletedEvent,
-    RunEvent.session_summary_started.value: SessionSummaryStartedEvent,
-    RunEvent.session_summary_completed.value: SessionSummaryCompletedEvent,
+    RunEvent.session_summary_started.value: AgentSummaryStartedEvent,
+    RunEvent.session_summary_completed.value: AgentSummaryCompletedEvent,
     RunEvent.tool_call_started.value: ToolCallStartedEvent,
     RunEvent.tool_call_completed.value: ToolCallCompletedEvent,
     RunEvent.parser_model_response_started.value: ParserModelResponseStartedEvent,
@@ -607,7 +607,7 @@ class RunOutput:
     created_at: int = field(default_factory=lambda: int(time()))
 
     status: RunStatus = RunStatus.RUNNING
-    summary: Optional["SessionSummary"] = None
+    summary: Optional["AgentSummary"] = None
     # User control flow (HITL) requirements to continue a run when paused, in order of arrival
     requirements: Optional[list[RunRequirement]] = None
     error_message: Optional[str] = None

@@ -20,15 +20,17 @@ class FakeScheduler:
         self.stopped += 1
 
 
-def test_start_scheduler_registers_cleanup_job(monkeypatch):
+def test_start_scheduler_registers_cleanup_jobs(monkeypatch):
     fake_scheduler = FakeScheduler()
     monkeypatch.setattr(tasks, "scheduler", fake_scheduler)
 
     tasks.start_scheduler()
 
     assert fake_scheduler.started == 1
-    assert len(fake_scheduler.jobs) == 1
-    assert fake_scheduler.jobs[0][1]["id"] == "cleanup_stale_agent_run_tasks"
+    assert len(fake_scheduler.jobs) == 2
+    job_ids = [j[1]["id"] for j in fake_scheduler.jobs]
+    assert "cleanup_stale_agent_run_tasks" in job_ids
+    assert "cleanup_stale_chat_runs" in job_ids
 
 
 def test_shutdown_scheduler_is_idempotent(monkeypatch):

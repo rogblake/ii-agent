@@ -185,7 +185,7 @@ def _make_content_delta(**kwargs):
 
 
 def _make_session_summary_started(**kwargs):
-    from ii_agent.agent.runtime.run.agent import SessionSummaryStartedEvent
+    from ii_agent.agent.runtime.run.agent import AgentSummaryStartedEvent
 
     defaults = dict(
         agent_id="agent-1",
@@ -194,11 +194,11 @@ def _make_session_summary_started(**kwargs):
         session_id=SESSION_STR,
     )
     defaults.update(kwargs)
-    return SessionSummaryStartedEvent(**defaults)
+    return AgentSummaryStartedEvent(**defaults)
 
 
 def _make_session_summary_completed(**kwargs):
-    from ii_agent.agent.runtime.run.agent import SessionSummaryCompletedEvent
+    from ii_agent.agent.runtime.run.agent import AgentSummaryCompletedEvent
 
     defaults = dict(
         agent_id="agent-1",
@@ -208,7 +208,7 @@ def _make_session_summary_completed(**kwargs):
         session_summary=None,
     )
     defaults.update(kwargs)
-    return SessionSummaryCompletedEvent(**defaults)
+    return AgentSummaryCompletedEvent(**defaults)
 
 
 def _make_run_output(**kwargs):
@@ -575,7 +575,7 @@ class TestConvertAgentEventToRealtime:
         realtime = convert_agent_event_to_realtime(event, SESSION_STR)
         assert realtime.content["text"] == "chunk"
 
-    # --- SessionSummaryStartedEvent ---
+    # --- AgentSummaryStartedEvent ---
     def test_session_summary_started_returns_none(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
 
@@ -583,7 +583,7 @@ class TestConvertAgentEventToRealtime:
         result = convert_agent_event_to_realtime(event, SESSION_STR)
         assert result is None
 
-    # --- SessionSummaryCompletedEvent ---
+    # --- AgentSummaryCompletedEvent ---
     def test_session_summary_completed_returns_model_compact(self):
         from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
         from ii_agent.agent.events.models import EventType

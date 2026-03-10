@@ -127,7 +127,7 @@ MUST DO: Please provide your summary based on the conversation so far, following
 
 
 @dataclass
-class SessionSummary:
+class AgentSummary:
     """Model for Session Summary."""
 
     content: str
@@ -145,7 +145,7 @@ class SessionSummary:
         return {k: v for k, v in _dict.items() if v is not None}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SessionSummary":
+    def from_dict(cls, data: Dict[str, Any]) -> "AgentSummary":
         updated_at = data.get("updated_at")
         if isinstance(updated_at, str):
             data["updated_at"] = datetime.fromisoformat(updated_at)
@@ -334,7 +334,7 @@ class SessionSummaryManager:
 
     def _process_summary_response(
         self, summary_response, session_summary_model: "Model"
-    ) -> Optional[SessionSummary]:  # type: ignore
+    ) -> Optional[AgentSummary]:  # type: ignore
         """Process the model response into a SessionSummary"""
         from datetime import datetime
 
@@ -347,7 +347,7 @@ class SessionSummaryManager:
             and summary_response.parsed is not None
             and isinstance(summary_response.parsed, SessionSummaryResponse)
         ):
-            session_summary = SessionSummary(
+            session_summary = AgentSummary(
                 content=summary_response.parsed.summary,
                 topics=summary_response.parsed.topics,
                 updated_at=datetime.now(),
@@ -366,7 +366,7 @@ class SessionSummaryManager:
                 )
 
                 if parsed_summary is not None:
-                    session_summary = SessionSummary(
+                    session_summary = AgentSummary(
                         content=parsed_summary.summary,
                         topics=parsed_summary.topics,
                         updated_at=datetime.now(),
@@ -385,7 +385,7 @@ class SessionSummaryManager:
     async def acreate_session_summary(
         self,
         session: "AgentSession"
-    ) -> Optional[SessionSummary]:
+    ) -> Optional[AgentSummary]:
         """Creates a summary of the session.
 
         Args:
@@ -410,7 +410,7 @@ class SessionSummaryManager:
 
         finalize_content = f"This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n{summary_response.content}."
 
-        session_summary = SessionSummary(
+        session_summary = AgentSummary(
             content=finalize_content,
             topics=None,
             updated_at=datetime.now(),

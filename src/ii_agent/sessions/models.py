@@ -4,11 +4,11 @@ Models migrated from core/db/models.py:
 - SessionStateEnum
 - Session
 
-ConversationSummary has been moved to ii_agent.chat.models (only used by chat).
+ChatSummary (formerly ConversationSummary) has been moved to ii_agent.chat.models (only used by chat).
 """
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, BigInteger, Boolean, Float, ForeignKey, Index, UUID
+from sqlalchemy import String, BigInteger, Boolean, ForeignKey, Index, UUID
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from ii_agent.auth.users.models import User
     from ii_agent.settings.llm.models import LLMSetting
     from ii_agent.projects.models import Project
-    from ii_agent.agent.events.models import Event
+    from ii_agent.agent.events.models import AgentUIEvent
     from ii_agent.files.models import FileUpload
     from ii_agent.content.slides.models import SlideContent, SlideVersion
     from ii_agent.content.storybook.models import Storybook
@@ -63,7 +63,7 @@ class Session(Base):
     status: Mapped[str] = mapped_column(String, default="active")
     agent_state_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     agent_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    state_storage_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    app_kind: Mapped[str] = mapped_column(String, nullable=False, default="agent", server_default="agent")
     public_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, default=False)
     api_version: Mapped[str] = mapped_column(String, default="v0")
@@ -72,16 +72,6 @@ class Session(Base):
         ForeignKey("sessions.id"),
         nullable=True
     )
-
-    # Token tracking
-    prompt_tokens: Mapped[int] = mapped_column(BigInteger, default=0)
-    completion_tokens: Mapped[int] = mapped_column(BigInteger, default=0)
-
-    # Summary message ID (CHAT MODE ONLY)
-    summary_message_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-
-    # Cost tracking
-    cost: Mapped[float] = mapped_column(Float, default=0.0)
 
     # Session metadata
     session_metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
@@ -116,8 +106,8 @@ class Session(Base):
         back_populates="session",
         uselist=False
     )
-    events: Mapped[list["Event"]] = relationship(
-        "Event",
+    events: Mapped[list["AgentUIEvent"]] = relationship(
+        "AgentUIEvent",
         back_populates="session",
         cascade="all, delete-orphan"
     )

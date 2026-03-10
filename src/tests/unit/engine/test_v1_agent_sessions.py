@@ -1,4 +1,4 @@
-"""Unit tests for engine/runtime/agent_sessions/ - AgentSession, SessionSummary, SessionStore."""
+"""Unit tests for engine/runtime/agent_sessions/ - AgentSession, AgentSummary, SessionStore."""
 
 import asyncio
 from datetime import datetime
@@ -11,7 +11,7 @@ from ii_agent.agent.runtime.agent_sessions.base import NoOpSessionStore
 from ii_agent.agent.runtime.agent_sessions.summary import (
     DEFAULT_TOKEN_THRESHOLD,
     MODEL_TOKEN_THRESHOLDS,
-    SessionSummary,
+    AgentSummary,
     SessionSummaryManager,
     SessionSummaryResponse,
 )
@@ -296,7 +296,7 @@ class TestAgentSessionSerialization:
         assert session.get_session_summary() is None
 
     def test_get_session_summary_returns_summary(self):
-        summary = SessionSummary(content="Test summary")
+        summary = AgentSummary(content="Test summary")
         session = _make_session()
         session.summary = summary
         result = session.get_session_summary()
@@ -313,47 +313,47 @@ class TestSessionSummary:
     """Tests for SessionSummary dataclass."""
 
     def test_basic_construction(self):
-        summary = SessionSummary(content="This is a summary")
+        summary = AgentSummary(content="This is a summary")
         assert summary.content == "This is a summary"
         assert summary.topics is None
         assert summary.updated_at is None
         assert summary.metrics is None
 
     def test_with_topics(self):
-        summary = SessionSummary(content="Summary", topics=["Python", "Testing"])
+        summary = AgentSummary(content="Summary", topics=["Python", "Testing"])
         assert summary.topics == ["Python", "Testing"]
 
     def test_with_updated_at(self):
         now = datetime.now()
-        summary = SessionSummary(content="Summary", updated_at=now)
+        summary = AgentSummary(content="Summary", updated_at=now)
         assert summary.updated_at == now
 
     def test_to_dict_basic(self):
-        summary = SessionSummary(content="Content")
+        summary = AgentSummary(content="Content")
         d = summary.to_dict()
         assert d["content"] == "Content"
 
     def test_to_dict_excludes_none_values(self):
-        summary = SessionSummary(content="Content")
+        summary = AgentSummary(content="Content")
         d = summary.to_dict()
         assert "topics" not in d
         assert "metrics" not in d
         assert "updated_at" not in d
 
     def test_to_dict_with_topics(self):
-        summary = SessionSummary(content="Content", topics=["AI", "ML"])
+        summary = AgentSummary(content="Content", topics=["AI", "ML"])
         d = summary.to_dict()
         assert d["topics"] == ["AI", "ML"]
 
     def test_to_dict_updated_at_as_isoformat(self):
         now = datetime(2024, 1, 15, 10, 30, 0)
-        summary = SessionSummary(content="Content", updated_at=now)
+        summary = AgentSummary(content="Content", updated_at=now)
         d = summary.to_dict()
         assert "2024-01-15" in d["updated_at"]
 
     def test_from_dict_basic(self):
         data = {"content": "Summary content"}
-        summary = SessionSummary.from_dict(data)
+        summary = AgentSummary.from_dict(data)
         assert summary.content == "Summary content"
 
     def test_from_dict_with_iso_datetime_string(self):
@@ -361,12 +361,12 @@ class TestSessionSummary:
             "content": "Summary",
             "updated_at": "2024-01-15T10:30:00",
         }
-        summary = SessionSummary.from_dict(data)
+        summary = AgentSummary.from_dict(data)
         assert isinstance(summary.updated_at, datetime)
 
     def test_from_dict_with_topics(self):
         data = {"content": "Summary", "topics": ["topic1", "topic2"]}
-        summary = SessionSummary.from_dict(data)
+        summary = AgentSummary.from_dict(data)
         assert summary.topics == ["topic1", "topic2"]
 
 

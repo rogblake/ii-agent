@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.settings import Settings, get_settings
-from ii_agent.agent.events.models import Event, RealtimeEvent
+from ii_agent.agent.events.models import AgentUIEvent, RealtimeEvent
 from ii_agent.agent.events.publisher import EventPublisher, NoopEventPublisher
 from ii_agent.agent.events.repository import EventRepository
 
@@ -37,7 +37,7 @@ class EventService:
 
     async def save_event(
         self, db: AsyncSession, session_id: uuid.UUID, event: RealtimeEvent
-    ) -> Event:
+    ) -> AgentUIEvent:
         created_at = self._normalize_timestamp(event)
         return await self._repo.save(db, session_id, event, created_at=created_at)
 

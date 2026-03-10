@@ -79,10 +79,10 @@ class ChatMessage(Base):
     )
 
 
-class ConversationSummary(Base):
+class ChatSummary(Base):
     """Conversation summaries for context management."""
 
-    __tablename__ = "conversation_summaries"
+    __tablename__ = "chat_summaries"
 
     id: Mapped[str] = mapped_column(
         String,
@@ -109,7 +109,7 @@ class ConversationSummary(Base):
     # Chaining for recursive compression
     parent_summary_id: Mapped[Optional[str]] = mapped_column(
         String,
-        ForeignKey("conversation_summaries.id"),
+        ForeignKey("chat_summaries.id"),
         nullable=True
     )
 

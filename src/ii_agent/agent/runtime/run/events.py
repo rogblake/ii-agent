@@ -34,14 +34,14 @@ from ii_agent.agent.runtime.run.agent import (
     RunPausedEvent,
     RunStartedEvent,
     SandboxInitializedEvent,
-    SessionSummaryCompletedEvent,
-    SessionSummaryStartedEvent,
+    AgentSummaryCompletedEvent,
+    AgentSummaryStartedEvent,
     ToolCallCompletedEvent,
     ToolCallStartedEvent,
 )
 from ii_agent.agent.runtime.run.requirement import RunRequirement
 from ii_agent.agent.sandboxes.schemas import SandboxInfo
-from ii_agent.agent.runtime.agent_sessions.summary import SessionSummary
+from ii_agent.agent.runtime.agent_sessions.summary import AgentSummary
 
 if TYPE_CHECKING:
     pass
@@ -232,8 +232,8 @@ def create_memory_update_completed_event(
 
 def create_session_summary_started_event(
     from_run_response: RunOutput,
-) -> SessionSummaryStartedEvent:
-    return SessionSummaryStartedEvent(
+) -> AgentSummaryStartedEvent:
+    return AgentSummaryStartedEvent(
         session_id=from_run_response.session_id,
         agent_id=from_run_response.agent_id,  # type: ignore
         agent_name=from_run_response.agent_name,  # type: ignore
@@ -244,9 +244,9 @@ def create_session_summary_started_event(
 
 
 def create_session_summary_completed_event(
-    from_run_response: RunOutput, session_summary: Optional[SessionSummary] = None
-) -> SessionSummaryCompletedEvent:
-    return SessionSummaryCompletedEvent(
+    from_run_response: RunOutput, session_summary: Optional[AgentSummary] = None
+) -> AgentSummaryCompletedEvent:
+    return AgentSummaryCompletedEvent(
         session_id=from_run_response.session_id,
         agent_id=from_run_response.agent_id,  # type: ignore
         agent_name=from_run_response.agent_name,  # type: ignore
@@ -540,11 +540,11 @@ async def _persist_event_to_db(
         db: Database session
     """
     try:
-        from ii_agent.agent.runs.event import AgentEvent
+        from ii_agent.agent.runs.event import AgentEventLog
 
         async with get_db_session_local() as db:
             # Create database event record
-            db_event = AgentEvent(
+            db_event = AgentEventLog(
                 session_id=str(run_response.session_id),
                 run_id=uuid.UUID(run_response.run_id),
                 group="AGENT_RUN",

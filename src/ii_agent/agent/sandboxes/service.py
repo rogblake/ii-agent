@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.agent.sandboxes.base import SandboxManager
 from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
-from ii_agent.agent.sandboxes.models import Sandbox
+from ii_agent.agent.sandboxes.models import AgentSandbox
 from ii_agent.agent.sandboxes.schemas import SandboxStatus
 from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.agent.sandboxes.exceptions import SandboxNotFoundException
@@ -185,7 +185,7 @@ class SandboxService:
 
     async def resolve_sandbox_for_session(
         self, db: AsyncSession, session_id: uuid.UUID, *, session_service
-    ) -> Sandbox | None:
+    ) -> AgentSandbox | None:
         """Resolve the sandbox record for a session, handling forked sessions.
 
         Tries to find a sandbox directly by *session_id*.  If none is found,
@@ -199,7 +199,7 @@ class SandboxService:
                 circular imports).
 
         Returns:
-            The :class:`Sandbox` record, or ``None`` if no sandbox exists.
+            The :class:`AgentSandbox` record, or ``None`` if no sandbox exists.
         """
         # Direct lookup by session_id
         sandbox_record = await self._repo.get_by_session_id(db, str(session_id))
@@ -219,17 +219,17 @@ class SandboxService:
 
     async def get_by_id(
         self, db: AsyncSession, sandbox_id: uuid.UUID
-    ) -> Sandbox | None:
+    ) -> AgentSandbox | None:
         return await self._repo.get_by_id(db, sandbox_id)
 
     async def get_by_session_id(
         self, db: AsyncSession, session_id: uuid.UUID
-    ) -> Sandbox | None:
+    ) -> AgentSandbox | None:
         return await self._repo.get_by_session_id(db, str(session_id))
 
     async def get_by_provider_id(
         self, db: AsyncSession, provider_sandbox_id: str, provider: str = "e2b"
-    ) -> Sandbox | None:
+    ) -> AgentSandbox | None:
         return await self._repo.get_by_provider_id(
             db, provider_sandbox_id, provider
         )

@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.agent.runs.service import AgentRunService
 
-from ii_agent.agent.events.models import EventType, Event
+from ii_agent.agent.events.models import EventType, AgentUIEvent
 from ii_agent.agent.events.repository import EventRepository
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.models import Session
@@ -329,7 +329,7 @@ class SessionService:
             existing_plan_event.content = plan_event_content
             await db.flush()
         else:
-            event = Event(
+            event = AgentUIEvent(
                 session_id=session_id,
                 type=EventType.PLAN_GENERATED.value,
                 content=plan_event_content,
@@ -433,6 +433,7 @@ class SessionService:
             status=session.status,
             sandbox_id=session.sandbox_id,
             agent_type=session.agent_type,
+            app_kind=session.app_kind,
             created_at=session.created_at.isoformat(),
             updated_at=session.updated_at.isoformat(),
             workspace_dir=session.get_workspace_dir(),
@@ -457,6 +458,7 @@ class SessionService:
             "token_usage": None,
             "settings": None,
             "agent_type": session.agent_type,
+            "app_kind": session.app_kind,
             "created_at": (
                 session.created_at.isoformat() if session.created_at else None
             ),

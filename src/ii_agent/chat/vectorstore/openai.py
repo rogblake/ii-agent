@@ -15,7 +15,7 @@ from ii_agent.core.config.llm_config import APITypes
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.config.settings import get_settings
 from ii_agent.settings.llm.service import get_system_llm_config
-from ii_agent.chat.providers.models import ProviderVectorStore
+from ii_agent.chat.providers.models import ChatProviderVectorStore
 from ii_agent.files.models import FileUpload
 from ii_agent.chat.vectorstore.base import (
     VectorStore,
@@ -396,7 +396,7 @@ class OpenAIVectorStore(VectorStore):
 
     async def _get_or_create_vector_store(
         self, db_session: AsyncSession, user_id: str
-    ) -> ProviderVectorStore:
+    ) -> ChatProviderVectorStore:
         vector_store = await self._get_vector_store_from_db(db_session, user_id)
         now = datetime.now(timezone.utc)
 
@@ -441,17 +441,17 @@ class OpenAIVectorStore(VectorStore):
 
     async def _get_vector_store_from_db(
         self, db_session: AsyncSession, user_id: str
-    ) -> Optional[ProviderVectorStore]:
+    ) -> Optional[ChatProviderVectorStore]:
         """Get vector store from database for a specific user."""
         result = await db_session.execute(
-            select(ProviderVectorStore).where(
-                ProviderVectorStore.user_id == user_id,
-                ProviderVectorStore.provider == self.provider,
+            select(ChatProviderVectorStore).where(
+                ChatProviderVectorStore.user_id == user_id,
+                ChatProviderVectorStore.provider == self.provider,
             )
         )
         return result.scalar_one_or_none()
 
-    async def _is_vector_store_expired(self, vector_store: ProviderVectorStore) -> bool:
+    async def _is_vector_store_expired(self, vector_store: ChatProviderVectorStore) -> bool:
         """Check if vector store has expired."""
         if vector_store.expires_at is None:
             return False
@@ -515,14 +515,14 @@ class OpenAIVectorStore(VectorStore):
         user_id: str,
         vector_store_id: str,
         raw_vector_object: dict,
-    ) -> ProviderVectorStore:
+    ) -> ChatProviderVectorStore:
         """Save vector store information to database."""
         try:
             # Calculate expiration date (7 days from now)
             expires_at = datetime.now(timezone.utc) + timedelta(days=self.EXPIRES_DAYS)
 
             # Create database record
-            db_vector_store = ProviderVectorStore(
+            db_vector_store = ChatProviderVectorStore(
                 id=uuid.uuid4(),
                 user_id=user_id,
                 provider=self.provider,

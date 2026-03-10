@@ -11,7 +11,7 @@ from ii_agent.content.media.models import MediaTemplate
 from ii_agent.core.db.repository import BaseRepository
 from ii_agent.agent.runs.models import RunStatus
 from ii_agent.agent.runs.repository import AgentRunTaskRepository
-from ii_agent.agent.sandboxes.models import Sandbox
+from ii_agent.agent.sandboxes.models import AgentSandbox
 from ii_agent.agent.sandboxes.repository import SandboxRepository
 from ii_agent.files.models import FileUpload
 from ii_agent.files.repository import FileRepository
@@ -94,7 +94,7 @@ async def test_sandbox_repository_lookup_paths(
     session = await session_factory()
     repo = SandboxRepository()
 
-    sandbox = Sandbox(
+    sandbox = AgentSandbox(
         id=uuid.uuid4(),
         provider="e2b",
         provider_sandbox_id="provider-123",

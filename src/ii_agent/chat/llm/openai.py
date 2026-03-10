@@ -51,7 +51,7 @@ from sqlalchemy import or_, select
 
 from ii_agent.billing.usage.models import TokenUsage
 from ii_agent.chat.base import LLMClient
-from ii_agent.chat.providers.models import ProviderContainer, ProviderFile
+from ii_agent.chat.providers.models import ChatProviderContainer, ChatProviderFile
 from ii_agent.chat.prompts.openai_system_prompt import template
 from ii_agent.chat.types import (
     ArrayResultContent,
@@ -187,7 +187,7 @@ class OpenAIProvider(LLMClient):
                 max_retries=1,
             )
 
-    async def get_or_create_container(self, session_id: str) -> ProviderContainer:
+    async def get_or_create_container(self, session_id: str) -> ChatProviderContainer:
         """Ensure an OpenAI container exists for the given session.
 
         Uses dedicated provider_containers table:
@@ -205,13 +205,13 @@ class OpenAIProvider(LLMClient):
             try:
                 # Check if container already exists in database (only non-deleted)
                 result = await db_session.execute(
-                    select(ProviderContainer)
+                    select(ChatProviderContainer)
                     .where(
-                        ProviderContainer.session_id == session_id,
-                        ProviderContainer.provider == APITypes.OPENAI.value,
-                        ProviderContainer.status == "running",
+                        ChatProviderContainer.session_id == session_id,
+                        ChatProviderContainer.provider == APITypes.OPENAI.value,
+                        ChatProviderContainer.status == "running",
                     )
-                    .order_by(ProviderContainer.created_at.desc())
+                    .order_by(ChatProviderContainer.created_at.desc())
                     .limit(1)
                 )
 
@@ -242,7 +242,7 @@ class OpenAIProvider(LLMClient):
                         },
                     )
 
-                    new_container = ProviderContainer(
+                    new_container = ChatProviderContainer(
                         session_id=session_id,
                         provider=APITypes.OPENAI.value,
                         container_id=response.id,
@@ -315,13 +315,13 @@ class OpenAIProvider(LLMClient):
         async with get_db_session_local() as db_session:
             now = datetime.now(timezone.utc)
             existing_result = await db_session.execute(
-                select(ProviderFile).where(
-                    ProviderFile.file_id.in_(user_message.file_ids),
-                    ProviderFile.session_id == user_message.session_id,
-                    ProviderFile.provider == APITypes.OPENAI.value,
+                select(ChatProviderFile).where(
+                    ChatProviderFile.file_id.in_(user_message.file_ids),
+                    ChatProviderFile.session_id == user_message.session_id,
+                    ChatProviderFile.provider == APITypes.OPENAI.value,
                     or_(
-                        ProviderFile.expires_at.is_(None),
-                        ProviderFile.created_at
+                        ChatProviderFile.expires_at.is_(None),
+                        ChatProviderFile.created_at
                         > (now - timedelta(self.FILE_TTL_SECONDS)),
                     ),
                 )
@@ -361,7 +361,7 @@ class OpenAIProvider(LLMClient):
             async with get_db_session_local() as db_session:
                 provider_files = []
                 for file_response in new_provider_records:
-                    provider_file = ProviderFile(
+                    provider_file = ChatProviderFile(
                         file_id=file_response.id,
                         provider=APITypes.OPENAI.value,
                         session_id=user_message.session_id,
@@ -767,18 +767,18 @@ class OpenAIProvider(LLMClient):
         async with get_db_session_local() as db_session:
             now = datetime.now(timezone.utc)
             result = await db_session.execute(
-                select(ProviderFile, FileUpload)
-                .join(FileUpload, ProviderFile.file_id == FileUpload.id)
+                select(ChatProviderFile, FileUpload)
+                .join(FileUpload, ChatProviderFile.file_id == FileUpload.id)
                 .where(
-                    ProviderFile.session_id == session_id,
-                    ProviderFile.provider == APITypes.OPENAI.value,
+                    ChatProviderFile.session_id == session_id,
+                    ChatProviderFile.provider == APITypes.OPENAI.value,
                     or_(
-                        ProviderFile.expires_at.is_(None),
-                        ProviderFile.created_at
+                        ChatProviderFile.expires_at.is_(None),
+                        ChatProviderFile.created_at
                         > (now - timedelta(seconds=self.FILE_TTL_SECONDS)),
                     ),
                 )
-                .order_by(ProviderFile.created_at.desc())
+                .order_by(ChatProviderFile.created_at.desc())
             )
 
             file_objects = []

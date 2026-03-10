@@ -94,6 +94,7 @@ class ChatService:
             name=session_name,
             status="active",
             agent_type="chat",
+            app_kind="chat",
             created_at=created_at,
             updated_at=created_at,
         )

@@ -12,10 +12,10 @@ from ii_agent.core.db.base import Base, TimestampColumn
 from ii_agent.agent.sandboxes.schemas import SandboxStatus
 
 
-class Sandbox(Base):
+class AgentSandbox(Base):
     """Database model for sandboxes."""
 
-    __tablename__ = "sandboxes"
+    __tablename__ = "agent_sandboxes"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=lambda: str(uuid.uuid4()))
     provider: Mapped[str] = mapped_column(String, default="e2b")
@@ -42,9 +42,9 @@ class Sandbox(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("session_id", name="uq_sandboxes_session_id"),
-        Index("idx_sandboxes_status", "status"),
-        Index("idx_sandboxes_provider_sandbox_id", "provider", "provider_sandbox_id"),
+        UniqueConstraint("session_id", name="uq_agent_sandboxes_session_id"),
+        Index("idx_agent_sandboxes_status", "status"),
+        Index("idx_agent_sandboxes_provider_sandbox_id", "provider", "provider_sandbox_id"),
     )
 
     __mapper_args__ = {

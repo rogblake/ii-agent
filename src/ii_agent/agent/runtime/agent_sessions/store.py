@@ -25,7 +25,7 @@ from ii_agent.core.db.manager import get_db
 from ii_agent.agent.runs.models import AgentRunTask, RunStatus
 from ii_agent.sessions.models import Session
 from ii_agent.agent.runs.message import AgentRunMessage
-from ii_agent.agent.runs.summary import SessionSummary
+from ii_agent.agent.runs.summary import AgentSummary
 from ii_agent.agent.runtime.models.message import Message
 from ii_agent.agent.runtime.run.agent import RunOutput
 from ii_agent.agent.runtime.agent_sessions.agent import AgentSession
@@ -296,7 +296,7 @@ class AgentSessionStore(SessionStore):
                     await db.refresh(message_record)
                     # Check for existing summary
                     existing_summary = await db.execute(
-                        select(SessionSummary).where(SessionSummary.session_id == run.session_id)
+                        select(AgentSummary).where(AgentSummary.session_id == run.session_id)
                     )
                     summary_record = existing_summary.scalar_one_or_none()
 
@@ -310,7 +310,7 @@ class AgentSessionStore(SessionStore):
                         summary_record.agent_run_id = message_record.id
                     else:
                         # Create new summary
-                        new_summary = SessionSummary(
+                        new_summary = AgentSummary(
                             session_id=run.session_id,
                             content=run.summary.content,
                             topics=run.summary.topics,
@@ -620,7 +620,7 @@ class AgentSessionStore(SessionStore):
                     )
 
                 # 2. Check if a summary exists for this session
-                summary_stmt = select(SessionSummary).where(SessionSummary.session_id == session_id)
+                summary_stmt = select(AgentSummary).where(AgentSummary.session_id == session_id)
                 summary_result = await db.execute(summary_stmt)
                 summary = summary_result.scalar_one_or_none()
 
@@ -693,7 +693,7 @@ class AgentSessionStore(SessionStore):
         self,
         session_row: Session,
         message_rows: List[AgentRunMessage],
-        summary_row: Optional[SessionSummary] = None,
+        summary_row: Optional[AgentSummary] = None,
     ) -> AgentSession:
         """
         Map database rows to AgentSession dataclass.
@@ -701,7 +701,7 @@ class AgentSessionStore(SessionStore):
         Args:
             session_row: The Session ORM object.
             message_rows: List of AgentRunMessage ORM objects.
-            summary_row: Optional SessionSummary ORM object.
+            summary_row: Optional AgentSummary ORM object.
 
         Returns:
             AgentSession dataclass instance.

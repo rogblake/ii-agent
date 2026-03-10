@@ -32,8 +32,8 @@ from ii_agent.agent.runtime.run.agent import (
     RunOutput,
     RunPausedEvent,
     RunStartedEvent,
-    SessionSummaryCompletedEvent,
-    SessionSummaryStartedEvent,
+    AgentSummaryCompletedEvent,
+    AgentSummaryStartedEvent,
     ToolCallCompletedEvent,
     ToolCallStartedEvent,
 )
@@ -951,7 +951,7 @@ class TestSessionSummaryEvents:
     def test_create_session_summary_started_event_type(self, mock_run_output):
         from ii_agent.agent.runtime.run.events import create_session_summary_started_event
         event = create_session_summary_started_event(mock_run_output)
-        assert isinstance(event, SessionSummaryStartedEvent)
+        assert isinstance(event, AgentSummaryStartedEvent)
         assert event.event == RunEvent.session_summary_started.value
 
     def test_create_session_summary_started_copies_session_id(self, mock_run_output):
@@ -962,7 +962,7 @@ class TestSessionSummaryEvents:
     def test_create_session_summary_completed_event_type(self, mock_run_output):
         from ii_agent.agent.runtime.run.events import create_session_summary_completed_event
         event = create_session_summary_completed_event(mock_run_output)
-        assert isinstance(event, SessionSummaryCompletedEvent)
+        assert isinstance(event, AgentSummaryCompletedEvent)
         assert event.event == RunEvent.session_summary_completed.value
 
     def test_create_session_summary_completed_with_summary(self, mock_run_output):

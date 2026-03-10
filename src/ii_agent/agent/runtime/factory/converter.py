@@ -23,8 +23,8 @@ from ii_agent.agent.runtime.run.agent import (
     SandboxInitializedEvent,
     ToolCallStartedEvent,
     ToolCallCompletedEvent,
-    SessionSummaryStartedEvent,
-    SessionSummaryCompletedEvent,
+    AgentSummaryStartedEvent,
+    AgentSummaryCompletedEvent,
     RunOutput,
     RunOutputEvent,
 )
@@ -461,12 +461,12 @@ def convert_agent_event_to_realtime(
             content=tool_data,
         )
 
-    # SessionSummaryStartedEvent -> Skip (wait for completed event)
-    if isinstance(event, SessionSummaryStartedEvent):
+    # AgentSummaryStartedEvent -> Skip (wait for completed event)
+    if isinstance(event, AgentSummaryStartedEvent):
         return None
 
-    # SessionSummaryCompletedEvent -> MODEL_COMPACT
-    if isinstance(event, SessionSummaryCompletedEvent):
+    # AgentSummaryCompletedEvent -> MODEL_COMPACT
+    if isinstance(event, AgentSummaryCompletedEvent):
         summary_content = None
         if hasattr(event, "session_summary") and event.session_summary:
             summary_content = event.session_summary.content

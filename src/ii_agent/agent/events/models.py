@@ -97,10 +97,10 @@ class RealtimeEvent(BaseModel):
 # ==================== SQLAlchemy Models ====================
 
 
-class Event(Base):
+class AgentUIEvent(Base):
     """Database model for session events."""
 
-    __tablename__ = "events"
+    __tablename__ = "agent_events"
 
     id: Mapped[str] = mapped_column(
         String,
@@ -124,7 +124,7 @@ class Event(Base):
     session: Mapped["Session"] = relationship("Session", back_populates="events")
 
     __table_args__ = (
-        Index("idx_events_session_id", "session_id"),
-        Index("idx_events_created_at", "created_at"),
-        Index("idx_events_type", "type"),
+        Index("idx_agent_events_session_id", "session_id"),
+        Index("idx_agent_events_created_at", "created_at"),
+        Index("idx_agent_events_type", "type"),
     )

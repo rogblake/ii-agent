@@ -37,7 +37,7 @@ from ii_agent.core.config.llm_config import APITypes, LLMConfig
 from ii_agent.core.storage.locations import get_session_file_path
 from ii_agent.files.models import FileUpload
 from ii_agent.sessions.models import Session
-from ii_agent.chat.providers.models import ProviderFile
+from ii_agent.chat.providers.models import ChatProviderFile
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.billing.usage.models import TokenUsage
 from ii_agent.chat.prompts.anthropic_system_prompt import system_prompt_template
@@ -195,10 +195,10 @@ class AnthropicProvider(LLMClient):
         async with get_db_session_local() as db_session:
             # Check for existing provider files to avoid re-upload
             existing_result = await db_session.execute(
-                select(ProviderFile).where(
-                    ProviderFile.file_id.in_(user_message.file_ids),
-                    ProviderFile.session_id == session_id,
-                    ProviderFile.provider == APITypes.ANTHROPIC.value,
+                select(ChatProviderFile).where(
+                    ChatProviderFile.file_id.in_(user_message.file_ids),
+                    ChatProviderFile.session_id == session_id,
+                    ChatProviderFile.provider == APITypes.ANTHROPIC.value,
                 )
             )
 
@@ -229,9 +229,9 @@ class AnthropicProvider(LLMClient):
                 # Filter out None results (failed uploads)
                 upload_results = [r for r in upload_results if r is not None]
 
-                # Save ProviderFile records for successful uploads
+                # Save ChatProviderFile records for successful uploads
                 for file_response in upload_results:
-                    provider_file = ProviderFile(
+                    provider_file = ChatProviderFile(
                         file_id=file_response.id,
                         provider=APITypes.ANTHROPIC.value,
                         session_id=session_id,

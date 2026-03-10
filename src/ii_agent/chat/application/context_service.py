@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from ii_agent.chat.types import Message, TextContent, MessageRole
 from ii_agent.chat.messages.service import MessageService
-from ii_agent.chat.messages.models import ConversationSummary
+from ii_agent.chat.messages.models import ChatSummary
 from ii_agent.sessions.models import Session
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.chat.llm import LLMProviderFactory
@@ -291,10 +291,10 @@ class ContextWindowManager:
         db_session: AsyncSession,
         session_id: str,
         messages: List[Message],
-        parent_summary: Optional[ConversationSummary],
+        parent_summary: Optional[ChatSummary],
         llm_config: LLMConfig,
         user_id: str,
-    ) -> ConversationSummary:
+    ) -> ChatSummary:
         """Create new summary, optionally chaining from parent."""
 
         # Generate summary text via LLM
@@ -314,7 +314,7 @@ class ContextWindowManager:
         logger.info(f"Summary text: {summary_text}")
 
         # Create DB record
-        summary = ConversationSummary(
+        summary = ChatSummary(
             id=str(uuid.uuid4()),
             session_id=session_id,
             summary_text=summary_text,
@@ -343,12 +343,12 @@ class ContextWindowManager:
         cls,
         db_session: AsyncSession,
         session_id: str,
-    ) -> Optional[ConversationSummary]:
+    ) -> Optional[ChatSummary]:
         """Get most recent summary (highest end_message_id)."""
         result = await db_session.execute(
-            select(ConversationSummary)
-            .where(ConversationSummary.session_id == session_id)
-            .order_by(ConversationSummary.created_at.desc())
+            select(ChatSummary)
+            .where(ChatSummary.session_id == session_id)
+            .order_by(ChatSummary.created_at.desc())
             .limit(1)
         )
         return result.scalar_one_or_none()

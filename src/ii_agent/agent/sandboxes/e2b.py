@@ -32,7 +32,7 @@ from ii_agent.agent.sandboxes.exceptions import (
     SandboxNotInitializedError,
     SandboxOperationError,
 )
-from ii_agent.agent.sandboxes.models import Sandbox
+from ii_agent.agent.sandboxes.models import AgentSandbox
 from ii_agent.agent.sandboxes.sandbox_client import MCPClient
 from fastmcp import Client
 
@@ -160,7 +160,7 @@ class E2BSandboxManager(SandboxManager):
         )
 
     @classmethod
-    async def from_sandbox_record(cls, sandbox_record: Sandbox) -> Optional["E2BSandboxManager"]:
+    async def from_sandbox_record(cls, sandbox_record: AgentSandbox) -> Optional["E2BSandboxManager"]:
         """Create an E2BSandboxManager from an existing database record.
 
         This is a read-only operation that connects to the E2B sandbox
@@ -418,7 +418,7 @@ class E2BSandboxManager(SandboxManager):
 
                 if not sandbox_record:
                     # Create new database record
-                    sandbox_record = Sandbox(
+                    sandbox_record = AgentSandbox(
                         session_id=session_id,
                         provider=cls.get_provider(),
                         status=SandboxStatus.INITIALIZING,

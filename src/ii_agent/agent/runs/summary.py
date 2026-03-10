@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from ii_agent.core.db.base import Base, TimestampColumn
 
 
-class SessionSummary(Base):
+class AgentSummary(Base):
     """Session summary storage for agent conversations.
 
     Stores summarized conversation data for sessions including:
@@ -36,7 +36,7 @@ class SessionSummary(Base):
         - Composite index on (session_id, agent_run_id) for efficient queries by both fields.
     """
 
-    __tablename__ = "session_summaries"
+    __tablename__ = "agent_summaries"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     content: Mapped[str] = mapped_column(String, nullable=False)
@@ -58,6 +58,6 @@ class SessionSummary(Base):
     __mapper_args__ = {"version_id_col": version}
 
     __table_args__ = (
-        Index("ix_session_summaries_session_id", "session_id", unique=True),
-        Index("ix_session_summaries_session_id_agent_run_id", "session_id", "agent_run_id"),
+        Index("ix_agent_summaries_session_id", "session_id", unique=True),
+        Index("ix_agent_summaries_session_id_agent_run_id", "session_id", "agent_run_id"),
     )

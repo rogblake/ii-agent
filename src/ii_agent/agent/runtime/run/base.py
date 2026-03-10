@@ -214,9 +214,9 @@ class BaseRunOutputEvent:
 
         session_summary = data.pop("session_summary", None)
         if session_summary:
-            from ii_agent.agent.runtime.agent_sessions.summary import SessionSummary
+            from ii_agent.agent.runtime.agent_sessions.summary import AgentSummary
 
-            data["session_summary"] = SessionSummary.from_dict(session_summary)
+            data["session_summary"] = AgentSummary.from_dict(session_summary)
 
         run_input = data.pop("run_input", None)
         if run_input:

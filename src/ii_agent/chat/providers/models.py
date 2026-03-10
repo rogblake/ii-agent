@@ -19,10 +19,10 @@ from ii_agent.core.db.base import Base
 _ProviderTimestamp = TIMESTAMP(timezone=True)
 
 
-class ProviderContainer(Base):
+class ChatProviderContainer(Base):
     """Database model for provider-specific containers (OpenAI, Anthropic, etc.)."""
 
-    __tablename__ = "provider_containers"
+    __tablename__ = "chat_provider_containers"
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     session_id = Column(String, nullable=False)
@@ -45,20 +45,20 @@ class ProviderContainer(Base):
     )
 
     __table_args__ = (
-        Index("idx_provider_containers_session_id", "session_id"),
-        Index("idx_provider_containers_provider", "provider"),
-        Index("idx_provider_containers_session_provider", "session_id", "provider"),
-        Index("idx_provider_containers_expires_at", "expires_at"),
+        Index("idx_chat_provider_containers_session_id", "session_id"),
+        Index("idx_chat_provider_containers_provider", "provider"),
+        Index("idx_chat_provider_containers_session_provider", "session_id", "provider"),
+        Index("idx_chat_provider_containers_expires_at", "expires_at"),
         UniqueConstraint(
-            "container_id", "provider", name="uq_provider_containers_container_provider"
+            "container_id", "provider", name="uq_chat_provider_containers_container_provider"
         ),
     )
 
 
-class ProviderFile(Base):
+class ChatProviderFile(Base):
     """Database model for provider-specific file uploads (OpenAI, Anthropic, etc.)."""
 
-    __tablename__ = "provider_files"
+    __tablename__ = "chat_provider_files"
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     file_id = Column(String, nullable=False)
@@ -82,22 +82,22 @@ class ProviderFile(Base):
     expires_at = Column(_ProviderTimestamp, nullable=True)  # File expiration timestamp
 
     __table_args__ = (
-        Index("idx_provider_files_file_id", "file_id"),
-        Index("idx_provider_files_provider", "provider"),
-        Index("idx_provider_files_file_provider", "file_id", "provider"),
-        Index("idx_provider_files_expires_at", "expires_at"),
+        Index("idx_chat_provider_files_file_id", "file_id"),
+        Index("idx_chat_provider_files_provider", "provider"),
+        Index("idx_chat_provider_files_file_provider", "file_id", "provider"),
+        Index("idx_chat_provider_files_expires_at", "expires_at"),
         UniqueConstraint(
             "provider_file_id",
             "provider",
-            name="uq_provider_files_provider_file_provider",
+            name="uq_chat_provider_files_provider_file_provider",
         ),
     )
 
 
-class ProviderVectorStore(Base):
+class ChatProviderVectorStore(Base):
     """Database model for provider-specific vector stores (OpenAI, Anthropic, etc.)."""
 
-    __tablename__ = "provider_vector_stores"
+    __tablename__ = "chat_provider_vector_stores"
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     user_id = Column(String, nullable=False)
@@ -123,14 +123,14 @@ class ProviderVectorStore(Base):
     )  # Vector store expiration timestamp
     __mapper_args__ = {"version_id_col": version}
     __table_args__ = (
-        Index("idx_provider_vector_stores_user_id", "user_id"),
-        Index("idx_provider_vector_stores_provider", "provider"),
-        Index("idx_provider_vector_stores_vector_store_id", "vector_store_id"),
-        Index("idx_provider_vector_stores_expires_at", "expires_at"),
+        Index("idx_chat_provider_vector_stores_user_id", "user_id"),
+        Index("idx_chat_provider_vector_stores_provider", "provider"),
+        Index("idx_chat_provider_vector_stores_vector_store_id", "vector_store_id"),
+        Index("idx_chat_provider_vector_stores_expires_at", "expires_at"),
         UniqueConstraint(
             "user_id",
             "provider",
             "vector_store_id",
-            name="uq_provider_vector_stores_user_provider_vector",
+            name="uq_chat_provider_vector_stores_user_provider_vector",
         ),
     )

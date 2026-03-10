@@ -7,11 +7,11 @@ from typing import List
 from sqlalchemy import asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.agent.events.models import Event, EventType, RealtimeEvent
+from ii_agent.agent.events.models import AgentUIEvent, EventType, RealtimeEvent
 
 
 class EventRepository:
-    """Data access layer for Event model."""
+    """Data access layer for AgentUIEvent model."""
 
     async def save(
         self,
@@ -20,8 +20,8 @@ class EventRepository:
         event: RealtimeEvent,
         *,
         created_at: datetime | None = None,
-    ) -> Event:
-        """Persist a RealtimeEvent as a database Event.
+    ) -> AgentUIEvent:
+        """Persist a RealtimeEvent as a database AgentUIEvent.
 
         Args:
             db: The async database session
@@ -30,11 +30,11 @@ class EventRepository:
             created_at: Pre-normalized timestamp (falls back to utcnow)
 
         Returns:
-            The created Event ORM instance
+            The created AgentUIEvent ORM instance
         """
         event_timestamp = created_at or datetime.now(timezone.utc)
 
-        db_event = Event(
+        db_event = AgentUIEvent(
             id=str(event.id),
             session_id=str(session_id),
             run_id=event.run_id,
@@ -47,7 +47,7 @@ class EventRepository:
         await db.refresh(db_event)
         return db_event
 
-    async def get_by_session(self, db: AsyncSession, session_id: str | uuid.UUID) -> List[Event]:
+    async def get_by_session(self, db: AsyncSession, session_id: str | uuid.UUID) -> List[AgentUIEvent]:
         """Get all events for a session ordered by creation time.
 
         Args:
@@ -58,9 +58,9 @@ class EventRepository:
             List of events for the session
         """
         result = await db.execute(
-            select(Event)
-            .where(Event.session_id == str(session_id))
-            .order_by(asc(Event.created_at))
+            select(AgentUIEvent)
+            .where(AgentUIEvent.session_id == str(session_id))
+            .order_by(asc(AgentUIEvent.created_at))
         )
         return list(result.scalars().all())
 
@@ -69,7 +69,7 @@ class EventRepository:
         db: AsyncSession,
         session_id: str,
         excluded_types: List[str] | None = None,
-    ) -> List[Event]:
+    ) -> List[AgentUIEvent]:
         """Get events for a session, optionally excluding certain types.
 
         Args:
@@ -80,12 +80,12 @@ class EventRepository:
         Returns:
             Filtered list of events
         """
-        query = select(Event).where(Event.session_id == session_id)
+        query = select(AgentUIEvent).where(AgentUIEvent.session_id == session_id)
 
         if excluded_types:
-            query = query.where(Event.type.not_in(excluded_types))
+            query = query.where(AgentUIEvent.type.not_in(excluded_types))
 
-        query = query.order_by(asc(Event.created_at))
+        query = query.order_by(asc(AgentUIEvent.created_at))
         result = await db.execute(query)
         return list(result.scalars().all())
 
@@ -94,7 +94,7 @@ class EventRepository:
         db: AsyncSession,
         session_id: str,
         event_type: str,
-    ) -> Event | None:
+    ) -> AgentUIEvent | None:
         """Get the latest event of a given type for a session.
 
         Args:
@@ -106,16 +106,16 @@ class EventRepository:
             The latest matching event, or None
         """
         result = await db.execute(
-            select(Event)
-            .where(Event.session_id == session_id)
-            .where(Event.type == event_type)
-            .order_by(desc(Event.created_at))
+            select(AgentUIEvent)
+            .where(AgentUIEvent.session_id == session_id)
+            .where(AgentUIEvent.type == event_type)
+            .order_by(desc(AgentUIEvent.created_at))
             .limit(1)
         )
         return result.scalar_one_or_none()
 
-    async def create(self, db: AsyncSession, event: Event) -> Event:
-        """Persist a raw Event ORM instance."""
+    async def create(self, db: AsyncSession, event: AgentUIEvent) -> AgentUIEvent:
+        """Persist a raw AgentUIEvent ORM instance."""
         db.add(event)
         await db.flush()
         return event

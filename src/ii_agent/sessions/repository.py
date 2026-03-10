@@ -101,9 +101,9 @@ class SessionRepository(BaseRepository[Session]):
         if search_term:
             conditions.append(Session.name.ilike(f"%{search_term}%"))
         if session_type == "chat":
-            conditions.append(Session.agent_type == "chat")
+            conditions.append(Session.app_kind == "chat")
         elif session_type == "agent":
-            conditions.append(Session.agent_type != "chat")
+            conditions.append(Session.app_kind == "agent")
 
         count_query = select(func.count()).select_from(Session).where(*conditions)
         count_result = await db.execute(count_query)

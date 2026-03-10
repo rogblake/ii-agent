@@ -28,6 +28,7 @@ def _make_session_ns(**kwargs):
         status="active",
         sandbox_id=None,
         agent_type=None,
+        app_kind="agent",
         is_public=False,
         public_url=None,
         api_version="v0",
@@ -520,7 +521,7 @@ class TestUpdateSessionPlan:
         svc._session_repo.sessions[sid] = session
 
         mock_event = SimpleNamespace(session_id=sid, type="plan_generated", content={})
-        with patch("ii_agent.sessions.service.Event", return_value=mock_event):
+        with patch("ii_agent.sessions.service.AgentUIEvent", return_value=mock_event):
             await svc.update_session_plan(
                 db, sid, "u-1", "Summary", [{"title": "M1", "status": "pending"}]
             )
@@ -538,7 +539,7 @@ class TestUpdateSessionPlan:
         existing_event = SimpleNamespace(content={}, session_id=sid)
         svc._event_repo.latest_by_type[(sid, "plan_generated")] = existing_event
 
-        with patch("ii_agent.sessions.service.Event"):
+        with patch("ii_agent.sessions.service.AgentUIEvent"):
             await svc.update_session_plan(db, sid, "u-1", "New Summary", [])
         assert "summary" in existing_event.content
         # No new event should be created since one existed
@@ -554,7 +555,7 @@ class TestUpdateSessionPlan:
 
         milestones = [{"title": "M1", "status": "pending"}]
         mock_event = SimpleNamespace(session_id=sid, type="plan_generated", content={})
-        with patch("ii_agent.sessions.service.Event", return_value=mock_event):
+        with patch("ii_agent.sessions.service.AgentUIEvent", return_value=mock_event):
             await svc.update_session_plan(db, sid, "u-1", "Summary", milestones)
         plan = session.session_metadata.get("plan", {})
         assert plan["milestones"][0]["details"] == ""
@@ -569,7 +570,7 @@ class TestUpdateSessionPlan:
         svc._session_repo.sessions[sid] = session
 
         mock_event = SimpleNamespace(session_id=sid, type="plan_generated", content={})
-        with patch("ii_agent.sessions.service.Event", return_value=mock_event):
+        with patch("ii_agent.sessions.service.AgentUIEvent", return_value=mock_event):
             await svc.update_session_plan(db, sid, "u-1", "Summary", [])
         assert session.session_metadata.get("other_key") == "other_val"
         assert "plan" in session.session_metadata

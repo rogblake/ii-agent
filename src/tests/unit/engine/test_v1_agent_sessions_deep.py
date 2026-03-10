@@ -157,13 +157,13 @@ class TestAgentSessionFromDict:
         assert session.runs[0] is mock_run
 
     def test_deserializes_summary_from_dict(self):
-        from ii_agent.agent.runtime.agent_sessions.summary import SessionSummary
+        from ii_agent.agent.runtime.agent_sessions.summary import AgentSummary
         data = {
             "session_id": "s-1",
             "user_id": "u-1",
             "summary": {"total_runs": 3},
         }
-        with patch("ii_agent.agent.runtime.agent_sessions.agent.SessionSummary.from_dict") as mock_from_dict:
+        with patch("ii_agent.agent.runtime.agent_sessions.agent.AgentSummary.from_dict") as mock_from_dict:
             mock_from_dict.return_value = MagicMock()
             session = AgentSession.from_dict(data)
         assert session is not None

@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.agent.events.models import Event, EventType, RealtimeEvent
+from ii_agent.agent.events.models import AgentUIEvent, EventType, RealtimeEvent
 from ii_agent.agent.events.repository import EventRepository
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
@@ -63,7 +63,7 @@ async def test_event_repository_save_filter_and_latest(
     assert latest_agent is not None
     assert latest_agent.type == EventType.AGENT_RESPONSE.value
 
-    raw_event = Event(
+    raw_event = AgentUIEvent(
         id=str(uuid.uuid4()),
         session_id=session.id,
         type="custom",

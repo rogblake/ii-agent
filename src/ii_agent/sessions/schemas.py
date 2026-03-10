@@ -42,6 +42,7 @@ class SessionInfo(BaseModel):
     updated_at: Optional[str] = None
     last_message_at: Optional[str] = None
     agent_type: Optional[str] = None
+    app_kind: str = "agent"
 
 
 class SessionList(BaseModel):

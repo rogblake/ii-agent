@@ -14,6 +14,7 @@ import { useAppDispatch, useAppSelector } from '@/state/store'
 import { setUser, clearUser, setLoading } from '@/state/slice/user'
 import type { User } from '@/state/slice/user'
 import { fetchWishlist, clearFavorites } from '@/state/slice/favorites'
+import { fetchPins, clearPins } from '@/state/slice/pins'
 import { createContext, useContext, useEffect, ReactNode, useCallback } from 'react'
 
 interface AuthContextType {
@@ -68,8 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         const userRes = await authService.getCurrentUser()
                         dispatch(setUser(userRes))
                         await fetchAvailableModels()
-                        // Fetch user's wishlist after successful authentication
+                        // Fetch user's wishlist and pins after successful authentication
                         dispatch(fetchWishlist())
+                        dispatch(fetchPins())
                     } catch (apiError) {
                         console.error(
                             'Failed to get current user from API:',
@@ -79,8 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         if (storedUser) {
                             const userData = JSON.parse(storedUser)
                             dispatch(setUser(userData))
-                            // Try to fetch wishlist even with cached user data
+                            // Try to fetch wishlist and pins even with cached user data
                             dispatch(fetchWishlist())
+                            dispatch(fetchPins())
                         } else {
                             dispatch(setLoading(false))
                         }
@@ -113,8 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const userRes = await authService.getCurrentUser()
             dispatch(setUser(userRes))
             await fetchAvailableModels()
-            // Fetch user's wishlist after successful login
+            // Fetch user's wishlist and pins after successful login
             dispatch(fetchWishlist())
+            dispatch(fetchPins())
         } catch (error) {
             console.error('Error handling auth code:', error)
             throw error
@@ -125,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(ACCESS_TOKEN)
         dispatch(clearUser())
         dispatch(clearFavorites())
+        dispatch(clearPins())
         // Reset all RTK Query cache to prevent data leakage between users
         dispatch(userApi.util.resetApiState())
         dispatch(sessionApi.util.resetApiState())

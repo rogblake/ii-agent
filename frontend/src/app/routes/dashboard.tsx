@@ -37,13 +37,15 @@ import {
     useAppDispatch,
     toggleFavoriteAsync,
     selectFavoriteSessionIds,
-    fetchWishlist
+    fetchWishlist,
+    fetchPins
 } from '@/state'
 import { wishlistService } from '@/services/wishlist.service'
 import { sessionService } from '@/services/session.service'
 import { ISession } from '@/typings/agent'
 import { deleteSession } from '@/state/slice/sessions'
 import { clearSessionState } from '@/state/slice/session-state'
+import { removePin } from '@/state/slice/pins'
 
 enum TAB {
     ALL = 'all',
@@ -111,8 +113,8 @@ export function DashboardPage() {
 
         try {
             await dispatch(deleteSession(deleteSessionId)).unwrap()
-            // Clear cached session state to free up localStorage
             dispatch(clearSessionState(deleteSessionId))
+            dispatch(removePin(deleteSessionId))
             setIsDeleteDialogOpen(false)
             setDeleteSessionId(null)
         } catch (error) {
@@ -148,6 +150,7 @@ export function DashboardPage() {
         dispatch(resetPagination())
         dispatch(fetchSessions({ page: 1, limit }))
         dispatch(fetchWishlist())
+        dispatch(fetchPins())
     }, [dispatch, limit])
 
     // Fetch favorite sessions when Favorite tab is selected or favoriteSessionIds changes

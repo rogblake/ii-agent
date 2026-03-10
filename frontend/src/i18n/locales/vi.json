@@ -183,7 +183,9 @@
         "bulkDeleteProjectsConfirmation": "Bạn có chắc chắn muốn xóa {{count}} dự án? Hành động này không thể hoàn tác.",
         "bulkDeleteSuccess": "Đã xóa {{count}} mục thành công.",
         "bulkDeletePartialFailure": "Không thể xóa {{count}} mục.",
-        "bulkDeleteError": "Xóa thất bại. Vui lòng thử lại."
+        "bulkDeleteError": "Xóa thất bại. Vui lòng thử lại.",
+        "pin": "Ghim",
+        "unpin": "Bỏ ghim"
     },
     "searchHistory": {
         "trigger": "Tìm kiếm Chat",

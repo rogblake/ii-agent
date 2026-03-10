@@ -88,6 +88,28 @@ export {
     clearError as clearFavoritesError
 } from './slice/favorites'
 
+// Export pins slice with explicit re-exports to avoid naming conflicts
+export {
+    fetchPins,
+    pinSessionAsync,
+    unpinSessionAsync,
+    togglePinAsync,
+    togglePin,
+    addPin,
+    removePin,
+    clearPins,
+    setPins,
+    selectPinnedSessionIds,
+    selectPinnedSessions,
+    selectIsPinned,
+    selectPinsLoading,
+    selectPinsError,
+    selectPinsInitialized,
+    pinnedItemToSession,
+    pinsReducer,
+    clearPinsError
+} from './slice/pins'
+
 // Export session state slice
 export * from './slice/session-state'
 

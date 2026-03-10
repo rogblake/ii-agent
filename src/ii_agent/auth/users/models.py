@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from ii_agent.settings.mcp.models import MCPSetting
     from ii_agent.files.models import FileUpload
     from ii_agent.sessions.wishlist.models import SessionWishlist
+    from ii_agent.sessions.pin.models import SessionPin
     from ii_agent.integrations.connectors.models import Connector, ComposioProfile
     from ii_agent.billing.models import BillingTransaction
     from ii_agent.projects.models import Project
@@ -106,6 +107,11 @@ class User(Base):
     )
     session_wishlists: Mapped[list["SessionWishlist"]] = relationship(
         "SessionWishlist",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    session_pins: Mapped[list["SessionPin"]] = relationship(
+        "SessionPin",
         back_populates="user",
         cascade="all, delete-orphan"
     )

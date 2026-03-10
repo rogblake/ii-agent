@@ -183,7 +183,9 @@
         "bulkDeleteProjectsConfirmation": "Are you sure you want to delete {{count}} project(s)? This action cannot be undone.",
         "bulkDeleteSuccess": "{{count}} item(s) deleted successfully.",
         "bulkDeletePartialFailure": "{{count}} item(s) could not be deleted.",
-        "bulkDeleteError": "Failed to delete. Please try again."
+        "bulkDeleteError": "Failed to delete. Please try again.",
+        "pin": "Pin",
+        "unpin": "Unpin"
     },
     "searchHistory": {
         "trigger": "Search Chat",

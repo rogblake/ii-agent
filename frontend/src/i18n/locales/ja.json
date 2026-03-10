@@ -183,7 +183,9 @@
         "bulkDeleteProjectsConfirmation": "{{count}}件のプロジェクトを削除しますか？この操作は取り消せません。",
         "bulkDeleteSuccess": "{{count}}件を削除しました。",
         "bulkDeletePartialFailure": "{{count}}件を削除できませんでした。",
-        "bulkDeleteError": "削除に失敗しました。もう一度お試しください。"
+        "bulkDeleteError": "削除に失敗しました。もう一度お試しください。",
+        "pin": "ピン留め",
+        "unpin": "ピン留め解除"
     },
     "searchHistory": {
         "trigger": "チャットを検索",

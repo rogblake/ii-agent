@@ -15,6 +15,7 @@ import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { useAppDispatch } from '@/state'
 import { updateSession } from '@/state/slice/sessions'
+import { fetchPins } from '@/state/slice/pins'
 import { ISession } from '@/typings/agent'
 
 type RenameSessionDialogProps = {
@@ -69,6 +70,8 @@ const RenameSessionDialog = ({
                     name: trimmedName
                 })
             ).unwrap()
+            // Refresh pinned sessions so sidebar stubs reflect the new name
+            dispatch(fetchPins())
             handleOpenChange(false)
         } catch (error) {
             console.error('Failed to rename session:', error)

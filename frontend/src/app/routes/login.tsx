@@ -16,6 +16,7 @@ import { authService } from '@/services/auth.service'
 import { useAppDispatch } from '@/state/store'
 import { setUser } from '@/state/slice/user'
 import { fetchWishlist } from '@/state/slice/favorites'
+import { fetchPins } from '@/state/slice/pins'
 import { toast } from 'sonner'
 import { useIsSageTheme } from '@/hooks/use-is-sage-theme'
 
@@ -118,6 +119,7 @@ export function LoginPage() {
                 const userRes = await authService.getCurrentUser()
                 dispatch(setUser(userRes))
                 dispatch(fetchWishlist())
+                dispatch(fetchPins())
 
                 navigate('/')
             } catch (error) {

@@ -19,6 +19,7 @@ from ii_agent.auth.users.router import router as users_router
 from ii_agent.sessions.router import router as sessions_router
 from ii_agent.billing import router as billing_router
 from ii_agent.sessions.wishlist import router as wishlist_router
+from ii_agent.sessions.pin import router as pin_router
 from ii_agent.integrations.connectors import router as connectors_router
 from ii_agent.integrations.enhance_prompt import router as enhance_prompt_router
 from ii_agent.files.router import router as files_router
@@ -225,6 +226,7 @@ def create_app():
     app.include_router(slide_design_router)  # /slides/design/*
     app.include_router(nano_banana_router)  # /slides/nano-banana/*
     app.include_router(wishlist_router)  # /wishlist/*
+    app.include_router(pin_router)  # /pin/*
     app.include_router(enhance_prompt_router)  # /enhance-prompt/*
     app.include_router(billing_router)  # /billing/*
     app.include_router(chat_router)  # /chat/*

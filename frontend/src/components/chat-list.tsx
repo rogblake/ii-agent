@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import isEmpty from 'lodash/isEmpty'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -13,11 +13,15 @@ import {
 import {
     selectChats,
     selectActiveSessionId,
+    selectPinnedSessionIds,
+    selectPinnedSessions,
+    pinnedItemToSession,
     useAppSelector,
     useAppDispatch,
     bulkDeleteSessions
 } from '@/state'
 import { clearSessionState } from '@/state/slice/session-state'
+import { removePin } from '@/state/slice/pins'
 import { Icon } from './ui/icon'
 import { Button } from './ui/button'
 import {
@@ -53,6 +57,8 @@ const ChatList = ({
     const dispatch = useAppDispatch()
     const chats = useAppSelector(selectChats)
     const activeSessionId = useAppSelector(selectActiveSessionId)
+    const pinnedSessionIds = useAppSelector(selectPinnedSessionIds)
+    const pinnedSessions = useAppSelector(selectPinnedSessions)
 
     const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(true)
     const [selectionMode, setSelectionMode] = useState(false)
@@ -60,7 +66,28 @@ const ChatList = ({
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
 
-    const filteredChats = chats?.filter((session) => session.name) ?? []
+    const filteredChats = useMemo(() => {
+        const loaded = chats?.filter((session) => session.name) ?? []
+        const loadedIds = new Set(loaded.map((s) => s.id))
+
+        // Add pinned chat sessions not yet loaded via pagination
+        const missingPinned = pinnedSessions
+            .filter(
+                (p) =>
+                    p.agent_type === 'chat' &&
+                    p.session_name &&
+                    !loadedIds.has(p.session_id)
+            )
+            .map(pinnedItemToSession)
+
+        return [...missingPinned, ...loaded].sort((a, b) => {
+            const aPinned = pinnedSessionIds.includes(a.id)
+            const bPinned = pinnedSessionIds.includes(b.id)
+            if (aPinned && !bPinned) return -1
+            if (!aPinned && bPinned) return 1
+            return 0
+        })
+    }, [chats, pinnedSessions, pinnedSessionIds])
 
     const toggleSelectionMode = () => {
         if (selectionMode) {
@@ -104,9 +131,9 @@ const ChatList = ({
             const ids = Array.from(selectedIds)
             const result = await dispatch(bulkDeleteSessions(ids)).unwrap()
 
-            // Clear cached session state for deleted sessions
             for (const id of result.deleted_ids) {
                 dispatch(clearSessionState(id))
+                dispatch(removePin(id))
             }
 
             if (result.deleted_ids.length > 0) {

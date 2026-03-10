@@ -23,9 +23,10 @@ import {
 } from './ui/alert-dialog'
 import RenameSessionDialog from './rename-session-dialog'
 import ShareConversation from './agent/share-conversation'
-import { useAppDispatch } from '@/state'
+import { useAppDispatch, useAppSelector } from '@/state'
 import { deleteSession } from '@/state/slice/sessions'
 import { clearSessionState } from '@/state/slice/session-state'
+import { selectIsPinned, togglePinAsync, removePin } from '@/state/slice/pins'
 import { Tooltip, TooltipContent } from './ui/tooltip'
 import { TooltipTrigger } from '@radix-ui/react-tooltip'
 import { ISession } from '@/typings/agent'
@@ -52,6 +53,7 @@ const SessionItem = ({
 }: SessionItemProps) => {
     const { t } = useTranslation()
     const dispatch = useAppDispatch()
+    const isPinned = useAppSelector(selectIsPinned(session.id))
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [isHovered, setIsHovered] = useState(false)
     const [isShareOpen, setIsShareOpen] = useState(false)
@@ -83,6 +85,13 @@ const SessionItem = ({
         setIsDropdownOpen(false)
     }
 
+    const handleTogglePin = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        dispatch(togglePinAsync(session.id))
+        setIsDropdownOpen(false)
+    }
+
     const handleDelete = (e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
@@ -92,8 +101,8 @@ const SessionItem = ({
     const confirmDelete = async () => {
         try {
             await dispatch(deleteSession(session.id)).unwrap()
-            // Clear cached session state to free up localStorage
             dispatch(clearSessionState(session.id))
+            dispatch(removePin(session.id))
             setIsDeleteDialogOpen(false)
         } catch (error) {
             console.error('Failed to delete session:', error)
@@ -162,6 +171,12 @@ const SessionItem = ({
                                     className="fill-black dark:fill-white size-5"
                                 />
                             )}
+                            {isPinned && (
+                                <Icon
+                                    name="pin-fill"
+                                    className="size-3.5 shrink-0 fill-black/50 dark:fill-white/50"
+                                />
+                            )}
                             <span className="flex-1 line-clamp-1">
                                 {session.name}
                             </span>
@@ -188,6 +203,12 @@ const SessionItem = ({
                                         )?.icon || 'global'
                                     }
                                     className="fill-black dark:fill-white size-5"
+                                />
+                            )}
+                            {isPinned && (
+                                <Icon
+                                    name="pin-fill"
+                                    className="size-3.5 shrink-0 fill-black/50 dark:fill-white/50"
                                 />
                             )}
                             <span className="flex-1 line-clamp-1">
@@ -249,6 +270,16 @@ const SessionItem = ({
                                 className="size-[18px] fill-black"
                             />
                             {t('common.rename')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            className="py-2"
+                            onClick={handleTogglePin}
+                        >
+                            <Icon
+                                name={isPinned ? 'pin-fill' : 'pin'}
+                                className="size-5 fill-black dark:fill-white"
+                            />
+                            {isPinned ? t('sidebar.unpin') : t('sidebar.pin')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="my-1" />
                         <DropdownMenuItem

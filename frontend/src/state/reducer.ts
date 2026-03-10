@@ -11,6 +11,7 @@ import { settingsReducer } from './slice/settings'
 import { sessionsReducer } from './slice/sessions'
 import { userReducer } from './slice/user'
 import { favoritesReducer } from './slice/favorites'
+import { pinsReducer } from './slice/pins'
 import { sessionStateReducer } from './slice/session-state'
 import { userApi } from './api/user.api'
 import { sessionApi } from './api/session.api'
@@ -35,6 +36,7 @@ export default combineReducers({
     sessions: sessionsReducer,
     user: userReducer,
     favorites: favoritesReducer,
+    pins: pinsReducer,
     sessionState: sessionStateReducer,
     [userApi.reducerPath]: userApi.reducer,
     [sessionApi.reducerPath]: sessionApi.reducer,

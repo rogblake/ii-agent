@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from ii_agent.content.slides.models import SlideContent, SlideVersion
     from ii_agent.content.storybook.models import Storybook
     from ii_agent.sessions.wishlist.models import SessionWishlist
+    from ii_agent.sessions.pin.models import SessionPin
     from ii_agent.projects.databases.models import ProjectDatabase
 
 
@@ -133,6 +134,11 @@ class Session(Base):
     )
     wishlisted_by: Mapped[list["SessionWishlist"]] = relationship(
         "SessionWishlist",
+        back_populates="session",
+        cascade="all, delete-orphan"
+    )
+    pinned_by: Mapped[list["SessionPin"]] = relationship(
+        "SessionPin",
         back_populates="session",
         cascade="all, delete-orphan"
     )

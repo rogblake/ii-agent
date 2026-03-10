@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import isEmpty from 'lodash/isEmpty'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -13,11 +13,15 @@ import {
 import {
     selectProjects,
     selectActiveSessionId,
+    selectPinnedSessionIds,
+    selectPinnedSessions,
+    pinnedItemToSession,
     useAppSelector,
     useAppDispatch,
     bulkDeleteSessions
 } from '@/state'
 import { clearSessionState } from '@/state/slice/session-state'
+import { removePin } from '@/state/slice/pins'
 import { Icon } from './ui/icon'
 import { Button } from './ui/button'
 import {
@@ -55,6 +59,8 @@ const ProjectList = ({
     const dispatch = useAppDispatch()
     const projects = useAppSelector(selectProjects)
     const activeSessionId = useAppSelector(selectActiveSessionId)
+    const pinnedSessionIds = useAppSelector(selectPinnedSessionIds)
+    const pinnedSessions = useAppSelector(selectPinnedSessions)
 
     const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(true)
     const [showAllProjects, setShowAllProjects] = useState(false)
@@ -63,7 +69,29 @@ const ProjectList = ({
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
 
-    const filteredProjects = projects?.filter((session) => session.name) ?? []
+    const filteredProjects = useMemo(() => {
+        const loaded = projects?.filter((session) => session.name) ?? []
+        const loadedIds = new Set(loaded.map((s) => s.id))
+
+        // Add pinned project sessions not yet loaded via pagination
+        const missingPinned = pinnedSessions
+            .filter(
+                (p) =>
+                    p.agent_type != null &&
+                    p.agent_type !== 'chat' &&
+                    p.session_name &&
+                    !loadedIds.has(p.session_id)
+            )
+            .map(pinnedItemToSession)
+
+        return [...missingPinned, ...loaded].sort((a, b) => {
+            const aPinned = pinnedSessionIds.includes(a.id)
+            const bPinned = pinnedSessionIds.includes(b.id)
+            if (aPinned && !bPinned) return -1
+            if (!aPinned && bPinned) return 1
+            return 0
+        })
+    }, [projects, pinnedSessions, pinnedSessionIds])
     const hasMoreProjects = filteredProjects.length > 5
     const visibleProjects = showAllProjects
         ? filteredProjects
@@ -115,6 +143,7 @@ const ProjectList = ({
 
             for (const id of result.deleted_ids) {
                 dispatch(clearSessionState(id))
+                dispatch(removePin(id))
             }
 
             if (result.deleted_ids.length > 0) {

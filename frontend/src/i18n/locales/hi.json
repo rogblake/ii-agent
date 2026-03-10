@@ -183,7 +183,9 @@
         "bulkDeleteProjectsConfirmation": "क्या आप वाकई {{count}} प्रोजेक्ट हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
         "bulkDeleteSuccess": "{{count}} आइटम सफलतापूर्वक हटा दिए गए।",
         "bulkDeletePartialFailure": "{{count}} आइटम हटाए नहीं जा सके।",
-        "bulkDeleteError": "हटाने में विफल। कृपया पुनः प्रयास करें।"
+        "bulkDeleteError": "हटाने में विफल। कृपया पुनः प्रयास करें।",
+        "pin": "पिन",
+        "unpin": "अनपिन"
     },
     "searchHistory": {
         "trigger": "चैट खोजें",

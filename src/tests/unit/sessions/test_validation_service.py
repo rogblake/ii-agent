@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from ii_agent.core.config.llm_config import LLMConfig
-from ii_agent.sessions.validation_service import SessionValidationService
+from ii_agent.agent.application.validation_service import SessionValidationService
 
 
 class FakeSessionService:
@@ -67,7 +67,7 @@ async def test_validate_session_returns_error_when_session_missing():
 @pytest.mark.asyncio
 async def test_validate_session_bypasses_credit_check_for_user_model(settings_factory, monkeypatch):
     monkeypatch.setattr(
-        "ii_agent.sessions.validation_service.SessionService._build_session_info",
+        "ii_agent.agent.application.validation_service.SessionService._build_session_info",
         lambda _session: SimpleNamespace(
             id=str(uuid4()),
             user_id="u1",

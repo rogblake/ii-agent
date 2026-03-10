@@ -51,6 +51,7 @@ from ii_agent.agent.dependencies import (
     get_agent_service,
     get_execution_service,
     get_plan_service,
+    get_session_validation_service,
 )
 from ii_agent.agent.sandboxes.dependencies import (
     get_sandbox_repository,
@@ -86,7 +87,6 @@ from ii_agent.sessions.dependencies import (
     get_session_fork_service,
     get_session_repository,
     get_session_service,
-    get_session_validation_service,
 )
 from ii_agent.settings.llm.dependencies import (
     get_llm_setting_repository,
@@ -126,7 +126,7 @@ if TYPE_CHECKING:
     from ii_agent.agent.sandboxes.service import SandboxService
     from ii_agent.sessions.service import SessionService
     from ii_agent.sessions.fork_service import SessionForkService
-    from ii_agent.sessions.validation_service import SessionValidationService
+    from ii_agent.agent.application.validation_service import SessionValidationService
     from ii_agent.content.skills.service import SkillService
     from ii_agent.content.storybook.service import StorybookService
     from ii_agent.auth.users.service import UserService

@@ -11,8 +11,6 @@ from ii_agent.core.events.dependencies import EventRepositoryDep
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.service import SessionService
 from ii_agent.sessions.fork_service import SessionForkService
-from ii_agent.sessions.validation_service import SessionValidationService
-from ii_agent.billing.credits.dependencies import CreditServiceDep
 from ii_agent.core.storage.client import storage
 
 
@@ -62,16 +60,4 @@ def get_session_fork_service(
     )
 
 
-def get_session_validation_service(
-    session_service: SessionServiceDep,
-    credit_service: CreditServiceDep,
-) -> SessionValidationService:
-    """Provide SessionValidationService instance."""
-    return SessionValidationService(
-        session_service=session_service,
-        credit_service=credit_service,
-    )
-
-
 SessionForkServiceDep = Annotated[SessionForkService, Depends(get_session_fork_service)]
-SessionValidationServiceDep = Annotated[SessionValidationService, Depends(get_session_validation_service)]

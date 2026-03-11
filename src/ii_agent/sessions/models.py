@@ -63,6 +63,7 @@ class Session(Base):
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(String, default="active")
     agent_state_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    state_storage_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     agent_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     app_kind: Mapped[str] = mapped_column(String, nullable=False, default="agent", server_default="agent")
     public_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)

@@ -25,6 +25,7 @@ import {
     selectActiveSessionId,
     selectSelectedGitHubRepository,
     selectChatMediaPreference,
+    selectCouncilPreference,
     userApi,
     sessionApi
 } from '@/state'
@@ -64,6 +65,21 @@ export type StreamCallbacks = {
         input_tokens: number
         output_tokens: number
         total_tokens: number
+    }) => void
+    onCouncilMember?: (params: {
+        status: 'start' | 'delta' | 'complete' | 'error'
+        model_id: string
+        model_name?: string
+        delta?: string
+        content?: string
+        error?: string
+    }) => void
+    onCouncilSynthesis?: (params: {
+        status: 'start' | 'delta' | 'complete' | 'error'
+        model_id?: string
+        delta?: string
+        content?: string
+        error?: string
     }) => void
     onDone?: () => void
     onError?: (message?: string, code?: string) => void
@@ -108,6 +124,7 @@ export function useChatTransport(options?: UseChatTransportOptions) {
         selectSelectedGitHubRepository
     )
     const chatMediaPreference = useAppSelector(selectChatMediaPreference)
+    const councilPreference = useAppSelector(selectCouncilPreference)
 
     const [isSubmitting, setIsSubmitting] = useState(false)
     const activeStreamControllerRef = useRef<AbortController | null>(null)
@@ -185,6 +202,20 @@ export function useChatTransport(options?: UseChatTransportOptions) {
                         effectiveFileIds
                     )
 
+                // Build council preferences if enabled
+                const councilPayload =
+                    councilPreference.enabled &&
+                    councilPreference.councilModelIds.length >= 2
+                        ? {
+                              enabled: true,
+                              council_models: councilPreference.councilModelIds.map(
+                                  (id) => ({ model_id: id })
+                              ),
+                              synthesis_model_id:
+                                  councilPreference.synthesisModelId || model.id
+                          }
+                        : undefined
+
                 const payload: ChatQueryPayload = {
                     session_id: sessionId,
                     model_id: model.id,
@@ -192,7 +223,8 @@ export function useChatTransport(options?: UseChatTransportOptions) {
                     files: messageFileIds,
                     tools: chatToolSettings,
                     media_preferences: mediaPreferences,
-                    github_repository: selectedGitHubRepository
+                    github_repository: selectedGitHubRepository,
+                    council_preferences: councilPayload
                 }
 
                 dispatch(setCurrentQuestion(''))
@@ -292,6 +324,27 @@ export function useChatTransport(options?: UseChatTransportOptions) {
                                 })
                                 break
                             }
+                            case 'council_member': {
+                                callbacks?.onCouncilMember?.({
+                                    status: event.status,
+                                    model_id: event.model_id,
+                                    model_name: event.model_name,
+                                    delta: event.delta,
+                                    content: event.content,
+                                    error: event.error
+                                })
+                                break
+                            }
+                            case 'council_synthesis': {
+                                callbacks?.onCouncilSynthesis?.({
+                                    status: event.status,
+                                    model_id: event.model_id,
+                                    delta: event.delta,
+                                    content: event.content,
+                                    error: event.error
+                                })
+                                break
+                            }
                             case 'done': {
                                 activeStreamControllerRef.current = null
                                 // Invalidate credit cache to refresh balance and usage
@@ -347,7 +400,8 @@ export function useChatTransport(options?: UseChatTransportOptions) {
             stopActiveStream,
             chatToolSettings,
             selectedGitHubRepository,
-            chatMediaPreference
+            chatMediaPreference,
+            councilPreference
         ]
     )
 

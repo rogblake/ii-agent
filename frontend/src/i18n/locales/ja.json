@@ -2296,8 +2296,22 @@
             },
             "cookStorybook": {
                 "name": "ストーリーブック／コミックブックを作成"
+            },
+            "modelCouncil": {
+                "name": "モデルカウンシル"
             }
         }
+    },
+    "council": {
+        "badge": "カウンシル",
+        "title": "モデルカウンシル",
+        "subtitle": "並列実行する2〜5モデルを選択",
+        "selectAtLeast": "少なくとも2つのモデルを選択してください",
+        "streaming": "ストリーミング中",
+        "error": "エラー",
+        "synthesizing": "合成中",
+        "modelResponses": "モデル応答",
+        "synthesizedResponse": "合成された応答"
     },
     "buildModeDropdown": {
         "modes": {

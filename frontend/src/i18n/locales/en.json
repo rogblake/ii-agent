@@ -2436,8 +2436,22 @@
             },
             "cookStorybook": {
                 "name": "Cook a Storybook / Comic"
+            },
+            "modelCouncil": {
+                "name": "Model Council"
             }
         }
+    },
+    "council": {
+        "badge": "Council",
+        "title": "Model Council",
+        "subtitle": "Select 2-5 models to run in parallel",
+        "selectAtLeast": "Select at least 2 models",
+        "streaming": "streaming",
+        "error": "error",
+        "synthesizing": "synthesizing",
+        "modelResponses": "Model Responses",
+        "synthesizedResponse": "Synthesized Response"
     },
     "buildModeDropdown": {
         "modes": {

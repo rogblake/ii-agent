@@ -1965,6 +1965,128 @@ function useChatProviderValue(): ChatContextValue {
                                 total_tokens
                             })
                         },
+                        onCouncilMember: ({
+                            status,
+                            model_id,
+                            model_name,
+                            delta,
+                            content,
+                            error
+                        }) => {
+                            // Hide thinking indicator when council starts
+                            setChatState((prev) => ({
+                                ...prev,
+                                isWaitingForNextEvent: false,
+                                showThinking: false
+                            }))
+
+                            const partId = `council-member-${model_id}`
+
+                            if (status === 'start') {
+                                updateMessagePart(partId, () => ({
+                                    type: 'council_member_output',
+                                    id: partId,
+                                    model_id,
+                                    model_name: model_name || model_id,
+                                    content: '',
+                                    status: 'streaming'
+                                }))
+                            } else if (status === 'delta' && delta) {
+                                updateMessagePart(partId, (existing) => ({
+                                    ...(existing || {}),
+                                    type: 'council_member_output',
+                                    id: partId,
+                                    model_id,
+                                    model_name:
+                                        model_name ||
+                                        existing?.model_name ||
+                                        model_id,
+                                    content:
+                                        (existing?.content || '') + delta,
+                                    status: 'streaming'
+                                }))
+                            } else if (status === 'complete') {
+                                updateMessagePart(partId, (existing) => ({
+                                    ...(existing || {}),
+                                    type: 'council_member_output',
+                                    id: partId,
+                                    model_id,
+                                    model_name:
+                                        model_name ||
+                                        existing?.model_name ||
+                                        model_id,
+                                    content:
+                                        existing?.content || content || '',
+                                    status: 'completed'
+                                }))
+                            } else if (status === 'error') {
+                                updateMessagePart(partId, (existing) => ({
+                                    ...(existing || {}),
+                                    type: 'council_member_output',
+                                    id: partId,
+                                    model_id,
+                                    model_name:
+                                        model_name ||
+                                        existing?.model_name ||
+                                        model_id,
+                                    content: existing?.content || '',
+                                    status: 'error',
+                                    error_message:
+                                        error || 'Unknown error'
+                                }))
+                            }
+                        },
+                        onCouncilSynthesis: ({
+                            status,
+                            model_id,
+                            delta,
+                            content,
+                            error
+                        }) => {
+                            const partId = 'council-synthesis'
+
+                            if (status === 'start') {
+                                updateMessagePart(partId, () => ({
+                                    type: 'council_synthesis',
+                                    id: partId,
+                                    synthesis_model_id: model_id || '',
+                                    content: ''
+                                }))
+                            } else if (status === 'delta' && delta) {
+                                updateMessagePart(partId, (existing) => ({
+                                    ...(existing || {}),
+                                    type: 'council_synthesis',
+                                    id: partId,
+                                    synthesis_model_id:
+                                        model_id ||
+                                        existing?.synthesis_model_id ||
+                                        '',
+                                    content:
+                                        (existing?.content || '') + delta
+                                }))
+                            } else if (status === 'complete') {
+                                updateMessagePart(partId, (existing) => ({
+                                    ...(existing || {}),
+                                    type: 'council_synthesis',
+                                    id: partId,
+                                    synthesis_model_id:
+                                        model_id ||
+                                        existing?.synthesis_model_id ||
+                                        '',
+                                    content:
+                                        existing?.content || content || ''
+                                }))
+                            } else if (status === 'error') {
+                                updateMessagePart(partId, () => ({
+                                    type: 'council_synthesis',
+                                    id: partId,
+                                    synthesis_model_id: model_id || '',
+                                    content: '',
+                                    error_message:
+                                        error || 'Synthesis failed'
+                                }))
+                            }
+                        },
                         onDone: () => {
                             const timestamp = Date.now()
                             const targetId = streamingMessageIdRef.current

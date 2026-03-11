@@ -2296,8 +2296,22 @@
             },
             "cookStorybook": {
                 "name": "स्टोरीबुक / कॉमिक बुक बनाएं"
+            },
+            "modelCouncil": {
+                "name": "मॉडल काउंसिल"
             }
         }
+    },
+    "council": {
+        "badge": "काउंसिल",
+        "title": "मॉडल काउंसिल",
+        "subtitle": "समानांतर चलाने के लिए 2-5 मॉडल चुनें",
+        "selectAtLeast": "कम से कम 2 मॉडल चुनें",
+        "streaming": "स्ट्रीमिंग",
+        "error": "त्रुटि",
+        "synthesizing": "संश्लेषण",
+        "modelResponses": "मॉडल प्रतिक्रियाएँ",
+        "synthesizedResponse": "संश्लेषित प्रतिक्रिया"
     },
     "buildModeDropdown": {
         "modes": {

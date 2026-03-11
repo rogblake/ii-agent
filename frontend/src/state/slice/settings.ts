@@ -8,10 +8,17 @@ import {
 import { IModel } from '@/typings/settings'
 import { GitHubRepositoryContext } from '@/typings/chat'
 
+export interface CouncilPreference {
+    enabled: boolean
+    councilModelIds: string[]
+    synthesisModelId: string
+}
+
 interface SettingsState {
     toolSettings: ToolSettings
     chatToolSettings: ChatToolSettings
     chatMediaPreference: ChatMediaPreference
+    councilPreference: CouncilPreference
     selectedModel?: string
     availableModels: IModel[]
     currentSettingData?: ISetting
@@ -53,6 +60,11 @@ const initialState: SettingsState = {
         provider: '',
         voice_enabled: true,
         rich_dialogue: false
+    },
+    councilPreference: {
+        enabled: false,
+        councilModelIds: [],
+        synthesisModelId: ''
     },
     selectedModel: undefined,
     availableModels: [],
@@ -132,6 +144,18 @@ const settingsSlice = createSlice({
             action: PayloadAction<GitHubRepositoryContext | undefined>
         ) => {
             state.selectedGitHubRepository = action.payload
+        },
+        setCouncilPreference: (
+            state,
+            action: PayloadAction<CouncilPreference>
+        ) => {
+            state.councilPreference = action.payload
+        },
+        resetCouncilMode: (state) => {
+            state.councilPreference = {
+                ...state.councilPreference,
+                enabled: false
+            }
         }
     }
 })
@@ -149,7 +173,9 @@ export const {
     setSelectedGitHubRepository,
     setChatMediaPreference,
     clearChatMediaTool,
-    resetChatMediaEnabled
+    resetChatMediaEnabled,
+    setCouncilPreference,
+    resetCouncilMode
 } = settingsSlice.actions
 export const settingsReducer = settingsSlice.reducer
 
@@ -173,3 +199,5 @@ export const selectClaudeCodeConfig = (state: { settings: SettingsState }) =>
 export const selectSelectedGitHubRepository = (state: {
     settings: SettingsState
 }) => state.settings.selectedGitHubRepository
+export const selectCouncilPreference = (state: { settings: SettingsState }) =>
+    state.settings.councilPreference

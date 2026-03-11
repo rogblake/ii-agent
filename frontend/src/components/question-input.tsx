@@ -21,6 +21,7 @@ import {
     clearCurrentMessageFileIds,
     selectAvailableModels,
     selectBuildMode,
+    selectCouncilPreference,
     selectCurrentMessageFileIds,
     selectIsCancelling,
     selectQuestionMode,
@@ -31,6 +32,7 @@ import {
     selectShouldFocusInput,
     selectSubscriptionPlan,
     selectUploadedFiles,
+    resetCouncilMode,
     setBuildMode,
     setChatMediaPreference,
     setQuestionMode,
@@ -168,6 +170,7 @@ const QuestionInput = ({
     const availableModels = useAppSelector(selectAvailableModels)
     const selectedModel = useAppSelector(selectSelectedModel)
     const subscriptionPlan = useAppSelector(selectSubscriptionPlan)
+    const councilPreference = useAppSelector(selectCouncilPreference)
     const isUploading = useAppSelector((state) => state.files.isUploading)
     const isLoading = useAppSelector((state) => state.ui.isLoading)
     const isCancelling = useAppSelector(selectIsCancelling)
@@ -1225,6 +1228,27 @@ const QuestionInput = ({
                                     onRemove={removeFeature}
                                     onSelect={handleSelectFeature}
                                 />
+                                {councilPreference.enabled &&
+                                    questionMode === QUESTION_MODE.CHAT && (
+                                        <div className="flex items-center gap-[6px] bg-blue-gradient text-black rounded-lg px-2 h-7 pointer-events-none">
+                                            <Icon
+                                                name="brain"
+                                                className="size-5 fill-black"
+                                            />
+                                            <button
+                                                type="button"
+                                                className="cursor-pointer pointer-events-auto"
+                                                onClick={() =>
+                                                    dispatch(resetCouncilMode())
+                                                }
+                                            >
+                                                <Icon
+                                                    name="cancel"
+                                                    className="size-4 stroke-black"
+                                                />
+                                            </button>
+                                        </div>
+                                    )}
                                 {!hideBuildModeSelector &&
                                     questionMode === QUESTION_MODE.AGENT &&
                                     (selectedFeature === AGENT_TYPE.GENERAL ||

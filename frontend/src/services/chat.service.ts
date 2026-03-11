@@ -154,7 +154,8 @@ class ChatService {
                     file_ids: payload.files,
                     tools: payload.tools,
                     media_preferences: payload.media_preferences,
-                    github_repository: payload.github_repository
+                    github_repository: payload.github_repository,
+                    council_preferences: payload.council_preferences
                 }),
                 signal: mergedSignal
             }
@@ -388,6 +389,50 @@ class ChatService {
                             output
                         })
                     }
+                }
+                return events
+            }
+
+            // Handle council_member event
+            if (eventName === 'council_member') {
+                const status = readString(record, 'status') as
+                    | 'start'
+                    | 'delta'
+                    | 'complete'
+                    | 'error'
+                    | undefined
+                const modelId = readString(record, 'model_id')
+                if (status && modelId) {
+                    events.push({
+                        type: 'council_member',
+                        status,
+                        model_id: modelId,
+                        model_name: readString(record, 'model_name'),
+                        delta: readString(record, 'delta'),
+                        content: readString(record, 'content'),
+                        error: readString(record, 'error')
+                    })
+                }
+                return events
+            }
+
+            // Handle council_synthesis event
+            if (eventName === 'council_synthesis') {
+                const status = readString(record, 'status') as
+                    | 'start'
+                    | 'delta'
+                    | 'complete'
+                    | 'error'
+                    | undefined
+                if (status) {
+                    events.push({
+                        type: 'council_synthesis',
+                        status,
+                        model_id: readString(record, 'model_id'),
+                        delta: readString(record, 'delta'),
+                        content: readString(record, 'content'),
+                        error: readString(record, 'error')
+                    })
                 }
                 return events
             }

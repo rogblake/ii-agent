@@ -11,7 +11,9 @@ import {
     setPlanModificationOptions,
     setBuildStep,
     setSelectedBuildStep,
-    setRunStatus
+    setRunStatus,
+    setCouncilPreference,
+    resetCouncilMode
 } from '@/state'
 import { BUILD_MODE, BUILD_STEP } from '@/typings/agent'
 
@@ -70,6 +72,13 @@ export function useSessionEnter() {
                     )
                 )
                 dispatch(setRunStatus(cachedState.runStatus ?? null))
+
+                // Restore council preference
+                if (cachedState.councilPreference) {
+                    dispatch(setCouncilPreference(cachedState.councilPreference))
+                } else {
+                    dispatch(resetCouncilMode())
+                }
             } else {
                 // No cached state - clear everything to ensure clean slate
                 console.log(
@@ -79,6 +88,7 @@ export function useSessionEnter() {
                 dispatch(setBuildMode(BUILD_MODE.BUILD))
                 dispatch(setRunStatus(null))
                 dispatch(setPlanModificationOptions(null))
+                dispatch(resetCouncilMode())
             }
         }
 

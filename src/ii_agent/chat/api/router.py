@@ -201,13 +201,80 @@ async def send_chat_message(
                 }
                 yield f"event: session\ndata: {json.dumps(session_event)}\n\n"
 
+            # Determine if this is a council request
+            is_council = (
+                request.council_preferences
+                and request.council_preferences.enabled
+            )
+
+            if is_council:
+                # Validate council config — reject invalid selections explicitly
+                council_prefs = request.council_preferences
+                if len(council_prefs.council_models) < 2:
+                    yield f"event: error\ndata: {json.dumps({'message': 'Council mode requires at least 2 models'})}\n\n"
+                    return
+                if not council_prefs.synthesis_model_id:
+                    yield f"event: error\ndata: {json.dumps({'message': 'Council mode requires a synthesis model'})}\n\n"
+                    return
+
+                stream = chat_service.stream_council_chat_response(
+                    db_session,
+                    chat_request=request,
+                    user_id=str(current_user.id),
+                )
+            else:
+                stream = chat_service.stream_chat_response(
+                    db_session,
+                    chat_request=request,
+                    user_id=str(current_user.id),
+                )
+
             # Stream response from provider
-            async for event in chat_service.stream_chat_response(
-                db_session,
-                chat_request=request,
-                user_id=str(current_user.id),
-            ):
+            async for event in stream:
                 event_type = event.get("type")
+
+                # Council member events
+                if event_type in (
+                    "council_member_start",
+                    "council_member_delta",
+                    "council_member_complete",
+                    "council_member_error",
+                ):
+                    status = event_type.replace("council_member_", "")
+                    council_event = {
+                        "status": status,
+                        "model_id": event.get("model_id"),
+                        "model_name": event.get("model_name"),
+                    }
+                    if status == "delta":
+                        council_event["delta"] = event.get("delta")
+                    elif status == "complete":
+                        council_event["content"] = event.get("content")
+                    elif status == "error":
+                        council_event["error"] = event.get("error")
+                    yield f"event: council_member\ndata: {json.dumps(council_event)}\n\n"
+                    continue
+
+                # Council synthesis events
+                elif event_type in (
+                    "council_synthesis_start",
+                    "council_synthesis_delta",
+                    "council_synthesis_complete",
+                    "council_synthesis_error",
+                ):
+                    status = event_type.replace("council_synthesis_", "")
+                    synthesis_event = {
+                        "status": status,
+                        "model_id": event.get("model_id"),
+                    }
+                    if status == "delta":
+                        synthesis_event["delta"] = event.get("delta")
+                    elif status == "complete":
+                        synthesis_event["content"] = event.get("content")
+                    elif status == "error":
+                        synthesis_event["error"] = event.get("error")
+                    yield f"event: council_synthesis\ndata: {json.dumps(synthesis_event)}\n\n"
+                    continue
 
                 # Content events (start/delta/stop)
                 if event_type == "content_start":

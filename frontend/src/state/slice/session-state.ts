@@ -5,6 +5,7 @@ import {
     Milestone,
     PlanModificationSuggestion
 } from '@/typings/agent'
+import type { CouncilPreference } from './settings'
 
 /**
  * Per-session UI state that should be saved and restored when switching between sessions
@@ -22,6 +23,7 @@ export interface PerSessionState {
         suggestions: PlanModificationSuggestion[]
     } | null
     runStatus: string | null
+    councilPreference?: CouncilPreference
     lastAccessed?: number // Timestamp for LRU eviction
 }
 

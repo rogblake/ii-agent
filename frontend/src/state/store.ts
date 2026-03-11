@@ -50,6 +50,22 @@ const persistConfig = {
                 references: undefined
             }
         }
+
+        // Council: ensure state exists, reset enabled on reload
+        if (state?.settings) {
+            if (!state.settings.councilPreference) {
+                state.settings.councilPreference = {
+                    enabled: false,
+                    councilModelIds: [],
+                    synthesisModelId: ''
+                }
+            } else {
+                state.settings.councilPreference = {
+                    ...state.settings.councilPreference,
+                    enabled: false
+                }
+            }
+        }
         return Promise.resolve(state)
     }
 }

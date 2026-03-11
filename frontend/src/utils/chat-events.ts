@@ -95,6 +95,12 @@ export type ContentPart = {
     is_error?: boolean
     files?: FileMetadata[]
     isLastOfTurn?: boolean
+    // Council-specific fields
+    model_id?: string
+    model_name?: string
+    status?: string
+    error_message?: string
+    synthesis_model_id?: string
 }
 
 export type GroupedPart = {

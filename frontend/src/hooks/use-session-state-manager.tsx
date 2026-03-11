@@ -18,7 +18,9 @@ import {
     selectMilestones,
     selectSelectedMilestoneId,
     selectPlanSummary,
-    selectPlanModificationOptions
+    selectPlanModificationOptions,
+    resetCouncilMode,
+    selectCouncilPreference
 } from '@/state'
 import {
     setAgentInitialized,
@@ -55,6 +57,7 @@ export function useSessionStateManager() {
         selectPlanModificationOptions
     )
     const runStatus = useAppSelector(selectRunStatus)
+    const councilPreference = useAppSelector(selectCouncilPreference)
 
     /**
      * Save current session state to cache
@@ -71,7 +74,8 @@ export function useSessionStateManager() {
                 selectedMilestoneId,
                 planSummary,
                 planModificationOptions,
-                runStatus
+                runStatus,
+                councilPreference
             }
             dispatch(saveSessionState({ sessionId, state }))
         },
@@ -84,7 +88,8 @@ export function useSessionStateManager() {
             selectedMilestoneId,
             planSummary,
             planModificationOptions,
-            runStatus
+            runStatus,
+            councilPreference
         ]
     )
 
@@ -101,6 +106,9 @@ export function useSessionStateManager() {
         dispatch(setBuildMode(BUILD_MODE.BUILD))
         dispatch(clearMilestones())
         dispatch(setPlanModificationOptions(null))
+
+        // Reset council mode
+        dispatch(resetCouncilMode())
 
         // Reset agent state — isCompleted/isStopped/isWaitingForInput derived from runStatus
         dispatch(setRunStatus(null))

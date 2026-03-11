@@ -30,6 +30,9 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import ChatMiniTools from '@/components/media/image/chat-mini-tools'
 import {
     selectIsLoading,
+    selectCouncilPreference,
+    setCouncilPreference,
+    resetCouncilMode,
     setQuestionMode,
     setSelectedGitHubRepository,
     useAppDispatch,
@@ -411,6 +414,8 @@ function ChatPageContent() {
         setSessionId(initialSessionId)
     }, [initialSessionId, setSessionId])
 
+    const councilPreference = useAppSelector(selectCouncilPreference)
+
     useEffect(() => {
         if (!sessionId) {
             resetConversationState()
@@ -426,6 +431,50 @@ function ChatPageContent() {
             console.error('Failed to hydrate history', error)
         })
     }, [chatStatus, hydrateSessionHistory, resetConversationState, sessionId])
+
+    // Track which session we last restored council mode for
+    const lastRestoredCouncilSessionRef = useRef<string | null>(null)
+
+    // Restore council mode from message history after hydration (not during live streaming)
+    useEffect(() => {
+        if (!messages.length) return
+        // Don't interfere while actively streaming — this effect is for history restoration only
+        if (chatStatus === 'running') return
+        // Skip if we already restored for this exact session
+        if (councilPreference.enabled && lastRestoredCouncilSessionRef.current === sessionId) return
+
+        const councilModelIds = new Set<string>()
+        for (const msg of messages) {
+            if (!msg.parts) continue
+            for (const part of msg.parts) {
+                if (part.type === 'council_member_output' && part.model_id) {
+                    councilModelIds.add(part.model_id)
+                }
+            }
+        }
+
+        if (councilModelIds.size >= 2) {
+            lastRestoredCouncilSessionRef.current = sessionId ?? null
+            dispatch(
+                setCouncilPreference({
+                    enabled: true,
+                    councilModelIds: Array.from(councilModelIds),
+                    synthesisModelId: ''
+                })
+            )
+        } else if (councilPreference.enabled) {
+            // New session has no council parts, reset
+            lastRestoredCouncilSessionRef.current = sessionId ?? null
+            dispatch(resetCouncilMode())
+        }
+    }, [messages, councilPreference.enabled, sessionId, chatStatus, dispatch])
+
+    // Reset council mode when leaving (no session)
+    useEffect(() => {
+        if (!sessionId && councilPreference.enabled) {
+            dispatch(resetCouncilMode())
+        }
+    }, [sessionId, councilPreference.enabled, dispatch])
 
     const handleSend = useCallback(
         async (overrideQuestion?: string) => {

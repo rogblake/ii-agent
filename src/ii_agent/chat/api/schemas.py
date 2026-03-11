@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from ii_agent.billing.usage.models import TokenUsage
 from ii_agent.chat.types import (
+    CouncilPreferences,
     MediaPreferences,
     GitHubRepositoryContext,
     MediaReference,
@@ -69,6 +70,10 @@ class ChatMessageRequest(BaseModel):
         None,
         description="Selected GitHub repository context for agent operations. "
         "When provided, the agent will use this repository as the default context for GitHub operations.",
+    )
+    council_preferences: Optional[CouncilPreferences] = Field(
+        None,
+        description="Model Council preferences for running multiple LLMs in parallel.",
     )
 
 

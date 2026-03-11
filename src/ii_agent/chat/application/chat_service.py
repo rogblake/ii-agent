@@ -13,6 +13,8 @@ from ii_agent.core.config.settings import Settings
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.chat.types import (
     BinaryContent,
+    CouncilMemberOutput,
+    CouncilSynthesis,
     Message,
     TextContent,
     MessageRole,
@@ -29,6 +31,7 @@ from ii_agent.chat.application.file_processing_service import ChatFileProcessor
 from ii_agent.chat.application.tool_service import ChatToolService
 from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
 from ii_agent.chat.messages.history_service import ChatMessageHistoryService
+from ii_agent.chat.council_service import CouncilService, MIN_COUNCIL_MODELS
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.chat.runs.models import ChatRunStatus
@@ -388,6 +391,264 @@ class ChatService:
                     "code": "anthropic_image_too_large",
                 }
                 return
+
+            if is_cancelled:
+                yield {
+                    "type": EventType.COMPLETE,
+                    "finish_reason": FinishReason.CANCELED,
+                }
+            else:
+                raise
+
+    async def stream_council_chat_response(
+        self, db: AsyncSession, *, chat_request: ChatMessageRequest, user_id: str
+    ) -> AsyncIterator[Dict]:
+        """Stream council response: run multiple LLMs in parallel, then synthesize.
+
+        Orchestrates: context loading, file processing, parallel model execution, synthesis.
+        """
+        council_prefs = chat_request.council_preferences
+        if not council_prefs or not council_prefs.enabled:
+            raise ValueError("Council preferences must be enabled")
+
+        CouncilService.validate_preferences(council_prefs)
+
+        session_id = str(chat_request.session_id)
+
+        # Load context
+        messages = await ContextWindowManager.load_context_for_llm(
+            db_session=db,
+            session_id=session_id,
+        )
+        logger.info(f"Council: loaded context for session {session_id} ({len(messages)} messages)")
+
+        # Build user message content
+        display_content = chat_request.content
+        llm_content = chat_request.content
+
+        if chat_request.github_repository:
+            repo_context = (
+                f"\n\n[The user has selected GitHub repository: {chat_request.github_repository.full_name} "
+                f"(default branch: {chat_request.github_repository.default_branch}). "
+                f"When the user says 'this repository', 'the repository', 'the repo', or similar, "
+                f"they are referring to this GitHub repository. Use the github tool to access it.]"
+            )
+            llm_content += repo_context
+
+        display_text_part = TextContent(text=display_content)
+        user_message = await self._message_service.create_message(
+            db,
+            session_id=session_id,
+            role=MessageRole.USER,
+            parts=[display_text_part],
+            model_id=chat_request.model_id,
+            file_ids=chat_request.file_ids,
+        )
+
+        agent_task = await self._chat_run_service.create_run(
+            db,
+            session_id=uuid.UUID(session_id),
+            user_message_id=user_message.id,
+            status=ChatRunStatus.RUNNING,
+        )
+        await db.commit()
+
+        run_id = str(agent_task.id)
+        await cancel.register_run(run_id)
+        logger.info(f"Started council run {run_id} for session {session_id}")
+
+        # Process file uploads (provider-neutral with api_type=None)
+        await self._file_processor.process_uploads(
+            db,
+            user_id=user_id,
+            session_id=session_id,
+            user_message=user_message,
+            llm_content=llm_content,
+            display_content=display_content,
+        )
+
+        # Build LLM messages list
+        # After process_uploads, user_message.parts[0] already contains
+        # llm_content (with GitHub repo context) + file info text
+        llm_parts = [user_message.parts[0]]
+        for part in user_message.parts:
+            if isinstance(part, BinaryContent):
+                llm_parts.append(part)
+
+        llm_user_message = Message(
+            id=user_message.id,
+            role=user_message.role,
+            session_id=user_message.session_id,
+            parts=llm_parts,
+            model=user_message.model,
+            provider=user_message.provider,
+            created_at=user_message.created_at,
+            updated_at=user_message.updated_at,
+            file_ids=user_message.file_ids,
+            tokens=user_message.tokens,
+            tools_enabled=user_message.tools_enabled,
+            metadata=user_message.metadata,
+            provider_metadata=user_message.provider_metadata,
+            finish_reason=user_message.finish_reason,
+        )
+        messages.append(llm_user_message)
+
+        # Resolve LLM configs for all council models + synthesis model
+        all_model_ids = [m.model_id for m in council_prefs.council_models]
+        if council_prefs.synthesis_model_id not in all_model_ids:
+            all_model_ids.append(council_prefs.synthesis_model_id)
+
+        llm_configs = {}
+        model_names = {}
+        all_models = await self._llm_setting_service.get_all_available_models(
+            db, user_id=user_id
+        )
+        failed_models = []
+        for mid in all_model_ids:
+            try:
+                llm_configs[mid] = await self.get_llm_config(
+                    db, model_id=mid, user_id=user_id
+                )
+                model_info = next((m for m in all_models.models if m.id == mid), None)
+                model_names[mid] = model_info.model if model_info else mid
+            except Exception as e:
+                logger.warning(f"Could not resolve config for council model {mid}: {e}")
+                failed_models.append(mid)
+
+        # Fail fast: synthesis model config is required
+        if council_prefs.synthesis_model_id not in llm_configs:
+            agent_task.status = ChatRunStatus.FAILED
+            await db.commit()
+            await cancel.cleanup_run(run_id)
+            raise ValueError(
+                f"Synthesis model '{council_prefs.synthesis_model_id}' could not be resolved"
+            )
+
+        # Fail fast: need at least 2 council models with valid configs
+        valid_council_count = sum(
+            1 for m in council_prefs.council_models if m.model_id in llm_configs
+        )
+        if valid_council_count < MIN_COUNCIL_MODELS:
+            agent_task.status = ChatRunStatus.FAILED
+            await db.commit()
+            await cancel.cleanup_run(run_id)
+            raise ValueError(
+                f"Only {valid_council_count} council models could be resolved, "
+                f"need at least {MIN_COUNCIL_MODELS}"
+            )
+
+        council_had_error = False
+        member_outputs_for_persist = {}
+        synthesis_content = ""
+        synthesis_model_id = council_prefs.synthesis_model_id
+
+        try:
+            async for event in CouncilService.stream_council_response(
+                messages=messages,
+                user_question=display_content,
+                council_preferences=council_prefs,
+                llm_configs=llm_configs,
+                model_names=model_names,
+                run_id=run_id,
+            ):
+                event_type = event.get("type")
+
+                if event_type == "council_result":
+                    # Internal metadata event - don't yield to frontend
+                    member_outputs_for_persist = event.get("member_outputs", {})
+                    synthesis_content = event.get("synthesis_content", "")
+                    synthesis_model_id = event.get("synthesis_model_id", synthesis_model_id)
+                    council_had_error = event.get("had_error", False)
+                    continue
+
+                if event_type == "council_synthesis_error":
+                    council_had_error = True
+                    yield event
+                    continue
+
+                yield event
+
+            # Persist assistant message with council parts
+            assistant_parts = []
+            for mid, content in member_outputs_for_persist.items():
+                assistant_parts.append(
+                    CouncilMemberOutput(
+                        model_id=mid,
+                        model_name=model_names.get(mid, mid),
+                        content=content,
+                        status="completed",
+                    )
+                )
+
+            if synthesis_content:
+                assistant_parts.append(
+                    CouncilSynthesis(
+                        synthesis_model_id=synthesis_model_id,
+                        content=synthesis_content,
+                    )
+                )
+
+            # Don't persist an empty assistant message on total failure
+            if not assistant_parts:
+                assistant_parts.append(
+                    TextContent(text="[Council execution failed - no model produced output]")
+                )
+                council_had_error = True
+
+            assistant_message = await self._message_service.create_message(
+                db,
+                session_id=session_id,
+                role=MessageRole.ASSISTANT,
+                parts=assistant_parts,
+                model_id=chat_request.model_id,
+            )
+
+            # Update task status
+            await db.refresh(agent_task)
+            agent_task.status = ChatRunStatus.FAILED if council_had_error else ChatRunStatus.COMPLETED
+            await db.commit()
+
+            await cancel.cleanup_run(run_id)
+
+            # Post-response summarization
+            try:
+                llm_config = await self.get_llm_config(
+                    db, model_id=chat_request.model_id, user_id=user_id
+                )
+                await ContextWindowManager.check_and_summarize_after_response(
+                    db_session=db,
+                    session_id=session_id,
+                    llm_config=llm_config,
+                    user_id=user_id,
+                )
+            except Exception as e:
+                logger.warning(f"Post-council summarization failed: {e}")
+
+            yield {
+                "type": "complete",
+                "message_id": str(assistant_message.id),
+                "finish_reason": FinishReason.END_TURN,
+            }
+
+            logger.info(f"Completed council run {run_id} for session {session_id}")
+
+        except (cancel.RunCancelledException, Exception) as e:
+            is_cancelled = isinstance(e, cancel.RunCancelledException)
+
+            if is_cancelled:
+                logger.info(f"Council run {run_id} was cancelled for session {session_id}")
+            else:
+                logger.error(f"Council streaming error: {e}", exc_info=True)
+
+            await db.refresh(agent_task)
+            agent_task.status = ChatRunStatus.ABORTED if is_cancelled else ChatRunStatus.FAILED
+            await db.commit()
+
+            await self._message_service.mark_messages_incomplete(
+                db,
+                parent_message_id=user_message.id,
+            )
+            await cancel.cleanup_run(run_id)
 
             if is_cancelled:
                 yield {

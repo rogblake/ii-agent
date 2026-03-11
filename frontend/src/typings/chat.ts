@@ -65,6 +65,11 @@ export interface ChatQueryPayload {
         storybook_context?: StorybookContext
     }
     github_repository?: GitHubRepositoryContext
+    council_preferences?: {
+        enabled: boolean
+        council_models: Array<{ model_id: string }>
+        synthesis_model_id: string
+    }
 }
 
 export type ChatStreamEvent =
@@ -138,6 +143,23 @@ export type ChatStreamEvent =
           type: 'done'
       }
     | {
+          type: 'council_member'
+          status: 'start' | 'delta' | 'complete' | 'error'
+          model_id: string
+          model_name?: string
+          delta?: string
+          content?: string
+          error?: string
+      }
+    | {
+          type: 'council_synthesis'
+          status: 'start' | 'delta' | 'complete' | 'error'
+          model_id?: string
+          delta?: string
+          content?: string
+          error?: string
+      }
+    | {
           type: 'error'
           message?: string
           code?: string
@@ -183,6 +205,19 @@ export type ContentPart =
           status: string
           outputs?: Array<Record<string, unknown>> | null
           container_id?: string | null
+      }
+    | {
+          type: 'council_member_output'
+          model_id: string
+          model_name: string
+          content: string
+          status: 'streaming' | 'completed' | 'error'
+          error_message?: string
+      }
+    | {
+          type: 'council_synthesis'
+          synthesis_model_id: string
+          content: string
       }
 
 export enum FinishReason {

@@ -226,6 +226,24 @@ class MediaPreferences(BaseModel):
     )
 
 
+class CouncilModelConfig(BaseModel):
+    """Configuration for a single council member model."""
+
+    model_id: str = Field(..., description="LLM model ID for this council member")
+
+
+class CouncilPreferences(BaseModel):
+    """User preferences for Model Council mode."""
+
+    enabled: bool = Field(False, description="Whether council mode is active")
+    council_models: List[CouncilModelConfig] = Field(
+        default_factory=list, description="List of models to run in parallel"
+    )
+    synthesis_model_id: str = Field(
+        "", description="Model ID used to synthesize council outputs"
+    )
+
+
 class TokenDetailsCompletion(BaseModel):
     """Completion token usage details."""
 
@@ -591,6 +609,25 @@ class CodeBlockContent(BaseContentPart):
     container_id: Optional[str] = None
 
 
+class CouncilMemberOutput(BaseContentPart):
+    """Output from a single council member model."""
+
+    type: Literal["council_member_output"] = "council_member_output"
+    model_id: str
+    model_name: str
+    content: str
+    status: Literal["completed", "error"] = "completed"
+    error_message: Optional[str] = None
+
+
+class CouncilSynthesis(BaseContentPart):
+    """Synthesized response from the synthesis model."""
+
+    type: Literal["council_synthesis"] = "council_synthesis"
+    synthesis_model_id: str
+    content: str
+
+
 ContentPart = Union[
     TextContent,
     ReasoningContent,
@@ -600,6 +637,8 @@ ContentPart = Union[
     ToolResult,
     Finish,
     CodeBlockContent,
+    CouncilMemberOutput,
+    CouncilSynthesis,
 ]
 
 

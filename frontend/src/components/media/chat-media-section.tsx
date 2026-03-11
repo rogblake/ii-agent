@@ -19,6 +19,13 @@ import type { MediaTemplate } from '@/services/media-template.service'
 import type { MiniTool } from '@/constants/media-tools'
 import type { VideoTemplate } from '@/constants/video-models'
 import { useTranslation } from 'react-i18next'
+import { CouncilConfigPanel } from '@/components/council/council-config-panel'
+import {
+    selectCouncilPreference,
+    setCouncilPreference,
+    useAppDispatch,
+    useAppSelector
+} from '@/state'
 
 type ChatMediaSectionProps = {
     questionMode: QUESTION_MODE
@@ -63,6 +70,8 @@ const ChatMediaSection = ({
     fallbackSessionId
 }: ChatMediaSectionProps) => {
     const { t } = useTranslation()
+    const dispatch = useAppDispatch()
+    const councilPreference = useAppSelector(selectCouncilPreference)
     const [showMiniTools, setShowMiniTools] = useState(false)
     const [miniToolBoardOpen, setMiniToolBoardOpen] = useState(false)
     const miniToolsSectionRef = useRef<HTMLDivElement | null>(null)
@@ -108,17 +117,27 @@ const ChatMediaSection = ({
 
     return (
         <div className="flex flex-col items-start justify-start w-full mt-3 z-10 gap-3">
-            {!chatMediaPreference.enabled && (
+            {!chatMediaPreference.enabled && !councilPreference.enabled && (
                 <div className="flex items-center gap-3 md:gap-4 md:justify-center flex-wrap md:flex-nowrap w-full">
                     {CHAT_FEATURES.map((chat_feature) => (
                         <Button
                             variant="outline"
                             key={chat_feature.name}
-                            onClick={() =>
-                                onSelectMedia(
-                                    chat_feature.type as ChatMediaType
-                                )
-                            }
+                            onClick={() => {
+                                if (chat_feature.type === 'council') {
+                                    dispatch(
+                                        setCouncilPreference({
+                                            enabled: true,
+                                            councilModelIds: [],
+                                            synthesisModelId: ''
+                                        })
+                                    )
+                                } else {
+                                    onSelectMedia(
+                                        chat_feature.type as ChatMediaType
+                                    )
+                                }
+                            }}
                             className="h-7 md:h-8 !px-4 cursor-pointer rounded-full text-xs border-charcoal dark:border-sky-blue text-charcoal dark:text-sky-blue"
                         >
                             <Icon
@@ -132,6 +151,7 @@ const ChatMediaSection = ({
                     ))}
                 </div>
             )}
+            {councilPreference.enabled && <CouncilConfigPanel />}
             {!hideSuggestions &&
                 chatMediaPreference.enabled &&
                 mediaTypeConfig.supportSuggestions &&

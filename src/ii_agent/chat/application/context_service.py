@@ -7,7 +7,13 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from ii_agent.chat.types import Message, TextContent, MessageRole
+from ii_agent.chat.types import (
+    Message,
+    TextContent,
+    MessageRole,
+    CouncilMemberOutput,
+    CouncilSynthesis,
+)
 from ii_agent.chat.messages.service import MessageService
 from ii_agent.chat.messages.models import ChatSummary
 from ii_agent.sessions.models import Session
@@ -89,6 +95,9 @@ class ContextWindowManager:
             )
             context.append(summary_msg)
         context.extend(messages)
+
+        # Collapse council messages: replace council member outputs with synthesis-only text
+        context = cls._collapse_council_messages(context)
 
         logger.info(
             f"Loaded context: summary={'Yes' if summary else 'No'}"
@@ -352,6 +361,63 @@ class ContextWindowManager:
             .limit(1)
         )
         return result.scalar_one_or_none()
+
+    @classmethod
+    def _collapse_council_messages(cls, messages: List[Message]) -> List[Message]:
+        """Collapse council assistant messages to synthesis-only text.
+
+        For messages containing CouncilMemberOutput parts, replace the entire
+        message's parts with just the synthesis text (or a placeholder if no
+        synthesis is available). This prevents context window explosion from
+        N model outputs per council turn.
+        """
+        collapsed = []
+        for msg in messages:
+            if msg.role != MessageRole.ASSISTANT:
+                collapsed.append(msg)
+                continue
+
+            has_council_parts = any(
+                isinstance(p, (CouncilMemberOutput, CouncilSynthesis))
+                for p in msg.parts
+            )
+            if not has_council_parts:
+                collapsed.append(msg)
+                continue
+
+            # Extract synthesis content
+            synthesis_text = None
+            for p in msg.parts:
+                if isinstance(p, CouncilSynthesis):
+                    synthesis_text = p.content
+                    break
+
+            if not synthesis_text:
+                synthesis_text = "[Council response - synthesis unavailable]"
+
+            # Estimate tokens for collapsed content (original tokens reflect
+            # all N council outputs, not just the synthesis text)
+            estimated_tokens = len(synthesis_text) // 4 if synthesis_text else 0
+
+            collapsed_msg = Message(
+                id=msg.id,
+                role=msg.role,
+                session_id=msg.session_id,
+                parts=[TextContent(text=synthesis_text)],
+                model=msg.model,
+                provider=msg.provider,
+                created_at=msg.created_at,
+                updated_at=msg.updated_at,
+                file_ids=msg.file_ids,
+                tokens=estimated_tokens,
+                tools_enabled=msg.tools_enabled,
+                metadata=msg.metadata,
+                provider_metadata=msg.provider_metadata,
+                finish_reason=msg.finish_reason,
+            )
+            collapsed.append(collapsed_msg)
+
+        return collapsed
 
     @classmethod
     def _find_last_user_message(cls, messages: List[Message]) -> int:

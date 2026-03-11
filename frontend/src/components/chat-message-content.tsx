@@ -18,6 +18,7 @@ import {
     ChainOfThoughtStep
 } from '@/components/ai-elements/chain-of-thought'
 import { Response } from '@/components/ai-elements/response'
+import { CouncilResultDisplay } from '@/components/council/council-result-display'
 import { type ChatMediaType } from '@/constants/media-type-config'
 import { useMediaModels } from '@/hooks/use-media-models'
 import {
@@ -586,7 +587,26 @@ function ChatMessageContent({
             ) : (
                 <MessageContent variant="flat" className="p-0">
                     {(() => {
+                        const councilParts = group.parts.filter(
+                            (p) =>
+                                p.type === 'council_member_output' ||
+                                p.type === 'council_synthesis'
+                        )
+                        if (councilParts.length > 0) {
+                            return (
+                                <CouncilResultDisplay parts={councilParts} />
+                            )
+                        }
+                        return null
+                    })()}
+                    {(() => {
                         const chainParts = group.parts
+                        const hasCouncilParts = chainParts.some(
+                            (part) =>
+                                part.type === 'council_member_output' ||
+                                part.type === 'council_synthesis'
+                        )
+                        if (hasCouncilParts) return null
                         const hasTextPart = chainParts.some(
                             (part) => part.type === 'text'
                         )

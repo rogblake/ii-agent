@@ -202,5 +202,11 @@ export const CHAT_FEATURES = [
         name: 'Generate Video',
         nameKey: 'toolCatalog.chatFeatures.generateVideo.name',
         type: 'video' //AGENT_TYPE.MEDIA
+    },
+    {
+        icon: 'brain',
+        name: 'Model Council',
+        nameKey: 'toolCatalog.chatFeatures.modelCouncil.name',
+        type: 'council'
     }
 ]

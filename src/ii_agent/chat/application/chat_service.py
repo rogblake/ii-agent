@@ -31,7 +31,7 @@ from ii_agent.chat.application.file_processing_service import ChatFileProcessor
 from ii_agent.chat.application.tool_service import ChatToolService
 from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
 from ii_agent.chat.messages.history_service import ChatMessageHistoryService
-from ii_agent.chat.council_service import CouncilService, MIN_COUNCIL_MODELS
+from ii_agent.chat.application.council_service import CouncilService, MIN_COUNCIL_MODELS
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.chat.runs.models import ChatRunStatus

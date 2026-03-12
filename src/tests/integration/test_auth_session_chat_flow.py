@@ -6,6 +6,8 @@ import pytest
 from ii_agent.auth.users.service import UserService
 from ii_agent.chat.application.chat_service import ChatService
 from ii_agent.sessions.service import SessionService
+from ii_agent.sessions.title_service import SessionTitleService
+from ii_agent.sessions.title_config import SessionTitleConfig
 
 pytestmark = pytest.mark.integration
 
@@ -103,6 +105,7 @@ async def test_auth_session_chat_flow(settings_factory):
         llm_setting_service=SimpleNamespace(),
         credit_service=None,
         container=SimpleNamespace(),
+        title_service=SessionTitleService(config=SessionTitleConfig(openai_api_key=None)),
     )
 
     class _DB:

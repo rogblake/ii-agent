@@ -27,6 +27,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle
 } from '@/components/ui/alert-dialog'
+import SessionTitle from '@/components/session-title'
+import { getSessionDisplayName } from '@/utils/session-title'
 
 interface ChatHeaderMobileProps {
     sessionData?: ISession
@@ -90,7 +92,10 @@ const ChatHeaderMobile = ({
                     <SidebarTrigger className="size-6 p-0" />
                     <div className="leading-tight">
                         <p className="text-lg line-clamp-1">
-                            {sessionData?.name}
+                            <SessionTitle
+                                session={sessionData}
+                                dotClassName="size-[5px]"
+                            />
                         </p>
                         <p className="text-[10px] leading-tight">
                             {model?.model}
@@ -98,7 +103,7 @@ const ChatHeaderMobile = ({
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
-                    {sessionData?.name && (
+                    {sessionData && (
                         <HeaderDropdownMenu
                             isFavorite={isFavorite}
                             onShare={handleShare}
@@ -134,7 +139,10 @@ const ChatHeaderMobile = ({
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                             {t('dashboard.deleteConfirmationNamed', {
-                                sessionName: sessionData?.name
+                                sessionName: getSessionDisplayName(
+                                    sessionData,
+                                    t('common.untitled')
+                                )
                             })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>

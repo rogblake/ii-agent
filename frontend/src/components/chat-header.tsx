@@ -47,6 +47,8 @@ import { getDefaultChatMediaPreference } from '@/utils/default-models'
 import SwitchLanguage from './switch-language'
 import { useMediaModels } from '@/hooks/use-media-models'
 import { useChat } from '@/hooks/use-chat-query'
+import SessionTitle from './session-title'
+import { getSessionDisplayName } from '@/utils/session-title'
 
 interface ChatHeaderProps {
     sessionData?: ISession
@@ -144,7 +146,10 @@ const ChatHeader = ({
                     <SidebarTrigger className="size-6 p-0" />
                     <div className="leading-tight">
                         <p className="text-lg line-clamp-1">
-                            {sessionData?.name}
+                            <SessionTitle
+                                session={sessionData}
+                                dotClassName="size-[5px]"
+                            />
                         </p>
                         <p className="text-[10px] leading-tight">
                             {model?.model}
@@ -221,7 +226,10 @@ const ChatHeader = ({
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                             {t('dashboard.deleteConfirmationNamed', {
-                                sessionName: sessionData?.name
+                                sessionName: getSessionDisplayName(
+                                    sessionData,
+                                    t('common.untitled')
+                                )
                             })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>

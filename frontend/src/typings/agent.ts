@@ -465,6 +465,7 @@ export interface ISession {
     created_at: string
     updated_at?: string
     name?: string
+    title_pending?: boolean
     status?: string
     sandbox_id?: string | null
     agent_type?: string
@@ -477,7 +478,7 @@ export interface ISession {
     metadata?: {
         media?: ChatMediaPreference
         fork_info?: ForkInfo
-        [key: string]: any
+        [key: string]: unknown
     }
 }
 

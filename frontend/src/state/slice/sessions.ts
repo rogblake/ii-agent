@@ -41,15 +41,33 @@ const initialState: SessionsState = {
     limit: 20
 }
 
+const isChatSession = (session: ISession) =>
+    session.agent_type === 'chat' || session.agent_type == null
+
+const upsertSessionInList = (sessions: ISession[], session: ISession) => {
+    const existingIndex = sessions.findIndex((item) => item.id === session.id)
+    if (existingIndex === -1) {
+        sessions.unshift(session)
+        return
+    }
+
+    sessions[existingIndex] = {
+        ...sessions[existingIndex],
+        ...session
+    }
+}
+
 export const fetchSessions = createAsyncThunk(
     'sessions/fetchSessions',
     async ({
         page = 1,
         limit = 20
     }: { page?: number; limit?: number } = {}) => {
-        // Use RTK Query to fetch sessions
         const result = await store.dispatch(
-            sessionApi.endpoints.getSessions.initiate({ page, limit })
+            sessionApi.endpoints.getSessions.initiate(
+                { page, limit },
+                { forceRefetch: true, subscribe: false }
+            )
         )
         return result.data || []
     }
@@ -62,11 +80,14 @@ export const fetchChats = createAsyncThunk(
         limit = 20
     }: { page?: number; limit?: number } = {}) => {
         const result = await store.dispatch(
-            sessionApi.endpoints.getSessions.initiate({
-                page,
-                limit,
-                session_type: 'chat'
-            })
+            sessionApi.endpoints.getSessions.initiate(
+                {
+                    page,
+                    limit,
+                    session_type: 'chat'
+                },
+                { forceRefetch: true, subscribe: false }
+            )
         )
         return result.data || []
     }
@@ -79,11 +100,14 @@ export const fetchProjects = createAsyncThunk(
         limit = 20
     }: { page?: number; limit?: number } = {}) => {
         const result = await store.dispatch(
-            sessionApi.endpoints.getSessions.initiate({
-                page,
-                limit,
-                session_type: 'agent'
-            })
+            sessionApi.endpoints.getSessions.initiate(
+                {
+                    page,
+                    limit,
+                    session_type: 'agent'
+                },
+                { forceRefetch: true, subscribe: false }
+            )
         )
         return result.data || []
     }
@@ -195,6 +219,24 @@ const sessionsSlice = createSlice({
                 const [session] = state.sessions.splice(generalIndex, 1)
                 state.sessions.unshift(session)
             }
+        },
+        upsertSession: (state, action: PayloadAction<ISession>) => {
+            const session = action.payload
+
+            upsertSessionInList(state.sessions, session)
+
+            if (isChatSession(session)) {
+                upsertSessionInList(state.chats.sessions, session)
+                state.projects.sessions = state.projects.sessions.filter(
+                    (item) => item.id !== session.id
+                )
+                return
+            }
+
+            upsertSessionInList(state.projects.sessions, session)
+            state.chats.sessions = state.chats.sessions.filter(
+                (item) => item.id !== session.id
+            )
         }
     },
     extraReducers: (builder) => {
@@ -344,7 +386,8 @@ export const {
     resetPagination,
     resetChatsPagination,
     resetProjectsPagination,
-    moveSessionToTop
+    moveSessionToTop,
+    upsertSession
 } = sessionsSlice.actions
 export const sessionsReducer = sessionsSlice.reducer
 

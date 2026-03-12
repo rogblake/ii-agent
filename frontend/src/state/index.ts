@@ -49,6 +49,7 @@ export {
     resetChatsPagination,
     resetProjectsPagination,
     moveSessionToTop,
+    upsertSession,
     sessionsReducer,
     selectSessions,
     selectActiveSessionId,

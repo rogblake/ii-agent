@@ -172,7 +172,11 @@ class SessionMetadata(BaseModel):
     """Chat session metadata."""
 
     session_id: str = Field(..., description="Unique session identifier")
-    name: str = Field(..., description="Session name")
+    name: str | None = Field(None, description="Session name")
+    title_pending: bool = Field(
+        False,
+        description="Whether a background title is still being generated",
+    )
     status: SessionStatusType = Field(..., description="Session status")
     agent_type: Literal["chat"] = Field(..., description="Type of agent")
     model_id: str = Field(..., description="LLM model ID used for this session")
@@ -183,6 +187,7 @@ class SessionMetadata(BaseModel):
             "example": {
                 "session_id": "550e8400-e29b-41d4-a716-446655440000",
                 "name": "Chat - 2025-10-23 15:30",
+                "title_pending": False,
                 "status": "active",
                 "agent_type": "chat",
                 "model_id": "gpt-4",

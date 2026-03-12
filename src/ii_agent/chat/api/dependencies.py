@@ -22,7 +22,7 @@ from ii_agent.billing.credits.dependencies import CreditServiceDep
 from ii_agent.core.llm.dependencies import LLMBillingServiceDep
 from ii_agent.files.dependencies import FileRepositoryDep
 from ii_agent.integrations.connectors.dependencies import ConnectorRepositoryDep
-from ii_agent.sessions.dependencies import SessionRepositoryDep
+from ii_agent.sessions.dependencies import SessionRepositoryDep, SessionTitleServiceDep
 
 
 def get_container(request: Request) -> ServiceContainer:
@@ -135,6 +135,7 @@ def get_chat_service(
     chat_run_service: ChatRunServiceDep,
     session_repo: SessionRepositoryDep,
     container: ContainerDep,
+    title_service: SessionTitleServiceDep,
 ) -> ChatService:
     """Provide ChatService instance with explicit sub-service injection."""
     return ChatService(
@@ -148,6 +149,7 @@ def get_chat_service(
         llm_setting_service=llm_setting_service,
         credit_service=credit_service,
         container=container,
+        title_service=title_service,
     )
 
 

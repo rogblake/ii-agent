@@ -11,6 +11,7 @@ from ii_agent.agent.events.dependencies import EventRepositoryDep
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.service import SessionService
 from ii_agent.sessions.fork_service import SessionForkService
+from ii_agent.sessions.title_service import SessionTitleService
 from ii_agent.core.storage.client import storage
 
 
@@ -61,3 +62,15 @@ def get_session_fork_service(
 
 
 SessionForkServiceDep = Annotated[SessionForkService, Depends(get_session_fork_service)]
+
+
+# ==================== Title Service Dependencies ====================
+
+
+def get_session_title_service() -> SessionTitleService:
+    """Provide SessionTitleService instance."""
+    config = get_settings().session_title
+    return SessionTitleService(config=config)
+
+
+SessionTitleServiceDep = Annotated[SessionTitleService, Depends(get_session_title_service)]

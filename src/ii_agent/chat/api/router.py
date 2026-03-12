@@ -195,6 +195,7 @@ async def send_chat_message(
                     "status": "created",
                     "session_id": session_metadata.session_id,
                     "name": session_metadata.name,
+                    "title_pending": session_metadata.title_pending,
                     "agent_type": session_metadata.agent_type,
                     "model_id": session_metadata.model_id,
                     "created_at": session_metadata.created_at,

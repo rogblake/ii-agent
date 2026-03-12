@@ -1,4 +1,6 @@
 import clsx from 'clsx'
+import SessionTitle from '@/components/session-title'
+import { hasSessionDisplayTitle } from '@/utils/session-title'
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
@@ -129,9 +131,7 @@ export function DashboardPage() {
     }
 
     const sessionsByTab = useMemo(() => {
-        const filteredSessions = sessions?.filter((session) => {
-            return session.name
-        })
+        const filteredSessions = sessions?.filter(hasSessionDisplayTitle)
         switch (activeTab) {
             case TAB.ALL:
                 return filteredSessions
@@ -139,7 +139,7 @@ export function DashboardPage() {
                 return filteredSessions?.slice(0, 10)
             case TAB.FAVORITE:
                 // Use the fetched favorite sessions from API
-                return favoriteSessions.filter((session) => session.name)
+                return favoriteSessions.filter(hasSessionDisplayTitle)
             default:
                 return filteredSessions
         }
@@ -320,7 +320,7 @@ export function DashboardPage() {
                                         />
                                         <div className="flex flex-col gap-1 text-sm flex-1">
                                             <p className="font-semibold">
-                                                {session.name}
+                                                <SessionTitle session={session} />
                                             </p>
                                         </div>
                                     </div>

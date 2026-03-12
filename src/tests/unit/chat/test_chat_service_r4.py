@@ -7,7 +7,14 @@ import pytest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from ii_agent.sessions.title_service import SessionTitleService
+from ii_agent.sessions.title_config import SessionTitleConfig
+
 pytestmark = pytest.mark.unit
+
+
+def _make_title_service():
+    return SessionTitleService(config=SessionTitleConfig(openai_api_key=None))
 
 
 # ============================================================================
@@ -613,47 +620,35 @@ class TestChatFileProcessor:
 
 
 # ============================================================================
-# ChatService - _truncate_session_name
+# SessionTitleService - _truncate (fallback logic)
 # ============================================================================
 
 
-class TestChatServiceTruncateSessionName:
-    def _make_service(self):
-        from ii_agent.chat.application.chat_service import ChatService
-
-        return ChatService(
-            file_processor=SimpleNamespace(_config=_make_settings()),
-            tool_service=SimpleNamespace(),
-            llm_loop=SimpleNamespace(),
-            message_history=SimpleNamespace(),
-            message_service=SimpleNamespace(),
-            session_repo=SimpleNamespace(),
-            chat_run_service=SimpleNamespace(),
-            llm_setting_service=SimpleNamespace(),
-            credit_service=None,
-            container=SimpleNamespace(),
-        )
-
+class TestSessionTitleServiceTruncate:
     def test_short_query_unchanged(self):
-        service = self._make_service()
-        result = service._truncate_session_name("Hello", max_length=50)
+        from ii_agent.sessions.title_service import SessionTitleService
+
+        result = SessionTitleService._truncate("Hello", max_length=80)
         assert result == "Hello"
 
     def test_long_query_truncated_with_ellipsis(self):
-        service = self._make_service()
-        result = service._truncate_session_name("x" * 60, max_length=50)
+        from ii_agent.sessions.title_service import SessionTitleService
+
+        result = SessionTitleService._truncate("x" * 90, max_length=80)
         assert result.endswith("...")
-        assert len(result) == 53
+        assert len(result) == 83
 
     def test_exact_max_length_not_truncated(self):
-        service = self._make_service()
-        result = service._truncate_session_name("x" * 50, max_length=50)
+        from ii_agent.sessions.title_service import SessionTitleService
+
+        result = SessionTitleService._truncate("x" * 80, max_length=80)
         assert not result.endswith("...")
-        assert len(result) == 50
+        assert len(result) == 80
 
     def test_empty_string_stays_empty(self):
-        service = self._make_service()
-        result = service._truncate_session_name("", max_length=50)
+        from ii_agent.sessions.title_service import SessionTitleService
+
+        result = SessionTitleService._truncate("", max_length=80)
         assert result == ""
 
 
@@ -684,6 +679,7 @@ class TestChatServiceValidateSessionAccess:
             llm_setting_service=SimpleNamespace(),
             credit_service=None,
             container=SimpleNamespace(),
+            title_service=_make_title_service(),
         )
 
     @pytest.mark.asyncio
@@ -737,6 +733,7 @@ class TestChatServiceCheckSufficientCredits:
             llm_setting_service=SimpleNamespace(),
             credit_service=credit_service,
             container=SimpleNamespace(),
+            title_service=_make_title_service(),
         )
 
     @pytest.mark.asyncio
@@ -787,6 +784,7 @@ class TestChatServiceValidateModelForChat:
             llm_setting_service=FakeLLMSettingService(),
             credit_service=None,
             container=SimpleNamespace(),
+            title_service=_make_title_service(),
         )
 
     @pytest.mark.asyncio
@@ -833,6 +831,7 @@ class TestChatServiceUpdateSessionNameIfUntitled:
             llm_setting_service=SimpleNamespace(),
             credit_service=None,
             container=SimpleNamespace(),
+            title_service=_make_title_service(),
         )
 
     @pytest.mark.asyncio
@@ -898,6 +897,7 @@ class TestChatServiceStopConversation:
             llm_setting_service=SimpleNamespace(),
             credit_service=None,
             container=SimpleNamespace(),
+            title_service=_make_title_service(),
         )
 
     @pytest.mark.asyncio

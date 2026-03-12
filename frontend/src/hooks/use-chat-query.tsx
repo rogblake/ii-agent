@@ -26,6 +26,7 @@ import {
     clearCurrentMessageFileIds,
     setChatMediaPreference,
     selectChatMediaPreference,
+    upsertSession,
     userApi
 } from '@/state'
 import { isImageFile } from '@/lib/utils'
@@ -123,6 +124,7 @@ const INITIAL_CHAT_STATE: ChatSharedState = {
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined)
+const MAX_PENDING_TITLE_POLLS = 40
 
 const parseStorybookPayload = (
     payload: unknown
@@ -230,6 +232,7 @@ function useChatProviderValue(): ChatContextValue {
     const hydratedSessionsRef = useRef<Set<string>>(new Set())
     const previousSessionIdRef = useRef<string | null>(null)
     const chatMediaPreferenceRef = useRef(chatMediaPreferenceFromStore)
+    const pendingTitlePollCountsRef = useRef<Map<string, number>>(new Map())
     const storybookPollingRef = useRef<Map<string, StorybookPollingEntry>>(
         new Map()
     )
@@ -302,6 +305,65 @@ function useChatProviderValue(): ChatContextValue {
 
         previousSessionIdRef.current = nextSessionId
     }, [currentMessageFileIds.length, dispatch, state.sessionId, chatMediaPreferenceFromStore])
+
+    useEffect(() => {
+        const currentSessionId = state.sessionId
+        if (!currentSessionId) {
+            return
+        }
+        if (!state.sessionData?.title_pending) {
+            pendingTitlePollCountsRef.current.delete(currentSessionId)
+            return
+        }
+        const pollCount =
+            pendingTitlePollCountsRef.current.get(currentSessionId) ?? 0
+        if (pollCount >= MAX_PENDING_TITLE_POLLS) {
+            return
+        }
+
+        let cancelled = false
+        const timerId = window.setTimeout(async () => {
+            try {
+                const session = await sessionService.getSession(currentSessionId)
+                if (cancelled || activeSessionIdRef.current !== currentSessionId) {
+                    return
+                }
+
+                if (session.title_pending) {
+                    pendingTitlePollCountsRef.current.set(
+                        currentSessionId,
+                        pollCount + 1
+                    )
+                } else {
+                    pendingTitlePollCountsRef.current.delete(currentSessionId)
+                }
+                dispatch(upsertSession(session))
+                setChatState((prev) => {
+                    if (prev.sessionId !== currentSessionId) {
+                        return prev
+                    }
+
+                    return {
+                        ...prev,
+                        sessionData: session
+                    }
+                })
+            } catch (error) {
+                if (!cancelled) {
+                    pendingTitlePollCountsRef.current.set(
+                        currentSessionId,
+                        pollCount + 1
+                    )
+                    console.error('Failed to refresh pending session title', error)
+                }
+            }
+        }, 1500)
+
+        return () => {
+            cancelled = true
+            window.clearTimeout(timerId)
+        }
+    }, [dispatch, setChatState, state.sessionData, state.sessionId])
 
     const updateMessagePartByToolCall = useCallback(
         (
@@ -1010,6 +1072,7 @@ function useChatProviderValue(): ChatContextValue {
 
                 streamingMessageIdRef.current = null
                 activeSessionIdRef.current = activeSessionId
+                dispatch(upsertSession(session))
 
                 // Mark this session as hydrated
                 hydratedSessionsRef.current.add(activeSessionId)
@@ -1708,12 +1771,32 @@ function useChatProviderValue(): ChatContextValue {
                     sessionId: stateRef.current.sessionId ?? undefined,
                     files: effectiveFileIds,
                     callbacks: {
-                        onSession: ({ sessionId: newSessionId }) => {
+                        onSession: ({
+                            sessionId: newSessionId,
+                            name,
+                            titlePending,
+                            agentType,
+                            createdAt
+                        }) => {
                             if (!newSessionId) return
+                            const provisionalSession: ISession = {
+                                id: newSessionId,
+                                workspace_dir: `/workspace/${newSessionId}`,
+                                created_at:
+                                    createdAt ?? new Date().toISOString(),
+                                updated_at:
+                                    createdAt ?? new Date().toISOString(),
+                                name,
+                                title_pending: titlePending,
+                                status: 'active',
+                                agent_type: agentType ?? 'chat'
+                            }
                             activeSessionIdRef.current = newSessionId
+                            dispatch(upsertSession(provisionalSession))
                             setChatState((prev) => ({
                                 ...prev,
-                                sessionId: newSessionId
+                                sessionId: newSessionId,
+                                sessionData: provisionalSession
                             }))
                         },
                         onThinking: ({ delta, signature }) => {

@@ -40,6 +40,7 @@ import {
     TooltipTrigger
 } from '@/components/ui/tooltip'
 import { useSidebar } from '@/components/ui/sidebar'
+import { hasSessionDisplayTitle } from '@/utils/session-title'
 
 interface ProjectListProps {
     workspaceInfo?: string
@@ -70,7 +71,7 @@ const ProjectList = ({
     const [isDeleting, setIsDeleting] = useState(false)
 
     const filteredProjects = useMemo(() => {
-        const loaded = projects?.filter((session) => session.name) ?? []
+        const loaded = projects?.filter(hasSessionDisplayTitle) ?? []
         const loadedIds = new Set(loaded.map((s) => s.id))
 
         // Add pinned project sessions not yet loaded via pagination

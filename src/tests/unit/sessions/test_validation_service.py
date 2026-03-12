@@ -5,6 +5,8 @@ import pytest
 
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.agent.application.validation_service import SessionValidationService
+from ii_agent.sessions.title_service import SessionTitleService
+from ii_agent.sessions.title_config import SessionTitleConfig
 
 
 class FakeSessionService:
@@ -50,6 +52,7 @@ async def test_validate_session_returns_error_when_session_missing():
     service = SessionValidationService(
         session_service=FakeSessionService(session=None),
         credit_service=FakeCreditService(has_credits=False),
+        title_service=SessionTitleService(config=SessionTitleConfig(openai_api_key=None)),
     )
 
     result = await service.validate_and_prepare_session(
@@ -105,6 +108,7 @@ async def test_validate_session_bypasses_credit_check_for_user_model(settings_fa
     service = SessionValidationService(
         session_service=FakeSessionService(session=session),
         credit_service=FakeCreditService(has_credits=False),
+        title_service=SessionTitleService(config=SessionTitleConfig(openai_api_key=None)),
     )
 
     result = await service.validate_and_prepare_session(

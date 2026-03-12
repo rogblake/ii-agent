@@ -361,10 +361,20 @@ async def init_agent(
     llm_config = _get_default_llm_config(_config)
 
     # Update session name from prompt and set is_public to True
-    session_name = prompt.strip()[:100] if prompt else None
+    from ii_agent.sessions.title_service import SessionTitleService
+    _title_service = SessionTitleService(config=_config.session_title)
+    session_name, title_pending = _title_service.build_initial_title(
+        prompt or "",
+        80,
+    )
     async with get_db_session_local() as db:
-        if session_name:
-            await _session_service.update_session_name(db, session_id, session_name)
+        if prompt:
+            await _session_service.update_session_title_state(
+                db,
+                session_id,
+                name=session_name,
+                title_pending=title_pending,
+            )
 
         # Update agent_type and llm_setting_id in database
         await _session_service.update_session_agent_type(db, session_id, agent_type.value)
@@ -373,6 +383,9 @@ async def init_agent(
         if agent_type == AgentType.SLIDE or agent_type == AgentType.SLIDE_NANO_BANANA:
             logger.info(f"Setting session {session_id} to public")
             await _session_service.set_session_public(db, str(session_id), str(user_id), True)
+
+    if prompt and title_pending:
+        _title_service.schedule_title_update(str(session_id), prompt)
 
     # Create event collector with MCP server for streaming notifications
     # Also pass Socket.IO server for broadcasting to web clients

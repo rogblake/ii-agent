@@ -30,6 +30,7 @@ from ii_agent.core.config.agent import AgentSettings
 from ii_agent.core.config.mobile import MobileSettings
 from ii_agent.core.config.enhance_prompt_config import EnhancePromptConfig
 from ii_agent.core.config.nano_banana import NanoBananaConfig
+from ii_agent.sessions.title_config import SessionTitleConfig
 
 if TYPE_CHECKING:
     from ii_agent.core.storage.base import BaseStorage
@@ -195,6 +196,11 @@ class Settings(BaseSettings):
     nano_banana: NanoBananaConfig = Field(
         default_factory=NanoBananaConfig,
         description="Nano Banana slide detection LLM configuration",
+    )
+
+    session_title: SessionTitleConfig = Field(
+        default_factory=SessionTitleConfig,
+        description="LLM-generated session title configuration (OpenAI-based)",
     )
 
     # ========== Workspace Configuration ==========

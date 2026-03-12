@@ -43,6 +43,7 @@ class SessionInfo(BaseModel):
     last_message_at: Optional[str] = None
     agent_type: Optional[str] = None
     app_kind: str = "agent"
+    title_pending: bool = False
 
 
 class SessionList(BaseModel):

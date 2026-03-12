@@ -33,6 +33,8 @@ import { ISession } from '@/typings/agent'
 import { FEATURES } from '@/constants/tool'
 import { useTranslation } from 'react-i18next'
 import { Checkbox } from './ui/checkbox'
+import SessionTitle from './session-title'
+import { getSessionDisplayName } from '@/utils/session-title'
 
 interface SessionItemProps {
     session: ISession
@@ -178,7 +180,7 @@ const SessionItem = ({
                                 />
                             )}
                             <span className="flex-1 line-clamp-1">
-                                {session.name}
+                                <SessionTitle session={session} />
                             </span>
                         </div>
                     ) : (
@@ -212,7 +214,7 @@ const SessionItem = ({
                                 />
                             )}
                             <span className="flex-1 line-clamp-1">
-                                {session.name}
+                                <SessionTitle session={session} />
                             </span>
                         </Link>
                     )}
@@ -222,7 +224,7 @@ const SessionItem = ({
                     side="top"
                     className="max-w-[200px]"
                 >
-                    {session.name}
+                    <SessionTitle session={session} />
                 </TooltipContent>
             </Tooltip>
             {!selectionMode && (
@@ -309,7 +311,10 @@ const SessionItem = ({
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                             {t('dashboard.deleteConfirmationNamed', {
-                                sessionName: session.name
+                                sessionName: getSessionDisplayName(
+                                    session,
+                                    t('common.untitled')
+                                )
                             })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.billing.credits.service import CreditService
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.sessions.service import SessionService
+from ii_agent.sessions.title_service import SessionTitleService
 
 if TYPE_CHECKING:
     from ii_agent.core.config.llm_config import LLMConfig
@@ -39,9 +40,11 @@ class SessionValidationService:
         *,
         session_service: SessionService,
         credit_service: CreditService,
+        title_service: SessionTitleService,
     ) -> None:
         self._session_service = session_service
         self._credit_service = credit_service
+        self._title_service = title_service
 
     async def validate_and_prepare_session(
         self,
@@ -79,9 +82,18 @@ class SessionValidationService:
                 error_type="unexpected_error",
             )
 
+        title_pending = False
+
         # Update session name if needed
         if not current_name and query_text:
-            session.name = query_text.strip()[:100]
+            session.name, title_pending = self._title_service.build_initial_title(
+                query_text,
+                80,
+            )
+            session.session_metadata = SessionTitleService.set_title_pending(
+                getattr(session, "session_metadata", None),
+                title_pending,
+            )
         if session.agent_type is None and agent_type:
             session.agent_type = agent_type
 
@@ -112,7 +124,12 @@ class SessionValidationService:
         db.add(session)
         await db.flush()
         await db.refresh(session)
+        await db.commit()
 
+        if title_pending:
+            self._title_service.schedule_title_update(str(session.id), query_text)
+
+        await db.refresh(session)
         # Rebuild session_info after flush
         updated_session_info = SessionService._build_session_info(session)
 

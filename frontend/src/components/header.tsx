@@ -36,6 +36,8 @@ import ShareConversation from './agent/share-conversation'
 import HeaderDropdownMenu from './header-dropdown-menu'
 import { useIsSageTheme } from '@/hooks/use-is-sage-theme'
 import { useIsMobile } from '@/hooks/use-mobile'
+import SessionTitle from './session-title'
+import { getSessionDisplayName } from '@/utils/session-title'
 
 interface AgentHeaderProps {
     sessionData?: ISession
@@ -126,7 +128,7 @@ const AgentHeader = ({ sessionData, isChatPage }: AgentHeaderProps) => {
                     betaLabel={t('common.beta')}
                 />
             )}
-            {sessionData?.name && (
+            {sessionData && (
                 <div className="flex-1 pr-3 md:pr-0 flex gap-x-4 items-center md:absolute md:left-1/2 md:-translate-x-1/2">
                     <div className="flex-1 flex items-center gap-x-2">
                         <div className="hidden border dark:border-white rounded-full size-6 md:flex items-center justify-center">
@@ -136,7 +138,7 @@ const AgentHeader = ({ sessionData, isChatPage }: AgentHeaderProps) => {
                             />
                         </div>
                         <span className="dark:text-white font-semibold text-sm flex-1 line-clamp-1 text-center">
-                            {sessionData?.name}
+                            <SessionTitle session={sessionData} />
                         </span>
                     </div>
                     {!isShareMode && (
@@ -172,7 +174,7 @@ const AgentHeader = ({ sessionData, isChatPage }: AgentHeaderProps) => {
                     )}
                 </div>
             )}
-            {sessionData?.name && isMobile && (
+            {sessionData && isMobile && (
                 <HeaderDropdownMenu
                     isFavorite={isFavorite}
                     onShare={handleShare}
@@ -198,7 +200,10 @@ const AgentHeader = ({ sessionData, isChatPage }: AgentHeaderProps) => {
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                             {t('dashboard.deleteConfirmationNamed', {
-                                sessionName: sessionData?.name
+                                sessionName: getSessionDisplayName(
+                                    sessionData,
+                                    t('common.untitled')
+                                )
                             })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>

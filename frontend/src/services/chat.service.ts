@@ -163,8 +163,10 @@ class ChatService {
 
         if (!response.ok || !response.body) {
             if (response.status === 402) {
-                const err = new Error('Insufficient credits')
-                ;(err as any).status = 402
+                const err = new Error('Insufficient credits') as Error & {
+                    status?: number
+                }
+                err.status = 402
                 throw err
             }
             throw new Error('Failed to start chat stream')
@@ -244,6 +246,14 @@ class ChatService {
                 const value = source[key]
                 return typeof value === 'number' ? value : undefined
             }
+            const readBoolean = (
+                source: Record<string, unknown> | undefined,
+                key: string
+            ): boolean | undefined => {
+                if (!source) return undefined
+                const value = source[key]
+                return typeof value === 'boolean' ? value : undefined
+            }
 
             // Handle session event
             if (eventName === 'session') {
@@ -255,6 +265,7 @@ class ChatService {
                         session_id: sessionId,
                         is_new_session: status === 'created',
                         name: readString(record, 'name'),
+                        title_pending: readBoolean(record, 'title_pending'),
                         agent_type: readString(record, 'agent_type'),
                         model_id: readString(record, 'model_id'),
                         created_at: readString(record, 'created_at')

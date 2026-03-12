@@ -41,6 +41,7 @@ from ii_agent.settings.llm.service import get_system_llm_config
 from ii_agent.core.redis import cancel
 from ii_agent.chat.exceptions import ModelNotFoundError
 from ii_agent.sessions.exceptions import SessionNotFoundError
+from ii_agent.sessions.title_service import SessionTitleService
 
 if TYPE_CHECKING:
     from ii_agent.chat.messages.repository import ChatMessageRepository
@@ -65,6 +66,7 @@ class ChatService:
         llm_setting_service,
         credit_service: CreditService | None = None,
         container: ServiceContainer,
+        title_service: SessionTitleService,
     ) -> None:
         self._file_processor = file_processor
         self._tool_service = tool_service
@@ -76,20 +78,17 @@ class ChatService:
         self._llm_setting_service = llm_setting_service
         self._credit_service = credit_service
         self._container = container
-
-    @staticmethod
-    def _truncate_session_name(query: str, max_length: int = 50) -> str:
-        truncated = query[:max_length].strip()
-        if len(query) > max_length:
-            truncated += "..."
-        return truncated
+        self._title_service = title_service
 
     async def create_chat_session(
         self, db: AsyncSession, *, user_message: str, user_id: str, model_id: str
     ) -> SessionMetadata:
         session_id = str(uuid.uuid4())
         created_at = datetime.now(timezone.utc)
-        session_name = self._truncate_session_name(user_message)
+        session_name, title_pending = self._title_service.build_initial_title(
+            user_message,
+            80,
+        )
 
         session = Session(
             id=session_id,
@@ -100,14 +99,23 @@ class ChatService:
             app_kind="chat",
             created_at=created_at,
             updated_at=created_at,
+            session_metadata=SessionTitleService.set_title_pending(
+                None,
+                title_pending,
+            ),
         )
         session = await self._session_repo.create(db, session)
+        await db.commit()
 
         logger.info(f"Created chat session {session_id} for user {user_id}")
+
+        if title_pending:
+            self._title_service.schedule_title_update(session_id, user_message)
 
         return SessionMetadata(
             session_id=session_id,
             name=session.name,
+            title_pending=title_pending,
             status="active",
             agent_type="chat",
             model_id=model_id,
@@ -122,10 +130,18 @@ class ChatService:
             return
 
         if session.name == "Untitled":
-            new_name = self._truncate_session_name(query)
-            session.name = new_name
+            session.name, title_pending = self._title_service.build_initial_title(
+                query,
+                80,
+            )
+            session.session_metadata = SessionTitleService.set_title_pending(
+                getattr(session, "session_metadata", None),
+                title_pending,
+            )
             await db.flush()
-            logger.info(f"Updated session {session_id} name to: {new_name}")
+            if title_pending:
+                self._title_service.schedule_title_update(session_id, query)
+                logger.info(f"Scheduled background title update for session {session_id}")
 
     async def validate_session_access(
         self, db: AsyncSession, *, session_id: str, user_id: str

@@ -19,6 +19,7 @@ from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.schemas import SessionInfo
+from ii_agent.sessions.title_service import SessionTitleService
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.storage.locations import get_conversation_agent_state_path
 
@@ -109,7 +110,33 @@ class SessionService:
     async def update_session_name(
         self, db: AsyncSession, session_id: uuid.UUID, name: str
     ) -> None:
-        await self._update_session_field(db, session_id, name=name)
+        session = await self._session_repo.get_by_id(db, session_id)
+        if not session:
+            return
+        session.name = name
+        session.session_metadata = SessionTitleService.set_title_pending(
+            session.session_metadata,
+            False,
+        )
+        await self._session_repo.update(db, session)
+
+    async def update_session_title_state(
+        self,
+        db: AsyncSession,
+        session_id: uuid.UUID,
+        *,
+        name: Optional[str],
+        title_pending: bool,
+    ) -> None:
+        session = await self._session_repo.get_by_id(db, session_id)
+        if not session:
+            return
+        session.name = name
+        session.session_metadata = SessionTitleService.set_title_pending(
+            session.session_metadata,
+            title_pending,
+        )
+        await self._session_repo.update(db, session)
 
     async def update_session_agent_type(
         self, db: AsyncSession, session_id: uuid.UUID, agent_type: str
@@ -441,6 +468,9 @@ class SessionService:
             token_usage=None,
             project_id=resolved_project_id,
             api_version=api_version or session.api_version,
+            title_pending=SessionTitleService.is_title_pending(
+                session.session_metadata,
+            ),
         )
 
     @staticmethod
@@ -469,6 +499,9 @@ class SessionService:
                 session.last_message_at.isoformat()
                 if session.last_message_at
                 else None
+            ),
+            "title_pending": SessionTitleService.is_title_pending(
+                session.session_metadata,
             ),
         }
         if include_project:

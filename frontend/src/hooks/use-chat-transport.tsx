@@ -39,7 +39,14 @@ interface UseChatTransportOptions {
 }
 
 export type StreamCallbacks = {
-    onSession?: (params: { sessionId: string; isNewSession: boolean }) => void
+    onSession?: (params: {
+        sessionId: string
+        isNewSession: boolean
+        name?: string
+        titlePending?: boolean
+        agentType?: string
+        createdAt?: string
+    }) => void
     onThinking?: (params: { delta: string; signature?: string }) => void
     onContentStart?: () => void
     onToken?: (token: string) => void
@@ -258,7 +265,11 @@ export function useChatTransport(options?: UseChatTransportOptions) {
                                 }
                                 callbacks?.onSession?.({
                                     sessionId: event.session_id,
-                                    isNewSession
+                                    isNewSession,
+                                    name: event.name,
+                                    titlePending: event.title_pending,
+                                    agentType: event.agent_type,
+                                    createdAt: event.created_at
                                 })
                                 break
                             }
@@ -370,9 +381,15 @@ export function useChatTransport(options?: UseChatTransportOptions) {
                 dispatch(clearCurrentMessageFileIds())
             } catch (error) {
                 console.error('Failed to submit chat query', error)
+                const errorStatus =
+                    typeof error === 'object' &&
+                    error !== null &&
+                    'status' in error
+                        ? (error as { status?: number }).status
+                        : undefined
                 const isInsufficientCredits =
                     error instanceof Error &&
-                    (error as any).status === 402
+                    errorStatus === 402
                 callbacks?.onError?.(
                     error instanceof Error ? error.message : undefined,
                     isInsufficientCredits ? 'insufficient_credits' : undefined

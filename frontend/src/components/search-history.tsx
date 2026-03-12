@@ -49,6 +49,8 @@ import { useMediaModels } from '@/hooks/use-media-models'
 import { useSidebar } from '@/components/ui/sidebar'
 import { useSessionStateManager } from '@/hooks/use-session-state-manager'
 import { useChat } from '@/hooks/use-chat-query'
+import SessionTitle from '@/components/session-title'
+import { hasSessionDisplayTitle } from '@/utils/session-title'
 
 interface SearchHistoryProps {
     className?: string
@@ -83,10 +85,12 @@ const SearchHistory = ({ className, isMobile }: SearchHistoryProps) => {
         const start7DaysAgo = startOfToday.subtract(7, 'days')
 
         const filteredSessions = [...sessions].filter((session) => {
-            return (
-                session.name &&
-                session.name.toLowerCase().includes(searchTerm.toLowerCase())
-            )
+            if (session.name) {
+                return session.name
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase())
+            }
+            return session.title_pending && searchTerm.length === 0
         })
 
         const todaySessions = filteredSessions.filter((session) => {
@@ -302,7 +306,9 @@ const SearchHistory = ({ className, isMobile }: SearchHistoryProps) => {
                                                 'flex text-sm md:text-base items-center gap-x-2 line-clamp-1 hover:dark:text-sky-blue'
                                             )}
                                         >
-                                            {session.name}
+                                            {hasSessionDisplayTitle(session) && (
+                                                <SessionTitle session={session} />
+                                            )}
                                         </Link>
                                     ))}
                                 </div>

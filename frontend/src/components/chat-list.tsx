@@ -39,6 +39,7 @@ import {
     TooltipContent,
     TooltipTrigger
 } from '@/components/ui/tooltip'
+import { hasSessionDisplayTitle } from '@/utils/session-title'
 
 interface ChatListProps {
     workspaceInfo?: string
@@ -67,7 +68,7 @@ const ChatList = ({
     const [isDeleting, setIsDeleting] = useState(false)
 
     const filteredChats = useMemo(() => {
-        const loaded = chats?.filter((session) => session.name) ?? []
+        const loaded = chats?.filter(hasSessionDisplayTitle) ?? []
         const loadedIds = new Set(loaded.map((s) => s.id))
 
         // Add pinned chat sessions not yet loaded via pagination

@@ -73,11 +73,12 @@ export interface ChatQueryPayload {
 }
 
 export type ChatStreamEvent =
-    | {
+      | {
           type: 'session'
           session_id: string
           is_new_session?: boolean
           name?: string
+          title_pending?: boolean
           agent_type?: string
           model_id?: string
           created_at?: string

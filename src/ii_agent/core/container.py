@@ -96,6 +96,7 @@ from ii_agent.sessions.dependencies import (
     get_session_fork_service,
     get_session_repository,
     get_session_service,
+    get_session_title_service,
 )
 from ii_agent.settings.llm.dependencies import (
     get_llm_setting_repository,
@@ -258,8 +259,9 @@ class ServiceContainer:
         llm_billing_svc = get_llm_billing_service(credit_svc, cfg)
         llm_execution_svc = get_llm_execution_service(llm_billing_svc)
         llm_config_resolver = get_llm_config_resolver(llm_setting_svc, cfg)
+        title_svc = get_session_title_service()
         session_validation_svc = get_session_validation_service(
-            session_svc, credit_svc
+            session_svc, credit_svc, title_svc
         )
 
         project_design_svc = get_project_design_service(

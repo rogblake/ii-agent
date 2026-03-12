@@ -11,9 +11,15 @@ import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import axiosInstance from '@/lib/axios'
+import { useSocketIOContext } from '@/contexts/websocket-context'
 import { addMessage, useAppDispatch, setBuildMode } from '@/state'
 import { BUILD_MODE } from '@/typings'
 import { useDesignModeContext } from '../design-mode-context'
+import {
+    loadDesignStateViaSocket,
+    saveDesignStateViaSocket,
+    syncSlideDeckStateViaSocket
+} from '../design-mode-socket-state'
 import { ErrorOverlay } from '../error-overlay'
 import { SavingOverlay } from '../saving-overlay'
 import { useSlideDeckScale } from './use-slide-deck-scale'
@@ -42,6 +48,8 @@ export function SlideDesignModeView({
 }: SlideDesignModeViewProps) {
     const { t } = useTranslation()
     const dispatch = useAppDispatch()
+    const { sendMessage: sendSocketMessage, isSessionReady } =
+        useSocketIOContext()
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const viewportRef = useRef<HTMLDivElement>(null)
 
@@ -204,21 +212,26 @@ export function SlideDesignModeView({
             return
         }
 
-        let cancelled = false
         setIsDesignStateLoaded(false)
+        if (!isSessionReady) {
+            return
+        }
+
+        let cancelled = false
 
         const load = async () => {
             try {
-                const response = await axiosInstance.get('/projects/design/state', {
-                    params: { session_id: sessionId }
-                })
-                const serverChanges = Array.isArray(response?.data?.changes)
-                    ? (response.data.changes as DesignChange[])
+                const response = await loadDesignStateViaSocket(
+                    sendSocketMessage,
+                    sessionId
+                )
+                const serverChanges = Array.isArray(response?.changes)
+                    ? (response.changes as DesignChange[])
                     : []
                 const serverRedoChanges = Array.isArray(
-                    response?.data?.redo_changes
+                    response?.redo_changes
                 )
-                    ? (response.data.redo_changes as DesignChange[])
+                    ? (response.redo_changes as DesignChange[])
                     : []
 
                 if (cancelled) return
@@ -247,7 +260,14 @@ export function SlideDesignModeView({
         return () => {
             cancelled = true
         }
-    }, [sessionId, replaceChanges, mergeChanges, replaceRedoChanges])
+    }, [
+        sessionId,
+        isSessionReady,
+        sendSocketMessage,
+        replaceChanges,
+        mergeChanges,
+        replaceRedoChanges
+    ])
 
     useEffect(() => {
         const handleStateUpdated = (event: Event) => {
@@ -609,19 +629,23 @@ export function SlideDesignModeView({
 
     const persistState = useCallback(
         async (changes: DesignChange[]) => {
-            if (!sessionId) return
+            if (!sessionId || !isSessionReady) return
             try {
-                await axiosInstance.post('/projects/design/state', {
-                    session_id: sessionId,
+                const result = await saveDesignStateViaSocket(sendSocketMessage, {
+                    sessionId,
                     changes,
-                    redo_changes: redoChangesRef.current
+                    redoChanges: redoChangesRef.current
                 })
                 window.dispatchEvent(
                     new CustomEvent('design-mode-state-updated', {
                         detail: {
-                            session_id: sessionId,
-                            changes,
-                            redo_changes: redoChangesRef.current
+                            session_id: result.session_id ?? sessionId,
+                            changes: Array.isArray(result.changes)
+                                ? result.changes
+                                : changes,
+                            redo_changes: Array.isArray(result.redo_changes)
+                                ? result.redo_changes
+                                : redoChangesRef.current
                         }
                     })
                 )
@@ -632,13 +656,14 @@ export function SlideDesignModeView({
                 )
             }
         },
-        [sessionId]
+        [sessionId, isSessionReady, sendSocketMessage]
     )
 
     useEffect(() => {
         if (!isEnabled) return
         if (!sessionId) return
         if (!isDesignStateLoaded) return
+        if (!isSessionReady) return
         if (isSaving) return
 
         if (persistTimeoutRef.current) {
@@ -663,7 +688,8 @@ export function SlideDesignModeView({
         sessionId,
         pendingChanges,
         redoChanges,
-        persistState
+        persistState,
+        isSessionReady
     ])
 
     useEffect(() => {
@@ -834,6 +860,10 @@ export function SlideDesignModeView({
      */
     const handleSaveChanges = useCallback(
         async (changesOverride?: DesignChange[]) => {
+            if (!isSessionReady) {
+                toast.error('Socket session is not ready. Please try again.')
+                return
+            }
             const changesToSync = Array.isArray(changesOverride)
                 ? changesOverride
                 : pendingChanges
@@ -920,18 +950,19 @@ export function SlideDesignModeView({
                 // Ensure persisted state is up-to-date before syncing.
                 await persistState(changesToSync)
 
-                const response = await axiosInstance.post(
-                    '/slides/design/slide-deck-sync-state',
+                // Send sync command via socket and wait for completion event
+                const syncResult = await syncSlideDeckStateViaSocket(
+                    sendSocketMessage,
                     {
-                        session_id: sessionId,
-                        presentation_name: presentationName
+                        sessionId,
+                        presentationName
                     }
                 )
 
                 const remainingChanges = Array.isArray(
-                    response?.data?.remaining_changes
+                    syncResult?.remaining_changes
                 )
-                    ? (response.data.remaining_changes as DesignChange[])
+                    ? (syncResult.remaining_changes as DesignChange[])
                     : []
 
                 const mergedRemaining =
@@ -942,22 +973,22 @@ export function SlideDesignModeView({
                 replaceChanges(mergedRemaining)
 
                 const applied =
-                    response?.data && typeof response.data.applied === 'number'
-                        ? (response.data.applied as number)
+                    syncResult && typeof syncResult.applied === 'number'
+                        ? (syncResult.applied as number)
                         : undefined
                 const totalFromServer =
-                    response?.data && typeof response.data.total === 'number'
-                        ? (response.data.total as number)
+                    syncResult && typeof syncResult.total === 'number'
+                        ? (syncResult.total as number)
                         : undefined
                 const remainingFromServer =
-                    response?.data &&
-                        typeof response.data.remaining === 'number'
-                        ? (response.data.remaining as number)
+                    syncResult &&
+                        typeof syncResult.remaining === 'number'
+                        ? (syncResult.remaining as number)
                         : undefined
 
                 const summary =
-                    typeof response?.data?.summary === 'string'
-                        ? (response.data.summary as string)
+                    typeof syncResult?.summary === 'string'
+                        ? (syncResult.summary as string)
                         : applied !== undefined
                             ? t('designMode.messages.syncedSlideDesignChanges', {
                                 count: applied
@@ -967,8 +998,8 @@ export function SlideDesignModeView({
                             )
 
                 const eventId =
-                    typeof response?.data?.event_id === 'string'
-                        ? (response.data.event_id as string)
+                    typeof syncResult?.event_id === 'string'
+                        ? (syncResult.event_id as string)
                         : `${Date.now()}-slide-design-sync`
 
                 dispatch(
@@ -980,7 +1011,7 @@ export function SlideDesignModeView({
                     })
                 )
 
-                const isSyncSuccess = response?.data?.success === true
+                const isSyncSuccess = syncResult?.success === true
                 if (isSyncSuccess) {
                     if (mergedRemaining.length === 0) {
                         clearChanges()
@@ -1036,7 +1067,9 @@ export function SlideDesignModeView({
             initSyncProgress,
             persistState,
             dispatch,
-            t
+            t,
+            sendSocketMessage,
+            isSessionReady
         ]
     )
 

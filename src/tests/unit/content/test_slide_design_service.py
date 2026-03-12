@@ -79,11 +79,10 @@ class _FakeSandbox:
         raise FileNotFoundError(path)
 
 
-def _make_service(settings_factory, repo: _FakeRepo, sandbox_service, event_service):
+def _make_service(settings_factory, repo: _FakeRepo, sandbox_service, event_service=None):
     return SlideDesignService(
         repo=repo,
         sandbox_service=sandbox_service,
-        event_service=event_service,
         config=settings_factory(),
     )
 
@@ -250,6 +249,12 @@ async def test_sync_persisted_slide_deck_changes_success(settings_factory, monke
         staticmethod(_always_apply),
     )
 
+    captured_summary = {}
+
+    async def on_summary(summary: str) -> str | None:
+        captured_summary["text"] = summary
+        return "evt-callback"
+
     response = await service.sync_persisted_slide_deck_changes(
         db=None,
         request=SlideDeckSyncStateRequest(
@@ -257,12 +262,14 @@ async def test_sync_persisted_slide_deck_changes_success(settings_factory, monke
             presentation_name="deck",
         ),
         user_id="user-1",
+        on_summary=on_summary,
     )
 
     assert response.success is True
     assert response.applied == 1
     assert response.remaining == 0
-    assert response.event_id == "evt-1"
+    assert response.event_id == "evt-callback"
+    assert "text" in captured_summary
     assert repo.updated_slide_html
     assert repo.updated_design_state["changes"] == []
     assert any(path.endswith("/metadata.json") for path in sandbox.writes)

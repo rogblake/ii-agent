@@ -511,6 +511,32 @@ export function useAppEvents() {
                     const errorMessage =
                         (data.content.message as string) ||
                         'An unexpected error occurred.'
+                    const errorType = data.content.error_type as string | undefined
+                    const sessionIdFromEvent =
+                        (data.session_id as string | undefined) ??
+                        (data.content.session_id as string | undefined)
+
+                    if (
+                        errorType === 'design_sync_state_error' ||
+                        errorType === 'slide_deck_sync_state_error'
+                    ) {
+                        const operation =
+                            errorType === 'design_sync_state_error'
+                                ? 'design_sync_state_complete'
+                                : 'slide_deck_sync_state_complete'
+
+                        window.dispatchEvent(
+                            new CustomEvent('design-mode-sync-response', {
+                                detail: {
+                                    operation,
+                                    error_type: errorType,
+                                    message: errorMessage,
+                                    session_id: sessionIdFromEvent
+                                }
+                            })
+                        )
+                    }
+
                     // Only show toast for live events, not during replay
                     if (!ignoreClickAction) {
                         toast.error(errorMessage)
@@ -534,6 +560,54 @@ export function useAppEvents() {
                 }
 
                 case AgentEvent.SYSTEM: {
+                    // Design mode sync completion events
+                    const systemOperation = data.content.operation as string | undefined
+                    if (
+                        systemOperation === 'design_sync_complete' ||
+                        systemOperation === 'design_sync_state_complete' ||
+                        systemOperation === 'slide_deck_sync_state_complete'
+                    ) {
+                        const sessionIdFromEvent =
+                            (data.session_id as string | undefined) ??
+                            (data.content.session_id as string | undefined)
+
+                        window.dispatchEvent(
+                            new CustomEvent('design-mode-sync-response', {
+                                detail: {
+                                    operation: systemOperation,
+                                    session_id: sessionIdFromEvent,
+                                    ...data.content
+                                }
+                            })
+                        )
+
+                        window.dispatchEvent(
+                            new CustomEvent('design-mode-sync-complete', {
+                                detail: {
+                                    operation: systemOperation,
+                                    session_id: sessionIdFromEvent,
+                                    ...data.content,
+                                }
+                            })
+                        )
+                        break
+                    }
+
+                    if (
+                        systemOperation === 'design_state_loaded' ||
+                        systemOperation === 'design_state_saved'
+                    ) {
+                        window.dispatchEvent(
+                            new CustomEvent('design-mode-state-response', {
+                                detail: {
+                                    operation: systemOperation,
+                                    ...data.content
+                                }
+                            })
+                        )
+                        break
+                    }
+
                     if (data.content.type === 'reviewer_agent') {
                         safeDispatch(
                             addMessage({

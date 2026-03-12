@@ -37,12 +37,10 @@ def _make_service(
 ) -> SlideDesignService:
     repo = repo or MagicMock()
     sandbox_service = sandbox_service or MagicMock()
-    event_service = event_service or MagicMock()
     config = config or MagicMock(workspace_path="/workspace")
     return SlideDesignService(
         repo=repo,
         sandbox_service=sandbox_service,
-        event_service=event_service,
         config=config,
     )
 

@@ -13,7 +13,6 @@ from ii_agent.core.exceptions import IIAgentError, PermissionDeniedError, Valida
 from ii_agent.core.logger import logger
 from ii_agent.projects.exceptions import ProjectNotFoundError
 from ii_agent.projects.subdomains.exceptions import SubdomainNotFoundError, SubdomainServiceUnavailableError
-from ii_agent.agent.events.models import EventType
 from ii_agent.projects.subdomains.dependencies import (
     BaseDomainDep,
     CloudflareKVServiceDep,
@@ -175,38 +174,6 @@ async def claim_subdomain(
             full_domain=full_domain_url,
             cloudflare_record_id=getattr(result, "record_id", None),
         )
-
-        # Emit socket event to update frontend state
-        session_id = project.session_id
-        if session_id:
-            try:
-                from ii_agent.app import sio
-
-                if sio:
-                    await sio.emit(
-                        "chat_event",
-                        {
-                            "type": EventType.SYSTEM,
-                            "content": {
-                                "message": f"Custom domain claimed: {full_domain_url}",
-                                "deployment_url": full_domain_url,
-                                "custom_domain": {
-                                    "subdomain": subdomain,
-                                    "full_domain": full_domain_url,
-                                    "dns_status": "active",
-                                    "ssl_status": "active",
-                                },
-                                "deployment": {
-                                    "url": full_domain_url,
-                                    "custom_domain": subdomain,
-                                    "provider": "cloud_run",
-                                },
-                            },
-                        },
-                        room=session_id,
-                    )
-            except Exception as emit_error:
-                logger.warning(f"Failed to emit subdomain claim event: {emit_error}")
 
         return ClaimSubdomainResponse(
             success=True,

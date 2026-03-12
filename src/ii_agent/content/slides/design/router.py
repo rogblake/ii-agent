@@ -10,8 +10,6 @@ from ii_agent.content.slides.design.dependencies import SlideDesignServiceDep
 from ii_agent.content.slides.design.schemas import (
     SlideDeckSyncBatchRequest,
     SlideDeckSyncBatchResponse,
-    SlideDeckSyncStateRequest,
-    SlideDeckSyncStateResponse,
     SlideSyncBatchRequest,
     SlideSyncBatchResponse,
 )
@@ -89,15 +87,3 @@ async def slide_deck_sync_batch(
     )
 
 
-@router.post("/slide-deck-sync-state", response_model=SlideDeckSyncStateResponse)
-async def sync_persisted_slide_deck_changes(
-    request: SlideDeckSyncStateRequest,
-    current_user: CurrentUser,
-    db: DBSession,
-    service: SlideDesignServiceDep,
-) -> SlideDeckSyncStateResponse:
-    return await service.sync_persisted_slide_deck_changes(
-        db,
-        request=request,
-        user_id=str(current_user.id),
-    )

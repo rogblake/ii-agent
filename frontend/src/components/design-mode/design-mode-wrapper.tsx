@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import axiosInstance from '@/lib/axios'
+import { useSocketIOContext } from '@/contexts/websocket-context'
 import { addMessage, setBuildMode, useAppDispatch } from '@/state'
 import { BUILD_MODE } from '@/typings'
 import { useDesignModeContext } from './design-mode-context'
@@ -31,6 +32,11 @@ import {
     buildDesignChangeKey,
     buildDesignChangeKeyWithTimestamp
 } from './change-keys'
+import {
+    loadDesignStateViaSocket,
+    saveDesignStateViaSocket,
+    syncDesignStateViaSocket
+} from './design-mode-socket-state'
 
 interface DesignModeWrapperProps {
     /** The iframe source URL (direct sandbox URL) */
@@ -54,6 +60,8 @@ export function DesignModeWrapper({
 }: DesignModeWrapperProps) {
     const { t } = useTranslation()
     const dispatch = useAppDispatch()
+    const { sendMessage: sendSocketMessage, isSessionReady } =
+        useSocketIOContext()
     const iframeRef = useRef<HTMLIFrameElement>(null)
 
     const [isDesignStateLoaded, setIsDesignStateLoaded] = useState(false)
@@ -318,21 +326,26 @@ export function DesignModeWrapper({
             return
         }
 
-        let cancelled = false
         setIsDesignStateLoaded(false)
+        if (!isSessionReady) {
+            return
+        }
+
+        let cancelled = false
 
         const load = async () => {
             try {
-                const response = await axiosInstance.get('/projects/design/state', {
-                    params: { session_id: sessionId }
-                })
-                const serverChanges = Array.isArray(response?.data?.changes)
-                    ? (response.data.changes as DesignChange[])
+                const response = await loadDesignStateViaSocket(
+                    sendSocketMessage,
+                    sessionId
+                )
+                const serverChanges = Array.isArray(response?.changes)
+                    ? (response.changes as DesignChange[])
                     : []
                 const serverRedoChanges = Array.isArray(
-                    response?.data?.redo_changes
+                    response?.redo_changes
                 )
-                    ? (response.data.redo_changes as DesignChange[])
+                    ? (response.redo_changes as DesignChange[])
                     : []
 
                 if (cancelled) return
@@ -357,11 +370,18 @@ export function DesignModeWrapper({
             }
         }
 
-        load()
+        void load()
         return () => {
             cancelled = true
         }
-    }, [sessionId, replaceChanges, mergeChanges, replaceRedoChanges])
+    }, [
+        sessionId,
+        isSessionReady,
+        sendSocketMessage,
+        replaceChanges,
+        mergeChanges,
+        replaceRedoChanges
+    ])
 
     useEffect(() => {
         const handleStateUpdated = (event: Event) => {
@@ -1001,12 +1021,12 @@ export function DesignModeWrapper({
 
     const persistState = useCallback(
         async (changes: DesignChange[]) => {
-            if (!sessionId) return
+            if (!sessionId || !isSessionReady) return
             try {
-                await axiosInstance.post('/projects/design/state', {
-                    session_id: sessionId,
+                await saveDesignStateViaSocket(sendSocketMessage, {
+                    sessionId,
                     changes,
-                    redo_changes: redoChangesRef.current
+                    redoChanges: redoChangesRef.current
                 })
             } catch (err) {
                 console.error(
@@ -1015,13 +1035,14 @@ export function DesignModeWrapper({
                 )
             }
         },
-        [sessionId]
+        [sessionId, isSessionReady, sendSocketMessage]
     )
 
     useEffect(() => {
         // Prevent wiping server state with an initial empty list before the GET completes.
         if (!isDesignStateLoaded) return
         if (!sessionId) return
+        if (!isSessionReady) return
         if (isSaving) return
 
         if (persistTimeoutRef.current) {
@@ -1044,6 +1065,7 @@ export function DesignModeWrapper({
         pendingChanges,
         redoChanges,
         persistState,
+        isSessionReady,
         isSaving
     ])
 
@@ -1064,6 +1086,10 @@ export function DesignModeWrapper({
         async (changesOverride?: DesignChange[]) => {
             if (!sessionId) {
                 toast.error(t('designMode.toasts.missingSessionId'))
+                return
+            }
+            if (!isSessionReady) {
+                toast.error('Socket session is not ready. Please try again.')
                 return
             }
             if (isSaving) return
@@ -1100,29 +1126,28 @@ export function DesignModeWrapper({
             try {
                 // Ensure the latest local changes are flushed to DB so sync uses the current state.
                 if (changesToSync.length > 0) {
-                    await axiosInstance.post('/projects/design/state', {
-                        session_id: sessionId,
+                    await saveDesignStateViaSocket(sendSocketMessage, {
+                        sessionId,
                         changes: changesToSync,
-                        redo_changes: redoChangesRef.current
+                        redoChanges: redoChangesRef.current
                     })
                 }
 
-                const response = await axiosInstance.post(
-                    '/projects/design/sync-state',
-                    {
-                        session_id: sessionId
-                    }
+                // Send sync command via socket and wait for completion event
+                const syncResult = await syncDesignStateViaSocket(
+                    sendSocketMessage,
+                    sessionId
                 )
 
                 const applied =
-                    response?.data && typeof response.data.applied === 'number'
-                        ? response.data.applied
+                    syncResult && typeof syncResult.applied === 'number'
+                        ? syncResult.applied
                         : undefined
 
                 const remainingChanges = Array.isArray(
-                    response?.data?.remaining_changes
+                    syncResult?.remaining_changes
                 )
-                    ? (response.data.remaining_changes as DesignChange[])
+                    ? (syncResult.remaining_changes as DesignChange[])
                     : []
                 const mergedRemaining =
                     selectedKeySet !== null
@@ -1150,10 +1175,10 @@ export function DesignModeWrapper({
 
                 if (selectedKeySet !== null) {
                     try {
-                        await axiosInstance.post('/projects/design/state', {
-                            session_id: sessionId,
+                        await saveDesignStateViaSocket(sendSocketMessage, {
+                            sessionId,
                             changes: mergedRemaining,
-                            redo_changes: redoChangesRef.current
+                            redoChanges: redoChangesRef.current
                         })
                     } catch (e) {
                         console.warn(
@@ -1164,28 +1189,28 @@ export function DesignModeWrapper({
                 }
 
                 const summary =
-                    typeof response?.data?.summary === 'string'
-                        ? (response.data.summary as string)
+                    typeof syncResult?.summary === 'string'
+                        ? (syncResult.summary as string)
                         : applied !== undefined
                             ? t('designMode.messages.syncedDesignChanges', {
                                 count: applied
                             })
                             : t('designMode.messages.syncedDesignChangesDefault')
 
-                const isSyncSuccess = response?.data?.success === true
+                const isSyncSuccess = syncResult?.success === true
                 const total =
-                    response?.data && typeof response.data.total === 'number'
-                        ? (response.data.total as number)
+                    syncResult && typeof syncResult.total === 'number'
+                        ? (syncResult.total as number)
                         : undefined
                 const remaining =
-                    response?.data &&
-                        typeof response.data.remaining === 'number'
-                        ? (response.data.remaining as number)
+                    syncResult &&
+                        typeof syncResult.remaining === 'number'
+                        ? (syncResult.remaining as number)
                         : undefined
 
                 const eventId =
-                    typeof response?.data?.event_id === 'string'
-                        ? (response.data.event_id as string)
+                    typeof syncResult?.event_id === 'string'
+                        ? (syncResult.event_id as string)
                         : `${Date.now()}-design-sync`
 
                 dispatch(
@@ -1235,6 +1260,8 @@ export function DesignModeWrapper({
             setIsSaving,
             replaceChanges,
             dispatch,
+            sendSocketMessage,
+            isSessionReady,
             t
         ]
     )

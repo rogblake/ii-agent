@@ -14,10 +14,6 @@ from ii_agent.projects.design.schemas import (
     DesignStateResponse,
     IframeAIPlanRequest,
     IframeAIPlanResponse,
-    SyncRequest,
-    SyncResponse,
-    SyncStateRequest,
-    SyncStateResponse,
 )
 
 router = APIRouter(prefix="/projects/design", tags=["Project Design Mode"])
@@ -108,29 +104,3 @@ async def save_design_state(
     )
 
 
-@router.post("/sync", response_model=SyncResponse)
-async def sync_design_changes(
-    request: SyncRequest,
-    current_user: CurrentUser,
-    db: DBSession,
-    service: ProjectDesignServiceDep,
-) -> SyncResponse:
-    return await service.sync_design_changes(
-        db,
-        user_id=str(current_user.id),
-        request=request,
-    )
-
-
-@router.post("/sync-state", response_model=SyncStateResponse)
-async def sync_persisted_design_changes(
-    request: SyncStateRequest,
-    current_user: CurrentUser,
-    db: DBSession,
-    service: ProjectDesignServiceDep,
-) -> SyncStateResponse:
-    return await service.sync_persisted_design_changes(
-        db,
-        user_id=str(current_user.id),
-        request=request,
-    )

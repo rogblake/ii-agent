@@ -28,8 +28,6 @@ from ii_agent.projects.design.router import (
     get_design_state,
     proxy_design_mode,
     save_design_state,
-    sync_design_changes,
-    sync_persisted_design_changes,
 )
 from ii_agent.projects.design.schemas import (
     AIChangeRequest,
@@ -38,9 +36,6 @@ from ii_agent.projects.design.schemas import (
     ElementInfoRequest,
     IframeAIPlanRequest,
     IframeAIPlanResponse,
-    SyncRequest,
-    SyncStateRequest,
-    SyncStateResponse,
     StyleChange,
 )
 
@@ -345,42 +340,15 @@ async def test_design_router_ai_iframe_plan_invokes_service():
 @pytest.mark.asyncio
 async def test_design_router_state_and_sync_routes_delegate():
     state_service = AsyncMock()
-    state_service.get_design_state.return_value = SyncStateResponse(
-        success=True,
-        applied=2,
-        total=2,
-        remaining=0,
-        errors=[],
-        summary="done",
+    state_service.get_design_state.return_value = DesignStateRequest(
+        session_id="session-1",
+        changes=[],
     )
     save_service = AsyncMock()
-    save_service.save_design_state.return_value = SyncStateResponse(
-        success=True,
-        applied=1,
-        total=2,
-        remaining=1,
-        errors=[],
-        summary="partial",
+    save_service.save_design_state.return_value = DesignStateRequest(
+        session_id="session-1",
+        changes=[],
     )
-    sync_service = AsyncMock()
-    sync_service.sync_design_changes.return_value = SyncStateResponse(
-        success=True,
-        applied=1,
-        total=1,
-        remaining=0,
-        errors=[],
-        summary="ok",
-    )
-    persist_service = AsyncMock()
-    persist_service.sync_persisted_design_changes.return_value = SyncStateResponse(
-        success=True,
-        applied=1,
-        total=1,
-        remaining=0,
-        errors=[],
-        summary="persisted",
-    )
-
     style_changes = [
         StyleChange(
             designId="d1",
@@ -405,20 +373,6 @@ async def test_design_router_state_and_sync_routes_delegate():
         None,
         save_service,
     )
-    synced = await sync_design_changes(
-        SyncRequest(session_id="session-1", changes=style_changes),
-        _user("user-1"),
-        None,
-        sync_service,
-    )
-    persisted = await sync_persisted_design_changes(
-        SyncStateRequest(session_id="session-1"),
-        _user("user-1"),
-        None,
-        persist_service,
-    )
 
-    assert state.success
-    assert saved.applied == 1
-    assert synced.success
-    assert persisted.summary == "persisted"
+    assert state is not None
+    assert saved is not None

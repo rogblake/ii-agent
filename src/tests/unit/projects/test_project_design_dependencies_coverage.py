@@ -25,7 +25,6 @@ def test_get_project_design_service_builds_service_with_config(monkeypatch):
             *,
             repo,
             sandbox_service,
-            event_service,
             llm_setting_service,
             llm_billing_service,
             llm_execution_service,
@@ -33,7 +32,6 @@ def test_get_project_design_service_builds_service_with_config(monkeypatch):
         ) -> None:
             created["repo"] = repo
             created["sandbox_service"] = sandbox_service
-            created["event_service"] = event_service
             created["llm_setting_service"] = llm_setting_service
             created["llm_billing_service"] = llm_billing_service
             created["llm_execution_service"] = llm_execution_service
@@ -49,7 +47,6 @@ def test_get_project_design_service_builds_service_with_config(monkeypatch):
     service = get_project_design_service(
         design_repo=repository,
         sandbox_service=object(),
-        event_service=object(),
         llm_setting_service=object(),
         llm_billing_service=object(),
         llm_execution_service=object(),

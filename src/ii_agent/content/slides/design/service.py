@@ -8,7 +8,7 @@ import time
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,8 +50,9 @@ from ii_agent.content.slides.design.schemas import (
     SlideSyncBatchResponse,
 )
 from ii_agent.agent.sandboxes.service import SandboxService
-from ii_agent.agent.events.models import EventType, RealtimeEvent
-from ii_agent.agent.events.service import EventService
+
+ProgressCallback = Callable[..., Awaitable[None]]
+SummaryCallback = Callable[[str], Awaitable[str | None]]
 
 
 class SlideDesignService:
@@ -62,12 +63,10 @@ class SlideDesignService:
         *,
         repo: SlideDesignRepository,
         sandbox_service: SandboxService,
-        event_service: EventService,
         config: Settings,
     ) -> None:
         self._repo = repo
         self._sandbox_service = sandbox_service
-        self._event_service = event_service
         self._config = config
 
     # ------------------------------------------------------------------
@@ -341,6 +340,8 @@ class SlideDesignService:
         *,
         request: SlideDeckSyncStateRequest,
         user_id: str,
+        on_progress: ProgressCallback | None = None,
+        on_summary: SummaryCallback | None = None,
     ) -> SlideDeckSyncStateResponse:
         session = await self._get_session_for_request(
             db,
@@ -394,28 +395,28 @@ class SlideDesignService:
         counters = DesignSyncCounters()
         applied_candidate_indexes_by_slide: dict[int, list[int]] = defaultdict(list)
 
-        await self._emit_sync_progress(
-            db,
-            session_id=session_uuid,
-            processed=0,
-            total=total,
-            applied=0,
-            errors=0,
-            current=1,
-            done=False,
-        )
-
-        for idx, change in enumerate(changes):
-            await self._emit_sync_progress(
-                db,
+        if on_progress:
+            await on_progress(
                 session_id=session_uuid,
-                processed=idx,
+                processed=0,
                 total=total,
-                applied=counters.applied,
-                errors=counters.failed,
-                current=idx + 1,
+                applied=0,
+                errors=0,
+                current=1,
                 done=False,
             )
+
+        for idx, change in enumerate(changes):
+            if on_progress:
+                await on_progress(
+                    session_id=session_uuid,
+                    processed=idx,
+                    total=total,
+                    applied=counters.applied,
+                    errors=counters.failed,
+                    current=idx + 1,
+                    done=False,
+                )
             counters.processed += 1
 
             slide_number = self._extract_slide_number(change)
@@ -535,16 +536,16 @@ class SlideDesignService:
             updated_at=updated_at,
         )
 
-        await self._emit_sync_progress(
-            db,
-            session_id=session_uuid,
-            processed=total,
-            total=total,
-            applied=counters.applied,
-            errors=counters.failed,
-            current=None,
-            done=True,
-        )
+        if on_progress:
+            await on_progress(
+                session_id=session_uuid,
+                processed=total,
+                total=total,
+                applied=counters.applied,
+                errors=counters.failed,
+                current=None,
+                done=True,
+            )
 
         result = self._build_persisted_sync_result(
             total=total,
@@ -554,12 +555,9 @@ class SlideDesignService:
             sandbox_error=sandbox_error,
         )
 
-        event_id = await self._emit_sync_summary(
-            db,
-            session_id=session_uuid,
-            summary=result.summary,
-        )
-        result.event_id = event_id
+        if on_summary:
+            event_id = await on_summary(result.summary)
+            result.event_id = event_id
 
         return SlideDeckSyncStateResponse(
             success=result.success,
@@ -714,56 +712,6 @@ class SlideDesignService:
             errors=errors,
             summary=summary,
         )
-
-    async def _emit_sync_summary(
-        self,
-        db: AsyncSession,
-        *,
-        session_id: uuid.UUID,
-        summary: str,
-    ) -> str:
-        sync_event = RealtimeEvent(
-            type=EventType.AGENT_RESPONSE,
-            session_id=session_id,
-            content={"text": summary},
-        )
-        saved = await self._event_service.save_event(db, session_id, sync_event)
-        return str(saved.id)
-
-    async def _emit_sync_progress(
-        self,
-        db: AsyncSession,
-        *,
-        session_id: uuid.UUID,
-        processed: int,
-        total: int,
-        applied: int,
-        errors: int,
-        current: Optional[int],
-        done: bool,
-    ) -> None:
-        progress_payload = {
-            "processed": processed,
-            "total": total,
-            "applied": applied,
-            "errors": errors,
-            "current": current,
-            "done": done,
-        }
-        content = {
-            "operation": "design_mode_sync",
-            # Keep legacy payload shape expected by the frontend listener.
-            "progress": progress_payload,
-            # Keep flat fields for compatibility with newer consumers.
-            **progress_payload,
-        }
-        progress_event = RealtimeEvent(
-            type=EventType.STATUS_UPDATE,
-            session_id=session_id,
-            content=content,
-        )
-        await self._event_service.save_event(db, session_id, progress_event)
-        await self._event_service.emit_event(progress_event)
 
     async def _write_presentation_metadata(
         self,

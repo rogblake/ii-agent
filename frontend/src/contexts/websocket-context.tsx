@@ -27,6 +27,7 @@ interface WebSocketMessageContent {
 
 interface SocketIOContextType {
     socket: Socket | null
+    isSessionReady: boolean
     connectSocket: () => void
     sendMessage: (payload: {
         type: string
@@ -56,6 +57,7 @@ export function SocketIOProvider({
     const activeSessionId = useAppSelector(selectActiveSessionId)
     const wsConnectionState = useAppSelector(selectWsConnectionState)
     const [socket, setSocket] = useState<Socket | null>(null)
+    const [isSessionReady, setIsSessionReady] = useState(false)
     const connectionRef = useRef<Socket | null>(null)
     const isConnectingRef = useRef(false)
     const handleEventRef = useRef(handleEvent)
@@ -89,6 +91,10 @@ export function SocketIOProvider({
         }
     }
 
+    useEffect(() => {
+        setIsSessionReady(false)
+    }, [currentSessionId])
+
     // Also reset on initial mount if sessionId is present
     useEffect(() => {
         if (sessionId && sessionIdRef.current === sessionId) {
@@ -120,6 +126,7 @@ export function SocketIOProvider({
 
         // Reset session initialization flag when reconnecting
         sessionInitializedRef.current = false
+        setIsSessionReady(false)
 
         dispatch(setWsConnectionState(WebSocketConnectionState.CONNECTING))
         const token = localStorage.getItem(ACCESS_TOKEN)
@@ -175,6 +182,12 @@ export function SocketIOProvider({
 
         socketInstance.on('chat_event', (data) => {
             try {
+                if (
+                    data?.type === AgentEvent.SYSTEM &&
+                    typeof data?.content?.session_id === 'string'
+                ) {
+                    setIsSessionReady(true)
+                }
                 handleEventRef.current({ ...data, id: Date.now().toString() })
             } catch (error) {
                 console.error('Error handling Socket.IO event:', error)
@@ -184,6 +197,7 @@ export function SocketIOProvider({
         socketInstance.on('connect_error', (error) => {
             console.log('Socket.IO connection error:', error)
             isConnectingRef.current = false
+            setIsSessionReady(false)
             dispatch(
                 setWsConnectionState(WebSocketConnectionState.DISCONNECTED)
             )
@@ -200,6 +214,7 @@ export function SocketIOProvider({
                 setWsConnectionState(WebSocketConnectionState.DISCONNECTED)
             )
             sessionInitializedRef.current = false
+            setIsSessionReady(false)
             // Socket.IO will auto-reconnect; keep connectionRef intact
         })
 
@@ -213,6 +228,7 @@ export function SocketIOProvider({
                 'Skipping join_session: current path includes /chat'
             )
             sessionInitializedRef.current = true
+            setIsSessionReady(true)
             return
         }
 
@@ -224,6 +240,7 @@ export function SocketIOProvider({
         // Always emit initialize_session to ensure server-side session is ready
         // The server should handle duplicate initializations gracefully
         console.log('Joining session...')
+        setIsSessionReady(false)
         socket.emit('join_session', {
             session_uuid: sessionIdRef.current
         })
@@ -280,7 +297,13 @@ export function SocketIOProvider({
 
     return (
         <SocketIOContext.Provider
-            value={{ socket, connectSocket, sendMessage, joinSession }}
+            value={{
+                socket,
+                isSessionReady,
+                connectSocket,
+                sendMessage,
+                joinSession
+            }}
         >
             {children}
         </SocketIOContext.Provider>

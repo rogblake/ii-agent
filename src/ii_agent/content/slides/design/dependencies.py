@@ -9,7 +9,6 @@ from fastapi import Depends
 from ii_agent.core.config.settings import get_settings
 from ii_agent.content.slides.dependencies import SlideRepositoryDep
 from ii_agent.agent.sandboxes.dependencies import SandboxServiceDep
-from ii_agent.agent.events.dependencies import EventServiceDep
 from ii_agent.sessions.dependencies import SessionRepositoryDep
 from ii_agent.content.slides.design.repository import SlideDesignRepository
 from ii_agent.content.slides.design.service import SlideDesignService
@@ -28,12 +27,10 @@ SlideDesignRepositoryDep = Annotated[SlideDesignRepository, Depends(get_slide_de
 def get_slide_design_service(
     design_repo: SlideDesignRepositoryDep,
     sandbox_service: SandboxServiceDep,
-    event_service: EventServiceDep,
 ) -> SlideDesignService:
     return SlideDesignService(
         repo=design_repo,
         sandbox_service=sandbox_service,
-        event_service=event_service,
         config=get_settings(),
     )
 

@@ -8,7 +8,7 @@ import shlex
 import time
 import uuid
 from collections import defaultdict
-from typing import Any, Callable, Optional, TYPE_CHECKING
+from typing import Any, Awaitable, Callable, Optional, TYPE_CHECKING
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -80,6 +80,9 @@ from ii_agent.settings.llm.service import LLMSettingService, get_system_llm_conf
 if TYPE_CHECKING:
     from ii_agent.core.llm.billing_service import LLMBillingService
 
+ProgressCallback = Callable[..., Awaitable[None]]
+SummaryCallback = Callable[[str], Awaitable[str | None]]
+
 _E2B_ALLOWED_HOST_SUFFIXES = (".e2b.app", ".e2b.dev")
 _IFRAME_MAX_TOOL_LOOPS = 10
 
@@ -92,7 +95,7 @@ class ProjectDesignService:
         *,
         repo: ProjectDesignRepository,
         sandbox_service: SandboxService,
-        event_service: EventService,
+        event_service: EventService | None = None,
         llm_setting_service: LLMSettingService,
         llm_execution_service: LLMExecutionService,
         llm_billing_service: LLMBillingService | None,
@@ -382,11 +385,13 @@ class ProjectDesignService:
         *,
         user_id: str,
         request: SyncRequest,
+        on_progress: ProgressCallback | None = None,
     ) -> SyncResponse:
         response, _failed_indexes = await self._sync_design_changes_internal(
             db=db,
             user_id=user_id,
             request=request,
+            on_progress=on_progress,
         )
         return response
 
@@ -396,6 +401,8 @@ class ProjectDesignService:
         *,
         user_id: str,
         request: SyncStateRequest,
+        on_progress: ProgressCallback | None = None,
+        on_summary: SummaryCallback | None = None,
     ) -> SyncStateResponse:
         try:
             session_uuid = uuid.UUID(request.session_id)
@@ -432,6 +439,7 @@ class ProjectDesignService:
             db=db,
             user_id=user_id,
             request=sync_request,
+            on_progress=on_progress,
         )
 
         remaining_changes = [change for idx, change in enumerate(changes) if idx in failed_indexes]
@@ -462,14 +470,20 @@ class ProjectDesignService:
             )
 
         event_id = None
-        try:
-            event_id = await self._emit_sync_summary(
-                db,
-                session_id=session_uuid,
-                summary=summary,
-            )
-        except Exception as exc:
-            logger.warning("[DesignMode Sync] Failed to emit summary event: %s", exc)
+        if on_summary:
+            try:
+                event_id = await on_summary(summary)
+            except Exception as exc:
+                logger.warning("[DesignMode Sync] Failed to emit summary event: %s", exc)
+        elif self._event_service:
+            try:
+                event_id = await self._emit_sync_summary(
+                    db,
+                    session_id=session_uuid,
+                    summary=summary,
+                )
+            except Exception as exc:
+                logger.warning("[DesignMode Sync] Failed to emit summary event: %s", exc)
 
         return SyncStateResponse(
             success=all_applied,
@@ -1063,6 +1077,7 @@ class ProjectDesignService:
         *,
         user_id: str,
         request: SyncRequest,
+        on_progress: ProgressCallback | None = None,
     ) -> tuple[SyncResponse, set[int]]:
         await self._get_session_for_request(
             db,
@@ -1093,25 +1108,31 @@ class ProjectDesignService:
                 ) from exc
 
         try:
+            _effective_progress = on_progress or (
+                (lambda **payload: self._emit_sync_progress(db, **payload))
+                if self._event_service
+                else None
+            )
             applied, errors, remaining_changes = await apply_changes_with_source_mapping(
                 sandbox=sandbox,
                 changes=request.changes,
                 session_id=session_uuid,
-                emit_progress=lambda **payload: self._emit_sync_progress(db, **payload),
+                emit_progress=_effective_progress,
             )
         except Exception as exc:
             errors = [f"Deterministic source mapping sync failed: {exc}"]
             failed_indexes = set(range(total))
-            await self._emit_sync_progress(
-                db,
-                session_id=session_uuid,
-                processed=total,
-                total=total,
-                applied=0,
-                errors=len(errors),
-                current=None,
-                done=True,
-            )
+            _error_progress = _effective_progress
+            if _error_progress:
+                await _error_progress(
+                    session_id=session_uuid,
+                    processed=total,
+                    total=total,
+                    applied=0,
+                    errors=len(errors),
+                    current=None,
+                    done=True,
+                )
             return SyncResponse(success=False, applied=0, errors=errors), failed_indexes
 
         failed_indexes = self._resolve_failed_sync_indexes(

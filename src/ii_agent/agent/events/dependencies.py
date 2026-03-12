@@ -2,15 +2,10 @@
 
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.core.redis import session_manager
-from ii_agent.agent.events.publisher import (
-    EventPublisher,
-    NoopEventPublisher,
-    SocketIOEventPublisher,
-)
+from ii_agent.agent.events.publisher import EventPublisher
 from ii_agent.agent.events.repository import EventRepository
 from ii_agent.agent.events.service import EventService
 
@@ -29,17 +24,6 @@ EventRepositoryDep = Annotated[EventRepository, Depends(get_event_repository)]
 # ==================== Service Dependencies ====================
 
 
-def get_event_publisher(request: Request) -> EventPublisher:
-    """Provide the realtime event publisher for HTTP-triggered workflows."""
-    sio = getattr(request.app.state, "sio", None)
-    if sio is None:
-        return NoopEventPublisher()
-    return SocketIOEventPublisher(sio=sio, redis_manager=session_manager)
-
-
-EventPublisherDep = Annotated[EventPublisher, Depends(get_event_publisher)]
-
-
 def build_event_service(
     event_repo: EventRepository,
     *,
@@ -53,23 +37,8 @@ def build_event_service(
     )
 
 
-def get_event_service(
-    event_repo: EventRepositoryDep,
-    event_publisher: EventPublisherDep,
-) -> EventService:
-    """Provide EventService instance with explicit repo injection."""
-    return build_event_service(event_repo, publisher=event_publisher)
-
-
-EventServiceDep = Annotated[EventService, Depends(get_event_service)]
-
-
 __all__ = [
     "build_event_service",
     "get_event_repository",
-    "get_event_publisher",
-    "get_event_service",
-    "EventPublisherDep",
     "EventRepositoryDep",
-    "EventServiceDep",
 ]

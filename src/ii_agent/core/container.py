@@ -36,6 +36,11 @@ from ii_agent.content.skills.dependencies import (
     get_skill_repository,
     get_skill_service,
 )
+from ii_agent.content.slides.dependencies import get_slide_repository
+from ii_agent.content.slides.design.dependencies import (
+    get_slide_design_repository,
+    get_slide_design_service,
+)
 from ii_agent.content.storybook.dependencies import (
     get_storybook_repository,
     get_storybook_service,
@@ -73,6 +78,10 @@ from ii_agent.projects.dependencies import (
     get_deployment_orchestration_service,
     get_project_repository,
     get_project_service,
+)
+from ii_agent.projects.design.dependencies import (
+    get_project_design_repository,
+    get_project_design_service,
 )
 from ii_agent.projects.deployments.dependencies import (
     get_deployments_repository,
@@ -128,7 +137,9 @@ if TYPE_CHECKING:
     from ii_agent.sessions.fork_service import SessionForkService
     from ii_agent.agent.application.validation_service import SessionValidationService
     from ii_agent.content.skills.service import SkillService
+    from ii_agent.content.slides.design.service import SlideDesignService
     from ii_agent.content.storybook.service import StorybookService
+    from ii_agent.projects.design.service import ProjectDesignService
     from ii_agent.auth.users.service import UserService
 
 
@@ -171,6 +182,8 @@ class ServiceContainer:
     media_template_service: MediaTemplateService
     skill_service: SkillService
     storybook_service: StorybookService
+    project_design_service: ProjectDesignService
+    slide_design_service: SlideDesignService
 
     @classmethod
     def create(cls) -> ServiceContainer:
@@ -236,12 +249,25 @@ class ServiceContainer:
         deployments_svc = get_deployments_service(project_repo, deployments_repo)
         media_template_svc = get_media_template_service(media_template_repo)
 
+        # ── Design services ──────────────────────────────────────────────
+        slide_repo = get_slide_repository()
+        project_design_repo = get_project_design_repository(session_repo)
+        slide_design_repo = get_slide_design_repository(session_repo, slide_repo)
+
         # ── LLM infrastructure & validation ──────────────────────────────────
         llm_billing_svc = get_llm_billing_service(credit_svc, cfg)
         llm_execution_svc = get_llm_execution_service(llm_billing_svc)
         llm_config_resolver = get_llm_config_resolver(llm_setting_svc, cfg)
         session_validation_svc = get_session_validation_service(
             session_svc, credit_svc
+        )
+
+        project_design_svc = get_project_design_service(
+            project_design_repo, sandbox_svc,
+            llm_setting_svc, llm_billing_svc, llm_execution_svc,
+        )
+        slide_design_svc = get_slide_design_service(
+            slide_design_repo, sandbox_svc,
         )
 
         return cls(
@@ -272,4 +298,6 @@ class ServiceContainer:
             media_template_service=media_template_svc,
             skill_service=skill_svc,
             storybook_service=storybook_svc,
+            project_design_service=project_design_svc,
+            slide_design_service=slide_design_svc,
         )

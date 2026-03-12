@@ -16,16 +16,13 @@ from ii_agent.content.slides.design.router import (
     slide_deck_sync_batch,
     slide_proxy_design_mode,
     slide_sync_batch,
-    sync_persisted_slide_deck_changes,
 )
 from ii_agent.content.slides.design.schemas import (
     SlideDeckSyncBatchRequest,
-    SlideDeckSyncStateRequest,
     SlideSyncBatchRequest,
 )
 from ii_agent.content.slides.design.schemas import (
     SlideDeckSyncBatchResponse,
-    SlideDeckSyncStateResponse,
 )
 
 
@@ -43,10 +40,9 @@ def test_get_slide_design_service_builds_service_with_dependencies(monkeypatch):
     captured = {}
 
     class FakeService:
-        def __init__(self, *, repo, sandbox_service, event_service, config) -> None:
+        def __init__(self, *, repo, sandbox_service, config) -> None:
             captured["repo"] = repo
             captured["sandbox_service"] = sandbox_service
-            captured["event_service"] = event_service
             captured["config"] = config
 
     class FakeSettings:
@@ -59,7 +55,6 @@ def test_get_slide_design_service_builds_service_with_dependencies(monkeypatch):
     service = get_slide_design_service(
         design_repo=repo,
         sandbox_service=object(),
-        event_service=object(),
     )
 
     assert isinstance(service, FakeService)
@@ -107,25 +102,15 @@ def _stateful_responses():
             "failed": 1,
             "errors": ["retry"],
         },
-        {
-            "success": True,
-            "applied": 1,
-            "total": 1,
-            "remaining": 0,
-            "errors": [],
-            "summary": "ok",
-            "remaining_changes": [],
-        },
     )
 
 
 async def _run_sync_routes():
-    slide_state_response, deck_state_response, sync_state_response = _stateful_responses()
+    slide_state_response, deck_state_response = _stateful_responses()
 
     sync_service = AsyncMock()
     sync_service.apply_slide_sync_batch.return_value = SlideDeckSyncBatchResponse(**slide_state_response)
     sync_service.apply_slide_deck_sync_batch.return_value = SlideDeckSyncBatchResponse(**deck_state_response)
-    sync_service.sync_persisted_slide_deck_changes.return_value = SlideDeckSyncStateResponse(**sync_state_response)
 
     slide_request = SlideSyncBatchRequest(
         session_id="session-1",
@@ -137,10 +122,6 @@ async def _run_sync_routes():
         session_id="session-1",
         presentation_name="deck",
         changes=[],
-    )
-    state_request = SlideDeckSyncStateRequest(
-        session_id="session-1",
-        presentation_name="deck",
     )
 
     slide_result = await slide_sync_batch(
@@ -155,14 +136,8 @@ async def _run_sync_routes():
         None,
         sync_service,
     )
-    persisted_result = await sync_persisted_slide_deck_changes(
-        state_request,
-        _current_user(),
-        None,
-        sync_service,
-    )
 
-    return slide_result, deck_result, persisted_result
+    return slide_result, deck_result
 
 
 @pytest.mark.asyncio
@@ -171,7 +146,6 @@ async def test_slide_design_routers_delegate_to_service():
     assert proxy.status_code == 200
     assert deck_proxy.status_code == 200
 
-    slide_result, deck_result, persisted_result = await _run_sync_routes()
+    slide_result, deck_result = await _run_sync_routes()
     assert slide_result.processed == 1
     assert deck_result.failed == 1
-    assert persisted_result.summary == "ok"

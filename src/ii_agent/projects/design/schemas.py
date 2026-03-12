@@ -112,6 +112,12 @@ class DesignStateRequest(BaseModel):
     redo_changes: Optional[List[StyleChange]] = None
 
 
+class DesignStateGetRequest(BaseModel):
+    """Request body for loading persisted design-mode state."""
+
+    session_id: str
+
+
 class DesignStateResponse(BaseModel):
     """Response for persisted design-mode state."""
 

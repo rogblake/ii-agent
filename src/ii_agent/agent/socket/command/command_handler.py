@@ -43,6 +43,11 @@ class UserCommandType(str, Enum):
     APPLE_LIST_APPS = "apple_list_apps"
     APPLE_CHECK_AUTH = "apple_check_auth"
     SAVE_EXPO_TOKEN = "save_expo_token"
+    DESIGN_SYNC = "design_sync"
+    DESIGN_SYNC_STATE = "design_sync_state"
+    SLIDE_DECK_SYNC_STATE = "slide_deck_sync_state"
+    DESIGN_GET_STATE = "design_get_state"
+    DESIGN_SAVE_STATE = "design_save_state"
 
 
 class CommandHandler(ABC):

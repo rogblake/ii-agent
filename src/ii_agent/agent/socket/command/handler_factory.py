@@ -45,6 +45,11 @@ from ii_agent.agent.socket.command.apple_app_setup_handler import (
     AppleAppSetupHandler,
     AppleListAppsHandler,
 )
+from ii_agent.agent.socket.command.design_get_state_handler import DesignGetStateHandler
+from ii_agent.agent.socket.command.design_save_state_handler import DesignSaveStateHandler
+from ii_agent.agent.socket.command.design_sync_handler import DesignSyncHandler
+from ii_agent.agent.socket.command.design_sync_state_handler import DesignSyncStateHandler
+from ii_agent.agent.socket.command.slide_deck_sync_state_handler import SlideDeckSyncStateHandler
 from ii_agent.agent.subscribers.database_subscriber import DatabaseSubscriber
 from ii_agent.agent.subscribers.metrics_subscriber import MetricsSubscriber
 from ii_agent.agent.subscribers.socketio_subscriber import SocketIOSubscriber
@@ -151,6 +156,26 @@ class CommandHandlerFactory:
                 container=self._container,
             ),
             UserCommandType.SAVE_EXPO_TOKEN: SaveExpoTokenHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.DESIGN_SYNC: DesignSyncHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.DESIGN_SYNC_STATE: DesignSyncStateHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.SLIDE_DECK_SYNC_STATE: SlideDeckSyncStateHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.DESIGN_GET_STATE: DesignGetStateHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.DESIGN_SAVE_STATE: DesignSaveStateHandler(
                 event_stream=event_stream,
                 container=self._container,
             ),

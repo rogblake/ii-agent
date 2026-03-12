@@ -12,7 +12,6 @@ from ii_agent.core.llm.dependencies import (
     LLMExecutionServiceDep,
 )
 from ii_agent.agent.sandboxes.dependencies import SandboxServiceDep
-from ii_agent.agent.events.dependencies import EventServiceDep
 from ii_agent.sessions.dependencies import SessionRepositoryDep
 from ii_agent.settings.llm.dependencies import LLMSettingServiceDep
 from ii_agent.projects.design.repository import ProjectDesignRepository
@@ -31,7 +30,6 @@ ProjectDesignRepositoryDep = Annotated[ProjectDesignRepository, Depends(get_proj
 def get_project_design_service(
     design_repo: ProjectDesignRepositoryDep,
     sandbox_service: SandboxServiceDep,
-    event_service: EventServiceDep,
     llm_setting_service: LLMSettingServiceDep,
     llm_billing_service: LLMBillingServiceDep,
     llm_execution_service: LLMExecutionServiceDep,
@@ -39,7 +37,6 @@ def get_project_design_service(
     return ProjectDesignService(
         repo=design_repo,
         sandbox_service=sandbox_service,
-        event_service=event_service,
         llm_setting_service=llm_setting_service,
         llm_billing_service=llm_billing_service,
         llm_execution_service=llm_execution_service,

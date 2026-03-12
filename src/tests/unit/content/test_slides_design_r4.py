@@ -49,7 +49,6 @@ def _make_service(
     return SlideDesignService(
         repo=repo or MagicMock(),
         sandbox_service=sandbox_service or MagicMock(),
-        event_service=event_service or MagicMock(),
         config=config or SimpleNamespace(workspace_path="/workspace"),
     )
 

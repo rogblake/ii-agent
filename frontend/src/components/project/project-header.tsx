@@ -6,6 +6,7 @@ import { Icon } from '../ui/icon'
 export type ProjectTab =
     | 'database'
     | 'domain'
+    | 'integrations'
     | 'branding'
     | 'secrets'
     | 'authentication'
@@ -17,44 +18,6 @@ interface TabConfig {
     titleKey: string
     descriptionKey: string
 }
-
-const tabs: TabConfig[] = [
-    {
-        id: 'database',
-        labelKey: 'project.header.tabs.database.label',
-        icon: 'database',
-        titleKey: 'project.header.tabs.database.title',
-        descriptionKey: 'project.header.tabs.database.description'
-    },
-    {
-        id: 'domain',
-        labelKey: 'project.header.tabs.domain.label',
-        icon: 'globe',
-        titleKey: 'project.header.tabs.domain.title',
-        descriptionKey: 'project.header.tabs.domain.description'
-    },
-    // {
-    //     id: 'branding',
-    //     label: 'Branding',
-    //     icon: 'ai-magic',
-    //     title: 'Branding',
-    //     description: 'Customize your app appearance and brand identity'
-    // },
-    {
-        id: 'secrets',
-        labelKey: 'project.header.tabs.secrets.label',
-        icon: 'secret',
-        titleKey: 'project.header.tabs.secrets.title',
-        descriptionKey: 'project.header.tabs.secrets.description'
-    }
-    // {
-    //     id: 'authentication',
-    //     label: 'Authentication',
-    //     icon: 'user-3',
-    //     title: 'Authentication',
-    //     description: 'Configure user authentication and access control'
-    // }
-]
 
 interface ProjectHeaderProps {
     activeTab?: ProjectTab
@@ -70,6 +33,36 @@ const ProjectHeader = ({
 
     const activeTab = controlledTab ?? internalTab
     const setActiveTab = onTabChange ?? setInternalTab
+    const tabs: TabConfig[] = [
+        {
+            id: 'database',
+            labelKey: 'project.header.tabs.database.label',
+            icon: 'database',
+            titleKey: 'project.header.tabs.database.title',
+            descriptionKey: 'project.header.tabs.database.description'
+        },
+        {
+            id: 'domain',
+            labelKey: 'project.header.tabs.domain.label',
+            icon: 'globe',
+            titleKey: 'project.header.tabs.domain.title',
+            descriptionKey: 'project.header.tabs.domain.description'
+        },
+        {
+            id: 'integrations',
+            labelKey: 'project.header.tabs.integrations.label',
+            icon: 'connector',
+            titleKey: 'project.header.tabs.integrations.title',
+            descriptionKey: 'project.header.tabs.integrations.description'
+        },
+        {
+            id: 'secrets',
+            labelKey: 'project.header.tabs.secrets.label',
+            icon: 'secret',
+            titleKey: 'project.header.tabs.secrets.title',
+            descriptionKey: 'project.header.tabs.secrets.description'
+        }
+    ]
 
     const currentTab = tabs.find((tab) => tab.id === activeTab)
 
@@ -108,15 +101,19 @@ const ProjectHeader = ({
                             className={clsx('size-4', {
                                 'stroke-sky-blue-2 dark:stroke-charcoal':
                                     tab.icon !== 'database' &&
+                                    tab.icon !== 'connector' &&
                                     activeTab === tab.id,
                                 'stroke-black dark:stroke-sky-blue':
                                     tab.icon !== 'database' &&
+                                    tab.icon !== 'connector' &&
                                     activeTab !== tab.id,
                                 'fill-sky-blue-2 dark:fill-charcoal':
-                                    tab.icon === 'database' &&
+                                    (tab.icon === 'database' ||
+                                        tab.icon === 'connector') &&
                                     activeTab === tab.id,
                                 'fill-black dark:fill-sky-blue':
-                                    tab.icon === 'database' &&
+                                    (tab.icon === 'database' ||
+                                        tab.icon === 'connector') &&
                                     activeTab !== tab.id
                             })}
                         />

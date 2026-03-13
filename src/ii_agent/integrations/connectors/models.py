@@ -26,6 +26,7 @@ class ConnectorTypeEnum(str, Enum):
 
     GOOGLE_DRIVE = "google_drive"
     GITHUB = "github"
+    REVENUECAT = "revenuecat"
     CHATGPT_MCP = "chatgpt_mcp"
     COMPOSIO = "composio"
 

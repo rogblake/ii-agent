@@ -21,6 +21,7 @@ from ii_agent.integrations.connectors.exceptions import (
 )
 from ii_agent.integrations.connectors.github import GitHubConnector
 from ii_agent.integrations.connectors.google_drive import GoogleDriveConnector
+from ii_agent.integrations.connectors.revenuecat import RevenueCatConnector
 from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.core.storage.dependencies import StorageDep
 
@@ -101,6 +102,7 @@ def _create_state_token(
     connector_type: str,
     frontend_url: Optional[str] = None,
     redirect_uri: Optional[str] = None,
+    code_verifier: Optional[str] = None,
 ) -> str:
     """Create encrypted state token for OAuth flow.
 
@@ -109,6 +111,7 @@ def _create_state_token(
         connector_type: Type of connector
         frontend_url: Optional frontend URL for redirect
         redirect_uri: Optional OAuth redirect URI for multi-domain support
+        code_verifier: Optional PKCE code verifier to persist across the flow
 
     Returns:
         str: Encrypted state token
@@ -122,6 +125,8 @@ def _create_state_token(
         state_data["frontend_url"] = frontend_url
     if redirect_uri:
         state_data["redirect_uri"] = redirect_uri
+    if code_verifier:
+        state_data["code_verifier"] = code_verifier
     return serializer.dumps(state_data)
 
 
@@ -563,3 +568,92 @@ async def get_github_repositories(
         f"Successfully fetched {len(repositories)} repositories for user {current_user.id}"
     )
     return GitHubRepositoriesResponse(repositories=repositories)
+
+
+# RevenueCat Endpoints
+@router.get("/connectors/revenuecat/auth-url", response_model=ConnectorAuthUrlResponse)
+async def get_revenuecat_auth_url(
+    db: DBSession,
+    current_user: CurrentUser,
+    redirect_uri: Optional[str] = None,
+) -> ConnectorAuthUrlResponse:
+    """Generate RevenueCat OAuth URL."""
+    try:
+        connector = ConnectorFactory.create(ConnectorTypeEnum.REVENUECAT, db)
+
+        if not isinstance(connector, RevenueCatConnector):
+            raise ConnectorConfigError("Invalid connector type")
+
+        # Generate PKCE pair and embed code_verifier in the signed state token
+        code_verifier, code_challenge = RevenueCatConnector.generate_pkce()
+        state = _create_state_token(
+            current_user.id,
+            "revenuecat",
+            redirect_uri=redirect_uri,
+            code_verifier=code_verifier,
+        )
+
+        auth_url = await connector.get_auth_url(
+            state, redirect_uri=redirect_uri, code_challenge=code_challenge
+        )
+        return ConnectorAuthUrlResponse(auth_url=auth_url, state=state)
+    except ValueError as e:
+        raise ConnectorConfigError(str(e)) from e
+
+
+@router.post("/connectors/revenuecat/callback")
+async def revenuecat_callback(
+    request: ConnectorCallbackRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """Handle RevenueCat OAuth callback."""
+    state_data = _verify_state_token(request.state, current_user.id)
+    redirect_uri = request.redirect_uri or state_data.get("redirect_uri")
+    code_verifier = state_data.get("code_verifier")
+
+    connector = ConnectorFactory.create(ConnectorTypeEnum.REVENUECAT, db)
+    if not isinstance(connector, RevenueCatConnector):
+        raise ConnectorConfigError("Invalid connector type")
+
+    connector_data = await connector.handle_callback(
+        request.code,
+        request.state,
+        redirect_uri=redirect_uri,
+        code_verifier=code_verifier,
+    )
+    await connector.connect(current_user.id, connector_data)
+
+    return {"success": True, "message": "RevenueCat connected successfully"}
+
+
+@router.get("/connectors/revenuecat/status", response_model=ConnectorStatusResponse)
+async def get_revenuecat_status(
+    db: DBSession,
+    current_user: CurrentUser,
+) -> ConnectorStatusResponse:
+    """Get RevenueCat connection status."""
+    connector = ConnectorFactory.create(ConnectorTypeEnum.REVENUECAT, db)
+    status = await connector.get_status(current_user.id)
+
+    return ConnectorStatusResponse(
+        is_connected=status.is_connected,
+        connector_type=status.connector_type,
+        metadata=status.metadata,
+        access_token=status.access_token,
+    )
+
+
+@router.delete("/connectors/revenuecat")
+async def disconnect_revenuecat(
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """Disconnect RevenueCat."""
+    connector = ConnectorFactory.create(ConnectorTypeEnum.REVENUECAT, db)
+
+    if not await connector.get_connector(current_user.id):
+        raise ConnectorNotFoundError("RevenueCat is not connected")
+
+    await connector.disconnect(current_user.id)
+    return {"success": True, "message": "RevenueCat disconnected successfully"}

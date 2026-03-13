@@ -18,6 +18,7 @@ DESCRIPTION = """Get a database connection.
 - Support multiple database types (currently: postgres).
 - Provide connection string for use in applications.
 - Requires a project to be initialized first (use fullstack_project_init).
+- If database_source is "supabase", this tool will skip NeonDB provisioning and instruct the agent to use Supabase Composio tools instead.
 """
 INPUT_SCHEMA = {
     "type": "object",
@@ -26,6 +27,12 @@ INPUT_SCHEMA = {
             "type": "string",
             "description": "Type of the database to connect to",
             "enum": ["postgres"],
+        },
+        "database_source": {
+            "type": "string",
+            "description": "(Optional) Database provider. 'default' uses NeonDB. 'supabase' uses Supabase via Composio tools.",
+            "enum": ["default", "supabase"],
+            "default": "default",
         },
     },
     "required": ["database_type"],
@@ -83,6 +90,45 @@ class GetDatabaseConnection(BaseAgentTool):
                 )
 
             user_id = str(self._user_id) if self._user_id else None
+            database_source = tool_input.get("database_source", "default")
+
+            # Supabase database source: skip NeonDB provisioning
+            if database_source == "supabase":
+                _db_repo = ProjectDatabaseRepository()
+                async with get_db_session_local() as db:
+                    existing_db_record = await _db_repo.get_active_by_session_id(db, session_id=session_id)
+
+                if existing_db_record and existing_db_record.source == DatabaseSourceEnum.SUPABASE.value:
+                    if existing_db_record.connection_string != "pending_supabase_setup":
+                        return ToolResult(
+                            llm_content=f"Supabase database already configured. Connection string: {existing_db_record.connection_string}",
+                            user_display_content="Supabase database already configured.",
+                            is_error=False,
+                        )
+
+                if not existing_db_record:
+                    async with get_db_session_local() as db:
+                        await _db_repo.create(
+                            db,
+                            session_id=session_id,
+                            source=DatabaseSourceEnum.SUPABASE.value,
+                            connection_string="pending_supabase_setup",
+                            metadata={"database_source": "supabase"},
+                        )
+
+                return ToolResult(
+                    llm_content=(
+                        "Supabase selected as database provider. Use the available Supabase tools to set up the database:\n"
+                        "1. SUPABASE_LIST_ALL_ORGANIZATIONS to get the organization ID (or SUPABASE_LIST_ALL_PROJECTS to extract organization_id from an existing project), then SUPABASE_CREATE_A_PROJECT with ONLY 4 params: name, organization_id, region, db_pass. Do NOT pass template_url, plan, or other optional params as empty strings. "
+                        "IMPORTANT: Save the project 'ref' (project reference ID) from the response - you need it for all subsequent Supabase API calls.\n"
+                        "2. SUPABASE_GET_PROJECT_API_KEYS with ref=<project-ref> (required) to retrieve API keys\n"
+                        "3. SUPABASE_BETA_RUN_SQL_QUERY with ref=<project-ref> to create tables and schema\n"
+                        "4. Save NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY as environment variables\n"
+                        "5. Install @supabase/supabase-js and create a Supabase client utility"
+                    ),
+                    user_display_content="Supabase selected as database provider. Setting up via Supabase tools.",
+                    is_error=False,
+                )
 
             # Check if an active database already exists for this session
             _db_repo = ProjectDatabaseRepository()

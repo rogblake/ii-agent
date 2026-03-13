@@ -41,7 +41,7 @@ class ProjectService:
         description: Optional[str] = None,
         database: Optional[Dict[str, Any]] = None,
     ) -> Optional[Project]:
-        """Create a new project for a session."""
+        """Create or update a project for a session."""
         session = await self._session_repo.get_by_id(db, session_id)
         if not session:
             logger.warning(
@@ -49,6 +49,21 @@ class ProjectService:
                 session_id,
             )
             return None
+
+        # Check if a project already exists for this session (unique constraint on session_id)
+        existing = await self._project_repo.get_by_session_id(db, session_id)
+        if existing:
+            existing.name = project_name
+            if description is not None:
+                existing.description = description
+            if framework is not None:
+                existing.framework = framework
+            if project_path is not None:
+                existing.project_path = project_path
+            if database is not None:
+                existing.database_json = database
+            await db.flush()
+            return existing
 
         project = Project(
             id=str(uuid.uuid4()),

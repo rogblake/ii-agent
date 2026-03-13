@@ -39,7 +39,7 @@ const baseQueryWithReauth: BaseQueryFn<
 export const connectorApi = createApi({
     reducerPath: 'connectorApi',
     baseQuery: baseQueryWithReauth,
-    tagTypes: ['GoogleDriveStatus', 'GitHubStatus'],
+    tagTypes: ['GoogleDriveStatus', 'GitHubStatus', 'RevenueCatStatus'],
     endpoints: (builder) => ({
         getGoogleDriveStatus: builder.query<ConnectorStatusResponse, void>({
             query: () => '/connectors/google-drive/status',
@@ -48,6 +48,10 @@ export const connectorApi = createApi({
         getGitHubStatus: builder.query<ConnectorStatusResponse, void>({
             query: () => '/connectors/github/status',
             providesTags: ['GitHubStatus']
+        }),
+        getRevenueCatStatus: builder.query<ConnectorStatusResponse, void>({
+            query: () => '/connectors/revenuecat/status',
+            providesTags: ['RevenueCatStatus']
         }),
         disconnectGoogleDrive: builder.mutation<
             { success: boolean; message: string },
@@ -68,6 +72,16 @@ export const connectorApi = createApi({
                 method: 'DELETE'
             }),
             invalidatesTags: ['GitHubStatus']
+        }),
+        disconnectRevenueCat: builder.mutation<
+            { success: boolean; message: string },
+            void
+        >({
+            query: () => ({
+                url: '/connectors/revenuecat',
+                method: 'DELETE'
+            }),
+            invalidatesTags: ['RevenueCatStatus']
         })
     })
 })
@@ -75,6 +89,8 @@ export const connectorApi = createApi({
 export const {
     useGetGoogleDriveStatusQuery,
     useGetGitHubStatusQuery,
+    useGetRevenueCatStatusQuery,
     useDisconnectGoogleDriveMutation,
-    useDisconnectGitHubMutation
+    useDisconnectGitHubMutation,
+    useDisconnectRevenueCatMutation
 } = connectorApi

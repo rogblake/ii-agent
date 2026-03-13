@@ -41,6 +41,7 @@ def test_gcp_source_maps_nested_and_top_level_fields(monkeypatch):
             FakeProvider.seen_keys = keys
             return {
                 SecretKey.DATABASE_URL: "postgresql://db",
+                SecretKey.REVENUECAT_CLIENT_SECRET: "rc-secret",
                 SecretKey.JWT_SECRET_KEY: "jwt-123",
                 SecretKey.ENCRYPTION_KEY: "not-mapped",
             }
@@ -54,6 +55,7 @@ def test_gcp_source_maps_nested_and_top_level_fields(monkeypatch):
     assert SecretKey.DATABASE_URL in FakeProvider.seen_keys
     assert settings_values == {
         "database": {"url": "postgresql://db"},
+        "oauth": {"revenuecat_client_secret": "rc-secret"},
         "jwt_secret_key": "jwt-123",
     }
 

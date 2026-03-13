@@ -18,6 +18,7 @@ class SecretKey(str, Enum):
     REDIS_SESSION_URL = "redis-url"
     GOOGLE_CLIENT_SECRET = "google-client-secret"
     GITHUB_CLIENT_SECRET = "github-client-secret"
+    REVENUECAT_CLIENT_SECRET = "revenuecat-client-secret"
     GITHUB_APP_PRIVATE_KEY = "github-app-private-key"
     SESSION_SECRET_KEY = "session-secret-key"
     STRIPE_SECRET_KEY = "stripe-secret-key"
@@ -57,6 +58,7 @@ DATABASE_SECRETS = {SecretKey.DATABASE_URL, SecretKey.REDIS_SESSION_URL}
 OAUTH_SECRETS = {
     SecretKey.GOOGLE_CLIENT_SECRET,
     SecretKey.GITHUB_CLIENT_SECRET,
+    SecretKey.REVENUECAT_CLIENT_SECRET,
     SecretKey.GITHUB_APP_PRIVATE_KEY,
     SecretKey.SESSION_SECRET_KEY,
     SecretKey.MCP_OAUTH_CLIENT_SECRET,

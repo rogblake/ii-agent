@@ -22,6 +22,7 @@ SECRET_TO_SETTINGS: dict[SecretKey, tuple[str | None, str]] = {
     SecretKey.REDIS_SESSION_URL: ("redis", "session_url"),
     SecretKey.GOOGLE_CLIENT_SECRET: ("oauth", "google_client_secret"),
     SecretKey.GITHUB_CLIENT_SECRET: ("oauth", "github_client_secret"),
+    SecretKey.REVENUECAT_CLIENT_SECRET: ("oauth", "revenuecat_client_secret"),
     SecretKey.GITHUB_APP_PRIVATE_KEY: ("oauth", "github_app_private_key"),
     SecretKey.SESSION_SECRET_KEY: ("oauth", "session_secret_key"),
     SecretKey.STRIPE_SECRET_KEY: ("stripe", "secret_key"),

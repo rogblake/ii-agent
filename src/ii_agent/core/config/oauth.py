@@ -81,6 +81,22 @@ class OAuth2Settings(BaseSettings):
         description="GitHub App private key in PEM format (use \\n for newlines)",
     )
 
+    # RevenueCat OAuth configuration
+    revenuecat_client_id: str = Field(
+        default="",
+        description="RevenueCat OAuth client ID",
+    )
+
+    revenuecat_client_secret: str = Field(
+        default="",
+        description="RevenueCat OAuth client secret",
+    )
+
+    revenuecat_redirect_uri: str = Field(
+        default="http://localhost:1420/auth/oauth/revenuecat/callback",
+        description="RevenueCat OAuth redirect URI",
+    )
+
     # II OAuth configuration (Hydra)
     ii_client_id: str = Field(
         default="",
@@ -129,6 +145,15 @@ class OAuth2Settings(BaseSettings):
     def has_github_app(self) -> bool:
         """Check if GitHub App is configured."""
         return bool(self.github_app_id and self.github_app_private_key)
+
+    def has_revenuecat_oauth(self) -> bool:
+        """Check if RevenueCat OAuth is configured.
+
+        RevenueCat supports both confidential clients (client secret) and
+        public PKCE clients (no client secret). The client ID is the only
+        required value for the authorization flow to start.
+        """
+        return bool(self.revenuecat_client_id)
 
     def has_ii_oauth(self) -> bool:
         """Check if II OAuth is configured."""

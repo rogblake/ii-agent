@@ -223,6 +223,8 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
                         className={`fill-white ${className}`}
                     />
                 )
+            case TOOL.ASK_USER_SELECT:
+                return <Icon name="questions" className={className} />
             default:
                 // Fallback to tool_logo if available
                 if (value.tool_logo) {

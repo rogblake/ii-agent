@@ -30,6 +30,7 @@ _SECRET_FIELD_MAP: dict[str, tuple[str | None, str]] = {
     "REDIS_SESSION_URL": ("redis", "session_url"),
     "GOOGLE_CLIENT_SECRET": ("oauth", "google_client_secret"),
     "GITHUB_CLIENT_SECRET": ("oauth", "github_client_secret"),
+    "REVENUECAT_CLIENT_SECRET": ("oauth", "revenuecat_client_secret"),
     "GITHUB_APP_PRIVATE_KEY": ("oauth", "github_app_private_key"),
     "SESSION_SECRET_KEY": ("oauth", "session_secret_key"),
     "STRIPE_SECRET_KEY": ("stripe", "secret_key"),

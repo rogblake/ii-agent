@@ -580,12 +580,12 @@ class E2BSandboxManager(SandboxManager):
     async def write_files(self, files: List[FileUpload]) -> List[SandboxFileInfo]:
         """Write content to a file in the sandbox."""
         await self._ensure_sandbox_connection()
-        files = [{"path": file.path, "content": file.content} for file in files]
+        files = [{"path": file.path, "data": file.content} for file in files]
         results = await self.sandbox.files.write_files(files)
         return [
             SandboxFileInfo(
                 name=r.name,
-                type=r.type.value,
+                type=r.type.value if hasattr(r.type, "value") else (r.type or "file"),
                 path=r.path,
             )
             for r in results

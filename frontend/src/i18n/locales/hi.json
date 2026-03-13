@@ -2430,6 +2430,11 @@
                     "title": "डोमेन सेटिंग्स",
                     "description": "डोमेन्स कॉन्फ़िगर करें ताकि आपका ऐप वेब पर उपलब्ध हो"
                 },
+                "integrations": {
+                    "label": "इंटीग्रेशन्स",
+                    "title": "इंटीग्रेशन्स",
+                    "description": "बिल्ड और लॉन्च के दौरान इस प्रोजेक्ट को जिन सेवाओं की जरूरत है उन्हें कनेक्ट करें"
+                },
                 "secrets": {
                     "label": "सीक्रेट्स",
                     "title": "सीक्रेट्स",
@@ -2469,6 +2474,23 @@
                 "range": "<range>{{start}}-{{end}}</range> में से <total>{{total}}</total>",
                 "page": "पेज",
                 "of": "में से"
+            }
+        },
+        "integrations": {
+            "empty": {
+                "title": "अभी कोई इंटीग्रेशन नहीं",
+                "description": "इस प्रकार के प्रोजेक्ट को अभी किसी विशेष इंटीग्रेशन सेटअप की आवश्यकता नहीं है।"
+            },
+            "status": {
+                "notConnected": "कनेक्ट नहीं है"
+            },
+            "supabase": {
+                "title": "Supabase",
+                "description": "Supabase कनेक्ट करें ताकि एजेंट आपके ऐप को बनाते समय projects, tables, auth, edge functions और storage देख सके।",
+                "helper": "जब प्रोजेक्ट को लाइव Supabase workspace चाहिए तब इसका उपयोग करें। ऐप के runtime keys को फिर भी Secrets में रखना चाहिए।"
+            },
+            "revenuecat": {
+                "helper": "जब इस मोबाइल ऐप को subscription, trial या paywall की जरूरत हो, तो RevenueCat यहीं कनेक्ट करें।"
             }
         },
         "deployment": {

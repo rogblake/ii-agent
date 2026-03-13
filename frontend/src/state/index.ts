@@ -129,6 +129,8 @@ export {
     connectorApi,
     useGetGoogleDriveStatusQuery,
     useGetGitHubStatusQuery,
+    useGetRevenueCatStatusQuery,
     useDisconnectGoogleDriveMutation,
-    useDisconnectGitHubMutation
+    useDisconnectGitHubMutation,
+    useDisconnectRevenueCatMutation
 } from './api/connector.api'

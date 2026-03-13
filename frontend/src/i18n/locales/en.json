@@ -238,6 +238,22 @@
                 "connectFailed": "Failed to connect Google Drive.",
                 "disconnectFailed": "Failed to disconnect Google Drive."
             }
+        },
+        "revenuecat": {
+            "title": "RevenueCat",
+            "description": "Connect RevenueCat so the mobile app agent can configure subscriptions.",
+            "connect": "Connect",
+            "connected": "Connected",
+            "disconnect": "Disconnect",
+            "authPopupTitle": "RevenueCat Authorization",
+            "toasts": {
+                "connected": "RevenueCat connected successfully.",
+                "disconnected": "RevenueCat disconnected."
+            },
+            "errors": {
+                "connectFailed": "Failed to connect RevenueCat.",
+                "disconnectFailed": "Failed to disconnect RevenueCat."
+            }
         }
     },
     "settings": {
@@ -2570,6 +2586,11 @@
                     "title": "Domain Settings",
                     "description": "Configure domains to make your app accessible to the global web"
                 },
+                "integrations": {
+                    "label": "Integrations",
+                    "title": "Integrations",
+                    "description": "Connect the services this project needs during build and launch"
+                },
                 "secrets": {
                     "label": "Secrets",
                     "title": "Secrets",
@@ -2609,6 +2630,23 @@
                 "range": "<range>{{start}}-{{end}}</range> of <total>{{total}}</total>",
                 "page": "Page",
                 "of": "of"
+            }
+        },
+        "integrations": {
+            "empty": {
+                "title": "No integrations yet",
+                "description": "This project type does not need a dedicated integration setup yet."
+            },
+            "status": {
+                "notConnected": "Not connected"
+            },
+            "supabase": {
+                "title": "Supabase",
+                "description": "Connect Supabase so the agent can inspect projects, tables, auth, edge functions, and storage while it builds your app.",
+                "helper": "Use this when the project needs a live Supabase workspace. Runtime keys for the app itself should still live in Secrets."
+            },
+            "revenuecat": {
+                "helper": "Connect RevenueCat here when this mobile app needs subscriptions, trials, or paywalls."
             }
         },
         "deployment": {

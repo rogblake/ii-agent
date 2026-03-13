@@ -14,6 +14,7 @@ from .base import BaseConnector, ConnectorData, ConnectorStatus
 from .factory import ConnectorFactory
 from .github import GitHubConnector
 from .google_drive import GoogleDriveConnector
+from .revenuecat import RevenueCatConnector
 from .registry import ConnectorRegistry
 from .service import ConnectorService
 from .router import router
@@ -24,6 +25,7 @@ connector_registry = ConnectorRegistry()
 # Register all connectors
 connector_registry.register(ConnectorTypeEnum.GOOGLE_DRIVE, GoogleDriveConnector)
 connector_registry.register(ConnectorTypeEnum.GITHUB, GitHubConnector)
+connector_registry.register(ConnectorTypeEnum.REVENUECAT, RevenueCatConnector)
 
 __all__ = [
     # Models
@@ -39,6 +41,7 @@ __all__ = [
     # Implementations
     "GitHubConnector",
     "GoogleDriveConnector",
+    "RevenueCatConnector",
     # Factory and registry
     "ConnectorFactory",
     "connector_registry",

@@ -8,10 +8,7 @@ export interface ConnectorAuthUrlResponse {
 export interface ConnectorStatusResponse {
     is_connected: boolean
     connector_type: string
-    metadata?: {
-        email?: string
-        name?: string
-    }
+    metadata?: Record<string, unknown>
     access_token?: string
 }
 
@@ -72,6 +69,10 @@ class ConnectorService {
         return `${window.location.origin}/auth/oauth/github/callback`
     }
 
+    getRevenueCatRedirectUri(): string {
+        return `${window.location.origin}/auth/oauth/revenuecat/callback`
+    }
+
     async getGitHubAuthUrl(): Promise<ConnectorAuthUrlResponse> {
         const redirectUri = this.getGitHubRedirectUri()
         const response = await axiosInstance.get<ConnectorAuthUrlResponse>(
@@ -128,6 +129,51 @@ class ConnectorService {
         const response = await axiosInstance.get<GitHubRepositoriesResponse>(
             '/connectors/github/repositories'
         )
+        return response.data
+    }
+
+    async getRevenueCatAuthUrl(): Promise<ConnectorAuthUrlResponse> {
+        const redirectUri = this.getRevenueCatRedirectUri()
+        const response = await axiosInstance.get<ConnectorAuthUrlResponse>(
+            '/connectors/revenuecat/auth-url',
+            {
+                params: { redirect_uri: redirectUri }
+            }
+        )
+        return response.data
+    }
+
+    async handleRevenueCatCallback(
+        code: string,
+        state: string
+    ): Promise<{ success: boolean; message: string }> {
+        const redirectUri = this.getRevenueCatRedirectUri()
+        const response = await axiosInstance.post<{
+            success: boolean
+            message: string
+        }>('/connectors/revenuecat/callback', {
+            code,
+            state,
+            redirect_uri: redirectUri
+        })
+        return response.data
+    }
+
+    async getRevenueCatStatus(): Promise<ConnectorStatusResponse> {
+        const response = await axiosInstance.get<ConnectorStatusResponse>(
+            '/connectors/revenuecat/status'
+        )
+        return response.data
+    }
+
+    async disconnectRevenueCat(): Promise<{
+        success: boolean
+        message: string
+    }> {
+        const response = await axiosInstance.delete<{
+            success: boolean
+            message: string
+        }>('/connectors/revenuecat')
         return response.data
     }
 
@@ -195,9 +241,11 @@ class ConnectorService {
 
     openAuthPopup(
         authUrl: string,
-        windowTitle: string = 'Authorization'
+        _windowTitle?: string
     ): Promise<{ code: string; state: string }> {
         return new Promise((resolve, reject) => {
+            const authState = this.getAuthStateConfig(authUrl)
+
             // Detect if we're on a mobile device
             const isMobile = /iPhone|iPad|iPod|Android/i.test(
                 navigator.userAgent
@@ -206,9 +254,8 @@ class ConnectorService {
             if (isMobile) {
                 // On mobile, use full-page redirect instead of popup
                 // Store the current intent in sessionStorage
-                const authType = authUrl.includes('github') ? 'github_auth_pending' : 'google_drive_auth_pending'
                 sessionStorage.setItem(
-                    authType,
+                    authState.pendingStorageKey,
                     JSON.stringify({
                         timestamp: Date.now(),
                         returnUrl: window.location.href
@@ -235,9 +282,9 @@ class ConnectorService {
                     if (!allowedOrigins.has(event.origin)) return
 
                     const data = event.data
-                    if (data && data.type === 'google-drive-auth') {
+                    if (data && data.type === authState.messageType) {
                         window.removeEventListener('message', handler)
-                        sessionStorage.removeItem('google_drive_auth_pending')
+                        sessionStorage.removeItem(authState.pendingStorageKey)
 
                         if (data.error) {
                             const description =
@@ -267,80 +314,79 @@ class ConnectorService {
                 return
             }
 
-            // Desktop: use popup window
-            const width = 600
-            const height = 700
-            const left = window.screen.width / 2 - width / 2
-            const top = window.screen.height / 2 - height / 2
+            // Desktop: open new tab (avoids COOP issues with popups).
+            // Communication uses BroadcastChannel since window.opener
+            // is unreliable after cross-origin navigation.
+            const authTab = window.open(authUrl, '_blank')
 
-            const popup = window.open(
-                authUrl,
-                windowTitle,
-                `width=${width},height=${height},left=${left},top=${top}`
-            )
-
-            if (!popup) {
-                reject(new Error('Failed to open popup window'))
+            if (!authTab) {
+                reject(new Error('Failed to open authorization tab'))
                 return
             }
 
-            const checkClosed = setInterval(() => {
-                if (popup.closed) {
-                    clearInterval(checkClosed)
-                    reject(new Error('Authorization cancelled'))
-                }
-            }, 1000)
-
-            const allowedOrigins = new Set<string>([window.location.origin])
+            let channel: BroadcastChannel | null = null
             try {
-                const apiUrl = import.meta.env.VITE_API_URL
-                if (apiUrl) {
-                    allowedOrigins.add(new URL(apiUrl).origin)
-                }
-            } catch (error) {
-                console.warn('Invalid API URL provided in VITE_API_URL:', error)
+                channel = new BroadcastChannel(authState.messageType)
+            } catch {
+                reject(
+                    new Error(
+                        'BroadcastChannel not supported by this browser'
+                    )
+                )
+                return
             }
 
-            window.addEventListener('message', function handler(event) {
-                if (!allowedOrigins.has(event.origin)) return
+            const cleanup = () => {
+                channel?.close()
+                channel = null
+            }
 
+            channel.onmessage = (event) => {
                 const data = event.data
-                if (
-                    data &&
-                    (data.type === 'google-drive-auth' ||
-                        data.type === 'github-auth')
-                ) {
-                    clearInterval(checkClosed)
-                    window.removeEventListener('message', handler)
-                    try {
-                        popup.close()
-                    } catch (error) {
-                        console.warn('Failed to close popup window:', error)
-                    }
-
-                    if (data.error) {
-                        const description =
-                            typeof data.errorDescription === 'string' &&
-                            data.errorDescription.length
-                                ? data.errorDescription
-                                : typeof data.error === 'string'
-                                  ? data.error
-                                  : 'Authorization failed'
-                        reject(new Error(description))
-                        return
-                    }
-
-                    if (data.code && data.state) {
-                        resolve({
-                            code: data.code,
-                            state: data.state
-                        })
-                    } else {
-                        reject(new Error('Authorization failed'))
-                    }
+                if (!data || data.type !== authState.messageType) return
+                cleanup()
+                if (data.error) {
+                    const description =
+                        typeof data.errorDescription === 'string' &&
+                        data.errorDescription.length
+                            ? data.errorDescription
+                            : typeof data.error === 'string'
+                              ? data.error
+                              : 'Authorization failed'
+                    reject(new Error(description))
+                    return
                 }
-            })
+                if (data.code && data.state) {
+                    resolve({ code: data.code, state: data.state })
+                } else {
+                    reject(new Error('Authorization failed'))
+                }
+            }
         })
+    }
+
+    private getAuthStateConfig(authUrl: string): {
+        pendingStorageKey: string
+        messageType: string
+    } {
+        if (authUrl.includes('github')) {
+            return {
+                pendingStorageKey: 'github_auth_pending',
+                messageType: 'github-auth'
+            }
+        }
+
+        if (authUrl.includes('revenuecat')) {
+            return {
+                pendingStorageKey: 'revenuecat_auth_pending',
+                messageType: 'revenuecat-auth'
+            }
+        }
+
+        return {
+            pendingStorageKey: 'google_drive_auth_pending',
+            messageType: 'google-drive-auth'
+        }
     }
 }
 

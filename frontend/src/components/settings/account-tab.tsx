@@ -22,6 +22,8 @@ import { SUBSCRIPTION_PLANS } from '@/constants/subscription'
 // Hidden: GitHub and Google Drive connections
 // import { GoogleDriveConnection } from './google-drive-connection'
 // import { GitHubConnection } from './github-connection'
+import { SupabaseConnection } from '@/components/project/supabase-connection'
+import { RevenueCatConnection } from './revenuecat-connection'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -120,14 +122,13 @@ const AccountTab = () => {
                 </div>
             </div>
 
-            {/* Linked accounts section hidden */}
-            {/* <div className="space-y-4">
+            <div className="space-y-4 pt-4 md:pt-6 border-t border-black/30 dark:border-white/30">
                 <h2 className="text-[18px] font-semibold mb-4">
                     {t('settings.account.linkedAccounts')}
                 </h2>
-                <GoogleDriveConnection />
-                <GitHubConnection />
-            </div> */}
+                <SupabaseConnection variant="settings" />
+                <RevenueCatConnection />
+            </div>
 
             {plan !== SubscriptionPlan.Free && (
                 <div className="pt-4 md:pt-6 border-t border-black/30 dark:border-white/30">

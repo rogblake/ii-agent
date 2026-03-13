@@ -2430,6 +2430,11 @@
                     "title": "ドメイン設定",
                     "description": "ドメインを設定してアプリをWebで利用可能にします"
                 },
+                "integrations": {
+                    "label": "連携",
+                    "title": "連携",
+                    "description": "ビルドと公開に必要なサービスをこのプロジェクトに接続します"
+                },
                 "secrets": {
                     "label": "シークレット",
                     "title": "シークレット",
@@ -2469,6 +2474,23 @@
                 "range": "全<total>{{total}}</total>件中<range>{{start}}-{{end}}</range>",
                 "page": "ページ",
                 "of": "/"
+            }
+        },
+        "integrations": {
+            "empty": {
+                "title": "連携はまだありません",
+                "description": "この種類のプロジェクトでは、現時点で専用の連携設定は必要ありません。"
+            },
+            "status": {
+                "notConnected": "未接続"
+            },
+            "supabase": {
+                "title": "Supabase",
+                "description": "Supabase を接続すると、エージェントがアプリ構築中にプロジェクト、テーブル、認証、Edge Functions、Storage を確認できます。",
+                "helper": "このプロジェクトで実際の Supabase ワークスペースが必要な場合に使います。アプリ本体のランタイムキーは引き続き Secrets に保存してください。"
+            },
+            "revenuecat": {
+                "helper": "このモバイルアプリでサブスクリプション、トライアル、またはペイウォールが必要な場合は、ここでRevenueCatを接続してください。"
             }
         },
         "deployment": {

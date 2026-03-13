@@ -1306,6 +1306,22 @@
                 "disconnectFailed": "Không thể ngắt kết nối Google Drive."
             }
         },
+        "revenuecat": {
+            "title": "RevenueCat",
+            "description": "Kết nối RevenueCat để agent mobile app có thể cấu hình subscription.",
+            "connect": "Kết nối",
+            "connected": "Đã kết nối",
+            "disconnect": "Ngắt kết nối",
+            "authPopupTitle": "Xác thực RevenueCat",
+            "toasts": {
+                "connected": "Đã kết nối RevenueCat thành công.",
+                "disconnected": "Đã ngắt kết nối RevenueCat."
+            },
+            "errors": {
+                "connectFailed": "Không thể kết nối RevenueCat.",
+                "disconnectFailed": "Không thể ngắt kết nối RevenueCat."
+            }
+        },
         "configure": "Cấu hình",
         "status": {
             "checking": "Đang kiểm tra...",
@@ -2430,6 +2446,11 @@
                     "title": "Cài đặt tên miền",
                     "description": "Cấu hình tên miền để ứng dụng có thể truy cập trên web"
                 },
+                "integrations": {
+                    "label": "Tích hợp",
+                    "title": "Tích hợp",
+                    "description": "Kết nối các dịch vụ mà dự án cần trong quá trình build và phát hành"
+                },
                 "secrets": {
                     "label": "Secrets",
                     "title": "Secrets",
@@ -2469,6 +2490,23 @@
                 "range": "<range>{{start}}-{{end}}</range> trên <total>{{total}}</total>",
                 "page": "Trang",
                 "of": "trên"
+            }
+        },
+        "integrations": {
+            "empty": {
+                "title": "Chưa có tích hợp",
+                "description": "Loại dự án này hiện chưa cần khu vực cấu hình tích hợp riêng."
+            },
+            "status": {
+                "notConnected": "Chưa kết nối"
+            },
+            "supabase": {
+                "title": "Supabase",
+                "description": "Kết nối Supabase để agent có thể kiểm tra project, bảng dữ liệu, auth, edge function và storage trong khi build ứng dụng.",
+                "helper": "Hãy dùng phần này khi dự án cần một workspace Supabase đang hoạt động. Các key runtime cho chính ứng dụng vẫn nên lưu trong Secrets."
+            },
+            "revenuecat": {
+                "helper": "Kết nối RevenueCat tại đây khi mobile app này cần subscription, trial hoặc paywall."
             }
         },
         "deployment": {

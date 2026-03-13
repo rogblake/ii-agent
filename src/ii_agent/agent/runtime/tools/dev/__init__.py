@@ -9,6 +9,8 @@ from .ask_user_env import AskUserEnvTool
 from .restart_server import RestartServerTool
 from .mobile_app_init import MobileAppInitTool
 from .restart_mobile_server import RestartMobileServerTool
+from .revenuecat import RevenueCatTool
+from .ask_user_select import AskUserSelectTool
 
 __all__ = [
     "FullStackInitTool",
@@ -22,4 +24,6 @@ __all__ = [
     "RestartServerTool",
     "MobileAppInitTool",
     "RestartMobileServerTool",
+    "RevenueCatTool",
+    "AskUserSelectTool",
 ]

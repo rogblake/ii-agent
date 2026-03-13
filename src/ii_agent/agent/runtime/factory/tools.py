@@ -33,6 +33,8 @@ from ii_agent.agent.runtime.tools.dev import (
     GetServerStatusTool,
     MobileAppInitTool,
     RestartMobileServerTool,
+    RevenueCatTool,
+    AskUserSelectTool,
 )
 
 from ii_agent.agent.runtime.tools.file_system import (
@@ -72,7 +74,7 @@ TOOL_CONFIRM_MAP = {
     # SaveCheckpointTool.name: True,
 }
 
-COMMON_TOOLS = {RegisterPortTool}
+COMMON_TOOLS = {RegisterPortTool, AskUserSelectTool}
 
 # Tool name to class mapping
 TOOL_CLASS_MAP = {
@@ -128,6 +130,8 @@ TOOL_CLASS_MAP = {
     GetServerStatusTool.name: GetServerStatusTool,
     MobileAppInitTool.name: MobileAppInitTool,
     RestartMobileServerTool.name: RestartMobileServerTool,
+    RevenueCatTool.name: RevenueCatTool,
+    AskUserSelectTool.name: AskUserSelectTool,
     # Productivity tools
     TodoReadTool.name: TodoReadTool,
     TodoWriteTool.name: TodoWriteTool,
@@ -550,6 +554,7 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
                 FullStackInitTool.name,
                 MobileAppInitTool.name,
                 RestartMobileServerTool.name,
+                RevenueCatTool.name,
                 GetDatabaseConnection.name,
                 WebSearchTool.name,
                 WebVisitTool.name,

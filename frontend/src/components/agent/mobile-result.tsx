@@ -81,7 +81,7 @@ const MobileResult = ({
             <div className="relative flex-shrink-0">
                 {/* iPhone outer titanium frame */}
                 <div
-                    className="relative w-[390px] aspect-[9/18] rounded-[60px] p-[2px]"
+                    className="relative w-[360px] aspect-[9/19.5] rounded-[60px] p-[2px]"
                     style={{
                         background:
                             'linear-gradient(145deg, #4a4a4a 0%, #2d2d2d 50%, #1a1a1a 100%)',

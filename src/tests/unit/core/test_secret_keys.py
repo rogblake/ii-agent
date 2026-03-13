@@ -23,6 +23,7 @@ def test_secret_groups_contain_expected_members():
     assert SecretKey.DATABASE_URL in DATABASE_SECRETS
     assert SecretKey.REDIS_SESSION_URL in DATABASE_SECRETS
     assert SecretKey.GOOGLE_CLIENT_SECRET in OAUTH_SECRETS
+    assert SecretKey.REVENUECAT_CLIENT_SECRET in OAUTH_SECRETS
     assert SecretKey.STRIPE_SECRET_KEY in BILLING_SECRETS
     assert SecretKey.JWT_SECRET_KEY in LLM_SECRETS
     assert SecretKey.A2A_SANDBOX_API_KEY in TOOL_SERVER_SECRETS

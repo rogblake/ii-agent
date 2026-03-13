@@ -76,7 +76,14 @@ Fullstack JavaScript + Python with FastAPI backend
 - Security best practices are implemented by default
 - Performance optimizations are built into the build process
 
-Use Database flag to enable database integration
+Use Database flag to enable database integration.
+
+## Database Source Options
+- `default`: Uses NeonDB (managed Postgres). A connection string will be automatically provisioned.
+- `supabase`: Uses Supabase as the database backend. Requires Supabase to be connected via integrations.
+  When supabase is selected, the agent should use the available Supabase Composio tools
+  (SUPABASE_CREATE_A_PROJECT, SUPABASE_BETA_RUN_SQL_QUERY, SUPABASE_GET_PROJECT_API_KEYS, etc.)
+  to create the project, set up tables, and retrieve API keys after initialization.
 """
 # Input schema
 INPUT_SCHEMA = {
@@ -95,6 +102,12 @@ INPUT_SCHEMA = {
             "type": "boolean",
             "description": "(Optional) whether this project requires a database connection. A postgres connection will be given if True",
             "default": False,
+        },
+        "database_source": {
+            "type": "string",
+            "description": "(Optional) The database provider to use. 'default' uses NeonDB (managed Postgres). 'supabase' uses Supabase - requires Supabase integration to be connected. Only relevant when database=true.",
+            "enum": ["default", "supabase"],
+            "default": "default",
         },
     },
     "required": ["project_name", "framework"],
@@ -118,7 +131,82 @@ class FullStackInitTool(MCPTool):
             if tool_input.get("database"):
                 session_id = str(self._session_id) if self._session_id else None
                 user_id = str(self._user_id) if self._user_id else None
+                database_source = tool_input.get("database_source", "default")
 
+                # Supabase database source: skip NeonDB provisioning
+                if database_source == "supabase":
+                    if not session_id:
+                        return ToolResult(
+                            llm_content="Cannot initialize database: no session_id available. A session must be created before initializing a project with database.",
+                            user_display_content="Cannot initialize database: no session_id available.",
+                            is_error=True,
+                        )
+
+                    # Record Supabase as the database source (no connection string yet)
+                    _db_repo = ProjectDatabaseRepository()
+                    async with get_db_session_local() as db:
+                        existing_db_record = await _db_repo.get_active_by_session_id(
+                            db, session_id=session_id
+                        )
+                    if not existing_db_record:
+                        async with get_db_session_local() as db:
+                            await _db_repo.create(
+                                db,
+                                session_id=session_id,
+                                source=DatabaseSourceEnum.SUPABASE.value,
+                                connection_string="pending_supabase_setup",
+                                metadata={"database_source": "supabase"},
+                            )
+
+                    # Don't pass database_connection to the MCP tool
+                    # The agent will use Supabase Composio tools after init
+                    tool_input["database"] = False
+                    tool_input.pop("database_source", None)
+
+                    result = await self._execute(tool_input)
+
+                    # Append Supabase setup instructions to the result
+                    supabase_instructions = (
+                        "\n\n## Supabase Database Setup Required\n"
+                        "The user chose Supabase as the database provider. You MUST build the entire website/app using Supabase for ALL database operations, authentication, and backend services.\n\n"
+                        "### Step 1: Get organization ID\n"
+                        "Call SUPABASE_LIST_ALL_ORGANIZATIONS to get the list of organizations. Extract the `id` from the organization you want to use.\n"
+                        "If SUPABASE_LIST_ALL_ORGANIZATIONS is not available, call SUPABASE_LIST_ALL_PROJECTS instead and extract the `organization_id` field from any existing project.\n"
+                        "If neither returns an organization ID, ask the user to provide their Supabase organization ID from https://supabase.com/dashboard.\n\n"
+                        "### Step 2: Create Supabase project\n"
+                        "Call SUPABASE_CREATE_A_PROJECT with ONLY these 4 required parameters:\n"
+                        "  - name: \"<project-name>\" (string, required)\n"
+                        "  - organization_id: \"<org-id-from-step-1>\" (string, required)\n"
+                        "  - region: \"us-east-1\" (string, required)\n"
+                        "  - db_pass: \"<strong-password>\" (string, required - generate a strong password with only alphanumeric characters)\n"
+                        "DO NOT pass any other parameters (no plan, no template_url, no kps_enabled, no postgres_engine, no release_channel, no desired_instance_size). "
+                        "Passing empty strings for optional URL fields will cause validation errors.\n"
+                        "IMPORTANT: Save the project 'ref' (project reference ID) from the response - you need it for all subsequent Supabase API calls.\n\n"
+                        "### Step 3: Get API keys\n"
+                        "Use SUPABASE_GET_PROJECT_API_KEYS with ref=<project-ref> (required) to retrieve the project API keys (anon key, service role key).\n\n"
+                        "### Step 4: Configure environment variables\n"
+                        "Save the Supabase URL and keys as environment variables in .env:\n"
+                        "   - NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co\n"
+                        "   - NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>\n"
+                        "   - SUPABASE_SERVICE_ROLE_KEY=<service-role-key> (for server-side operations)\n\n"
+                        "### Step 5: Install and set up Supabase client\n"
+                        "Install @supabase/supabase-js and create a Supabase client utility (e.g. lib/supabase.ts).\n\n"
+                        "### Step 6: Design and create database schema\n"
+                        "Use SUPABASE_BETA_RUN_SQL_QUERY with ref=<project-ref> to create all required tables, indexes, and RLS policies. "
+                        "Design the schema based on the app requirements.\n\n"
+                        "### Step 7: Build with Supabase throughout\n"
+                        "Use the Supabase client for ALL data operations: queries, inserts, updates, deletes, real-time subscriptions, and auth. "
+                        "Do NOT use direct Postgres connections or any other database. Every data interaction must go through Supabase.\n"
+                    )
+
+                    if isinstance(result.llm_content, str):
+                        result.llm_content += supabase_instructions
+                    elif isinstance(result.llm_content, list):
+                        result.llm_content.append(TextContent(type="text", text=supabase_instructions))
+
+                    return result
+
+                # Default database source: NeonDB provisioning
                 # Check if a database already exists for this session
                 if session_id:
                     _db_repo = ProjectDatabaseRepository()
@@ -170,6 +258,8 @@ class FullStackInitTool(MCPTool):
                         is_error=True,
                     )
 
+            # Remove database_source before passing to MCP (not recognized by the internal tool)
+            tool_input.pop("database_source", None)
             return await self._execute(tool_input)
         except Exception as e:
             logger.exception("Failed to initialize project")

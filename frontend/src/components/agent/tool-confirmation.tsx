@@ -28,7 +28,10 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
         t('agent.toolConfirmation.unknownTool')
     const toolArgs = requirement?.tool_execution?.tool_args || {}
 
-    const handleConfirm = (confirmed: boolean) => {
+    const handleConfirm = (
+        confirmed: boolean,
+        userInput?: Record<string, unknown>
+    ) => {
         if (isResponding) return
 
         setIsResponding(true)
@@ -45,7 +48,8 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
                 tool: {
                     tool_id: requirement?.tool_execution?.tool_call_id || '',
                     tool_name: requirement?.tool_execution?.tool_name || ''
-                }
+                },
+                ...(userInput ? { user_input: userInput } : {})
             }
         })
     }
@@ -90,10 +94,17 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
             )
         }
 
-        // Add more tool-specific cases here as needed
-        // case TOOL.SOME_OTHER_TOOL: {
-        //     return <SomeOtherToolConfirmation ... />
-        // }
+        case TOOL.ASK_USER_SELECT: {
+            return (
+                <AskUserSelectUI
+                    toolArgs={toolArgs}
+                    onSelect={(selected) =>
+                        handleConfirm(true, { selected })
+                    }
+                    onSkip={() => handleConfirm(false)}
+                />
+            )
+        }
 
         default:
             // Default confirmation UI for generic tools
@@ -141,4 +152,73 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
                 </div>
             )
     }
+}
+
+// --- AskUserSelect UI ---
+
+interface AskUserSelectOption {
+    value: string
+    label: string
+}
+
+interface AskUserSelectUIProps {
+    toolArgs: Record<string, unknown>
+    onSelect: (selected: string) => void
+    onSkip: () => void
+}
+
+function AskUserSelectUI({ toolArgs, onSelect, onSkip }: AskUserSelectUIProps) {
+    const { t } = useTranslation()
+    const [selectedValue, setSelectedValue] = useState<string | null>(null)
+
+    const question = (toolArgs.question as string) || ''
+    const options = (toolArgs.options as AskUserSelectOption[]) || []
+
+    return (
+        <div className="mt-3 w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e1e1e] p-4 shadow-sm">
+            <p className="mb-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                {question}
+            </p>
+
+            <div className="flex flex-col gap-2">
+                {options.map((option, idx) => {
+                    const isSelected = selectedValue === option.value
+                    return (
+                        <button
+                            key={idx}
+                            onClick={() => setSelectedValue(option.value)}
+                            className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-200 ${
+                                isSelected
+                                    ? 'bg-sky-100 dark:bg-sky-900/30 border border-sky-400 dark:border-sky-600 text-sky-900 dark:text-sky-100'
+                                    : 'bg-gray-50 dark:bg-[#2d2d2d] border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#333333]'
+                            }`}
+                        >
+                            <span className="flex-1">{option.label}</span>
+                            {isSelected && (
+                                <Check className="size-4 text-sky-600 dark:text-sky-400" />
+                            )}
+                        </button>
+                    )
+                })}
+            </div>
+
+            <div className="mt-4 flex items-center gap-3">
+                <Button
+                    onClick={() => {
+                        if (selectedValue) onSelect(selectedValue)
+                    }}
+                    disabled={!selectedValue}
+                    className="bg-sky-600 hover:bg-sky-700 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {t('common.confirm')}
+                </Button>
+                <button
+                    onClick={onSkip}
+                    className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                >
+                    {t('common.skip')}
+                </button>
+            </div>
+        </div>
+    )
 }

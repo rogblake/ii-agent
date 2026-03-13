@@ -13,6 +13,7 @@ import {
 import ProjectHeader, { ProjectTab } from './project-header'
 import ProjectDatabase from './project-database'
 import ProjectDeployment from './project-deployment'
+import ProjectIntegrations from './project-integrations'
 import ProjectSecret from './project-secret'
 import { setPublished, useAppDispatch } from '@/state'
 
@@ -21,6 +22,7 @@ const RECORD_PAGE_SIZE = 10
 interface ProjectPanelProps {
     sessionId?: string
     projectId?: string | null
+    agentType?: string
     visible: boolean
     className?: string
 }
@@ -36,6 +38,7 @@ const EMPTY_SECRETS: SecretEntry[] = []
 const ProjectPanel = ({
     sessionId,
     projectId,
+    agentType,
     visible,
     className
 }: ProjectPanelProps) => {
@@ -477,6 +480,8 @@ const ProjectPanel = ({
                 )
             case 'domain':
                 return <ProjectDeployment />
+            case 'integrations':
+                return <ProjectIntegrations agentType={agentType} />
             case 'secrets':
             default:
                 return (

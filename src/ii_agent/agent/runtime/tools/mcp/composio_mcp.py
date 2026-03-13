@@ -56,8 +56,29 @@ class ComposioMCPTool(BaseSandboxTool):
         sandbox_url = await sandbox.expose_port(get_settings().mcp.port)
         self.mcp_client = sandbox.get_mcp_client(sandbox_url)
 
+    def _strip_optional_params(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Keep only required parameters, dropping all optional ones.
+
+        Composio tool schemas expose many optional fields with defaults.
+        LLMs auto-fill these (e.g. plan='free', template_url='placeholder',
+        desired_instance_size='micro') which causes upstream API errors.
+        Since optional params have server-side defaults, it is safe to omit
+        them entirely and let the API apply its own defaults.
+        """
+        schema = getattr(self, "input_schema", None)
+        if not isinstance(schema, dict):
+            return params
+
+        required = set(schema.get("required", []))
+        if not required:
+            # No required list in schema — pass everything through
+            return params
+
+        return {k: v for k, v in params.items() if k in required}
+
     async def execute(self, tool_input: dict[str, Any]) -> ToolResult:
         try:
+            tool_input = self._strip_optional_params(tool_input)
             async with self.mcp_client:
                 composio_tool_name = f"mcp_composio_{self.name}"
                 mcp_results = await self.mcp_client.call_tool(

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Mobile Game"
+  short_description: "Expo mobile game workflow guide"
+  default_prompt: "Use $building-mobile-game to set up an Expo game, generate sprite assets, and implement a playable gameplay loop."

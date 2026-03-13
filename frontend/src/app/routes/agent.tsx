@@ -398,6 +398,7 @@ function AgentPageContent() {
                                                 projectId ??
                                                 sessionData?.project_id
                                             }
+                                            agentType={sessionData?.agent_type}
                                             visible={activeTab === TAB.PROJECT}
                                             className="h-full !mt-0"
                                         />

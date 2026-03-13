@@ -113,6 +113,12 @@ const SkillSetting = ({ className }: SkillSettingProps) => {
             return 'color-swatch'
         } else if (name.includes('code') || name.includes('dev')) {
             return 'code'
+        } else if (name.includes('game')) {
+            return 'game'
+        } else if (name.includes('building-ui')) {
+            return 'mobile'
+        } else if (name.includes('data-fetching')) {
+            return 'mobile'
         }
 
         // Default icon for other skills
@@ -304,9 +310,7 @@ const SkillSetting = ({ className }: SkillSettingProps) => {
                                     className="size-12 mx-auto mb-4 fill-firefly/30 dark:fill-white/30"
                                 />
                                 <p className="text-firefly/60 dark:text-white/60 text-sm">
-                                    {t(
-                                        'agentSetting.skillSetting.empty.title'
-                                    )}
+                                    {t('agentSetting.skillSetting.empty.title')}
                                 </p>
                                 <p className="text-firefly/40 dark:text-white/40 text-xs mt-1">
                                     {t(

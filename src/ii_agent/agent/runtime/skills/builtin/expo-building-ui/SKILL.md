@@ -312,3 +312,128 @@ export default function Layout({ segment }) {
   );
 }
 ```
+
+## UI/UX DESIGN SYSTEM
+
+### MANDATORY: Dark Mode and Light Mode Support
+
+- Every mobile app MUST support both dark mode and light mode. Users expect apps to respect their system theme preference.
+- **The default theme MUST be light mode.** The app should launch in light mode by default, and users can switch to dark mode via settings.
+
+#### Implementation Guidelines:
+
+- Use `expo-linear-gradient` or `react-native-linear-gradient` for gradient backgrounds
+- Add subtle animations using `react-native-reanimated` to make backgrounds feel alive
+- Gradient colors, positions, or opacity for dynamic effects
+- Keep animations subtle and smooth (slow transitions, 3-5 second loops)
+- Use `useSharedValue` and `withRepeat`/`withTiming` for performant animations
+
+#### Best Practices:
+
+- Use 2-3 colors maximum for gradients to keep it clean
+- Ensure text remains readable over animated backgrounds
+- Add blur overlays if content needs more contrast
+- Test on lower-end devices to ensure smooth 60fps performance
+
+### MANDATORY: Screens you must implement
+
+- Intro: Each app might have a different set of screens. One onboarding flow might take 10 screens, and another might take 2. Understanding your app's UX and industry best practices is crucial for success. Here are the screens that every app must have.
+- Login: Keep login screens simple and clear. Include username and assword fields plus a confirmation button. Always try to offer Google or Apple sign-in options. This takes extra setup time but greatly reduces user friction.
+- Onboarding screens: Focus on communicating core value quickly and minimize required actions. Consider using progress indicators to show users how far they've come in the setup process. The best onboarding experiences feel helpful rather than obstructive, setting users up for success with the minimum necessary friction.
+- Home screen: Home screen is the main hub for user interaction. It must address two critical states: the empty state (when users have no content yet) with a clear call-to-action guiding them to the app's primary function, and the content state for returning users that displays personalized information and quick access to main features.
+- User Profiles: Profiles personalize the app experience and connect users to the community. Keep profile pages clean with limited, relevant information. Use intuitive flows to lead to secondary info without confusing the users.
+- Settings screen: Organize options into logical categories, maintain a clean layout, and make actions visible. Group settings into sections to avoid overwhelm, and add a search function if your settings consist of a more complex flow.
+- Subscription screen: For paid apps, clearly show available plans, pricing, and features. Highlight the most popular option, briefly describe benefits, and include a clear call to action. Keep the process simple. Implement biometric authentication (Face ID/Touch ID) and quick verification methods to streamline the payment process.
+
+### Mandatory: Some design guidelines for mobile app
+
+- Short and sweet onboarding: Your onboarding shouldn't feel like homework. Keep it to 3-4 screens max, clearly explain value, and quickly guide users to the app's core value. Every extra onboarding step risks losing users before they experience real value.
+- Frictionless signup forms: Add Google and social sign-ins for easier, faster account creation. Don't make people fill out long forms right away. Let them sign up in seconds-then ask for the rest once they're in and already trust your product.
+- Personalize immediately: Personalized experiences have higher retention. Collect basic preferences early, then customize the content users see right away. When users feel the app is built just for them, they stay engaged longer.
+- Clear action buttons: Buttons drive actions. So, use clear, benefit-driven button labels ("Get Started", "Claim Your Free Trial") to boost taps. Generic labels like "Submit" or "Continue" are missed opportunities for higher conversions.
+- Show progress early: Good UX guides users through every step. From entry to outcome, make sure each screen has a purpose: → Clear actions → Visual states (like timers, confirmations, outcomes) → A sense of movement and feedback
+- Smart request permissions: Don't bombard users immediately with permission pop-ups. Ask for access (notifications, location, etc.) only when needed and clearly state the benefits. They're more likely to grant permissions if they understand why.
+- Reducing cognitive load: Don't make users think too hard. Simplify choices, remove unnecessary steps, and break up complex flows into bite-sized chunks. The easier it is to use, the more likely users are to stick with it.
+- Clear navigation hierarchy: If users can't navigate smoothly, they're gone. Use clear, simple navigation and limit tabs or menus to only what's necessary. A confused user rarely becomes a long-term user-keep it intuitive and straightforward.
+- Keep it simple: If an element doesn't add value, remove it. Keep the UI clean and uncluttered. Every element should have a purpose.
+- Utilize white space: White space isn't wasted space. It gives your design room to breathe and guides users' eyes to what's important.
+- Use shadows for elevation: Shadows add depth and help users differentiate between layers. Keep them subtle to maintain a clean aesthetic.
+- User blurs and gradients: Blurs and gradients, especially in iOS design, are a simple visual technique to add a modern, polished look to your UI.
+- Blow up your images: Blown-up images as backgrounds add a dramatic, artsy vibe. Use blend layers for a unique look - AI images work great here
+
+### MANDATORY: Design guidelines for mobile app settings screens
+
+- Group settings: Group related settings together. Think about how users will look for things. Categories should make sense to users.
+- Clear labels and descriptions: Use easy to understand labels and add short descriptions for more complex settings. Display & Brightness' tells users exactly what they'll find. Users shouldn't need to guess what something does.
+- Highlight critical settings: Frequently used settings should be easy to find. Don't bury critical functions five levels deep just to keep things tidy.
+- Personalize Defaults: Use onboarding flow to let users set their preferences early. This creates a more personalized experience from the start and reduces the need to dig through settings later.
+- Use progressive settings: Start with basic settings, allow access to advanced ones. Not everyone needs every option visible at once.
+- Use visual hierarchy: Use proper spacing and grouping. Make interactive elements obvious. Settings should be scannable at a glance.
+- Consider edge cases: Account deletion, data export, privacy settings - these need extra attention. Make important actions clear but hard to trigger accidentally.
+
+### Mandatory: Design guidelines for mobile app loading states
+
+- Use a skeleton screen: Show a placeholder screen with the layout of the actual screen. This gives users an idea of what to expect and reduces the perceived load time.
+- Progressive loading: Load content in chunks. Show the top part of the screen first, then load more content as the user scrolls. This reduces the perceived load time and makes the app feel faster.
+- Branded animations: Use branded animations to show that the app is loading. This makes the app feel more responsive and polished.
+- Progress indicators with context: Show a progress bar or spinner with context. This lets users know that the app is working and reduces the likelihood of them thinking the app has crashed.
+- Avoid loading spinners: If the app is loading a large amount of data, show a progress bar or spinner. This lets users know that the app is working and reduces the likelihood of them thinking the app has crashed.
+
+### Mandatory: Design guidelines for mobile app forms
+
+- Show only what's necessary: Every extra field reduces completion rates by 20%. Ask only what you absolutely need right now. You can always collect more information later when users are more invested.
+- Appropriate input types: Use the right keyboard for each field. Phone number? Show the numeric pad. Email? Show the email keyboard. Small detail that makes a huge difference in completion speed.
+- Real-time validation: Don't wait until submission to show errors. Validate each field as users type or move to the next field. Show success states too - users like knowing they're doing things right.
+- Use clear error states: When something goes wrong, make it obvious what needs fixing. "Password must be 8 characters" is better than "Invalid password." Help users recover quickly and seamlessly.
+- Make CTAS stand out: Your submit button should be prominent and clear about what happens next. "Create Account" is better than "Submit." Size it properly for touch targets.
+- Smart keyboard behavior: Enable auto-advance when sensible (like OTP fields). Add 'Next' and 'Done' buttons where appropriate. Small touches that make forms feel smoother.
+- Break long-forms down: if you need lots of information, split it into logical steps. Show progress to keep users motivated. Each step should feel manageable.
+
+### Mandatory: Design guidelines for mobile app welcome screen
+
+- Show only what's necessary: Every extra field reduces completion rates by 20%. Ask only what you absolutely need right now. You can always collect more information later when users are more invested.
+- Make the best of graphics: Use high quality images or canvas to make the app look professional. Use the right aspect ratio for the screen. Use the right file format. Use the right file size. Use the right compression. Use the right resolution. Use the right color depth. Use the right color profile. Use the right color space. Use the right color mode. Use the right color temperature. Use the right color balance. Use the right color correction. Use the right color grading
+
+### Choose gradient colors for both light and dark mode that match your app's unique color theme. Do NOT copy example colors - create custom gradients that complement your app's design.
+
+- Must choose color that contrast well with each other for both light and dark mode
+- Select gradient colors based on the app category
+- Beyond screen backgrounds, also apply gradients to: Hero sections and headers, Primary action buttons, Card backgrounds (subtle gradients), Empty states and onboarding screens, Premium/featured content highlights
+
+### Icons: Use @expo/vector-icons Only
+
+You MUST use `@expo/vector-icons` for all icons in your mobile apps. NEVER use FontAwesome icons.
+
+Recommended icon sets from `@expo/vector-icons`:
+
+- **Ionicons**: Modern, clean icons ideal for iOS-style apps
+- **MaterialIcons**: Google's Material Design icons for Android-style apps
+- **MaterialCommunityIcons**: Extended Material icons with more options
+- **Feather**: Minimal, elegant line icons
+- **AntDesign**: Clean icons with good variety
+
+### MANDATORY: Animation Design Guidelines
+
+Every mobile app MUST include smooth, delightful animations to create a polished user experience. Use `react-native-reanimated` for performant animations.
+
+```bash
+npx expo install react-native-reanimated
+bun install react-native-worklets@0.5.1
+```
+
+Then update babel.config.js - add "react-native-worklets/plugin" as the LAST item in plugins array:
+
+```js
+module.exports = function (api) {
+  api.cache(true);
+  return {
+    presets: ["babel-preset-expo"],
+    plugins: [
+      // ... other plugins
+      "react-native-worklets/plugin", // MUST be last, do NOT use reanimated/plugin
+    ],
+  };
+};
+```
+
+**IMPORTANT**: Only use "react-native-worklets/plugin". Do NOT use "react-native-reanimated/plugin" - that is the old version. Never add both plugins.

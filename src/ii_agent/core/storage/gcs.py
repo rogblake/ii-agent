@@ -120,7 +120,7 @@ class GCS(BaseStorage):
 
         if not blob.exists():
             raise FileNotFoundError(
-                f"File '{path}' not found in bucket '{self.bucket_name}'."
+                f"File '{path}' not found in bucket '{self.bucket.name}'."
             )
 
         kwargs = self._signed_url_kwargs(

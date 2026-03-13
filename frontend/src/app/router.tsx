@@ -224,6 +224,15 @@ const createAppRouter = () =>
                     }
                 },
                 {
+                    path: 'auth/oauth/revenuecat/callback',
+                    async lazy() {
+                        const { RevenueCatCallback } = await import(
+                            '@/app/routes/revenuecat-callback'
+                        )
+                        return { Component: RevenueCatCallback }
+                    }
+                },
+                {
                     path: 'google-drive-callback',
                     async lazy() {
                         const { GoogleDriveCallback } = await import(

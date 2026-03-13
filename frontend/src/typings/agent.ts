@@ -243,6 +243,7 @@ export enum TOOL {
     ADD_WEBDEV_SECRETS = 'add_webdev_secrets',
     STRIPE_WEBHOOK_REGISTER = 'stripe_webhook_register',
     ASK_USER_ENV = 'ask_user_env',
+    ASK_USER_SELECT = 'ask_user_select',
     SKILL = 'Skill',
     MOBILE_APP_INIT = 'mobile_app_init',
     RESTART_MOBILE_SERVER = 'restart_mobile_server'

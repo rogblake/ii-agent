@@ -11,6 +11,8 @@ from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
 class ImageSearchTool(BaseTool):
     """Search for images using Tool Server."""
 
+    max_cost_usd = 0.05
+
     def __init__(self, tool_server_url: str, user_api_key: str, session_id: str):
         self.tool_server_url = tool_server_url
         self.user_api_key = user_api_key
@@ -60,9 +62,11 @@ class ImageSearchTool(BaseTool):
                 response.raise_for_status()
                 data = response.json()
                 results = data.get("results", [])[:12]
+                cost = data.get("cost", 0.0) or 0.0
 
                 return ToolResponse(
-                    output=TextResultContent(value=json.dumps(results, indent=2))
+                    output=TextResultContent(value=json.dumps(results, indent=2)),
+                    cost_usd=cost,
                 )
 
         except httpx.TimeoutException:

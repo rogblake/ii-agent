@@ -21,8 +21,7 @@ from openai.types.responses.response_output_text import (
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from ii_agent.chat.types import ErrorTextContent
-
+from ii_agent.chat.types import ErrorTextContent, JsonResultContent
 
 from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
 from ii_agent.chat.messages.models import ChatMessage
@@ -34,8 +33,14 @@ from ii_agent.core.storage.locations import get_session_file_path
 logger = logging.getLogger(__name__)
 
 
+_OPENAI_COST_PER_MILLION_INPUT = 2.50  # conservative estimate (GPT-4.1 level)
+_OPENAI_COST_PER_MILLION_OUTPUT = 10.00
+
+
 class CodeInterpreter(BaseTool):
     """Execute Python code using OpenAI's Code Interpreter via Responses API."""
+
+    max_cost_usd = 0.20
 
     def __init__(
         self,
@@ -401,20 +406,25 @@ class CodeInterpreter(BaseTool):
                 "files": output_files if output_files else [],
             }
 
+            # Compute cost from token usage
+            input_tokens = response.usage.input_tokens if response.usage else 0
+            output_tokens = response.usage.output_tokens if response.usage else 0
+            cost_usd = (
+                input_tokens * _OPENAI_COST_PER_MILLION_INPUT / 1_000_000
+                + output_tokens * _OPENAI_COST_PER_MILLION_OUTPUT / 1_000_000
+            )
+
             return ToolResponse(
                 output=JsonResultContent(value=result),
                 metadata=json.dumps(
                     {
                         "usage": {
-                            "input_tokens": response.usage.input_tokens
-                            if response.usage
-                            else 0,
-                            "output_tokens": response.usage.output_tokens
-                            if response.usage
-                            else 0,
+                            "input_tokens": input_tokens,
+                            "output_tokens": output_tokens,
                         }
                     }
                 ),
+                cost_usd=cost_usd,
             )
 
         except Exception as e:

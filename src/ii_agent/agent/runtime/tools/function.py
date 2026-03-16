@@ -983,7 +983,7 @@ class FunctionCall(BaseModel):
             return
 
         run_context = self.function._run_context
-        dependencies = getattr(self.function, "_dependencies", None)
+        dependencies = getattr(tool, "dependencies", None) or getattr(self.function, "_dependencies", None)
         if (
             run_context is None
             or dependencies is None
@@ -1029,7 +1029,7 @@ class FunctionCall(BaseModel):
             return
 
         run_context = self.function._run_context
-        dependencies = getattr(self.function, "_dependencies", None)
+        dependencies = getattr(tool, "dependencies", None) or getattr(self.function, "_dependencies", None)
         if (
             run_context is None
             or dependencies is None

@@ -15,8 +15,13 @@ from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
 logger = logging.getLogger(__name__)
 
 
+_FILE_SEARCH_COST_PER_CALL = 0.0025  # OpenAI vector search: ~$2.50 per 1000 searches
+
+
 class FileSearchTool(BaseTool):
-    """Execute Python code using OpenAI's Code Interpreter via Responses API."""
+    """Search uploaded documents using OpenAI's Vector Store API."""
+
+    max_cost_usd = 0.01
 
     def __init__(
         self,
@@ -158,10 +163,13 @@ class FileSearchTool(BaseTool):
             else:
                 results = search_results.model_dump()
 
-            return ToolResponse(output=JsonResultContent(value=results))
+            return ToolResponse(
+                output=JsonResultContent(value=results),
+                cost_usd=_FILE_SEARCH_COST_PER_CALL,
+            )
 
         except Exception as e:
-            logger.error(f"Code interpreter error: {e}", exc_info=True)
+            logger.error(f"File search error: {e}", exc_info=True)
             return ToolResponse(
                 output=ErrorTextContent(value=f"File search failed: {str(e)}")
             )

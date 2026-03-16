@@ -1,7 +1,8 @@
-"""Web visit tool - thin wrapper around Tool Server API."""
+"""Web visit tool - delegates to IIToolClient."""
 
 import json
-import httpx
+
+from ii_agent_tools.client import IIToolClient
 
 from ii_agent.chat.types import ErrorTextContent, TextResultContent
 
@@ -9,14 +10,12 @@ from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
 
 
 class WebVisitTool(BaseTool):
-    """Visit a URL and extract its content using Tool Server."""
+    """Visit a URL and extract its content using IIToolClient."""
 
     max_cost_usd = 0.05
 
-    def __init__(self, tool_server_url: str, user_api_key: str, session_id: str):
-        self.tool_server_url = tool_server_url
-        self.user_api_key = user_api_key
-        self.session_id = session_id
+    def __init__(self, tool_client: IIToolClient):
+        self.tool_client = tool_client
         self._name = "web_visit"
 
     @property
@@ -58,42 +57,24 @@ class WebVisitTool(BaseTool):
             )
 
         try:
-            async with httpx.AsyncClient() as client:
-                request_body = {"url": url, "session_id": self.session_id}
-                if prompt:
-                    request_body["prompt"] = prompt
+            response = await self.tool_client.web_visit(url, prompt)
+            content = response.content
+            cost = response.cost or 0.0
 
-                response = await client.post(
-                    f"{self.tool_server_url}/web-visit",
-                    json=request_body,
-                    headers={"Authorization": f"Bearer {self.user_api_key}"},
-                    timeout=300,
-                )
-                response.raise_for_status()
-                data = response.json()
-                content = data.get("content", "")
-                cost = data.get("cost", 0.0) or 0.0
-
+            if content is None or (isinstance(content, str) and not content.strip()):
                 return ToolResponse(
-                    output=TextResultContent(value=content or "No content extracted."),
+                    output=TextResultContent(value="No content extracted."),
                     cost_usd=cost,
                 )
 
-        except httpx.TimeoutException:
             return ToolResponse(
-                output=ErrorTextContent(
-                    value=f"Visiting {url} timed out. The page may be too slow or unavailable."
-                ),
+                output=TextResultContent(value=content),
+                cost_usd=cost,
             )
-        except httpx.HTTPStatusError as e:
-            return ToolResponse(
-                output=ErrorTextContent(
-                    value=f"Failed to visit {url}: {e.response.status_code}"
-                ),
-            )
+
         except Exception as e:
             return ToolResponse(
                 output=ErrorTextContent(
-                    value=f"Unexpected error visiting {url}: {str(e)}"
+                    value=f"Failed to visit {url}: {str(e)}"
                 ),
             )

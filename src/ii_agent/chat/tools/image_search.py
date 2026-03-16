@@ -1,22 +1,23 @@
-"""Image search tool - thin wrapper around Tool Server API."""
+"""Image search tool - delegates to IIToolClient."""
 
 import json
-import httpx
+
+from ii_agent_tools.client import IIToolClient
 
 from ii_agent.chat.types import ErrorTextContent, TextResultContent
 
 from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
 
+MAX_RESULTS = 12
+
 
 class ImageSearchTool(BaseTool):
-    """Search for images using Tool Server."""
+    """Search for images using IIToolClient."""
 
     max_cost_usd = 0.05
 
-    def __init__(self, tool_server_url: str, user_api_key: str, session_id: str):
-        self.tool_server_url = tool_server_url
-        self.user_api_key = user_api_key
-        self.session_id = session_id
+    def __init__(self, tool_client: IIToolClient):
+        self.tool_client = tool_client
         self._name = "image_search"
 
     @property
@@ -52,36 +53,19 @@ class ImageSearchTool(BaseTool):
             )
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.tool_server_url}/image-search",
-                    json={"query": query, "session_id": self.session_id},
-                    headers={"Authorization": f"Bearer {self.user_api_key}"},
-                    timeout=120,
-                )
-                response.raise_for_status()
-                data = response.json()
-                results = data.get("results", [])[:12]
-                cost = data.get("cost", 0.0) or 0.0
-
-                return ToolResponse(
-                    output=TextResultContent(value=json.dumps(results, indent=2)),
-                    cost_usd=cost,
-                )
-
-        except httpx.TimeoutException:
-            return ToolResponse(
-                output=ErrorTextContent(
-                    value="Image search timed out. Please try again."
-                )
+            response = await self.tool_client.image_search(
+                query=query,
+                max_results=MAX_RESULTS,
             )
-        except httpx.HTTPStatusError as e:
+            results = response.result[:MAX_RESULTS]
+            cost = response.cost or 0.0
+
             return ToolResponse(
-                output=ErrorTextContent(
-                    value=f"Image search failed: {e.response.status_code}"
-                )
+                output=TextResultContent(value=json.dumps(results, indent=2)),
+                cost_usd=cost,
             )
+
         except Exception as e:
             return ToolResponse(
-                output=ErrorTextContent(value=f"Unexpected error: {str(e)}")
+                output=ErrorTextContent(value=f"Image search failed: {str(e)}")
             )

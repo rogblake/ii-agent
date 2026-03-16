@@ -39,12 +39,10 @@ async def test_execute_tool_returns_tool_response():
 
 
 @pytest.mark.asyncio
-async def test_build_tool_registry_returns_empty_when_no_tools(settings_factory):
+async def test_build_tool_registry_returns_empty_when_no_tools():
     service = ChatToolService(
-        user_service=SimpleNamespace(get_active_api_key=lambda *args, **kwargs: "key"),
         connector_repo=SimpleNamespace(get_by_user=lambda *args, **kwargs: []),
         container=SimpleNamespace(),
-        config=settings_factory(),
     )
 
     registry, tools = await service.build_tool_registry(

@@ -1,22 +1,23 @@
-"""Web search tool - thin wrapper around Tool Server API."""
+"""Web search tool - delegates to IIToolClient."""
 
 import json
-import httpx
+
+from ii_agent_tools.client import IIToolClient
 
 from ii_agent.chat.types import ErrorTextContent, TextResultContent
 
 from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
 
+MAX_RESULTS = 12
+
 
 class WebSearchTool(BaseTool):
-    """Search the web using Tool Server."""
+    """Search the web using IIToolClient."""
 
     max_cost_usd = 0.05
 
-    def __init__(self, tool_server_url: str, user_api_key: str, session_id: str):
-        self.tool_server_url = tool_server_url
-        self.user_api_key = user_api_key
-        self.session_id = session_id
+    def __init__(self, tool_client: IIToolClient):
+        self.tool_client = tool_client
         self._name = "web_search"
 
     @property
@@ -54,48 +55,28 @@ class WebSearchTool(BaseTool):
             )
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.tool_server_url}/web-search",
-                    json={"query": query, "session_id": self.session_id},
-                    headers={"Authorization": f"Bearer {self.user_api_key}"},
-                    timeout=120,
-                )
-                response.raise_for_status()
-                data = response.json()
-                results = data.get("results", [])[:12]
-                cost = data.get("cost", 0.0) or 0.0
+            response = await self.tool_client.web_search(query, max_results=MAX_RESULTS)
+            results = response.result[:MAX_RESULTS]
+            cost = response.cost or 0.0
 
-                if len(results) == 0:
-                    return ToolResponse(
-                        output=TextResultContent(
-                            value=(
-                                f"The search engine processed your query '{query}' successfully "
-                                "but found no matching results. Try rephrasing with different "
-                                "keywords, broader terms, or check for typos."
-                            )
-                        ),
-                        cost_usd=cost,
-                    )
-
+            if len(results) == 0:
                 return ToolResponse(
-                    output=TextResultContent(value=json.dumps(results, indent=2)),
+                    output=TextResultContent(
+                        value=(
+                            f"The search engine processed your query '{query}' successfully "
+                            "but found no matching results. Try rephrasing with different "
+                            "keywords, broader terms, or check for typos."
+                        )
+                    ),
                     cost_usd=cost,
                 )
 
-        except httpx.TimeoutException:
             return ToolResponse(
-                output=ErrorTextContent(
-                    value="The search engine is taking too long to respond. Please try again."
-                )
+                output=TextResultContent(value=json.dumps(results, indent=2)),
+                cost_usd=cost,
             )
-        except httpx.HTTPStatusError as e:
-            return ToolResponse(
-                output=ErrorTextContent(
-                    value=f"Search request failed: {e.response.status_code}"
-                )
-            )
+
         except Exception as e:
             return ToolResponse(
-                output=ErrorTextContent(value=f"Unexpected error: {str(e)}")
+                output=ErrorTextContent(value=f"Web search failed: {str(e)}")
             )

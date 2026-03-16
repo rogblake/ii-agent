@@ -7,9 +7,9 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.config.settings import Settings
 from ii_agent.integrations.connectors.repository import ConnectorRepository
 from ii_agent.integrations.connectors.models import ConnectorTypeEnum
+from ii_agent.agent.runtime.tools.clients import _get_client
 from ii_agent.chat.tools import (
     WebSearchTool,
     ImageSearchTool,
@@ -39,15 +39,11 @@ class ChatToolService:
     def __init__(
         self,
         *,
-        user_service,
         connector_repo: ConnectorRepository,
         container: ServiceContainer,
-        config: Settings,
     ) -> None:
-        self._user_service = user_service
         self._connector_repo = connector_repo
         self._container = container
-        self._config = config
 
     async def build_tool_registry(
         self,
@@ -70,17 +66,12 @@ class ChatToolService:
         if not (tools and any(tools.values())):
             return tool_registry, tools_to_pass
 
-        user_api_key = await self._user_service.get_active_api_key(db, user_id)
-        if not user_api_key:
-            logger.error(f"No active API key found for user {user_id}")
-            raise ValueError(
-                "User API key not found. Please configure API key in settings."
-            )
+        tool_client = _get_client()
 
         all_search_tools: List[BaseTool] = [
-            WebSearchTool(self._config.tool_server_url, user_api_key, session_id),
-            ImageSearchTool(self._config.tool_server_url, user_api_key, session_id),
-            WebVisitTool(self._config.tool_server_url, user_api_key, session_id),
+            WebSearchTool(tool_client),
+            ImageSearchTool(tool_client),
+            WebVisitTool(tool_client),
         ]
 
         if media_context:

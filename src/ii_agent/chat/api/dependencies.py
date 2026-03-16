@@ -16,7 +16,6 @@ from ii_agent.chat.application.file_processing_service import ChatFileProcessor
 from ii_agent.chat.application.tool_service import ChatToolService
 from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
 from ii_agent.chat.messages.history_service import ChatMessageHistoryService
-from ii_agent.auth.users.dependencies import UserServiceDep
 from ii_agent.billing.usage.dependencies import (
     LLMInvocationRepositoryDep,
     ToolInvocationRepositoryDep,
@@ -68,16 +67,13 @@ ChatFileProcessorDep = Annotated[ChatFileProcessor, Depends(get_chat_file_proces
 
 
 def get_chat_tool_service(
-    user_service: UserServiceDep,
     connector_repo: ConnectorRepositoryDep,
     container: ContainerDep,
 ) -> ChatToolService:
     """Provide ChatToolService instance."""
     return ChatToolService(
-        user_service=user_service,
         connector_repo=connector_repo,
         container=container,
-        config=get_settings(),
     )
 
 

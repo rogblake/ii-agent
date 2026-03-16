@@ -119,39 +119,26 @@ class TestGetChatFileProcessor:
 
 class TestGetChatToolService:
     def test_returns_chat_tool_service_instance(self):
-        mock_user_service = MagicMock()
         mock_connector_repo = MagicMock()
         mock_container = MagicMock()
-        mock_settings = MagicMock()
 
-        with patch(
-            "ii_agent.chat.api.dependencies.get_settings", return_value=mock_settings
-        ):
-            result = get_chat_tool_service(
-                user_service=mock_user_service,
-                connector_repo=mock_connector_repo,
-                container=mock_container,
-            )
+        result = get_chat_tool_service(
+            connector_repo=mock_connector_repo,
+            container=mock_container,
+        )
 
         assert isinstance(result, ChatToolService)
 
     def test_dependencies_stored_in_service(self):
-        mock_user_service = MagicMock()
         mock_connector_repo = MagicMock()
         mock_container = MagicMock()
-        mock_settings = MagicMock()
 
-        with patch(
-            "ii_agent.chat.api.dependencies.get_settings", return_value=mock_settings
-        ):
-            result = get_chat_tool_service(
-                user_service=mock_user_service,
-                connector_repo=mock_connector_repo,
-                container=mock_container,
-            )
+        result = get_chat_tool_service(
+            connector_repo=mock_connector_repo,
+            container=mock_container,
+        )
 
         # Check that the service received the mocked dependencies
-        assert result._user_service is mock_user_service
         assert result._connector_repo is mock_connector_repo
         assert result._container is mock_container
 

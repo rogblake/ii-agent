@@ -70,6 +70,7 @@ INPUT_SCHEMA = {
 }
 
 DEFAULT_TIMEOUT = 120
+DEFAULT_IMAGE_GENERATION_MAX_COST_USD = 0.05
 
 
 class ImageGenerateTool(BaseSandboxTool):
@@ -78,6 +79,7 @@ class ImageGenerateTool(BaseSandboxTool):
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = True
+    max_cost_usd = DEFAULT_IMAGE_GENERATION_MAX_COST_USD
 
     def __init__(
         self,

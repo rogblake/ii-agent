@@ -1,8 +1,10 @@
 import base64
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from ii_agent.billing.reservations.types import BillingQuote
 from ii_agent.agent.runtime.tools.base import FileURLContent, ToolResult
 from ii_agent.agent.runtime.tools.sandbox.base import BaseSandboxTool
 
@@ -19,6 +21,7 @@ _EXTENSION_TO_MIMETYPE = {
 }
 
 DEFAULT_TIMEOUT = 300
+DEFAULT_VIDEO_COST_USD_PER_8S_SEGMENT = 0.75
 
 
 class VideoGenerateTool(BaseSandboxTool):
@@ -79,6 +82,17 @@ NOTE:
         if not agent.sandbox:
             raise ValueError(f"Tool {self.name} requires running sandbox before execution!")
         return
+
+    async def quote_cost(self, tool_input: dict[str, Any]) -> BillingQuote | None:
+        duration_seconds = int(tool_input.get("duration_seconds", 5))
+        segments = max(1, (duration_seconds + 7) // 8)
+        max_usd = Decimal(str(segments * DEFAULT_VIDEO_COST_USD_PER_8S_SEGMENT))
+        return BillingQuote(
+            strategy="bounded",
+            reserve_usd=max_usd,
+            max_usd=max_usd,
+            metadata={"segments": segments, "requested_seconds": duration_seconds},
+        )
 
     async def execute(
         self,

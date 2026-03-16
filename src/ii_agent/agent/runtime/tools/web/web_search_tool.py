@@ -33,6 +33,7 @@ INPUT_SCHEMA = {
 
 MAX_RESULTS = 12
 FAILURE_MESSAGE = "Please try again. If the problem continues, switch to browser tools for manual searching and let the user know that web search is temporarily unavailable."
+DEFAULT_WEB_SEARCH_MAX_COST_USD = 0.05
 
 
 class WebSearchTool(BaseAgentTool):
@@ -41,6 +42,7 @@ class WebSearchTool(BaseAgentTool):
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = True
+    max_cost_usd = DEFAULT_WEB_SEARCH_MAX_COST_USD
 
     def __init__(self):
         super().__init__()

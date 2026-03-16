@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Dict, Any
 from ii_agent.agent.events.models import EventType, RealtimeEvent
 from ii_agent.agent.events.stream import EventStream
 from ii_agent.agent.runs.models import AgentRunTask, RunStatus
+from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.agent.prompts.plan_mode_prompt import (
@@ -22,9 +23,12 @@ from ii_agent.agent.socket.command.command_handler import (
 )
 from ii_agent.utils.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-from ii_agent.agent.runtime.run.agent import RunCompletedEvent, RunOutput
+from ii_agent.agent.runtime.run.agent import RunCancelledEvent, RunCompletedEvent, RunOutput, ToolCallCompletedEvent
+from ii_agent.agent.runtime.tools.base import ToolResult as BaseToolResult
 from ii_agent.agent.runtime.media import Image, File as UrlFile
 from ii_agent.agent.runtime.tools.plan import MilestoneTool, PlanModificationSuggestionsTool
+from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
+from ii_agent.core.llm.token_record import TokenTracker
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -42,6 +46,7 @@ class PlanHandler(CommandHandler):
 
     def __init__(self, event_stream: EventStream, container: ServiceContainer) -> None:
         super().__init__(event_stream=event_stream, container=container)
+        self._llm_invocation_repo = LLMInvocationRepository()
 
     def get_command_type(self) -> UserCommandType:
         return UserCommandType.PLAN
@@ -52,7 +57,7 @@ class PlanHandler(CommandHandler):
 
         # Use shared validation from base class
         is_valid, session_info, llm_config = await self.validate_and_update_session(
-            existing_session, query_command, min_credits=0.01
+            existing_session, query_command
         )
 
         if not is_valid or not session_info or not llm_config:
@@ -118,6 +123,13 @@ class PlanHandler(CommandHandler):
                     error_type="invalid_mode_error",
                 )
 
+        except InsufficientCreditsError as e:
+            logger.warning(f"Insufficient credits for plan: {e}")
+            await self._send_error_event(
+                str(session_info.id),
+                message=str(e),
+                error_type="insufficient_credits",
+            )
         except Exception as e:
             logger.error(f"Error in plan handler: {e}", exc_info=True)
             raise
@@ -183,7 +195,7 @@ class PlanHandler(CommandHandler):
                 files=files or None,
             )
 
-            await self._process_agent_events(event_stream, session_info, running_task)
+            await self._process_agent_events(event_stream, session_info, running_task, llm_config)
 
         except Exception as e:
             logger.error(f"Error in plan generation: {e}", exc_info=True)
@@ -268,7 +280,7 @@ class PlanHandler(CommandHandler):
                 run_id=str(running_task.id),
             )
 
-            await self._process_agent_events(event_stream, session_info, running_task)
+            await self._process_agent_events(event_stream, session_info, running_task, llm_config)
 
         except Exception as e:
             logger.error(f"Error generating modification suggestions: {e}", exc_info=True)
@@ -368,7 +380,7 @@ class PlanHandler(CommandHandler):
                 files=files or None,
             )
 
-            await self._process_agent_events(event_stream, session_info, running_task)
+            await self._process_agent_events(event_stream, session_info, running_task, llm_config)
 
         except Exception as e:
             logger.error(f"Error in plan modification: {e}", exc_info=True)
@@ -386,6 +398,7 @@ class PlanHandler(CommandHandler):
         event_stream,
         session_info: SessionInfo,
         running_task: AgentRunTask,
+        llm_config=None,
     ) -> None:
         """Process agent events and emit realtime events."""
         async for event in event_stream:
@@ -435,6 +448,14 @@ class PlanHandler(CommandHandler):
                         },
                     )
                 )
+
+    async def _record_llm_invocation_best_effort(self, db, **kwargs) -> None:
+        """Write agent LLM telemetry without affecting billing or run handling."""
+        try:
+            async with db.begin_nested():
+                await self._llm_invocation_repo.create(db, **kwargs)
+        except Exception:
+            logger.warning("Failed to write llm_invocation for agent plan", exc_info=True)
 
     async def _emit_plan_modification_suggestions(
         self,

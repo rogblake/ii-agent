@@ -1,6 +1,8 @@
 import json
+from decimal import Decimal
 from typing import Any
 
+from ii_agent.billing.reservations.types import BillingQuote
 from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult
 
 
@@ -34,6 +36,7 @@ INPUT_SCHEMA = {
 
 MAX_RESULTS = 6
 FAILURE_MESSAGE = "Please try again. If the problem continues, switch to browser tools for manual searching and let the user know that web search is temporarily unavailable."
+DEFAULT_WEB_BATCH_QUERY_MAX_COST_USD = 0.05
 
 
 class WebBatchSearchTool(BaseAgentTool):
@@ -45,6 +48,17 @@ class WebBatchSearchTool(BaseAgentTool):
 
     def __init__(self):
         super().__init__()
+
+    async def quote_cost(self, tool_input: dict[str, Any]) -> BillingQuote | None:
+        queries = tool_input.get("queries") or []
+        query_count = len(queries) if isinstance(queries, list) else 1
+        max_usd = Decimal(str(DEFAULT_WEB_BATCH_QUERY_MAX_COST_USD * max(query_count, 1)))
+        return BillingQuote(
+            strategy="bounded",
+            reserve_usd=max_usd,
+            max_usd=max_usd,
+            metadata={"query_count": query_count},
+        )
 
     async def execute(
         self,

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Dict
 import socketio
 
 from ii_agent.auth.jwt_handler import jwt_handler
+from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.logger import logger
 from ii_agent.agent.events.models import EventType
@@ -139,6 +140,8 @@ class SocketIOManager:
                         EventType.ERROR,
                         {"message": f"Unknown message type: {message_type}"},
                     )
+            except InsufficientCreditsError:
+                pass  # Already handled by command handlers via _send_error_event
             except Exception as e:
                 logger.bind(error=str(e)).exception("Error handling chat message")
                 await self._emit_error(sid, "Error processing message")

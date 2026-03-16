@@ -8,6 +8,7 @@ from uuid import UUID
 
 from ii_agent.agent.events.models import EventType, RealtimeEvent
 from ii_agent.agent.events.stream import EventStream
+from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.agent.socket.command.command_handler import (
@@ -16,13 +17,15 @@ from ii_agent.agent.socket.command.command_handler import (
 )
 from ii_agent.utils.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-from ii_agent.agent.runtime.run.agent import RunOutput
+from ii_agent.agent.runtime.run.agent import RunCancelledEvent, RunCompletedEvent, RunErrorEvent, RunOutput, ToolCallCompletedEvent
+from ii_agent.agent.runtime.tools.base import ToolResult as BaseToolResult
 from ii_agent.core.llm.token_record import TokenTracker
 from ii_agent.agent.runtime.factory.factory import AgentFactory
 from ii_agent.agent.types import AgentType
 from ii_agent.agent.runtime.factory.tools import echo_message, generate_random_number
 from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
 from ii_agent.agent.runtime.tools.connectors import ConnectorTool
+from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -59,6 +62,7 @@ class ContinueRunHandler(CommandHandler):
     def __init__(self, event_stream: EventStream, container: ServiceContainer) -> None:
         super().__init__(event_stream=event_stream, container=container)
         self._agent_factory = AgentFactory(config=self.container.config)
+        self._llm_invocation_repo = LLMInvocationRepository()
 
     def get_command_type(self) -> UserCommandType:
         return UserCommandType.CONTINUE_RUN
@@ -227,8 +231,8 @@ class ContinueRunHandler(CommandHandler):
                 if realtime_event:
                     await self.send_event(realtime_event)
 
-                # Emit METRICS_UPDATE for RunOutput events (for credit tracking)
-                if isinstance(event, RunOutput):
+                # Bill on RunCompletedEvent (streaming mode emits this, not RunOutput)
+                if isinstance(event, RunCompletedEvent):
                     metrics_content = {"api_version": "v1"}
                     if event.metrics:
                         metrics_content["metrics"] = event.metrics.to_dict()
@@ -241,21 +245,27 @@ class ContinueRunHandler(CommandHandler):
                         )
                     )
 
-                    # Direct billing — bypasses the broken MetricsSubscriber path
-                    if event.metrics:
-                        record = TokenTracker.from_agent_metrics(
-                            event.metrics, event.model
+                if isinstance(event, RunErrorEvent):
+                    async with get_db_session_local() as db:
+                        await self._record_llm_invocation_best_effort(
+                            db,
+                            run_id=UUID(event.run_id) if event.run_id else None,
+                            session_id=str(session_info.id),
+                            user_id=str(session_info.user_id),
+                            provider=event.model_provider,
+                            model=event.model,
+                            request_kind="agent_continue",
+                            success=False,
+                            error_code=event.error_type or "run_error",
                         )
-                        async with get_db_session_local() as db:
-                            await self.container.llm_billing_service.deduct_for_llm_usage(
-                                db,
-                                user_id=str(session_info.user_id),
-                                session_id=str(session_info.id),
-                                token_record=record,
-                                is_user_model=llm_config.is_user_model(),
-                            )
-                            await db.commit()
 
+        except InsufficientCreditsError as e:
+            logger.warning(f"Insufficient credits for continue_run: {e}")
+            await self._send_error_event(
+                session_info.id,
+                message=str(e),
+                error_type="insufficient_credits",
+            )
         except ValueError as e:
             logger.error(f"ValueError in continue_run: {str(e)}")
             await self._send_error_event(
@@ -269,4 +279,15 @@ class ContinueRunHandler(CommandHandler):
                 session_info.id,
                 message=f"Failed to continue run: {str(e)}",
                 error_type="execution_error",
+            )
+
+    async def _record_llm_invocation_best_effort(self, db, **kwargs) -> None:
+        """Write agent LLM telemetry without affecting billing or run handling."""
+        try:
+            async with db.begin_nested():
+                await self._llm_invocation_repo.create(db, **kwargs)
+        except Exception:
+            logger.warning(
+                "Failed to write llm_invocation for agent continue",
+                exc_info=True,
             )

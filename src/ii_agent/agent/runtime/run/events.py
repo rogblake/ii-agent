@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import uuid
 import asyncio
@@ -541,6 +542,9 @@ async def _persist_event_to_db(
     """
     try:
         from ii_agent.agent.runs.event import AgentEventLog
+        from ii_agent.billing.usage.tool_invocation_repository import (
+            ToolInvocationRepository,
+        )
 
         async with get_db_session_local() as db:
             # Create database event record
@@ -553,8 +557,66 @@ async def _persist_event_to_db(
             )
 
             db.add(db_event)
+            if isinstance(event, ToolCallCompletedEvent) and getattr(event, "tool", None):
+                tool = event.tool
+                finished_at = datetime.now(timezone.utc)
+                started_at = (
+                    datetime.fromtimestamp(tool.created_at, tz=timezone.utc)
+                    if tool.created_at
+                    else None
+                )
+                output_summary = _truncate_text(_render_tool_summary(tool.result))
+                from ii_agent.agent.runtime.tools.base import ToolResult as BaseToolResult
+
+                tool_cost = None
+                if isinstance(tool.result, BaseToolResult) and tool.result.cost > 0:
+                    tool_cost = tool.result.cost
+
+                await ToolInvocationRepository().create(
+                    db,
+                    run_id=_coerce_uuid(run_response.run_id),
+                    session_id=str(run_response.session_id),
+                    user_id=str(run_response.user_id),
+                    provider_tool_call_id=tool.tool_call_id,
+                    tool_name=tool.tool_name or "unknown",
+                    tool_namespace="agent",
+                    status="failed" if tool.tool_call_error else "completed",
+                    started_at=started_at,
+                    finished_at=finished_at,
+                    latency_ms=(
+                        int((finished_at - started_at).total_seconds() * 1000)
+                        if started_at is not None
+                        else None
+                    ),
+                    input_summary=_truncate_text(str(tool.tool_args) if tool.tool_args else None),
+                    output_summary=output_summary,
+                    is_error=bool(tool.tool_call_error),
+                    error_message=output_summary if tool.tool_call_error else None,
+                    cost_usd=tool_cost,
+                )
             await db.commit()
     except Exception:
         # Silently ignore errors in background persistence
         # to avoid disrupting the main agent flow
         pass
+
+
+def _coerce_uuid(value: str | uuid.UUID | None) -> uuid.UUID | None:
+    if value is None or isinstance(value, uuid.UUID):
+        return value
+    try:
+        return uuid.UUID(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _render_tool_summary(result: Any) -> str:
+    if result is None:
+        return ""
+    return str(result)
+
+
+def _truncate_text(value: str | None, limit: int = 500) -> str | None:
+    if not value:
+        return None
+    return value[:limit]

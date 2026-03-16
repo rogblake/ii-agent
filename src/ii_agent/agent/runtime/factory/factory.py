@@ -105,6 +105,8 @@ class AgentFactory:
 
         # Create tool dependencies for injection
         tool_deps = ToolDependencies.create_default()
+        model.bill_with_platform_credits = not llm_config.is_user_model()
+        model.llm_billing_service = tool_deps.container.llm_billing_service
 
         # Resolve required tool names based on agent type, model, and tool_args
         agent_tools = AgentToolManager.resolve_tools(
@@ -238,6 +240,8 @@ class AgentFactory:
         model = get_model(provider, llm_config=llm_config)
         # Resolve required tool names
         tool_deps = ToolDependencies.create_default()
+        model.bill_with_platform_credits = not llm_config.is_user_model()
+        model.llm_billing_service = tool_deps.container.llm_billing_service
         agent_tools = AgentToolManager.resolve_tools(
             agent_type=AgentType.TASK_AGENT,
             model_name=model.id,
@@ -267,4 +271,3 @@ class AgentFactory:
 
         logger.info(f"Created task agent tool with {len(agent_tools)} tools")
         return task_agent
-

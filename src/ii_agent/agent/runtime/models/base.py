@@ -41,6 +41,7 @@ from ii_agent.agent.runtime.tools.function import (
     FunctionExecutionResult,
     UserInputField,
 )
+from ii_agent.core.llm.token_record import TokenTracker
 from ii_agent.agent.runtime.utils.timer import Timer
 from ii_agent.core.logger import logger
 from ii_agent.core.exceptions import RunCancelledException
@@ -201,6 +202,8 @@ class Model(ABC):
     delay_between_retries: int = 1
     # Exponential backoff: if True, the delay between retries is doubled each time
     exponential_backoff: bool = False
+    bill_with_platform_credits: bool = True
+    llm_billing_service: Any = None
 
     def __post_init__(self):
         if self.provider is None and self.name is not None:
@@ -528,15 +531,29 @@ class Model(ABC):
         Returns:
             Tuple[Message, bool]: (assistant_message, should_continue)
         """
-        # Generate response with retry logic for ModelProviderError
-        provider_response = await self._ainvoke_with_retry(
+        billing_reservation = await self._reserve_llm_billing(
             messages=messages,
-            response_format=response_format,
-            tools=tools,
-            tool_choice=tool_choice or self._tool_choice,
             assistant_message=assistant_message,
             run_response=run_response,
         )
+        previous_output_caps = self._apply_reserved_output_cap(billing_reservation)
+        # Generate response with retry logic for ModelProviderError
+        try:
+            provider_response = await self._ainvoke_with_retry(
+                messages=messages,
+                response_format=response_format,
+                tools=tools,
+                tool_choice=tool_choice or self._tool_choice,
+                assistant_message=assistant_message,
+                run_response=run_response,
+            )
+        except Exception:
+            await self._release_llm_billing(
+                reservation=billing_reservation,
+                reason="provider_error",
+            )
+            self._restore_output_cap(previous_output_caps)
+            raise
 
         # Populate the assistant message
         self._populate_assistant_message(
@@ -570,6 +587,12 @@ class Model(ABC):
             model_response.provider_data = provider_response.provider_data
         if provider_response.response_usage is not None:
             model_response.response_usage = provider_response.response_usage
+        await self._settle_llm_billing(
+            reservation=billing_reservation,
+            run_response=run_response,
+            metrics=assistant_message.metrics,
+        )
+        self._restore_output_cap(previous_output_caps)
 
     def _populate_assistant_message(
         self,
@@ -697,24 +720,51 @@ class Model(ABC):
         """
         Process a streaming response from the model with retry logic for ModelProviderError.
         """
-        async for response_delta in self._ainvoke_stream_with_retry(
+        billing_reservation = await self._reserve_llm_billing(
             messages=messages,
             assistant_message=assistant_message,
-            response_format=response_format,
-            tools=tools,
-            tool_choice=tool_choice or self._tool_choice,
             run_response=run_response,
-        ):
-            for model_response_delta in self._populate_stream_data(
-                stream_data=stream_data,
-                model_response_delta=response_delta,
-            ):
-                yield model_response_delta
-
-        # Populate assistant message from stream data after the stream ends
-        self._populate_assistant_message_from_stream_data(
-            assistant_message=assistant_message, stream_data=stream_data
         )
+        previous_output_caps = self._apply_reserved_output_cap(billing_reservation)
+        try:
+            async for response_delta in self._ainvoke_stream_with_retry(
+                messages=messages,
+                assistant_message=assistant_message,
+                response_format=response_format,
+                tools=tools,
+                tool_choice=tool_choice or self._tool_choice,
+                run_response=run_response,
+            ):
+                for model_response_delta in self._populate_stream_data(
+                    stream_data=stream_data,
+                    model_response_delta=response_delta,
+                ):
+                    yield model_response_delta
+
+            # Populate assistant message from stream data after the stream ends
+            self._populate_assistant_message_from_stream_data(
+                assistant_message=assistant_message, stream_data=stream_data
+            )
+            await self._settle_llm_billing(
+                reservation=billing_reservation,
+                run_response=run_response,
+                metrics=stream_data.response_metrics,
+            )
+            self._restore_output_cap(previous_output_caps)
+        except Exception:
+            if stream_data.response_metrics is not None and stream_data.response_metrics.total_tokens > 0:
+                await self._settle_llm_billing(
+                    reservation=billing_reservation,
+                    run_response=run_response,
+                    metrics=stream_data.response_metrics,
+                )
+            else:
+                await self._release_llm_billing(
+                    reservation=billing_reservation,
+                    reason="provider_error",
+                )
+            self._restore_output_cap(previous_output_caps)
+            raise
 
     async def aresponse_stream(
         self,
@@ -896,6 +946,154 @@ class Model(ABC):
             assistant_message.file_output = stream_data.response_file
         if stream_data.response_tool_calls and len(stream_data.response_tool_calls) > 0:
             assistant_message.tool_calls = self.parse_tool_calls(stream_data.response_tool_calls)
+
+    async def _reserve_llm_billing(
+        self,
+        *,
+        messages: List[Message],
+        assistant_message: Message,
+        run_response: Optional[RunOutput],
+    ):
+        """Reserve one agent LLM call before invoking the provider."""
+        if (
+            self.llm_billing_service is None
+            or not self.bill_with_platform_credits
+            or run_response is None
+            or not run_response.user_id
+            or not run_response.session_id
+            or not run_response.run_id
+        ):
+            return None
+
+        from ii_agent.core.db.manager import get_db_session_local
+
+        async with get_db_session_local() as db:
+            reservation = await self.llm_billing_service.reserve_agent_llm_call(
+                db,
+                user_id=run_response.user_id,
+                session_id=run_response.session_id,
+                run_id=run_response.run_id,
+                model=self,
+                messages=messages,
+                source_id=assistant_message.id,
+                idempotency_key=f"agent-llm:{run_response.run_id}:{assistant_message.id}",
+            )
+            await db.commit()
+            return reservation
+
+    async def _settle_llm_billing(
+        self,
+        *,
+        reservation,
+        run_response: Optional[RunOutput],
+        metrics: Optional[Metrics],
+    ) -> None:
+        """Settle reserved agent LLM credits using actual provider usage."""
+        if (
+            reservation is None
+            or self.llm_billing_service is None
+            or run_response is None
+            or metrics is None
+        ):
+            return
+
+        try:
+            from ii_agent.core.db.manager import get_db_session_local
+
+            record = TokenTracker.from_agent_metrics(metrics, self.id)
+            async with get_db_session_local() as db:
+                await self.llm_billing_service.settle_agent_llm_call(
+                    db,
+                    reservation=reservation,
+                    run_id=run_response.run_id or "",
+                    token_record=record,
+                    provider=str(self.provider) if self.provider is not None else None,
+                    latency_ms=(
+                        int(metrics.duration * 1000)
+                        if metrics.duration is not None
+                        else None
+                    ),
+                )
+                await db.commit()
+        except Exception:
+            reservation_id = getattr(
+                getattr(reservation, "hold", None),
+                "reservation_id",
+                None,
+            )
+            logger.error(
+                "Failed to settle agent LLM billing; marking settlement_failed",
+                extra={"reservation_id": reservation_id},
+                exc_info=True,
+            )
+            await self._mark_llm_settlement_failed(
+                reservation_id=reservation_id,
+                error="agent_llm_settle_exception",
+            )
+
+    async def _mark_llm_settlement_failed(
+        self,
+        *,
+        reservation_id: str | None,
+        error: str,
+    ) -> None:
+        """Mark reservation as settlement_failed to prevent auto-expiry refund."""
+        if reservation_id is None or self.llm_billing_service is None:
+            return
+        try:
+            from ii_agent.core.db.manager import get_db_session_local
+
+            async with get_db_session_local() as db:
+                await self.llm_billing_service.mark_settlement_failed(
+                    db, reservation_id=reservation_id, error=error,
+                )
+                await db.commit()
+        except Exception:
+            logger.warning(
+                "Failed to mark reservation %s as settlement_failed",
+                reservation_id,
+                exc_info=True,
+            )
+
+    async def _release_llm_billing(self, *, reservation, reason: str) -> None:
+        """Release a reserved agent LLM call without charging."""
+        if reservation is None or self.llm_billing_service is None:
+            return
+
+        try:
+            from ii_agent.core.db.manager import get_db_session_local
+
+            async with get_db_session_local() as db:
+                await self.llm_billing_service.release_llm_call(
+                    db,
+                    reservation=reservation,
+                    reason=reason,
+                )
+                await db.commit()
+        except Exception:
+            logger.warning("Failed to release agent LLM reservation", exc_info=True)
+
+    def _apply_reserved_output_cap(self, reservation) -> dict[str, Any]:
+        """Temporarily clamp provider output limits to the reserved cap."""
+        if reservation is None:
+            return {}
+
+        previous: dict[str, Any] = {}
+        cap = reservation.output_token_cap
+        for attr in ("max_output_tokens", "max_tokens", "max_completion_tokens"):
+            if hasattr(self, attr):
+                current = getattr(self, attr, None)
+                previous[attr] = current
+                if isinstance(current, int) and current > 0:
+                    setattr(self, attr, min(current, cap))
+                else:
+                    setattr(self, attr, cap)
+        return previous
+
+    def _restore_output_cap(self, previous: dict[str, Any]) -> None:
+        """Restore model output limit attributes after one invocation."""
+        for attr, value in previous.items():
+            setattr(self, attr, value)
 
     def _populate_stream_data(
         self, stream_data: MessageData, model_response_delta: ModelResponse

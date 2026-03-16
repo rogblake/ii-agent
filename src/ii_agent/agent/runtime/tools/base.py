@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Type
 from pydantic import BaseModel
 
+from ii_agent.billing.reservations.types import BillingQuote
+
 if TYPE_CHECKING:
     from ii_agent.agent.runtime.agents.agent import IIAgent
     from ii_agent.agent.runtime.tools.dependencies import ToolDependencies
@@ -158,6 +160,7 @@ class BaseAgentTool(ABC):
 
     # If True, the agent will stop executing after this tool call completes
     stop_after_tool_call: bool = False
+    max_cost_usd: float | None = None
 
     def should_confirm_execute(self, tool_input: dict[str, Any]) -> ToolConfirmationDetails | bool:
         """
@@ -195,6 +198,17 @@ class BaseAgentTool(ABC):
             fc: The FunctionCall instance (contains result or error)
         """
         pass
+
+    async def quote_cost(self, tool_input: dict[str, Any]) -> BillingQuote | None:
+        """Return an upfront exact or bounded quote for prepaid billing."""
+        if self.max_cost_usd is None:
+            return None
+        return BillingQuote(
+            strategy="bounded",
+            reserve_usd=self.max_cost_usd,
+            max_usd=self.max_cost_usd,
+            metadata={"tool_name": self.name},
+        )
 
     @abstractmethod
     async def execute(self, tool_input: dict[str, Any]) -> ToolResult:

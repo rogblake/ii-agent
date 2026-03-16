@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import uuid
 from typing import Any, Optional
 
-from sqlalchemy import Index, Integer, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
@@ -21,7 +21,11 @@ class AgentSandbox(Base):
     provider: Mapped[str] = mapped_column(String, default="e2b")
     provider_sandbox_id: Mapped[str] = mapped_column(String, nullable=True)
     provider_data: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    session_id: Mapped[uuid.UUID] = mapped_column(String, nullable=False)
+    session_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     status: Mapped[SandboxStatus] = mapped_column(String, default=SandboxStatus.NOT_INITIALIZED)
 
     # Optimistic locking version

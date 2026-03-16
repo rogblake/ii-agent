@@ -34,6 +34,7 @@ INPUT_SCHEMA = {
     "required": ["url"],
 }
 FAILURE_MESSAGE = "Please try again. If the problem continues, switch to browser tools for manual visiting and let the user know that web visit is temporarily unavailable."
+DEFAULT_WEB_VISIT_MAX_COST_USD = 0.05
 
 
 class WebVisitTool(BaseAgentTool):
@@ -42,6 +43,7 @@ class WebVisitTool(BaseAgentTool):
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = True
+    max_cost_usd = DEFAULT_WEB_VISIT_MAX_COST_USD
 
     def __init__(self, credential: Dict | None = None, tool_server_url: str | None = None):
         super().__init__()

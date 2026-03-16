@@ -21,11 +21,13 @@ from pydantic import BaseModel, Field, validate_call
 
 from ii_agent.agent.runtime.utils.json_schema import get_py_type_for_json_type
 from ii_agent.agent.runtime.exceptions import AgentRunException
+from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.agent.runtime.media import Audio, File, Image, Video
 from ii_agent.agent.runtime.run import RunContext
 
 from ii_agent.agent.runtime.tools.base import BaseAgentTool, UserInputField
 from ii_agent.agent.sandboxes.schemas import SandboxInfo
+from ii_agent.core.llm.billing_service import ReservedToolCall
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -113,6 +115,8 @@ class Function(BaseModel):
     _agent: Optional["IIAgent"] = None
     # The run context that the function is associated with
     _run_context: Optional[RunContext] = None
+    # Original BaseAgentTool instance for from_tool wrappers.
+    _tool: Optional[BaseAgentTool] = None
 
     _images: Optional[Sequence[Image]] = None
     _videos: Optional[Sequence[Video]] = None
@@ -147,6 +151,7 @@ class Function(BaseModel):
                 "post_hook",
                 "tool_hooks",
                 "_agent",
+                "_tool",
             }
 
             # Create a copy with shallow references to callable fields
@@ -367,7 +372,7 @@ class Function(BaseModel):
                         )
                     )
 
-        return cls(
+        function = cls(
             name=tool.name,
             description=tool.description,
             parameters=parameters,
@@ -386,6 +391,8 @@ class Function(BaseModel):
             stop_after_tool_call=tool.stop_after_tool_call,
             skip_entrypoint_processing=True,  # Skip processing since we already have the schema
         )
+        object.__setattr__(function, "_tool", tool)
+        return function
 
     def process_entrypoint(self, strict: bool = False):
         """Process the entrypoint and make it ready for use by an agent."""
@@ -671,6 +678,7 @@ class FunctionCall(BaseModel):
     error: Optional[str] = None
 
     sandbox: Optional["SandboxInfo"] = None
+    billing_reservation: Optional[ReservedToolCall] = None
 
     def get_call_str(self) -> str:
         """Returns a string representation of the function call."""
@@ -957,6 +965,125 @@ class FunctionCall(BaseModel):
             sandbox_manager = await self.function._agent.init_sandbox()
             self.sandbox = await sandbox_manager.get_info()
 
+    def _resolve_billing_tool(self) -> Optional[BaseAgentTool]:
+        tool = getattr(self.function, "_tool", None)
+        if isinstance(tool, BaseAgentTool):
+            return tool
+
+        bound_self = getattr(self.function.entrypoint, "__self__", None)
+        if isinstance(bound_self, BaseAgentTool):
+            return bound_self
+
+        return None
+
+    async def _reserve_tool_billing(self) -> None:
+        """Reserve credits for billable agent tools before execution."""
+        tool = self._resolve_billing_tool()
+        if tool is None:
+            return
+
+        run_context = self.function._run_context
+        dependencies = getattr(self.function, "_dependencies", None)
+        if (
+            run_context is None
+            or dependencies is None
+            or dependencies.container is None
+            or not run_context.user_id
+            or not run_context.session_id
+            or not run_context.run_id
+        ):
+            return
+
+        quote = await tool.quote_cost(self.arguments or {})
+        if quote is None:
+            return
+
+        from ii_agent.core.db.manager import get_db_session_local
+
+        async with get_db_session_local() as db:
+            self.billing_reservation = await dependencies.container.llm_billing_service.reserve_tool_call(
+                db,
+                user_id=run_context.user_id,
+                session_id=run_context.session_id,
+                run_id=run_context.run_id,
+                source_domain="agent_tool",
+                source_id=self.call_id,
+                tool_name=tool.name,
+                quote=quote,
+                idempotency_key=f"agent-tool:{run_context.run_id}:{self.call_id}",
+                app_kind="agent",
+            )
+            await db.commit()
+
+    async def _finalize_tool_billing(
+        self,
+        *,
+        function_execution_result: Optional[FunctionExecutionResult],
+    ) -> None:
+        """Settle or release a tool reservation after execution."""
+        if self.billing_reservation is None:
+            return
+
+        tool = self._resolve_billing_tool()
+        if tool is None:
+            return
+
+        run_context = self.function._run_context
+        dependencies = getattr(self.function, "_dependencies", None)
+        if (
+            run_context is None
+            or dependencies is None
+            or dependencies.container is None
+        ):
+            return
+
+        from ii_agent.core.db.manager import get_db_session_local
+        from ii_agent.agent.runtime.tools.base import ToolResult as BaseToolResult
+
+        actual_cost_usd = 0.0
+        succeeded = (
+            function_execution_result is not None
+            and function_execution_result.status == "success"
+        )
+        result_obj = function_execution_result.result if function_execution_result else None
+        if isinstance(result_obj, BaseToolResult):
+            actual_cost_usd = result_obj.cost or 0.0
+
+        try:
+            async with get_db_session_local() as db:
+                if succeeded:
+                    await dependencies.container.llm_billing_service.settle_tool_call(
+                        db,
+                        reservation=self.billing_reservation,
+                        actual_cost_usd=actual_cost_usd,
+                        provider=None,
+                        extra_usage_metadata={
+                            "app_kind": "agent",
+                            "run_id": run_context.run_id,
+                            "tool_name": tool.name,
+                        },
+                    )
+                else:
+                    await dependencies.container.llm_billing_service.release_tool_call(
+                        db,
+                        reservation=self.billing_reservation,
+                        reason="tool_failed",
+                    )
+                await db.commit()
+        except Exception:
+            logger.error(
+                "Failed to finalize tool billing for %s; leaving reservation held",
+                tool.name,
+                extra={
+                    "reservation_id": getattr(
+                        getattr(self.billing_reservation, "hold", None),
+                        "reservation_id",
+                        None,
+                    ),
+                },
+                exc_info=True,
+            )
+
     async def _handle_pre_hook_async(self):
         """Handles the async pre-hook for the function call."""
 
@@ -1103,16 +1230,17 @@ class FunctionCall(BaseModel):
             return FunctionExecutionResult(status="failure", error="Entrypoint is not set")
 
         logger.debug(f"Running: {self.get_call_str()}")
-        # Execute pre-hook - always use async version in aexecute for sandbox initialization
-        await self._handle_pre_hook_async()
-
-        entrypoint_args = self._build_entrypoint_args()
-
         # Execute function
         execution_result: FunctionExecutionResult
         exception_to_raise = None
+        tool_result_for_billing: FunctionExecutionResult | None = None
 
         try:
+            await self._reserve_tool_billing()
+            # Execute pre-hook - always use async version in aexecute for sandbox initialization
+            await self._handle_pre_hook_async()
+            entrypoint_args = self._build_entrypoint_args()
+
             # Build and execute the nested chain of hooks
             if self.function.tool_hooks is not None:
                 execution_chain = await self._build_nested_execution_chain_async(entrypoint_args)
@@ -1144,23 +1272,33 @@ class FunctionCall(BaseModel):
                 result=self.result,
                 updated_session_state=updated_session_state,
             )
+            tool_result_for_billing = execution_result
 
+        except InsufficientCreditsError:
+            # Billing errors must propagate to the agent loop so the user
+            # sees an insufficient-credits error, not a silent tool failure.
+            raise
         except AgentRunException as e:
             logger.debug(f"{e.__class__.__name__}: {e}")
             self.error = str(e)
             exception_to_raise = e
             execution_result = FunctionExecutionResult(status="failure", error=str(e))
+            tool_result_for_billing = execution_result
         except Exception as e:
             logger.warning(f"Could not run function {self.get_call_str()}")
             logger.error(e)
             self.error = str(e)
             execution_result = FunctionExecutionResult(status="failure", error=str(e))
+            tool_result_for_billing = execution_result
 
         finally:
             if iscoroutinefunction(self.function.post_hook):
                 await self._handle_post_hook_async()
             else:
                 self._handle_post_hook()
+            await self._finalize_tool_billing(
+                function_execution_result=tool_result_for_billing
+            )
 
         if exception_to_raise is not None:
             raise exception_to_raise

@@ -1,4 +1,5 @@
 import json
+import uuid as _uuid_mod
 from typing import Any, Dict, Optional, TypeVar
 
 from ii_agent.agent.runtime.tools.function import Function, FunctionCall
@@ -23,8 +24,10 @@ def get_function_call(
         return None
 
     function_call = FunctionCall(function=function_to_call)
-    if call_id is not None:
-        function_call.call_id = call_id
+    # Always set call_id so downstream billing has a unique per-call
+    # identifier.  Provider-assigned IDs are preferred; if the LLM
+    # response omitted one, generate a stable UUID at parse time.
+    function_call.call_id = call_id or f"gen-{_uuid_mod.uuid4().hex[:16]}"
     if arguments is not None and arguments != "":
         try:
             try:

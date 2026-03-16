@@ -32,10 +32,9 @@ class CancelHandler(CommandHandler):
     async def handle(self, content: Dict[str, Any], session_info: SessionInfo) -> None:
         """Handle cancel request — signals the running agent to stop.
 
-        The actual status transition (ABORTED) and the corresponding
-        AGENT_RESPONSE_INTERRUPTED event are produced by the V1 event
-        converter when the agent run terminates. No STATUS_UPDATE is
-        emitted here to avoid duplication with run_status on every event.
+        When the run is PAUSED (waiting for tool confirmation), the normal
+        streaming loop has already ended, so this handler only marks the run
+        as aborting and relies on persisted per-call billing state.
         """
         async with get_db_session_local() as db:
             last_task: (
@@ -56,6 +55,7 @@ class CancelHandler(CommandHandler):
                 )
                 return
 
+            original_status = last_task.status
             last_task.status = RunStatus.ABORTING.value
             await db.commit()
 
@@ -69,4 +69,10 @@ class CancelHandler(CommandHandler):
             await self._send_error_event(
                 session_info.id,
                 message="Run not found or already completed",
+            )
+
+        if original_status == RunStatus.PAUSED.value:
+            logger.info(
+                "Paused run %s cancelled; per-call billing already settled in runtime",
+                run_id,
             )

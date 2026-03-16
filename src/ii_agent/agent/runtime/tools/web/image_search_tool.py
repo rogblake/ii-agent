@@ -60,6 +60,7 @@ INPUT_SCHEMA = {
 }
 
 MAX_RESULTS = 5
+DEFAULT_IMAGE_SEARCH_MAX_COST_USD = 0.05
 
 
 class ImageSearchTool(BaseAgentTool):
@@ -68,6 +69,7 @@ class ImageSearchTool(BaseAgentTool):
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = True
+    max_cost_usd = DEFAULT_IMAGE_SEARCH_MAX_COST_USD
 
     def __init__(self):
         super().__init__()

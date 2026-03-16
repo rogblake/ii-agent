@@ -2,6 +2,8 @@ from typing import Any, Dict
 
 from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult
 
+DEFAULT_WEB_VISIT_COMPRESS_MAX_COST_USD = 0.10
+
 
 # Name
 NAME = "web_visit_compress"
@@ -36,6 +38,7 @@ class WebVisitCompressTool(BaseAgentTool):
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = True
+    max_cost_usd = DEFAULT_WEB_VISIT_COMPRESS_MAX_COST_USD
 
     def __init__(self, credential: Dict | None = None, tool_server_url: str | None = None):
         super().__init__()

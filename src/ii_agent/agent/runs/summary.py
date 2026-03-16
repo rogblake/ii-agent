@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, Optional, Type, TypeVar, get_args, get_origin
 
 from pydantic import ValidationError
-from sqlalchemy import BigInteger, Boolean, Index, String, select
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, String, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -42,7 +42,11 @@ class AgentSummary(Base):
     content: Mapped[str] = mapped_column(String, nullable=False)
     topics: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
     metrics: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    session_id: Mapped[str] = mapped_column(String, nullable=False)
+    session_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     agent_run_id: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
 

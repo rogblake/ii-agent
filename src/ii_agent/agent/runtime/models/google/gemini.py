@@ -544,106 +544,112 @@ class Gemini(Model):
                 **request_kwargs,
             )
 
-            async for chunk in async_stream:
-                model_response = self._parse_provider_response_delta(chunk)
+            usage_flushed = False
 
-                # Track metadata for final response
-                if model_response.response_usage is not None:
-                    last_usage = model_response.response_usage
-                    model_response.response_usage = None
-                if model_response.provider_data is not None:
-                    last_provider_data = model_response.provider_data
+            try:
+                async for chunk in async_stream:
+                    model_response = self._parse_provider_response_delta(chunk)
 
-                # Handle reasoning content (thought: true)
-                if model_response.reasoning_content is not None:
-                    if not stream_state["reasoning_started_emitted"]:
-                        stream_state["reasoning_started_emitted"] = True
-                        stream_state["current_type"] = "reasoning"
-                        yield ModelResponse(delta_status="reasoning_started")
+                    # Track metadata for final response
+                    if model_response.response_usage is not None:
+                        last_usage = model_response.response_usage
+                        model_response.response_usage = None
+                    if model_response.provider_data is not None:
+                        last_provider_data = model_response.provider_data
 
-                    accumulators["reasoning_content"] += model_response.reasoning_content
-                    model_response.is_delta = True
-                    yield model_response
+                    # Handle reasoning content (thought: true)
+                    if model_response.reasoning_content is not None:
+                        if not stream_state["reasoning_started_emitted"]:
+                            stream_state["reasoning_started_emitted"] = True
+                            stream_state["current_type"] = "reasoning"
+                            yield ModelResponse(delta_status="reasoning_started")
 
-                # Handle regular content (thought: null/false)
-                elif model_response.content is not None:
-                    # Transition from reasoning to content
-                    if (
-                        stream_state["current_type"] == "reasoning"
-                        and not stream_state["reasoning_done_emitted"]
-                    ):
-                        stream_state["reasoning_done_emitted"] = True
-                        yield ModelResponse(
-                            delta_status="reasoning_done",
-                            reasoning_content=accumulators["reasoning_content"],
-                        )
-                        accumulators["reasoning_content"] = ""
+                        accumulators["reasoning_content"] += model_response.reasoning_content
+                        model_response.is_delta = True
+                        yield model_response
 
-                    if not stream_state["content_started_emitted"]:
-                        stream_state["content_started_emitted"] = True
-                        stream_state["current_type"] = "content"
-                        yield ModelResponse(delta_status="content_started")
+                    # Handle regular content (thought: null/false)
+                    elif model_response.content is not None:
+                        # Transition from reasoning to content
+                        if (
+                            stream_state["current_type"] == "reasoning"
+                            and not stream_state["reasoning_done_emitted"]
+                        ):
+                            stream_state["reasoning_done_emitted"] = True
+                            yield ModelResponse(
+                                delta_status="reasoning_done",
+                                reasoning_content=accumulators["reasoning_content"],
+                            )
+                            accumulators["reasoning_content"] = ""
 
-                    accumulators["content"] += model_response.content
-                    model_response.is_delta = True
-                    yield model_response
+                        if not stream_state["content_started_emitted"]:
+                            stream_state["content_started_emitted"] = True
+                            stream_state["current_type"] = "content"
+                            yield ModelResponse(delta_status="content_started")
 
-                # Handle tool calls
-                elif model_response.tool_calls:
-                    # Close reasoning state if open
-                    if (
-                        stream_state["current_type"] == "reasoning"
-                        and not stream_state["reasoning_done_emitted"]
-                    ):
-                        stream_state["reasoning_done_emitted"] = True
-                        yield ModelResponse(
-                            delta_status="reasoning_done",
-                            reasoning_content=accumulators["reasoning_content"],
-                        )
-                        accumulators["reasoning_content"] = ""
+                        accumulators["content"] += model_response.content
+                        model_response.is_delta = True
+                        yield model_response
 
-                    # Close content state if open
-                    if (
-                        stream_state["current_type"] == "content"
-                        and not stream_state["content_done_emitted"]
-                    ):
-                        stream_state["content_done_emitted"] = True
-                        yield ModelResponse(
-                            delta_status="content_done",
-                            content=accumulators["content"],
-                        )
-                        accumulators["content"] = ""
+                    # Handle tool calls
+                    elif model_response.tool_calls:
+                        # Close reasoning state if open
+                        if (
+                            stream_state["current_type"] == "reasoning"
+                            and not stream_state["reasoning_done_emitted"]
+                        ):
+                            stream_state["reasoning_done_emitted"] = True
+                            yield ModelResponse(
+                                delta_status="reasoning_done",
+                                reasoning_content=accumulators["reasoning_content"],
+                            )
+                            accumulators["reasoning_content"] = ""
 
-                    yield model_response
+                        # Close content state if open
+                        if (
+                            stream_state["current_type"] == "content"
+                            and not stream_state["content_done_emitted"]
+                        ):
+                            stream_state["content_done_emitted"] = True
+                            yield ModelResponse(
+                                delta_status="content_done",
+                                content=accumulators["content"],
+                            )
+                            accumulators["content"] = ""
 
-                # Handle images/audio responses
-                elif model_response.images or model_response.audio:
-                    yield model_response
+                        yield model_response
 
-            # Emit final done event
-            final_response = ModelResponse()
-            if (
-                stream_state["current_type"] == "content"
-                and not stream_state["content_done_emitted"]
-            ):
-                final_response.delta_status = "content_done"
-                final_response.content = accumulators["content"]
-            elif (
-                stream_state["current_type"] == "reasoning"
-                and not stream_state["reasoning_done_emitted"]
-            ):
-                final_response.delta_status = "reasoning_done"
-                final_response.reasoning_content = accumulators["reasoning_content"]
+                    # Handle images/audio responses
+                    elif model_response.images or model_response.audio:
+                        yield model_response
 
-            if last_usage is not None:
-                final_response.response_usage = last_usage
-            if last_provider_data is not None:
-                final_response.provider_data = last_provider_data
+                # Emit final done event
+                final_response = ModelResponse()
+                if (
+                    stream_state["current_type"] == "content"
+                    and not stream_state["content_done_emitted"]
+                ):
+                    final_response.delta_status = "content_done"
+                    final_response.content = accumulators["content"]
+                elif (
+                    stream_state["current_type"] == "reasoning"
+                    and not stream_state["reasoning_done_emitted"]
+                ):
+                    final_response.delta_status = "reasoning_done"
+                    final_response.reasoning_content = accumulators["reasoning_content"]
 
-            if final_response.delta_status or final_response.response_usage:
-                yield final_response
+                if last_usage is not None:
+                    final_response.response_usage = last_usage
+                    usage_flushed = True
+                if last_provider_data is not None:
+                    final_response.provider_data = last_provider_data
 
-            assistant_message.metrics.stop_timer()
+                if final_response.delta_status or final_response.response_usage:
+                    yield final_response
+            finally:
+                if not usage_flushed and last_usage is not None:
+                    assistant_message.metrics.apply_usage_snapshot(last_usage)
+                assistant_message.metrics.stop_timer()
 
         except (ClientError, ServerError) as e:
             logger.error(f"Error from Gemini API: {e}")

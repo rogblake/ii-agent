@@ -62,13 +62,15 @@ def get_plan_service():
     return PlanService(config=get_settings())
 
 
-def get_session_validation_service(session_service, credit_service, title_service):
+def get_session_validation_service(
+    session_service, title_service, balance_repo=None
+):
     """Provide SessionValidationService instance (container-only)."""
     from ii_agent.agent.application.validation_service import SessionValidationService
 
     return SessionValidationService(
         session_service=session_service,
-        credit_service=credit_service,
+        balance_repo=balance_repo,
         title_service=title_service,
     )
 

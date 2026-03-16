@@ -149,9 +149,8 @@ class CommandHandler(ABC):
         self,
         session_info: SessionInfo,
         query_command: QueryCommandContent,
-        min_credits: float = 1.0,
     ) -> tuple[bool, SessionInfo | None, LLMConfig | None]:
-        """Validate session exists, user has credits, update session name.
+        """Validate session exists, check billing status, update session name.
 
         Delegates to ``SessionService.validate_and_prepare_session()`` for
         business logic, then emits error events when validation fails.
@@ -167,7 +166,6 @@ class CommandHandler(ABC):
                 agent_type=query_command.agent_type,
                 source=query_command.source,
                 model_id=query_command.model_id,
-                min_credits=min_credits,
                 llm_setting_service=self.container.llm_setting_service,
                 current_name=session_info.name,
             )

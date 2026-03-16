@@ -111,7 +111,11 @@ class AgentUIEvent(Base):
         String,
         ForeignKey("sessions.id", ondelete="CASCADE")
     )
-    run_id: Mapped[Optional[_uuid.UUID]] = mapped_column(UUID, nullable=True)
+    run_id: Mapped[Optional[_uuid.UUID]] = mapped_column(
+        UUID,
+        ForeignKey("agent_run_tasks.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     type: Mapped[str] = mapped_column(String)
     content: Mapped[dict] = mapped_column(JSONB)
     source: Mapped[Optional[str]] = mapped_column(String, nullable=True)

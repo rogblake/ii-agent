@@ -88,6 +88,7 @@ INPUT_SCHEMA = {
     ],
 }
 DEFAULT_TIMEOUT = 120
+DEFAULT_SLIDE_GENERATION_MAX_COST_USD = 0.05
 SLIDE_SYSTEM_INSTRUCTION = """
 Use this tool if no template info is provided. If there's template involved, default to create slide tool
 
@@ -130,6 +131,7 @@ class SlideGenerationTool(SlideToolBase):
     input_schema = INPUT_SCHEMA
     read_only = False
     requires_confirmation = False
+    max_cost_usd = DEFAULT_SLIDE_GENERATION_MAX_COST_USD
 
     def __init__(self) -> None:
         super().__init__()

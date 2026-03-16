@@ -123,6 +123,27 @@ class Metrics:
         if self.timer is not None:
             self.time_to_first_token = self.timer.elapsed
 
+    def apply_usage_snapshot(self, usage: "Metrics") -> None:
+        """Replace token and cost fields with the latest cumulative usage snapshot."""
+        self.input_tokens = usage.input_tokens
+        self.output_tokens = usage.output_tokens
+        self.total_tokens = usage.total_tokens
+        self.audio_input_tokens = usage.audio_input_tokens
+        self.audio_output_tokens = usage.audio_output_tokens
+        self.audio_total_tokens = usage.audio_total_tokens
+        self.cache_read_tokens = usage.cache_read_tokens
+        self.cache_write_tokens = usage.cache_write_tokens
+        self.reasoning_tokens = usage.reasoning_tokens
+        self.cost = usage.cost
+        self.provider_metrics = (
+            dict(usage.provider_metrics) if usage.provider_metrics is not None else None
+        )
+        self.additional_metrics = (
+            dict(usage.additional_metrics)
+            if usage.additional_metrics is not None
+            else None
+        )
+
     @property
     def total_input_tokens(self) -> int:
         return self.input_tokens + self.cache_write_tokens + self.cache_read_tokens

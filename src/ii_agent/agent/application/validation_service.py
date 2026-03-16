@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.billing.credits.service import CreditService
+from ii_agent.billing.credits.balance_models import BillingStatus
+from ii_agent.billing.credits.balance_repository import CreditBalanceRepository
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.sessions.service import SessionService
 from ii_agent.sessions.title_service import SessionTitleService
@@ -39,11 +40,11 @@ class SessionValidationService:
         self,
         *,
         session_service: SessionService,
-        credit_service: CreditService,
+        balance_repo: CreditBalanceRepository | None = None,
         title_service: SessionTitleService,
     ) -> None:
         self._session_service = session_service
-        self._credit_service = credit_service
+        self._balance_repo = balance_repo
         self._title_service = title_service
 
     async def validate_and_prepare_session(
@@ -55,7 +56,6 @@ class SessionValidationService:
         agent_type: str | None = None,
         source: str | None = None,
         model_id: str | None = None,
-        min_credits: float = 1.0,
         llm_setting_service,
         current_name: str | None = None,
     ) -> SessionValidationResult:
@@ -66,7 +66,7 @@ class SessionValidationService:
         2. Updates the session name from query text if not already set.
         3. Sets agent_type if not set.
         4. Resolves LLM configuration.
-        5. Checks the user has sufficient credits.
+        5. Checks billing status (runtime reservation is the real credit gate).
 
         Cross-service dependencies (``llm_setting_service``) are passed as
         keyword arguments to avoid circular imports.
@@ -113,13 +113,15 @@ class SessionValidationService:
         # Update updated_at to ensure session appears at top of list
         session.updated_at = datetime.now(timezone.utc)
 
-        # Check credits
-        if llm_config.is_user_model():
-            has_credits = True
-        else:
-            has_credits = await self._credit_service.has_sufficient(
-                db, str(session.user_id), min_credits
+        # Validation only checks account health; runtime reservation is the
+        # single money gate for actual credit sufficiency.
+        billing_blocked = False
+        if not llm_config.is_user_model() and self._balance_repo is not None:
+            billing_status = await self._balance_repo.get_billing_status(
+                db, str(session.user_id)
             )
+            if billing_status is not None and billing_status != BillingStatus.OK:
+                billing_blocked = True
 
         db.add(session)
         await db.flush()
@@ -133,12 +135,12 @@ class SessionValidationService:
         # Rebuild session_info after flush
         updated_session_info = SessionService._build_session_info(session)
 
-        if not has_credits:
+        if billing_blocked:
             return SessionValidationResult(
                 is_valid=False,
                 session_info=updated_session_info,
-                error_message="Insufficient credits. Please check your credit balance.",
-                error_type="insufficient_credits",
+                error_message="Billing reconciliation required. Please contact support.",
+                error_type="billing_reconciliation_required",
             )
 
         return SessionValidationResult(

@@ -1,6 +1,7 @@
 """Repository layer for usage domain - data access only."""
 
-from typing import Optional
+from decimal import Decimal
+from typing import Optional, Union
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,11 +19,13 @@ class MetricsRepository:
         )
         return result.scalar_one_or_none()
 
-    async def create(self, db: AsyncSession, session_id: str, credits: float) -> SessionMetrics:
+    async def create(
+        self, db: AsyncSession, session_id: str, credits: Union[Decimal, float]
+    ) -> SessionMetrics:
         """Create a new session metrics record."""
         metrics = SessionMetrics(
             session_id=session_id,
-            credits=credits,
+            credits=Decimal(str(credits)),
         )
         db.add(metrics)
         await db.flush()

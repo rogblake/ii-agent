@@ -5,7 +5,7 @@ Models migrated from core/db/models.py:
 """
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Float, ForeignKey, Index
+from sqlalchemy import String, Numeric, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
@@ -38,11 +38,11 @@ class BillingTransaction(Base):
     stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     stripe_invoice_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     stripe_payment_intent_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    amount: Mapped[Optional[float]] = mapped_column(Numeric(18, 6), nullable=True)
     currency: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     plan_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     billing_cycle: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    credits: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    credits: Mapped[Optional[float]] = mapped_column(Numeric(18, 6), nullable=True)
     status: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     raw_payload: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

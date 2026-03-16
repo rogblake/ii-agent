@@ -59,7 +59,7 @@ const SessionUsageDetail = () => {
     )
 
     const handleBack = () => {
-        navigate('/settings/usage', { replace: true })
+        navigate('/settings')
     }
 
     return (

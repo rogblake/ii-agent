@@ -120,7 +120,8 @@ export {
     useGetCreditBalanceQuery,
     useGetCreditUsageQuery,
     useGetSessionUsageDetailQuery,
-    useGetSessionLedgerQuery
+    useGetSessionLedgerQuery,
+    useGetSessionReservationsQuery
 } from './api/user.api'
 export {
     sessionApi,

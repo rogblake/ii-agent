@@ -48,6 +48,7 @@ import {
     type ChatMessage,
     type ContentPart
 } from '@/utils/chat-events'
+import { useNavigate } from 'react-router'
 import { useChatTransport } from './use-chat-transport'
 import { type ChatMediaType } from '@/constants/media-type-config'
 import { getDefaultChatMediaPreference } from '@/utils/default-models'
@@ -222,6 +223,7 @@ function useChatProviderValue(): ChatContextValue {
     const selectedModelId = useAppSelector(selectSelectedModel)
     const chatMediaPreferenceFromStore = useAppSelector(selectChatMediaPreference)
     const { i18n } = useTranslation()
+    const navigate = useNavigate()
     const { getModelsForMediaType } = useMediaModels()
 
     const [state, setState] = useState<ChatSharedState>(INITIAL_CHAT_STATE)
@@ -2231,10 +2233,10 @@ function useChatProviderValue(): ChatContextValue {
                         },
                         onError: (message, code) => {
                             if (code === 'insufficient_credits') {
-                                toast.error(
+                                toast.warning(
                                     'You have run out of credits. Redirecting to upgrade your plan...'
                                 )
-                                window.location.href = '/settings/subscription'
+                                navigate('/settings/subscription')
                             } else if (code === 'anthropic_image_too_large') {
                                 toast.error(
                                     'Anthropic models cannot process images over 5 MB. Please switch to a different model (e.g. OpenAI) or upload a smaller image.'

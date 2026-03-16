@@ -89,3 +89,41 @@ class LedgerHistory(BaseModel):
         description="List of credit ledger entries"
     )
     total: int = Field(description="Total number of ledger entries")
+
+
+class ReservationResponse(BaseModel):
+    """A single credit reservation entry."""
+
+    id: str
+    session_id: Optional[str] = None
+    source_domain: str
+    source_id: str
+    billing_kind: str
+    quote_strategy: str
+    status: str
+    model_id: Optional[str] = None
+    tool_name: Optional[str] = None
+    idempotency_key: Optional[str] = None
+    reserved_credits: float
+    reserved_bonus_credits: float
+    actual_credits: Optional[float] = None
+    actual_bonus_credits: Optional[float] = None
+    released_credits: Optional[float] = None
+    released_bonus_credits: Optional[float] = None
+    quoted_usd: float
+    max_usd: float
+    actual_usd: Optional[float] = None
+    expires_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ReservationHistory(BaseModel):
+    """Paginated reservation history."""
+
+    entries: List[ReservationResponse] = Field(
+        description="List of credit reservations"
+    )
+    total: int = Field(description="Total number of reservations")

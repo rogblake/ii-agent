@@ -11,10 +11,13 @@ from ii_agent.billing.credits.schemas import (
     CreditHistory,
     LedgerEntryResponse,
     LedgerHistory,
+    ReservationHistory,
+    ReservationResponse,
     SessionCreditHistory,
     SessionUsageDetail,
     SessionUsageItem,
 )
+from ii_agent.billing.reservations.dependencies import CreditReservationRepositoryDep
 from ii_agent.billing.usage.dependencies import UsageServiceDep
 
 router = APIRouter(prefix="/credits", tags=["Credits"])
@@ -153,5 +156,30 @@ async def get_session_credit_ledger(
 
     return LedgerHistory(
         entries=[LedgerEntryResponse.model_validate(e) for e in entries],
+        total=total,
+    )
+
+
+@router.get("/reservations/{session_id}", response_model=ReservationHistory)
+async def get_session_reservations(
+    session_id: str,
+    db: DBSession,
+    current_user: CurrentUser,
+    reservation_repo: CreditReservationRepositoryDep,
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(50, ge=1, le=200, description="Items per page"),
+) -> Any:
+    """Get credit reservations for a specific session (developer view)."""
+
+    entries, total = await reservation_repo.get_history_by_session(
+        db,
+        str(current_user.id),
+        session_id,
+        page=page,
+        per_page=per_page,
+    )
+
+    return ReservationHistory(
+        entries=[ReservationResponse.model_validate(e) for e in entries],
         total=total,
     )

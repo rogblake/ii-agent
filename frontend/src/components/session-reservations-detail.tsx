@@ -6,7 +6,7 @@ import { useNavigate, useParams } from 'react-router'
 dayjs.extend(utc)
 
 import { cn } from '@/lib/utils'
-import { useGetSessionLedgerQuery } from '@/state'
+import { useGetSessionReservationsQuery } from '@/state'
 import {
     Table,
     TableBody,
@@ -23,13 +23,37 @@ const formatDecimal = (value: number) =>
         maximumFractionDigits: 6
     })
 
-const SessionLedgerDetail = () => {
+const formatUsd = (value: number) =>
+    '$' +
+    value.toLocaleString('en-US', {
+        minimumFractionDigits: 6,
+        maximumFractionDigits: 6
+    })
+
+const statusColor = (status: string) => {
+    switch (status) {
+        case 'reserved':
+            return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+        case 'settled':
+            return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+        case 'released':
+            return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+        case 'expired':
+            return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+        case 'settlement_failed':
+            return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+        default:
+            return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+    }
+}
+
+const SessionReservationsDetail = () => {
     const navigate = useNavigate()
     const { sessionId } = useParams<{ sessionId: string }>()
     const [page, setPage] = useState(1)
     const perPage = 50
 
-    const { data, isLoading } = useGetSessionLedgerQuery(
+    const { data, isLoading } = useGetSessionReservationsQuery(
         { sessionId: sessionId!, page, perPage },
         { skip: !sessionId }
     )
@@ -45,7 +69,7 @@ const SessionLedgerDetail = () => {
 
     return (
         <div className="p-3 md:p-0 min-h-screen bg-background">
-            <div className="max-w-5xl mx-auto md:pb-8 md:pt-16">
+            <div className="max-w-7xl mx-auto md:pb-8 md:pt-16">
                 <div className="flex items-center gap-x-3 md:gap-x-4 mb-6">
                     <button className="cursor-pointer" onClick={handleBack}>
                         <Icon
@@ -59,7 +83,7 @@ const SessionLedgerDetail = () => {
                     </button>
                     <div className="flex flex-col">
                         <span className="text-black dark:text-sky-blue text-2xl md:text-[32px] font-semibold">
-                            Session Ledger
+                            Session Reservations
                         </span>
                         <span className="text-xs text-black/40 dark:text-white/40 font-mono mt-1">
                             {sessionId}
@@ -68,29 +92,41 @@ const SessionLedgerDetail = () => {
                 </div>
 
                 <div className="rounded-2xl overflow-auto max-h-[75vh]">
-                    <Table className="min-w-[900px]">
+                    <Table className="min-w-[1200px]">
                         <TableHeader className="sticky top-0 z-10 bg-background">
                             <TableRow>
                                 <TableHead className="py-3 text-xs">
-                                    ID
+                                    Status
                                 </TableHead>
                                 <TableHead className="py-3 text-xs">
-                                    Type
+                                    Kind
                                 </TableHead>
                                 <TableHead className="py-3 text-xs">
                                     Domain
                                 </TableHead>
-                                <TableHead className="py-3 text-xs text-right">
-                                    Delta Credits
+                                <TableHead className="py-3 text-xs">
+                                    Model / Tool
                                 </TableHead>
                                 <TableHead className="py-3 text-xs text-right">
-                                    Delta Bonus
+                                    Reserved
                                 </TableHead>
                                 <TableHead className="py-3 text-xs text-right">
-                                    Balance After
+                                    Reserved Bonus
                                 </TableHead>
                                 <TableHead className="py-3 text-xs text-right">
-                                    Bonus Balance After
+                                    Actual
+                                </TableHead>
+                                <TableHead className="py-3 text-xs text-right">
+                                    Released
+                                </TableHead>
+                                <TableHead className="py-3 text-xs text-right">
+                                    Quoted USD
+                                </TableHead>
+                                <TableHead className="py-3 text-xs text-right">
+                                    Actual USD
+                                </TableHead>
+                                <TableHead className="py-3 text-xs">
+                                    Strategy
                                 </TableHead>
                                 <TableHead className="py-3 text-xs">
                                     Idempotency Key
@@ -105,7 +141,7 @@ const SessionLedgerDetail = () => {
                                 <TableRow>
                                     <TableCell
                                         className="py-6 pl-4"
-                                        colSpan={9}
+                                        colSpan={13}
                                     >
                                         Loading...
                                     </TableCell>
@@ -116,9 +152,9 @@ const SessionLedgerDetail = () => {
                                     <TableRow>
                                         <TableCell
                                             className="py-6 pl-4"
-                                            colSpan={9}
+                                            colSpan={13}
                                         >
-                                            No ledger entries for this session.
+                                            No reservations for this session.
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -128,81 +164,72 @@ const SessionLedgerDetail = () => {
                                         key={entry.id}
                                         className="border-0"
                                     >
-                                        <TableCell className="py-2 text-xs font-mono tabular-nums">
-                                            {entry.id}
-                                        </TableCell>
                                         <TableCell className="py-2 text-xs">
                                             <span
                                                 className={cn(
                                                     'inline-block px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap',
-                                                    entry.entry_type ===
-                                                        'deduction'
-                                                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                        : entry.entry_type ===
-                                                            'grant' ||
-                                                            entry.entry_type ===
-                                                                'bonus_grant'
-                                                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                          : entry.entry_type ===
-                                                              'reservation_hold'
-                                                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                                                            : entry.entry_type ===
-                                                                'reservation_release'
-                                                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                                              : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                                                    statusColor(entry.status)
                                                 )}
                                             >
-                                                {entry.entry_type}
+                                                {entry.status}
                                             </span>
                                         </TableCell>
+                                        <TableCell className="py-2 text-xs whitespace-nowrap">
+                                            {entry.billing_kind}
+                                        </TableCell>
                                         <TableCell className="py-2 text-xs text-black/60 dark:text-white/60 whitespace-nowrap">
-                                            {entry.source_domain || '-'}
+                                            {entry.source_domain}
+                                        </TableCell>
+                                        <TableCell className="py-2 text-xs whitespace-nowrap">
+                                            {entry.tool_name || entry.model_id || '-'}
+                                        </TableCell>
+                                        <TableCell className="py-2 text-xs text-right font-mono tabular-nums">
+                                            {formatDecimal(entry.reserved_credits)}
+                                        </TableCell>
+                                        <TableCell className="py-2 text-xs text-right font-mono tabular-nums text-black/40 dark:text-white/40">
+                                            {formatDecimal(entry.reserved_bonus_credits)}
                                         </TableCell>
                                         <TableCell
                                             className={cn(
                                                 'py-2 text-xs text-right font-mono tabular-nums',
-                                                entry.delta_credits < 0
-                                                    ? 'text-red-600 dark:text-red-400'
-                                                    : entry.delta_credits > 0
-                                                      ? 'text-green-600 dark:text-green-400'
-                                                      : ''
+                                                entry.actual_credits != null
+                                                    ? 'text-green-600 dark:text-green-400'
+                                                    : 'text-black/30 dark:text-white/30'
                                             )}
                                         >
-                                            {entry.delta_credits > 0
-                                                ? '+'
-                                                : ''}
-                                            {formatDecimal(
-                                                entry.delta_credits
-                                            )}
+                                            {entry.actual_credits != null
+                                                ? formatDecimal(entry.actual_credits)
+                                                : '-'}
                                         </TableCell>
                                         <TableCell
                                             className={cn(
                                                 'py-2 text-xs text-right font-mono tabular-nums',
-                                                entry.delta_bonus_credits < 0
-                                                    ? 'text-red-600 dark:text-red-400'
-                                                    : entry.delta_bonus_credits >
-                                                        0
-                                                      ? 'text-green-600 dark:text-green-400'
-                                                      : 'text-black/30 dark:text-white/30'
+                                                entry.released_credits != null
+                                                    ? 'text-blue-600 dark:text-blue-400'
+                                                    : 'text-black/30 dark:text-white/30'
                                             )}
                                         >
-                                            {formatDecimal(
-                                                entry.delta_bonus_credits
+                                            {entry.released_credits != null
+                                                ? formatDecimal(entry.released_credits)
+                                                : '-'}
+                                        </TableCell>
+                                        <TableCell className="py-2 text-xs text-right font-mono tabular-nums">
+                                            {formatUsd(entry.quoted_usd)}
+                                        </TableCell>
+                                        <TableCell
+                                            className={cn(
+                                                'py-2 text-xs text-right font-mono tabular-nums',
+                                                entry.actual_usd != null
+                                                    ? ''
+                                                    : 'text-black/30 dark:text-white/30'
                                             )}
-                                        </TableCell>
-                                        <TableCell className="py-2 text-xs text-right font-mono tabular-nums">
-                                            {entry.balance_after_credits != null
-                                                ? formatDecimal(
-                                                      entry.balance_after_credits
-                                                  )
+                                        >
+                                            {entry.actual_usd != null
+                                                ? formatUsd(entry.actual_usd)
                                                 : '-'}
                                         </TableCell>
-                                        <TableCell className="py-2 text-xs text-right font-mono tabular-nums">
-                                            {entry.balance_after_bonus_credits != null
-                                                ? formatDecimal(
-                                                      entry.balance_after_bonus_credits
-                                                  )
-                                                : '-'}
+                                        <TableCell className="py-2 text-xs text-black/60 dark:text-white/60 whitespace-nowrap">
+                                            {entry.quote_strategy}
                                         </TableCell>
                                         <TableCell className="py-2 text-[10px] font-mono text-black/40 dark:text-white/40 max-w-[140px] truncate">
                                             {entry.idempotency_key || '-'}
@@ -263,4 +290,4 @@ const SessionLedgerDetail = () => {
     )
 }
 
-export default SessionLedgerDetail
+export default SessionReservationsDetail

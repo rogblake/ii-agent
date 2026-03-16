@@ -6,10 +6,11 @@ import logging
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.billing.credits.ledger_models import CreditLedgerEntry
+from ii_agent.billing.reservations.models import CreditReservation
 
 logger = logging.getLogger(__name__)
 
@@ -179,10 +180,34 @@ class CreditLedgerRepository:
         page: int = 1,
         per_page: int = 50,
     ) -> tuple[list[CreditLedgerEntry], int]:
-        """Get paginated credit ledger entries for a specific session."""
+        """Get paginated credit ledger entries for a specific session.
+
+        Ledger entries are linked to sessions through reservations.
+        Each reservation stores the session_id and has FK references to
+        its reserve/release/shortfall ledger entries.
+        """
+        session_filter = (
+            (CreditReservation.user_id == user_id)
+            & (CreditReservation.session_id == session_id)
+        )
+        ledger_ids_subq = union_all(
+            select(CreditReservation.reserve_ledger_entry_id.label("ledger_id")).where(
+                session_filter
+                & (CreditReservation.reserve_ledger_entry_id.isnot(None))
+            ),
+            select(CreditReservation.release_ledger_entry_id.label("ledger_id")).where(
+                session_filter
+                & (CreditReservation.release_ledger_entry_id.isnot(None))
+            ),
+            select(CreditReservation.shortfall_ledger_entry_id.label("ledger_id")).where(
+                session_filter
+                & (CreditReservation.shortfall_ledger_entry_id.isnot(None))
+            ),
+        ).subquery()
+
         base_where = (
             (CreditLedgerEntry.user_id == user_id)
-            & (CreditLedgerEntry.source_id == session_id)
+            & (CreditLedgerEntry.id.in_(select(ledger_ids_subq.c.ledger_id)))
         )
 
         count_result = await db.execute(

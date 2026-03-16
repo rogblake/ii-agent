@@ -49,7 +49,7 @@ const Settings = () => {
     ]
 
     const handleBack = () => {
-        navigate(-1)
+        navigate('/')
     }
 
     const renderTabContent = () => {

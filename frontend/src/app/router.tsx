@@ -168,6 +168,21 @@ const createAppRouter = () =>
                     }
                 },
                 {
+                    path: 'settings/reservations/:sessionId',
+                    async lazy() {
+                        const { Component } = await import(
+                            '@/app/routes/session-reservations'
+                        )
+                        return {
+                            Component: () => (
+                                <ProtectedRoute>
+                                    <Component />
+                                </ProtectedRoute>
+                            )
+                        }
+                    }
+                },
+                {
                     path: 'chat',
                     async lazy() {
                         const { Component } = await import('@/app/routes/chat')

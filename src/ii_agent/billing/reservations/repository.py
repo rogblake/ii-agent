@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.billing.reservations.models import CreditReservation
@@ -80,6 +80,37 @@ class CreditReservationRepository:
             .limit(limit)
         )
         return list(result.scalars().all())
+
+    async def get_history_by_session(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        session_id: str,
+        *,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> tuple[list[CreditReservation], int]:
+        """Get paginated reservations for a specific session."""
+        base_where = (
+            (CreditReservation.user_id == user_id)
+            & (CreditReservation.session_id == session_id)
+        )
+
+        count_result = await db.execute(
+            select(func.count()).where(base_where)
+        )
+        total = count_result.scalar() or 0
+
+        offset = (page - 1) * per_page
+        result = await db.execute(
+            select(CreditReservation)
+            .where(base_where)
+            .order_by(CreditReservation.created_at.asc())
+            .limit(per_page)
+            .offset(offset)
+        )
+        entries = list(result.scalars().all())
+        return entries, total
 
     async def create(
         self,

@@ -8,6 +8,7 @@ import type {
     CreditBalanceResponse,
     CreditUsageResponse,
     LedgerHistoryResponse,
+    ReservationHistoryResponse,
     SessionUsageDetailResponse
 } from '@/typings/user'
 import { ACCESS_TOKEN } from '@/constants/auth'
@@ -45,7 +46,7 @@ const baseQueryWithReauth: BaseQueryFn<
 export const userApi = createApi({
     reducerPath: 'userApi',
     baseQuery: baseQueryWithReauth,
-    tagTypes: ['CreditBalance', 'CreditUsage', 'SessionUsageDetail', 'SessionLedger'],
+    tagTypes: ['CreditBalance', 'CreditUsage', 'SessionUsageDetail', 'SessionLedger', 'SessionReservations'],
     endpoints: (builder) => ({
         getCreditBalance: builder.query<CreditBalanceResponse, void>({
             query: () => '/credits/balance',
@@ -80,6 +81,16 @@ export const userApi = createApi({
                 params: { page, per_page: perPage }
             }),
             providesTags: ['SessionLedger']
+        }),
+        getSessionReservations: builder.query<
+            ReservationHistoryResponse,
+            { sessionId: string; page?: number; perPage?: number }
+        >({
+            query: ({ sessionId, page = 1, perPage = 50 }) => ({
+                url: `/credits/reservations/${sessionId}`,
+                params: { page, per_page: perPage }
+            }),
+            providesTags: ['SessionReservations']
         })
     })
 })
@@ -88,5 +99,6 @@ export const {
     useGetCreditBalanceQuery,
     useGetCreditUsageQuery,
     useGetSessionUsageDetailQuery,
-    useGetSessionLedgerQuery
+    useGetSessionLedgerQuery,
+    useGetSessionReservationsQuery
 } = userApi

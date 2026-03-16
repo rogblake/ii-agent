@@ -61,3 +61,33 @@ export interface LedgerHistoryResponse {
     entries: LedgerEntry[]
     total: number
 }
+
+export interface ReservationEntry {
+    id: string
+    session_id: string | null
+    source_domain: string
+    source_id: string
+    billing_kind: string
+    quote_strategy: string
+    status: string
+    model_id: string | null
+    tool_name: string | null
+    idempotency_key: string | null
+    reserved_credits: number
+    reserved_bonus_credits: number
+    actual_credits: number | null
+    actual_bonus_credits: number | null
+    released_credits: number | null
+    released_bonus_credits: number | null
+    quoted_usd: number
+    max_usd: number
+    actual_usd: number | null
+    expires_at: string | null
+    created_at: string
+    updated_at: string
+}
+
+export interface ReservationHistoryResponse {
+    entries: ReservationEntry[]
+    total: number
+}

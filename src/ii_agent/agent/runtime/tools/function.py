@@ -1072,18 +1072,32 @@ class FunctionCall(BaseModel):
                     )
                 await db.commit()
         except Exception:
+            reservation_id = getattr(
+                getattr(self.billing_reservation, "hold", None),
+                "reservation_id",
+                None,
+            )
             logger.error(
-                "Failed to finalize tool billing for %s; leaving reservation held",
+                "Failed to finalize tool billing for %s; marking settlement_failed",
                 tool.name,
-                extra={
-                    "reservation_id": getattr(
-                        getattr(self.billing_reservation, "hold", None),
-                        "reservation_id",
-                        None,
-                    ),
-                },
+                extra={"reservation_id": reservation_id},
                 exc_info=True,
             )
+            if succeeded and reservation_id is not None:
+                try:
+                    async with get_db_session_local() as db2:
+                        await dependencies.container.llm_billing_service.mark_settlement_failed(
+                            db2,
+                            reservation_id=reservation_id,
+                            error="tool_settle_exception",
+                        )
+                        await db2.commit()
+                except Exception:
+                    logger.warning(
+                        "Failed to mark tool reservation %s as settlement_failed",
+                        reservation_id,
+                        exc_info=True,
+                    )
 
     async def _handle_pre_hook_async(self):
         """Handles the async pre-hook for the function call."""

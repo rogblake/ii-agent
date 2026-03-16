@@ -94,6 +94,24 @@ class StripeConfig:
             return None
         return self._config.credits.default_plans_credits.get(plan_id)
 
+    _INTERVAL_TO_CYCLE: dict[str, str] = {
+        "month": "monthly",
+        "monthly": "monthly",
+        "year": "annually",
+        "annually": "annually",
+    }
+
+    @classmethod
+    def normalize_billing_cycle(cls, raw: str | None) -> str | None:
+        """Map Stripe interval values (``month``/``year``) to our canonical
+        billing cycle names (``monthly``/``annually``).
+
+        Returns ``None`` for unrecognised values.
+        """
+        if not raw:
+            return None
+        return cls._INTERVAL_TO_CYCLE.get(raw)
+
     @staticmethod
     def to_datetime(timestamp: int | None) -> datetime | None:
         if not timestamp:

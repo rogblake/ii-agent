@@ -85,58 +85,17 @@ def _estimate_page_credits(
 ) -> float:
     """Estimate total credits needed for one storybook page."""
     total_usd = image_cost_usd + max(audio_cost_usd, 0.0)
-    return usd_to_credits(total_usd)
+    return float(usd_to_credits(total_usd))
 
 
-async def _check_user_credits(user_id: str, required_credits: float) -> tuple[bool, float]:
-    """Check if user has sufficient credits for storybook generation."""
-    from ii_agent.core.db.manager import get_db_session_local
 
-    container = get_celery_container()
-    async with get_db_session_local() as db_session:
-        balance = await container.credit_service.get_balance(db_session, user_id)
-        if not balance:
-            return False, 0.0
-        available = balance.credits + balance.bonus_credits
-        return available >= required_credits, available
-
-
-async def _deduct_storybook_credits(
+async def _mark_scene_completed(
+    storybook_id: str,
+    scene_index: int,
     *,
-    user_id: str,
-    session_id: str,
-    credits_amount: float,
-    description: str,
+    actual_cost_usd: float,
 ) -> bool:
-    """Deduct credits for storybook generation and track in session metrics."""
-    if credits_amount <= 0:
-        return True
-
-    from ii_agent.core.db.manager import get_db_session_local
-
-    container = get_celery_container()
-    async with get_db_session_local() as db_session:
-        success = await container.credit_service.deduct_and_track_session_usage(
-            db_session,
-            user_id=user_id,
-            session_id=session_id,
-            amount=credits_amount,
-        )
-        if success:
-            logger.info(
-                "Charged %.4f credits for storybook: %s", credits_amount, description
-            )
-        else:
-            logger.warning(
-                "Failed to deduct %.4f credits for storybook: %s",
-                credits_amount,
-                description,
-            )
-        return success
-
-
-async def _mark_scene_completed(storybook_id: str, scene_index: int) -> bool:
-    """Atomically record a completed scene and update completed_pages."""
+    """Atomically record a completed scene and accumulate its actual billed cost."""
     from sqlalchemy import select
     from ii_agent.core.db.manager import get_db_session_local
     from ii_agent.content.storybook.models import Storybook
@@ -162,6 +121,9 @@ async def _mark_scene_completed(storybook_id: str, scene_index: int) -> bool:
 
         completed_scenes.append(scene_index)
         generation["completed_scenes"] = completed_scenes
+        generation["actual_cost_usd_total"] = float(
+            generation.get("actual_cost_usd_total") or 0.0
+        ) + max(actual_cost_usd, 0.0)
         generation["completed_pages"] = max(
             int(generation.get("completed_pages") or 0), len(completed_scenes)
         )
@@ -171,6 +133,74 @@ async def _mark_scene_completed(storybook_id: str, scene_index: int) -> bool:
         storybook.updated_at = datetime.now(timezone.utc)
         await db_session.flush()
         return True
+
+
+async def _finalize_storybook_billing(
+    storybook_id: str,
+    *,
+    terminal_status: str,
+) -> None:
+    """Settle or release the reserved storybook billing hold exactly once."""
+    from ii_agent.core.db.manager import get_db_session_local
+    from ii_agent.content.storybook.repository import StorybookRepository
+
+    container = get_celery_container()
+    repo = StorybookRepository()
+
+    try:
+        async with get_db_session_local() as db_session:
+            storybook = await repo.get_by_id(db_session, storybook_id)
+            if not storybook:
+                return
+
+            style_json = storybook.style_json or {}
+            if not isinstance(style_json, dict):
+                style_json = {}
+            generation = style_json.get("generation")
+            if not isinstance(generation, dict):
+                generation = {}
+
+            reservation_id = generation.get("reservation_id")
+            if not reservation_id:
+                return
+
+            tool_name = generation.get("tool_name", "generate_storybook")
+            actual_cost_usd = float(generation.get("actual_cost_usd_total") or 0.0)
+
+            if actual_cost_usd > 0:
+                await container.llm_billing_service.settle_tool_call_by_reservation_id(
+                    db_session,
+                    reservation_id=reservation_id,
+                    actual_cost_usd=actual_cost_usd,
+                    provider=None,
+                    latency_ms=None,
+                    extra_usage_metadata={
+                        "app_kind": "chat",
+                        "run_id": generation.get("run_id"),
+                        "tool_name": tool_name,
+                    },
+                )
+            else:
+                await container.llm_billing_service.release_tool_call_by_reservation_id(
+                    db_session,
+                    reservation_id=reservation_id,
+                    reason=(
+                        "storybook_cancelled"
+                        if terminal_status == "cancelled"
+                        else (
+                            "unused"
+                            if terminal_status == "completed"
+                            else "storybook_failed"
+                        )
+                    ),
+                )
+            await db_session.commit()
+    except Exception:
+        logger.error(
+            "Failed to finalize storybook billing for %s",
+            storybook_id,
+            exc_info=True,
+        )
 
 
 async def _create_storybook_tool_result(
@@ -312,14 +342,23 @@ async def _fail_storybook(
 
     session_id = payload.get("session_id")
     if session_id:
-        await _create_storybook_tool_error(
-            error_message=error_msg,
-            tool_call_id=payload.get("tool_call_id"),
-            session_id=session_id,
-            parent_message_id=payload.get("parent_message_id"),
-            model_id=payload.get("model_id"),
-            tool_name=payload.get("tool_name", "generate_storybook"),
-        )
+        try:
+            await _create_storybook_tool_error(
+                error_message=error_msg,
+                tool_call_id=payload.get("tool_call_id"),
+                session_id=session_id,
+                parent_message_id=payload.get("parent_message_id"),
+                model_id=payload.get("model_id"),
+                tool_name=payload.get("tool_name", "generate_storybook"),
+            )
+        except Exception:
+            logger.error(
+                "Failed to create storybook error tool result for %s",
+                storybook_id,
+                exc_info=True,
+            )
+
+    await _finalize_storybook_billing(storybook_id, terminal_status="failed")
 
 
 def _setup_storybook_tool(payload: dict[str, Any], session_id: str):
@@ -386,6 +425,7 @@ async def _generate_storybook_page_async(
 
     if await cancel.is_cancelled(storybook_id):
         logger.info("Storybook %s cancelled before scene %s", storybook_id, scene_index)
+        await _finalize_storybook_billing(storybook_id, terminal_status="cancelled")
         return {"status": "cancelled"}
 
     scenes = generation.get("scenes")
@@ -449,42 +489,6 @@ async def _generate_storybook_page_async(
             return {"status": "failed", "error": "api_key_missing"}
 
     voice_enabled = bool(style_json.get("voice_enabled", False))
-
-    if not generation.get("credits_checked"):
-        total_estimated_credits = 0.0
-        for scene in scenes:
-            audio_cost = _get_voice_cost_usd(scene) if voice_enabled else 0.0
-            total_estimated_credits += _estimate_page_credits(
-                image_cost_usd=DEFAULT_IMAGE_COST_USD,
-                audio_cost_usd=audio_cost,
-            )
-
-        has_credits, available_credits = await _check_user_credits(
-            session.user_id, total_estimated_credits
-        )
-        if not has_credits:
-            error_msg = (
-                f"Insufficient credits for {total_scenes} pages. "
-                f"Required: {total_estimated_credits:.2f}, Available: {available_credits:.2f}"
-            )
-            logger.warning(
-                "Insufficient credits for storybook: required %.4f, available %.4f",
-                total_estimated_credits,
-                available_credits,
-            )
-            await _fail_storybook(storybook_id, error_msg, failure_payload)
-            return {"status": "failed", "error": "insufficient_credits"}
-
-        async with get_db_session_local() as db_session:
-            await container.storybook_service.update_generation_status(
-                db_session,
-                storybook_id,
-                generation_meta={
-                    "credits_checked": True,
-                    "credits_required": total_estimated_credits,
-                    "credits_available": available_credits,
-                },
-            )
 
     tool = _setup_storybook_tool(
         {
@@ -573,26 +577,13 @@ async def _generate_storybook_page_async(
             await _fail_storybook(storybook_id, error_msg, failure_payload)
             return {"status": "failed", "error": error_msg}
 
-    scene_counted = await _mark_scene_completed(storybook_id, scene_index)
-
-    if scene_counted:
-        actual_image_cost = DEFAULT_IMAGE_COST_USD
-        actual_audio_cost = voice_cost_usd if voice_enabled else 0.0
-        page_credits = usd_to_credits(actual_image_cost + actual_audio_cost)
-
-        charged = await _deduct_storybook_credits(
-            user_id=session.user_id,
-            session_id=session_id,
-            credits_amount=page_credits,
-            description=(
-                f"Storybook page {display_page} "
-                f"(image: ${actual_image_cost:.4f}, audio: ${actual_audio_cost:.4f})"
-            ),
-        )
-        if not charged:
-            error_msg = "insufficient_credits"
-            await _fail_storybook(storybook_id, error_msg, failure_payload)
-            return {"status": "failed", "error": error_msg}
+    actual_image_cost = DEFAULT_IMAGE_COST_USD
+    actual_audio_cost = voice_cost_usd if voice_enabled else 0.0
+    await _mark_scene_completed(
+        storybook_id,
+        scene_index,
+        actual_cost_usd=actual_image_cost + actual_audio_cost,
+    )
 
     async with get_db_session_local() as db_session:
         await container.storybook_service.update_generation_status(
@@ -610,15 +601,24 @@ async def _generate_storybook_page_async(
                 generating_pages=[],
             )
 
+        await _finalize_storybook_billing(storybook_id, terminal_status="completed")
+
         if session_id:
-            await _create_storybook_tool_result(
-                storybook_id=storybook_id,
-                tool_call_id=generation.get("tool_call_id"),
-                session_id=session_id,
-                parent_message_id=generation.get("parent_message_id"),
-                model_id=generation.get("model_id"),
-                tool_name=generation.get("tool_name", "generate_storybook"),
-            )
+            try:
+                await _create_storybook_tool_result(
+                    storybook_id=storybook_id,
+                    tool_call_id=generation.get("tool_call_id"),
+                    session_id=session_id,
+                    parent_message_id=generation.get("parent_message_id"),
+                    model_id=generation.get("model_id"),
+                    tool_name=generation.get("tool_name", "generate_storybook"),
+                )
+            except Exception:
+                logger.error(
+                    "Failed to create storybook tool result for %s",
+                    storybook_id,
+                    exc_info=True,
+                )
 
         return {"status": "completed", "completed_pages": total_scenes}
 
@@ -628,6 +628,7 @@ async def _generate_storybook_page_async(
             storybook_id,
             scene_index,
         )
+        await _finalize_storybook_billing(storybook_id, terminal_status="cancelled")
         return {"status": "cancelled", "completed_pages": scene_index + 1}
 
     next_scene_index = scene_index + 1

@@ -7,7 +7,7 @@ import logging
 import sys
 from pathlib import Path
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.logger import logger as app_logger
@@ -39,26 +39,62 @@ async def refresh_free_user_credits() -> None:
     monthly_credits = _monthly_free_credit_allowance()
     updated_users = 0
 
+    from ii_agent.billing.customers.repository import BillingCustomerRepository
+    from ii_agent.billing.customers.service import BillingCustomerService
+    from ii_agent.billing.credits.balance_repository import CreditBalanceRepository
+    from ii_agent.billing.credits.service import CreditService
+    billing_customer_service = BillingCustomerService(
+        customer_repo=BillingCustomerRepository()
+    )
+    balance_repo = CreditBalanceRepository()
+    credit_service = CreditService(balance_repo=balance_repo)
+
     async with get_db_session_local() as db:
         result = await db.execute(
-            select(User).where(
-                User.is_active.is_(True),
-                or_(
-                    User.subscription_plan.is_(None),
-                    User.subscription_plan == FREE_PLAN_ID,
-                ),
-            )
+            select(User).where(User.is_active.is_(True))
         )
         users = result.scalars().all()
+        customers_by_user = await billing_customer_service.list_by_user_ids(
+            db,
+            [user.id for user in users],
+            provider="stripe",
+        )
 
         for user in users:
+            customer = customers_by_user.get(user.id)
+            billing_profile = billing_customer_service.resolve_effective_profile(
+                customer=customer,
+            )
+            if billing_profile.subscription_plan not in {None, FREE_PLAN_ID}:
+                continue
+
             changed = False
-            if user.subscription_plan != FREE_PLAN_ID:
-                user.subscription_plan = FREE_PLAN_ID
+            if customer and customer.subscription_plan != FREE_PLAN_ID:
+                await billing_customer_service.update_subscription(
+                    db,
+                    user.id,
+                    provider="stripe",
+                    subscription_plan=FREE_PLAN_ID,
+                )
                 changed = True
-            if user.credits != monthly_credits:
-                user.credits = monthly_credits
-                changed = True
+
+            try:
+                balance = await credit_service.ensure_balance_exists(db, user.id)
+                current_credits = float(balance[0])
+                if current_credits != monthly_credits:
+                    await credit_service.set_balance(
+                        db, user.id, monthly_credits,
+                        entry_type="refresh",
+                        source_domain="cron",
+                        entry_metadata={"plan": FREE_PLAN_ID},
+                    )
+                    changed = True
+            except Exception:
+                app_logger.warning(
+                    "Failed to set balance for user %s", user.id, exc_info=True
+                )
+                continue
+
             if changed:
                 updated_users += 1
 

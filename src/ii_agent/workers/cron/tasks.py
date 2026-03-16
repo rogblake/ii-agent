@@ -169,18 +169,23 @@ async def cleanup_long_running_chat_runs():
 
 def start_scheduler():
     """
-    Start the scheduler and add the cleanup job.
-    The cleanup task runs every 40 minutes.
+    Start the scheduler and add all periodic jobs.
     """
     try:
-        # Add the cleanup job with interval trigger (every 40 minutes)
+        from ii_agent.workers.cron.billing_recovery import (
+            alert_settlement_failures,
+            expire_stale_reservations,
+            retry_billing_usage_facts,
+        )
+
+        # ── Run / chat cleanup ────────────────────────────────────────────
         scheduler.add_job(
             cleanup_long_running_tasks,
             trigger=IntervalTrigger(minutes=40),
             id="cleanup_stale_agent_run_tasks",
             name="Cleanup stale AgentRunTasks (older than 45 mins)",
             replace_existing=True,
-            max_instances=1,  # Ensure only one instance runs at a time
+            max_instances=1,
         )
 
         scheduler.add_job(
@@ -192,11 +197,37 @@ def start_scheduler():
             max_instances=1,
         )
 
+        # ── Billing recovery ──────────────────────────────────────────────
+        scheduler.add_job(
+            expire_stale_reservations,
+            trigger=IntervalTrigger(minutes=15),
+            id="expire_stale_reservations",
+            name="Release stale credit reservation holds",
+            replace_existing=True,
+            max_instances=1,
+        )
+
+        scheduler.add_job(
+            retry_billing_usage_facts,
+            trigger=IntervalTrigger(minutes=1),
+            id="retry_billing_usage_facts",
+            name="Retry captured billing usage facts",
+            replace_existing=True,
+            max_instances=1,
+        )
+
+        scheduler.add_job(
+            alert_settlement_failures,
+            trigger=IntervalTrigger(minutes=5),
+            id="alert_settlement_failures",
+            name="Log reservations stuck in settlement_failed",
+            replace_existing=True,
+            max_instances=1,
+        )
+
         # Start the scheduler
         scheduler.start()
-        logger.info(
-            "Scheduler started successfully. Cleanup tasks will run every 40 minutes."
-        )
+        logger.info("Scheduler started with %d jobs", len(scheduler.get_jobs()))
 
     except Exception as e:
         logger.error(f"Error starting scheduler: {e}", exc_info=True)

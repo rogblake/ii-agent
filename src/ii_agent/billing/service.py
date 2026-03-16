@@ -10,6 +10,7 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.billing.stripe_config import StripeConfig
+from ii_agent.billing.customers.service import BillingCustomerService
 from ii_agent.billing.exceptions import (
     BillingConfigurationError,
     BillingServiceError,
@@ -36,9 +37,25 @@ class BillingService:
         *,
         stripe_config: StripeConfig,
         user_repo: UserRepository,
+        billing_customer_service: BillingCustomerService,
     ) -> None:
         self._stripe_config = stripe_config
         self._user_repo = user_repo
+        self._billing_customer_service = billing_customer_service
+
+    async def _get_customer_id(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+    ) -> str | None:
+        """Resolve the Stripe customer id from billing_customers."""
+        customer = await self._billing_customer_service.get_by_user(
+            db,
+            user_id,
+            provider="stripe",
+        )
+        return customer.external_customer_id if customer else None
 
     async def create_checkout_session(
         self, db: AsyncSession, params: CheckoutSessionParams
@@ -58,9 +75,9 @@ class BillingService:
         }
 
         customer_kwargs: dict[str, Any] = {}
-        user = await self._user_repo.get_by_id(db, params.user_id)
-        if user and user.stripe_customer_id:
-            customer_kwargs["customer"] = user.stripe_customer_id
+        customer_id = await self._get_customer_id(db, user_id=params.user_id)
+        if customer_id:
+            customer_kwargs["customer"] = customer_id
 
         session = await run_in_threadpool(
             stripe.checkout.Session.create,
@@ -84,7 +101,8 @@ class BillingService:
         if not user:
             raise BillingServiceError("User not found")
 
-        if not user.stripe_customer_id:
+        customer_id = await self._get_customer_id(db, user_id=user_id)
+        if not customer_id:
             raise BillingServiceError(
                 "Stripe customer not found for this account. Complete a checkout first."
             )
@@ -100,7 +118,7 @@ class BillingService:
         try:
             session = await run_in_threadpool(
                 stripe.billing_portal.Session.create,
-                customer=user.stripe_customer_id,
+                customer=customer_id,
                 return_url=portal_return_url,
             )
         except stripe.error.StripeError as exc:  # pragma: no cover - network path

@@ -13,8 +13,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
-from sqlalchemy import select
-
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.logger import logger as app_logger
 from ii_agent.core.db.manager import get_db_session_local
@@ -48,13 +46,21 @@ def _parse_iso_date(value: str | None) -> datetime | None:
 def _as_utc(dt: datetime | None) -> datetime | None:
     if dt is None:
         return None
+    if not isinstance(dt, datetime):
+        return None
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
 
 
-async def _refresh_user_credits(user: User, *, now: datetime) -> bool:
-    plan_id = user.subscription_plan
+def _should_refresh(
+    user: User,
+    *,
+    now: datetime,
+    plan_id: str | None,
+    period_end: datetime | None = None,
+) -> tuple[bool, float | None]:
+    """Check if user needs a credit refresh. Returns (should_refresh, monthly_credits)."""
     monthly_credits = get_settings().credits.default_plans_credits.get(plan_id or "")
     if monthly_credits is None:
         app_logger.warning(
@@ -62,11 +68,11 @@ async def _refresh_user_credits(user: User, *, now: datetime) -> bool:
             user.id,
             plan_id,
         )
-        return False
+        return False, None
 
-    subscription_period_end = _as_utc(user.subscription_current_period_end)
+    subscription_period_end = _as_utc(period_end)
     if subscription_period_end and subscription_period_end < now:
-        return False
+        return False, None
 
     metadata = _ensure_metadata_dict(user.user_metadata)
     last_refresh = _parse_iso_date(str(metadata.get(REFRESH_METADATA_KEY)))
@@ -75,31 +81,66 @@ async def _refresh_user_credits(user: User, *, now: datetime) -> bool:
         and last_refresh.year == now.year
         and last_refresh.month == now.month
     ):
-        return False
+        return False, None
 
-    user.credits = monthly_credits
-    metadata[REFRESH_METADATA_KEY] = now.isoformat()
-    user.user_metadata = metadata
-    return True
+    return True, monthly_credits
 
 
 async def refresh_annual_subscription_credits() -> None:
     now = datetime.now(timezone.utc)
     refreshed = 0
 
-    async with get_db_session_local() as db:
-        result = await db.execute(
-            select(User).where(
-                User.is_active.is_(True),
-                User.subscription_status.in_(ACTIVE_STATUSES),
-                User.subscription_billing_cycle == "annually",
-            )
-        )
-        users = result.scalars().all()
+    from ii_agent.billing.credits.balance_repository import CreditBalanceRepository
+    from ii_agent.billing.credits.service import CreditService
+    from ii_agent.billing.customers.repository import BillingCustomerRepository
+    from ii_agent.billing.customers.service import BillingCustomerService
+    billing_customer_service = BillingCustomerService(
+        customer_repo=BillingCustomerRepository()
+    )
+    balance_repo = CreditBalanceRepository()
+    credit_service = CreditService(balance_repo=balance_repo)
 
-        for user in users:
-            if await _refresh_user_credits(user, now=now):
-                refreshed += 1
+    async with get_db_session_local() as db:
+        # Subscription state now lives in billing_customers.
+        bc_rows = await billing_customer_service.list_by_subscription(
+            db,
+            provider="stripe",
+            subscription_statuses=ACTIVE_STATUSES,
+            subscription_billing_cycle="annually",
+        )
+
+        for bc in bc_rows:
+            # Load the user for metadata (last refresh tracking)
+            user = await db.get(User, bc.user_id)
+            if not user or not user.is_active:
+                continue
+
+            should, monthly_credits = _should_refresh(
+                user,
+                now=now,
+                plan_id=bc.subscription_plan,
+                period_end=bc.subscription_current_period_end,
+            )
+            if not should or monthly_credits is None:
+                continue
+
+            try:
+                await credit_service.set_balance(
+                    db, user.id, monthly_credits,
+                    entry_type="refresh",
+                    source_domain="cron",
+                    entry_metadata={"plan": bc.subscription_plan, "cycle": "annually"},
+                )
+            except Exception:
+                app_logger.warning(
+                    "Failed to set balance for user %s", user.id, exc_info=True
+                )
+                continue
+
+            metadata = _ensure_metadata_dict(user.user_metadata)
+            metadata[REFRESH_METADATA_KEY] = now.isoformat()
+            user.user_metadata = metadata
+            refreshed += 1
 
         await db.flush()
 

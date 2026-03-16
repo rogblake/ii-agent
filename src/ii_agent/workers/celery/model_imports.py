@@ -16,6 +16,11 @@ MODEL_MODULES: tuple[str, ...] = (
     "ii_agent.auth.models",
     "ii_agent.auth.users.models",
     "ii_agent.billing.models",
+    "ii_agent.billing.customers.models",
+    "ii_agent.billing.credits.ledger_models",
+    "ii_agent.billing.credits.balance_models",
+    "ii_agent.billing.outbox.models",
+    "ii_agent.billing.reservations.models",
     "ii_agent.billing.usage.models",
     "ii_agent.chat.messages.models",
     "ii_agent.chat.providers.models",
@@ -51,4 +56,3 @@ def import_model_modules() -> None:
     for module_path in MODEL_MODULES:
         import_module(module_path)
     configure_mappers()
-

@@ -10,6 +10,8 @@ import stripe
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.billing.customers.service import BillingCustomerService
+from ii_agent.billing.credits.service import CreditService
 from ii_agent.billing.repository import BillingTransactionRepository
 from ii_agent.billing.exceptions import BillingConfigurationError, BillingServiceError
 from ii_agent.billing.stripe_config import StripeConfig
@@ -48,10 +50,14 @@ class StripeWebhookHandler:
         stripe_config: StripeConfig,
         billing_repo: BillingTransactionRepository,
         user_repo: UserRepository,
+        billing_customer_service: BillingCustomerService,
+        credit_service: CreditService | None = None,
     ) -> None:
         self._stripe_config = stripe_config
         self._billing_repo = billing_repo
         self._user_repo = user_repo
+        self._billing_customer_service = billing_customer_service
+        self._credit_service = credit_service
 
     # ------------------------------------------------------------------
     # Public API
@@ -91,38 +97,45 @@ class StripeWebhookHandler:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-    async def _record_transaction(
+    async def _claim_event(
+        self, db: AsyncSession, event_id: str | None, user_id: str,
+    ) -> bool:
+        """Atomically claim a Stripe event via INSERT … ON CONFLICT.
+
+        Returns ``True`` if this worker won the claim (proceed with
+        mutations) or ``False`` if another transaction already owns
+        the event (skip all mutations).
+        """
+        if not event_id:
+            return True  # No event id — allow processing (best-effort)
+        claimed = await self._billing_repo.claim_event(
+            db,
+            user_id=user_id,
+            stripe_event_id=event_id,
+        )
+        if not claimed:
+            logger.debug(
+                "Duplicate Stripe event %s — skipping handler", event_id
+            )
+        return claimed
+
+    async def _finalize_transaction(
         self,
         db: AsyncSession,
         *,
         event_id: str | None,
-        user_id: str,
         values: dict[str, Any],
     ) -> None:
+        """Update a previously claimed transaction with final details."""
         if not event_id:
-            logger.warning(
-                "Skipping billing transaction for user %s due to missing event id",
-                user_id,
-            )
             return
-
-        existing = await self._billing_repo.get_by_event_id(db, event_id)
-        if existing:
-            logger.debug(
-                "Billing transaction already exists for event %s", event_id
-            )
-            return
-
-        await self._billing_repo.create(
+        await self._billing_repo.update_by_event_id(
             db,
-            user_id=user_id,
             stripe_event_id=event_id,
             **values,
         )
         logger.info(
-            "Stored billing transaction for user %s (event %s)",
-            user_id,
-            event_id,
+            "Finalized billing transaction for event %s", event_id,
         )
 
     async def _retrieve_subscription(
@@ -141,6 +154,21 @@ class StripeWebhookHandler:
         except stripe.error.StripeError as exc:  # pragma: no cover - network path
             logger.error("Failed to retrieve subscription %s: %s", subscription_id, exc)
             return None
+
+    async def _lookup_user_id_by_customer_id(
+        self,
+        db: AsyncSession,
+        customer_id: str | None,
+    ) -> str | None:
+        """Resolve user id via ``billing_customers``."""
+        if not customer_id:
+            return None
+
+        return await self._billing_customer_service.lookup_user_id(
+            db,
+            customer_id,
+            provider="stripe",
+        )
 
     async def _resolve_subscription_context(
         self,
@@ -224,16 +252,33 @@ class StripeWebhookHandler:
             )
             return
 
-        await self._user_repo.update_subscription(
-            db,
-            user,
-            subscription_plan=metadata.get("plan_id"),
-            subscription_status=status,
-            subscription_billing_cycle=ctx.billing_cycle if ctx.billing_cycle else ...,
-            stripe_customer_id=ctx.customer_id,
-            subscription_current_period_end=self._stripe_config.to_datetime(ctx.period_end) if ctx.period_end else None,
-            credits=ctx.credits,
-        )
+        # Claim after user lookup so a missing-user early return does not
+        # permanently poison retries for this event.
+        if not await self._claim_event(db, event_id, user_id):
+            return
+
+        # Do NOT set credits here — invoice.payment_succeeded is the
+        # authoritative credit-granting event.  Setting credits in checkout
+        # AND invoice causes a mid-cycle reset when both fire for the same
+        # subscription lifecycle.
+
+        # Write subscription state to billing_customers
+        period_end_dt = self._stripe_config.to_datetime(ctx.period_end) if ctx.period_end else None
+        if ctx.customer_id:
+            await self._billing_customer_service.get_or_create(
+                db,
+                user_id=user_id,
+                provider="stripe",
+                external_customer_id=ctx.customer_id,
+            )
+            await self._billing_customer_service.update_subscription(
+                db,
+                user_id,
+                subscription_plan=ctx.plan_id,
+                subscription_status=status,
+                subscription_billing_cycle=ctx.billing_cycle if ctx.billing_cycle else ...,
+                subscription_current_period_end=period_end_dt,
+            )
 
         logger.info(
             "Updated subscription for user %s via checkout completion: plan=%s, status=%s",
@@ -242,10 +287,9 @@ class StripeWebhookHandler:
             status,
         )
 
-        await self._record_transaction(
+        await self._finalize_transaction(
             db,
             event_id=event_id or session_data.get("id"),
-            user_id=user_id,
             values={
                 "stripe_object_id": session_data.get("id"),
                 "stripe_customer_id": ctx.customer_id,
@@ -274,7 +318,7 @@ class StripeWebhookHandler:
 
         user_id = ctx.user_id
         if not user_id and ctx.customer_id:
-            user_id = await self._user_repo.lookup_by_customer_id(db, ctx.customer_id)
+            user_id = await self._lookup_user_id_by_customer_id(db, ctx.customer_id)
 
         if not user_id:
             logger.warning(
@@ -305,24 +349,48 @@ class StripeWebhookHandler:
             logger.warning("User %s not found for invoice event", user_id)
             return
 
+        # Claim after user lookup so a missing-user early return does not
+        # permanently poison retries for this event.
+        if not await self._claim_event(db, event_id, user_id):
+            return
+
         resolved_status = (
             ctx.subscription.get("status", status) if ctx.subscription else status
         )
-        await self._user_repo.update_subscription(
-            db,
-            user,
-            subscription_plan=plan_id,
-            subscription_status=resolved_status,
-            subscription_billing_cycle=billing_cycle if billing_cycle else ...,
-            stripe_customer_id=ctx.customer_id,
-            subscription_current_period_end=self._stripe_config.to_datetime(ctx.period_end) if ctx.period_end else None,
-            credits=credits,
-        )
 
-        await self._record_transaction(
+        # invoice.payment_succeeded is the authoritative credit-granting
+        # event — money was actually collected so the balance is reset to
+        # the plan's full allocation.  Also clear reconciliation_required
+        # if set, because a successful payment proves the account is healthy.
+        if self._credit_service and credits is not None:
+            await self._credit_service.set_balance(
+                db, user_id, credits,
+                entry_type="plan_change", source_domain="webhook",
+                idempotency_key=f"webhook:invoice:{event_id}" if event_id else None,
+            )
+            await self._credit_service.clear_billing_status(db, user_id)
+
+        # Write subscription state to billing_customers
+        period_end_dt = self._stripe_config.to_datetime(ctx.period_end) if ctx.period_end else None
+        if ctx.customer_id:
+            await self._billing_customer_service.get_or_create(
+                db,
+                user_id=user_id,
+                provider="stripe",
+                external_customer_id=ctx.customer_id,
+            )
+            await self._billing_customer_service.update_subscription(
+                db,
+                user_id,
+                subscription_plan=plan_id,
+                subscription_status=resolved_status,
+                subscription_billing_cycle=billing_cycle if billing_cycle else ...,
+                subscription_current_period_end=period_end_dt,
+            )
+
+        await self._finalize_transaction(
             db,
             event_id=event_id or invoice_id,
-            user_id=user_id,
             values={
                 "stripe_object_id": invoice_id,
                 "stripe_customer_id": ctx.customer_id,
@@ -356,7 +424,7 @@ class StripeWebhookHandler:
         customer_id = subscription_data.get("customer")
 
         if not user_id and customer_id:
-            user_id = await self._user_repo.lookup_by_customer_id(db, customer_id)
+            user_id = await self._lookup_user_id_by_customer_id(db, customer_id)
 
         if not user_id:
             logger.warning(
@@ -377,15 +445,36 @@ class StripeWebhookHandler:
             )
             return
 
-        await self._user_repo.update_subscription(
-            db,
-            user,
-            subscription_status=status,
-            subscription_plan="free",
-            subscription_billing_cycle=None,
-            credits=self._stripe_config.config.credits.default_user_credits,
-            subscription_current_period_end=self._stripe_config.to_datetime(period_end) if period_end else None,
-        )
+        # Claim after user lookup so a missing-user early return does not
+        # permanently poison retries for this event.
+        if not await self._claim_event(db, event_id, user_id):
+            return
+
+        # Set credits via CreditService (writes to credit_balances + ledger)
+        if self._credit_service:
+            await self._credit_service.set_balance(
+                db, user_id, self._stripe_config.config.credits.default_user_credits,
+                entry_type="plan_change", source_domain="webhook",
+                idempotency_key=f"webhook:sub_deleted:{event_id}" if event_id else None,
+            )
+
+        # Write subscription state to billing_customers
+        period_end_dt = self._stripe_config.to_datetime(period_end) if period_end else None
+        if customer_id:
+            await self._billing_customer_service.get_or_create(
+                db,
+                user_id=user_id,
+                provider="stripe",
+                external_customer_id=customer_id,
+            )
+            await self._billing_customer_service.update_subscription(
+                db,
+                user_id,
+                subscription_plan="free",
+                subscription_status=status,
+                subscription_billing_cycle=None,
+                subscription_current_period_end=period_end_dt,
+            )
 
         logger.info(
             "Marked subscription canceled for user %s via event %s",
@@ -395,12 +484,13 @@ class StripeWebhookHandler:
 
         items = subscription_data.get("items", {}).get("data", []) or []
         first_plan = items[0].get("plan", {}) if items else {}
-        billing_cycle = first_plan.get("interval")
+        billing_cycle = self._stripe_config.normalize_billing_cycle(
+            first_plan.get("interval")
+        )
 
-        await self._record_transaction(
+        await self._finalize_transaction(
             db,
             event_id=event_id or subscription_data.get("id"),
-            user_id=user_id,
             values={
                 "stripe_object_id": subscription_data.get("id"),
                 "stripe_customer_id": customer_id,
@@ -438,14 +528,14 @@ class StripeWebhookHandler:
             recurring = price.get("recurring") or {}
             interval = recurring.get("interval")
             if interval:
-                billing_cycle = billing_cycle or interval
+                billing_cycle = self._stripe_config.normalize_billing_cycle(interval)
             elif first_item:
                 plan_interval = (first_item.get("plan") or {}).get("interval")
                 if plan_interval:
-                    billing_cycle = plan_interval
+                    billing_cycle = self._stripe_config.normalize_billing_cycle(plan_interval)
 
         if not user_id and customer_id:
-            user_id = await self._user_repo.lookup_by_customer_id(db, customer_id)
+            user_id = await self._lookup_user_id_by_customer_id(db, customer_id)
 
         if not user_id:
             logger.warning(
@@ -464,16 +554,33 @@ class StripeWebhookHandler:
             )
             return
 
-        await self._user_repo.update_subscription(
-            db,
-            user,
-            subscription_plan=plan_id,
-            subscription_status=status,
-            subscription_billing_cycle=billing_cycle if billing_cycle else ...,
-            stripe_customer_id=customer_id,
-            subscription_current_period_end=self._stripe_config.to_datetime(period_end) if period_end else None,
-            credits=credits,
-        )
+        # Claim after user lookup so a missing-user early return does not
+        # permanently poison retries for this event.
+        if not await self._claim_event(db, event_id, user_id):
+            return
+
+        # Do NOT set credits here — subscription.updated fires for many
+        # reasons (metadata change, payment method update, trial end,
+        # etc.) and would reset mid-cycle consumption.
+        # Credits are only granted from invoice.payment_succeeded.
+
+        # Write subscription state to billing_customers
+        period_end_dt = self._stripe_config.to_datetime(period_end) if period_end else None
+        if customer_id:
+            await self._billing_customer_service.get_or_create(
+                db,
+                user_id=user_id,
+                provider="stripe",
+                external_customer_id=customer_id,
+            )
+            await self._billing_customer_service.update_subscription(
+                db,
+                user_id,
+                subscription_plan=plan_id,
+                subscription_status=status,
+                subscription_billing_cycle=billing_cycle if billing_cycle else ...,
+                subscription_current_period_end=period_end_dt,
+            )
 
         logger.info(
             "Updated subscription for user %s via subscription updated event: plan=%s, status=%s",
@@ -482,10 +589,9 @@ class StripeWebhookHandler:
             status,
         )
 
-        await self._record_transaction(
+        await self._finalize_transaction(
             db,
             event_id=event_id or subscription_data.get("id"),
-            user_id=user_id,
             values={
                 "stripe_object_id": subscription_data.get("id"),
                 "stripe_customer_id": customer_id,

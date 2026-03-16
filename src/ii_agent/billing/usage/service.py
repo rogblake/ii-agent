@@ -9,6 +9,7 @@ from sqlalchemy import func, join, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.billing.credits.service import CreditDeductionResult, CreditService
+from ii_agent.billing.reservations.types import BillingKind
 from ii_agent.billing.usage.models import SessionMetrics
 from ii_agent.billing.usage.repository import MetricsRepository
 from ii_agent.billing.usage.usage_record_repository import UsageRecordRepository
@@ -50,7 +51,7 @@ class UsageService:
         session_id: str,
         amount: float,
         model_id: Optional[str] = None,
-        source_domain: str = "llm_usage",
+        source_domain: str = BillingKind.LLM_USAGE,
         idempotency_key: Optional[str] = None,
         entry_metadata: Optional[dict[str, Any]] = None,
     ) -> bool:

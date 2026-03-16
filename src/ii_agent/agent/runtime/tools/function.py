@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field, validate_call
 from ii_agent.agent.runtime.utils.json_schema import get_py_type_for_json_type
 from ii_agent.agent.runtime.exceptions import AgentRunException
 from ii_agent.billing.exceptions import InsufficientCreditsError
+from ii_agent.billing.reservations.types import SourceDomain
 from ii_agent.agent.runtime.media import Audio, File, Image, Video
 from ii_agent.agent.runtime.run import RunContext
 
@@ -1006,7 +1007,7 @@ class FunctionCall(BaseModel):
                 user_id=run_context.user_id,
                 session_id=run_context.session_id,
                 run_id=run_context.run_id,
-                source_domain="agent_tool",
+                source_domain=SourceDomain.AGENT_TOOL,
                 source_id=self.call_id,
                 tool_name=tool.name,
                 quote=quote,

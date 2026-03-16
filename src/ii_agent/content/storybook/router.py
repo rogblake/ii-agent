@@ -52,6 +52,7 @@ from ii_agent.content.storybook.schemas import (
 )
 from ii_agent.auth.users.dependencies import UserServiceDep
 from ii_agent.billing.credits.utils import usd_to_credits
+from ii_agent.billing.reservations.types import SourceDomain
 from ii_agent.content.media.service import _generate_image
 from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.core.storage.dependencies import MediaTemplateStorageDep
@@ -439,7 +440,7 @@ async def save_storybook_edits(
             user_id=str(current_user.id),
             session_id=storybook.session_id,
             amount=credits_to_deduct,
-            source_domain="voice_generation",
+            source_domain=SourceDomain.VOICE_GENERATION,
             idempotency_key=(
                 f"storybook:edit-voice:{storybook_id}:{get_or_generate_request_id()}"
             ),

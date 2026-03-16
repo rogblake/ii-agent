@@ -10,6 +10,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.billing.reservations.types import SourceDomain
 from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
 from ii_agent.billing.usage.tool_invocation_repository import ToolInvocationRepository
 from ii_agent.chat.application.context_service import ContextWindowManager
@@ -157,7 +158,7 @@ class LLMTurnLoopService:
                         },
                     }
 
-                if run_response.files:
+                if run_response and run_response.files:
                     file_parts.extend(run_response.files)
 
                 await cancel.raise_if_cancelled(run_id)
@@ -587,7 +588,7 @@ class LLMTurnLoopService:
                 user_id=user_id,
                 session_id=session_id,
                 run_id=run_id,
-                source_domain="chat_tool",
+                source_domain=SourceDomain.CHAT_TOOL,
                 source_id=tool_call_id,
                 tool_name=tool_name,
                 quote=quote,

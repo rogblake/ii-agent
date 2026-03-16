@@ -12,8 +12,9 @@ from bs4 import BeautifulSoup
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.auth.users.service import UserService
-from ii_agent.billing.usage.service import UsageService
 from ii_agent.billing.credits.utils import usd_to_credits
+from ii_agent.billing.reservations.types import SourceDomain
+from ii_agent.billing.usage.service import UsageService
 from ii_agent.chat.llm.factory import get_client
 from ii_agent.chat.types import ImageURLContent, MessageRole, TextContent
 from ii_agent.content.media.service import _generate_image
@@ -677,7 +678,7 @@ class StorybookAIEditService:
             user_id=user_id,
             session_id=session_id,
             amount=credits_to_deduct,
-            source_domain="image_generation",
+            source_domain=SourceDomain.IMAGE_GENERATION,
             idempotency_key=(
                 idempotency_key
                 or "storybook:image:"

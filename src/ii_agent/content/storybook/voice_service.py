@@ -8,6 +8,7 @@ from typing import Optional, Dict, Any, TYPE_CHECKING
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.billing.credits.utils import usd_to_credits
+from ii_agent.billing.reservations.types import SourceDomain
 from ii_agent.billing.usage.service import UsageService
 from ii_agent.content.storybook.repository import StorybookRepository
 from ii_agent.content.storybook.schemas import (
@@ -264,7 +265,7 @@ class StorybookVoiceService:
                 user_id=user_id,
                 session_id=session_id,
                 amount=credits_to_deduct,
-                source_domain="voice_generation",
+                source_domain=SourceDomain.VOICE_GENERATION,
                 idempotency_key=request_scoped_key,
             )
             if deduct_success:

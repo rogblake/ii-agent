@@ -20,6 +20,26 @@ class ReservationStatus(str, enum.Enum):
     SETTLEMENT_FAILED = "settlement_failed"
 
 
+class BillingKind(str, enum.Enum):
+    """What kind of billable work a reservation covers."""
+
+    LLM_USAGE = "llm_usage"
+    TOOL_USAGE = "tool_usage"
+
+
+class SourceDomain(str, enum.Enum):
+    """Origin of a billing event (ledger or reservation)."""
+
+    CHAT_LLM = "chat_llm"
+    AGENT_LLM = "agent_llm"
+    CHAT_TOOL = "chat_tool"
+    AGENT_TOOL = "agent_tool"
+    VOICE_GENERATION = "voice_generation"
+    IMAGE_GENERATION = "image_generation"
+    WEBHOOK = "webhook"
+    CRON = "cron"
+
+
 class QuoteStrategy(str, enum.Enum):
     """How the upfront cost was estimated."""
 

@@ -16,10 +16,12 @@ from ii_agent.billing.credits.service import CreditService
 from ii_agent.billing.credits.utils import credits_to_usd, usd_to_credits
 from ii_agent.billing.reservations.service import CreditReservationService
 from ii_agent.billing.reservations.types import (
+    BillingKind,
     BillingQuote,
     BillingSettlementResult,
     QuoteStrategy,
     ReservationHold,
+    SourceDomain,
 )
 from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.core.llm.token_record import TokenRecord
@@ -120,9 +122,9 @@ class LLMBillingService:
             user_id=user_id,
             session_id=session_id,
             run_id=run_id,
-            source_domain="chat_llm",
+            source_domain=SourceDomain.CHAT_LLM,
             source_id=source_id,
-            billing_kind="llm_usage",
+            billing_kind=BillingKind.LLM_USAGE,
             quote=quote,
             model_id=model_id,
             idempotency_key=idempotency_key,
@@ -221,9 +223,9 @@ class LLMBillingService:
             user_id=user_id,
             session_id=session_id,
             run_id=run_id,
-            source_domain="agent_llm",
+            source_domain=SourceDomain.AGENT_LLM,
             source_id=source_id,
-            billing_kind="llm_usage",
+            billing_kind=BillingKind.LLM_USAGE,
             quote=quote,
             model_id=model.id,
             idempotency_key=idempotency_key,
@@ -340,7 +342,7 @@ class LLMBillingService:
             run_id=run_id,
             source_domain=source_domain,
             source_id=source_id,
-            billing_kind="tool_usage",
+            billing_kind=BillingKind.TOOL_USAGE,
             quote=quote,
             tool_name=tool_name,
             idempotency_key=idempotency_key,

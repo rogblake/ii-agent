@@ -22,6 +22,7 @@ class LedgerEntryType(str, enum.Enum):
     GRANT = "grant"
     BONUS_GRANT = "bonus_grant"
     PLAN_CHANGE = "plan_change"
+    REFRESH = "refresh"
     RESERVATION_HOLD = "reservation_hold"
     RESERVATION_RELEASE = "reservation_release"
 

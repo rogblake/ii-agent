@@ -16,6 +16,7 @@ from ii_agent.billing.outbox.repository import BillingUsageFactRepository
 from ii_agent.billing.reservations.repository import CreditReservationRepository
 from ii_agent.billing.reservations.service import CreditReservationService
 from ii_agent.billing.reservations.types import (
+    BillingKind,
     BillingSettlementResult,
     ReservationStatus,
 )
@@ -79,7 +80,7 @@ class BillingUsageFactService:
             session_id=session_id,
             run_id=run_id,
             message_id=message_id,
-            billing_kind="llm_usage",
+            billing_kind=BillingKind.LLM_USAGE,
             event_kind="llm",
             app_kind=app_kind,
             provider=provider,
@@ -123,7 +124,7 @@ class BillingUsageFactService:
             session_id=session_id,
             run_id=run_id,
             message_id=message_id,
-            billing_kind="tool_usage",
+            billing_kind=BillingKind.TOOL_USAGE,
             event_kind="tool",
             app_kind=app_kind,
             provider=provider,
@@ -209,7 +210,7 @@ class BillingUsageFactService:
         if result.status == ReservationStatus.SETTLEMENT_FAILED:
             fact.failed_at = now
             fact.processing_started_at = None
-            fact.last_error = "settlement_failed"
+            fact.last_error = ReservationStatus.SETTLEMENT_FAILED.value
             fact.status = (
                 _STATUS_MANUAL_REVIEW
                 if int(fact.attempt_count or 0) >= _MAX_ATTEMPTS

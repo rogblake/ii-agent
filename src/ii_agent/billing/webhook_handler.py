@@ -16,6 +16,8 @@ from ii_agent.billing.repository import BillingTransactionRepository
 from ii_agent.billing.exceptions import BillingConfigurationError, BillingServiceError
 from ii_agent.billing.stripe_config import StripeConfig
 from ii_agent.auth.users.repository import UserRepository
+from ii_agent.billing.credits.ledger_models import LedgerEntryType
+from ii_agent.billing.reservations.types import SourceDomain
 
 
 logger = logging.getLogger(__name__)
@@ -365,7 +367,7 @@ class StripeWebhookHandler:
         if self._credit_service and credits is not None:
             await self._credit_service.set_balance(
                 db, user_id, credits,
-                entry_type="plan_change", source_domain="webhook",
+                entry_type=LedgerEntryType.PLAN_CHANGE, source_domain=SourceDomain.WEBHOOK,
                 idempotency_key=f"webhook:invoice:{event_id}" if event_id else None,
             )
             await self._credit_service.clear_billing_status(db, user_id)
@@ -454,7 +456,7 @@ class StripeWebhookHandler:
         if self._credit_service:
             await self._credit_service.set_balance(
                 db, user_id, self._stripe_config.config.credits.default_user_credits,
-                entry_type="plan_change", source_domain="webhook",
+                entry_type=LedgerEntryType.PLAN_CHANGE, source_domain=SourceDomain.WEBHOOK,
                 idempotency_key=f"webhook:sub_deleted:{event_id}" if event_id else None,
             )
 

@@ -125,6 +125,32 @@ class LLMExecutionService:
                 chunks.append(part.text)
         return "".join(chunks)
 
+    @staticmethod
+    def _merge_provider_options(
+        caller: dict[str, Any] | None,
+        reservation: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        """Merge caller-supplied provider options with reservation options.
+
+        Reservation keys (e.g. max_output_tokens) take precedence, but
+        caller keys (e.g. system_instruction) are preserved.
+        """
+        if not reservation:
+            return caller
+        if not caller:
+            return reservation
+        merged: dict[str, Any] = {}
+        for key in set(caller) | set(reservation):
+            c_val = caller.get(key)
+            r_val = reservation.get(key)
+            if isinstance(c_val, dict) and isinstance(r_val, dict):
+                merged[key] = {**c_val, **r_val}
+            elif r_val is not None:
+                merged[key] = r_val
+            else:
+                merged[key] = c_val
+        return merged
+
     async def send_once(
         self,
         *,
@@ -146,9 +172,9 @@ class LLMExecutionService:
         reservation = await self._reserve_if_needed(
             billing_context, messages, usage_key,
         )
-        effective_options = provider_options
-        if reservation is not None and reservation.provider_options:
-            effective_options = reservation.provider_options
+        effective_options = self._merge_provider_options(
+            provider_options, reservation.provider_options if reservation else None,
+        )
 
         try:
             response = await client.send(
@@ -220,9 +246,9 @@ class LLMExecutionService:
             reservation = await self._reserve_if_needed(
                 billing_context, conversation, usage_key,
             )
-            effective_options = provider_options
-            if reservation is not None and reservation.provider_options:
-                effective_options = reservation.provider_options
+            effective_options = self._merge_provider_options(
+                provider_options, reservation.provider_options if reservation else None,
+            )
 
             try:
                 response = await client.send(

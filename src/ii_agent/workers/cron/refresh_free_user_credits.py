@@ -13,6 +13,8 @@ from ii_agent.core.config.settings import get_settings
 from ii_agent.core.logger import logger as app_logger
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.auth.users.models import User
+from ii_agent.billing.credits.ledger_models import LedgerEntryType
+from ii_agent.billing.reservations.types import SourceDomain
 from ii_agent.workers.cron.cron_manager import CronJobDefinition, CronManager
 
 FREE_PLAN_ID = "free"
@@ -84,8 +86,8 @@ async def refresh_free_user_credits() -> None:
                 if current_credits != monthly_credits:
                     await credit_service.set_balance(
                         db, user.id, monthly_credits,
-                        entry_type="refresh",
-                        source_domain="cron",
+                        entry_type=LedgerEntryType.REFRESH,
+                        source_domain=SourceDomain.CRON,
                         entry_metadata={"plan": FREE_PLAN_ID},
                     )
                     changed = True

@@ -37,6 +37,10 @@ _TERMINAL_STATUSES = frozenset({
     ReservationStatus.EXPIRED,
 })
 
+# last_error values for settle outcomes.
+_LAST_ERROR_SHORTFALL = "settlement_shortfall_unreconciled"
+_LAST_ERROR_SETTLEMENT_REFUND = "settlement_refund"
+
 
 class CreditReservationService:
     """Reserve credits up front, then settle or release them after work finishes."""
@@ -251,7 +255,7 @@ class CreditReservationService:
 
             target_status = (
                 ReservationStatus.EXPIRED
-                if reason == "expired"
+                if reason == ReservationStatus.EXPIRED.value
                 else ReservationStatus.RELEASED
             )
             reservation.status = target_status
@@ -349,7 +353,7 @@ class CreditReservationService:
                     bonus_credits=refund_bonus,
                     metadata={
                         "billing_kind": reservation.billing_kind,
-                        "reason": "settlement_refund",
+                        "reason": _LAST_ERROR_SETTLEMENT_REFUND,
                         "reservation_id": reservation.id,
                     },
                     idempotency_key=settle_release_key,
@@ -461,9 +465,9 @@ class CreditReservationService:
                 None
                 if settlement_status == ReservationStatus.SETTLED
                 else (
-                    "settlement_shortfall_unreconciled"
+                    _LAST_ERROR_SHORTFALL
                     if shortfall_detected
-                    else "settlement_failed"
+                    else ReservationStatus.SETTLEMENT_FAILED.value
                 )
             )
             await db.flush()
@@ -494,7 +498,7 @@ class CreditReservationService:
             await self.release(
                 db,
                 reservation_id=reservation.id,
-                reason="expired",
+                reason=ReservationStatus.EXPIRED.value,
             )
         return len(stale)
 

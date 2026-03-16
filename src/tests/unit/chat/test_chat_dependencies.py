@@ -195,10 +195,14 @@ class TestGetLLMLoopService:
     def test_returns_llm_turn_loop_service_instance(self):
         mock_llm_billing = MagicMock()
         mock_message_service = MagicMock()
+        mock_llm_invocation_repo = MagicMock()
+        mock_tool_invocation_repo = MagicMock()
 
         result = get_llm_loop_service(
             llm_billing=mock_llm_billing,
+            llm_invocation_repo=mock_llm_invocation_repo,
             message_service=mock_message_service,
+            tool_invocation_repo=mock_tool_invocation_repo,
         )
 
         assert isinstance(result, LLMTurnLoopService)
@@ -206,14 +210,20 @@ class TestGetLLMLoopService:
     def test_dependencies_passed_correctly(self):
         mock_llm_billing = MagicMock()
         mock_message_service = MagicMock()
+        mock_llm_invocation_repo = MagicMock()
+        mock_tool_invocation_repo = MagicMock()
 
         result = get_llm_loop_service(
             llm_billing=mock_llm_billing,
+            llm_invocation_repo=mock_llm_invocation_repo,
             message_service=mock_message_service,
+            tool_invocation_repo=mock_tool_invocation_repo,
         )
 
         assert result._llm_billing is mock_llm_billing
         assert result._message_service is mock_message_service
+        assert result._llm_invocation_repo is mock_llm_invocation_repo
+        assert result._tool_invocation_repo is mock_tool_invocation_repo
 
 
 # ---------------------------------------------------------------------------
@@ -234,6 +244,7 @@ class TestGetChatService:
             "chat_run_service": MagicMock(),
             "session_repo": MagicMock(),
             "container": MagicMock(),
+            "title_service": MagicMock(),
         }
 
     def test_returns_chat_service_instance(self):

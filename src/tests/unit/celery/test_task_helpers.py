@@ -26,4 +26,4 @@ def test_page_mapping_helpers():
 def test_credit_estimation_math_is_deterministic():
     value = tasks._estimate_page_credits(image_cost_usd=0.03, audio_cost_usd=0.02)
 
-    assert round(value, 4) == round(usd_to_credits(0.05), 4)
+    assert round(value, 4) == round(float(usd_to_credits(0.05)), 4)

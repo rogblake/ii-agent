@@ -160,7 +160,10 @@ class TestRunDetection:
         ):
             with patch.object(service, "_get_image_dimensions", return_value=(1280, 720)):
                 components, width, height = await service._run_detection(
-                    "https://example.com/img.png"
+                    "https://example.com/img.png",
+                    db=AsyncMock(),
+                    user_id="u1",
+                    session_id="s1",
                 )
 
         assert (width, height) == (1280, 720)
@@ -185,7 +188,10 @@ class TestRunDetection:
         ):
             with patch.object(service, "_get_image_dimensions", return_value=(1280, 720)):
                 components, width, height = await service._run_detection(
-                    "https://example.com/img.png"
+                    "https://example.com/img.png",
+                    db=AsyncMock(),
+                    user_id="u1",
+                    session_id="s1",
                 )
 
         assert components == []

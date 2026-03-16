@@ -54,7 +54,6 @@ def _make_chat_service(
 ) -> MagicMock:
     svc = MagicMock()
     svc.validate_model_for_chat = AsyncMock(return_value=validate_model)
-    svc.check_sufficient_credits = AsyncMock(return_value=has_credits)
     svc.validate_session_access = AsyncMock(return_value=validate_session)
     svc.validate_public_session_access = AsyncMock(return_value=validate_public_session)
     svc.stop_conversation = AsyncMock(return_value=stop_result)
@@ -202,6 +201,7 @@ def test_send_chat_creates_new_session_and_streams_sse():
         agent_type="chat",
         model_id="gpt-4o",
         created_at="2026-01-01T00:00:00",
+        title_pending=False,
     )
     events = [
         {"type": "content_start"},
@@ -309,6 +309,7 @@ def test_send_chat_streams_all_event_types():
         agent_type="chat",
         model_id="gpt-4o",
         created_at="2026-01-01T00:00:00",
+        title_pending=False,
     )
     svc = _make_chat_service(has_credits=True, create_session=session_meta, stream_events=events)
 
@@ -339,6 +340,7 @@ def test_send_chat_stream_exception_yields_error_event():
         agent_type="chat",
         model_id="gpt-4o",
         created_at="2026-01-01",
+        title_pending=False,
     )
     svc = _make_chat_service(has_credits=True, create_session=session_meta)
 

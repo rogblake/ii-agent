@@ -12,6 +12,10 @@ from unittest.mock import AsyncMock, MagicMock, patch, call
 
 import pytest
 
+from ii_agent.workers.celery.model_imports import import_model_modules
+
+import_model_modules()  # resolve all cross-model ORM relationships
+
 pytestmark = pytest.mark.unit
 
 
@@ -59,6 +63,7 @@ class TestRefreshFreeUserCredits:
         from ii_agent.workers.cron.refresh_free_user_credits import refresh_free_user_credits
 
         user1 = MagicMock()
+        user1.id = "user-1"
         user1.subscription_plan = None
         user1.credits = 0.0
 
@@ -77,20 +82,38 @@ class TestRefreshFreeUserCredits:
         mock_settings.credits.default_plans_credits = {"free": 300.0}
         mock_settings.credits.default_user_credits = 100.0
 
+        mock_billing_customer_service = MagicMock()
+        mock_billing_customer_service.list_by_user_ids = AsyncMock(return_value={})
+        mock_billing_customer_service.resolve_effective_profile = MagicMock(
+            return_value=MagicMock(subscription_plan=None)
+        )
+
+        # Mock the CreditService used inside refresh_free_user_credits
+        mock_credit_service = MagicMock()
+        mock_credit_service.ensure_balance_exists = AsyncMock(return_value=(0.0, 0.0))
+        mock_credit_service.set_balance = AsyncMock(return_value=True)
+
         with (
             patch("ii_agent.workers.cron.refresh_free_user_credits.get_db_session_local", return_value=mock_ctx),
             patch("ii_agent.workers.cron.refresh_free_user_credits.get_settings", return_value=mock_settings),
+            patch("ii_agent.billing.customers.repository.BillingCustomerRepository", return_value=MagicMock()),
+            patch("ii_agent.billing.customers.service.BillingCustomerService", return_value=mock_billing_customer_service),
+            patch("ii_agent.billing.credits.balance_repository.CreditBalanceRepository", return_value=MagicMock()),
+            patch("ii_agent.billing.credits.service.CreditService", return_value=mock_credit_service),
         ):
             await refresh_free_user_credits()
 
-        assert user1.subscription_plan == "free"
-        assert user1.credits == 300.0
+        mock_billing_customer_service.resolve_effective_profile.assert_called_once_with(
+            customer=None,
+        )
+        mock_credit_service.set_balance.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_skips_users_with_correct_credits_and_plan(self):
         from ii_agent.workers.cron.refresh_free_user_credits import refresh_free_user_credits
 
         user1 = MagicMock()
+        user1.id = "user-1"
         user1.subscription_plan = "free"
         user1.credits = 300.0
 
@@ -109,15 +132,29 @@ class TestRefreshFreeUserCredits:
         mock_settings.credits.default_plans_credits = {"free": 300.0}
         mock_settings.credits.default_user_credits = 100.0
 
+        mock_billing_customer_service = MagicMock()
+        mock_billing_customer_service.list_by_user_ids = AsyncMock(return_value={})
+        mock_billing_customer_service.resolve_effective_profile = MagicMock(
+            return_value=MagicMock(subscription_plan="free")
+        )
+
+        # Mock balance repo returning current credits == monthly_credits
+        mock_credit_service = MagicMock()
+        mock_credit_service.ensure_balance_exists = AsyncMock(return_value=(300.0, 0.0))
+        mock_credit_service.set_balance = AsyncMock(return_value=True)
+
         with (
             patch("ii_agent.workers.cron.refresh_free_user_credits.get_db_session_local", return_value=mock_ctx),
             patch("ii_agent.workers.cron.refresh_free_user_credits.get_settings", return_value=mock_settings),
+            patch("ii_agent.billing.customers.repository.BillingCustomerRepository", return_value=MagicMock()),
+            patch("ii_agent.billing.customers.service.BillingCustomerService", return_value=mock_billing_customer_service),
+            patch("ii_agent.billing.credits.balance_repository.CreditBalanceRepository", return_value=MagicMock()),
+            patch("ii_agent.billing.credits.service.CreditService", return_value=mock_credit_service),
         ):
             await refresh_free_user_credits()
 
-        # User had correct plan and credits - no change should have happened
-        assert user1.credits == 300.0
-
+        # User had correct plan and credits - set_balance should NOT be called
+        mock_credit_service.set_balance.assert_not_called()
 
 class TestBuildFreeUserCronJobDefinition:
     def test_returns_correct_name(self):
@@ -253,14 +290,11 @@ class TestAsUtc:
         assert result.tzinfo.utcoffset(result).total_seconds() == 0
 
 
-class TestRefreshUserCredits:
-    @pytest.mark.asyncio
-    async def test_returns_false_when_no_plan_credits(self):
-        from ii_agent.workers.cron.refresh_annual_subscription_credits import _refresh_user_credits
+class TestShouldRefresh:
+    def test_returns_false_when_no_plan_credits(self):
+        from ii_agent.workers.cron.refresh_annual_subscription_credits import _should_refresh
 
         mock_user = MagicMock()
-        mock_user.subscription_plan = "pro"
-        mock_user.subscription_current_period_end = None
         mock_user.user_metadata = {}
 
         mock_settings = MagicMock()
@@ -271,16 +305,13 @@ class TestRefreshUserCredits:
             return_value=mock_settings,
         ):
             now = datetime.now(timezone.utc)
-            result = await _refresh_user_credits(mock_user, now=now)
-            assert result is False
+            should, credits = _should_refresh(mock_user, now=now, plan_id="pro")
+            assert should is False
 
-    @pytest.mark.asyncio
-    async def test_returns_false_when_subscription_expired(self):
-        from ii_agent.workers.cron.refresh_annual_subscription_credits import _refresh_user_credits
+    def test_returns_false_when_subscription_expired(self):
+        from ii_agent.workers.cron.refresh_annual_subscription_credits import _should_refresh
 
         mock_user = MagicMock()
-        mock_user.subscription_plan = "pro"
-        mock_user.subscription_current_period_end = datetime(2020, 1, 1, tzinfo=timezone.utc)
         mock_user.user_metadata = {}
 
         mock_settings = MagicMock()
@@ -291,13 +322,15 @@ class TestRefreshUserCredits:
             return_value=mock_settings,
         ):
             now = datetime.now(timezone.utc)
-            result = await _refresh_user_credits(mock_user, now=now)
-            assert result is False
+            should, credits = _should_refresh(
+                mock_user, now=now, plan_id="pro",
+                period_end=datetime(2020, 1, 1, tzinfo=timezone.utc),
+            )
+            assert should is False
 
-    @pytest.mark.asyncio
-    async def test_returns_false_when_already_refreshed_this_month(self):
+    def test_returns_false_when_already_refreshed_this_month(self):
         from ii_agent.workers.cron.refresh_annual_subscription_credits import (
-            _refresh_user_credits,
+            _should_refresh,
             REFRESH_METADATA_KEY,
         )
 
@@ -305,8 +338,6 @@ class TestRefreshUserCredits:
         last_refresh = datetime(2025, 6, 1, tzinfo=timezone.utc)
 
         mock_user = MagicMock()
-        mock_user.subscription_plan = "pro"
-        mock_user.subscription_current_period_end = None
         mock_user.user_metadata = {REFRESH_METADATA_KEY: last_refresh.isoformat()}
 
         mock_settings = MagicMock()
@@ -316,21 +347,18 @@ class TestRefreshUserCredits:
             "ii_agent.workers.cron.refresh_annual_subscription_credits.get_settings",
             return_value=mock_settings,
         ):
-            result = await _refresh_user_credits(mock_user, now=now)
-            assert result is False
+            should, credits = _should_refresh(mock_user, now=now, plan_id="pro")
+            assert should is False
 
-    @pytest.mark.asyncio
-    async def test_updates_credits_and_returns_true(self):
+    def test_returns_true_with_monthly_credits(self):
         from ii_agent.workers.cron.refresh_annual_subscription_credits import (
-            _refresh_user_credits,
+            _should_refresh,
             REFRESH_METADATA_KEY,
         )
 
         now = datetime(2025, 7, 1, tzinfo=timezone.utc)
 
         mock_user = MagicMock()
-        mock_user.subscription_plan = "pro"
-        mock_user.subscription_current_period_end = None
         mock_user.user_metadata = {}
 
         mock_settings = MagicMock()
@@ -340,9 +368,9 @@ class TestRefreshUserCredits:
             "ii_agent.workers.cron.refresh_annual_subscription_credits.get_settings",
             return_value=mock_settings,
         ):
-            result = await _refresh_user_credits(mock_user, now=now)
-            assert result is True
-            assert mock_user.credits == 500.0
+            should, monthly_credits = _should_refresh(mock_user, now=now, plan_id="pro")
+            assert should is True
+            assert monthly_credits == 500.0
 
 
 class TestBuildAnnualCronJobDefinition:
@@ -454,10 +482,13 @@ class TestStartScheduler:
 
         with patch("ii_agent.workers.cron.tasks.scheduler", mock_scheduler):
             start_scheduler()
-            assert mock_scheduler.add_job.call_count == 2
+            assert mock_scheduler.add_job.call_count == 5
             job_ids = [c.kwargs["id"] for c in mock_scheduler.add_job.call_args_list]
             assert "cleanup_stale_agent_run_tasks" in job_ids
             assert "cleanup_stale_chat_runs" in job_ids
+            assert "expire_stale_reservations" in job_ids
+            assert "retry_billing_usage_facts" in job_ids
+            assert "alert_settlement_failures" in job_ids
             mock_scheduler.start.assert_called_once()
 
 

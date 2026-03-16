@@ -115,6 +115,38 @@ class TestMessageData:
         assert md2.response_tool_calls == []
 
 
+class TestModelBillingFinalizationDeep:
+    @pytest.mark.asyncio
+    async def test_settle_llm_billing_does_not_release_on_settlement_failure(self):
+        from contextlib import asynccontextmanager
+
+        model = _ConcreteModel()
+        llm_billing = MagicMock()
+        llm_billing.settle_agent_llm_call = AsyncMock(side_effect=RuntimeError("boom"))
+        llm_billing.release_llm_call = AsyncMock()
+        model.llm_billing_service = llm_billing
+
+        @asynccontextmanager
+        async def _db_cm():
+            db = MagicMock()
+            db.commit = AsyncMock()
+            yield db
+
+        with patch("ii_agent.core.db.manager.get_db_session_local", _db_cm):
+            await model._settle_llm_billing(
+                reservation=MagicMock(hold=MagicMock(reservation_id="res-1")),
+                run_response=MagicMock(run_id="run-1"),
+                metrics=Metrics(
+                    input_tokens=10,
+                    output_tokens=5,
+                    total_tokens=15,
+                    duration=0.25,
+                ),
+            )
+
+        llm_billing.release_llm_call.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # _handle_agent_exception tests
 # ---------------------------------------------------------------------------

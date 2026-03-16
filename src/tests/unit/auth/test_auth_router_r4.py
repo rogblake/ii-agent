@@ -6,6 +6,8 @@ import base64
 import hashlib
 import sys
 import json
+from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -255,6 +257,72 @@ class TestFetchUserinfoIfEnabledR4:
 
             with pytest.raises(BadGatewayError, match="userinfo failed"):
                 await mod._fetch_userinfo_if_enabled("bad-token")
+
+
+class TestReaderUserMeR4:
+    def test_serialize_user_public_uses_effective_billing_profile(self):
+        mod = _get_auth_router_module()
+        current_user = SimpleNamespace(
+            id="user-1",
+            email="user@example.com",
+            role="user",
+            first_name="Ada",
+            last_name="Lovelace",
+            avatar="https://example.com/avatar.png",
+            language="en",
+        )
+        billing_profile = mod.EffectiveBillingProfile(
+            external_customer_id="cus_new",
+            subscription_plan="pro",
+            subscription_status="active",
+            subscription_billing_cycle="monthly",
+            subscription_current_period_end=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+
+        result = mod._serialize_user_public(current_user, billing_profile)
+
+        assert result.subscription_plan == "pro"
+        assert result.subscription_status == "active"
+        assert result.subscription_billing_cycle == "monthly"
+
+    @pytest.mark.asyncio
+    async def test_reader_user_me_prefers_billing_customer_service(self):
+        mod = _get_auth_router_module()
+        current_user = SimpleNamespace(
+            id="user-1",
+            email="user@example.com",
+            role="user",
+            first_name="Ada",
+            last_name="Lovelace",
+            avatar=None,
+            language="en",
+            subscription_plan="legacy-free",
+            subscription_status="legacy-status",
+            subscription_billing_cycle="monthly",
+            subscription_current_period_end=None,
+            stripe_customer_id="cus_legacy",
+        )
+        billing_profile = mod.EffectiveBillingProfile(
+            external_customer_id="cus_new",
+            subscription_plan="pro",
+            subscription_status="active",
+            subscription_billing_cycle="annually",
+            subscription_current_period_end=datetime(2026, 2, 1, tzinfo=timezone.utc),
+        )
+        billing_customer_service = MagicMock()
+        billing_customer_service.get_effective_profile = AsyncMock(
+            return_value=billing_profile
+        )
+
+        result = await mod.reader_user_me(
+            db=AsyncMock(),
+            current_user=current_user,
+            billing_customer_service=billing_customer_service,
+        )
+
+        assert result.subscription_plan == "pro"
+        assert result.subscription_status == "active"
+        billing_customer_service.get_effective_profile.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

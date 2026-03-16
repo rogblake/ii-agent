@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from decimal import Decimal
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.auth.models import WaitlistEntry
 from ii_agent.auth.users.repository import APIKeyRepository, UserRepository
 from ii_agent.auth.users.waitlist_repository import WaitlistRepository
+from ii_agent.billing.credits.balance_repository import CreditBalanceRepository
 from ii_agent.billing.repository import BillingTransactionRepository
 from ii_agent.billing.usage.repository import MetricsRepository
 
@@ -20,6 +21,7 @@ async def test_user_and_api_key_repositories_crud_and_credit_updates(
 ) -> None:
     user_repo = UserRepository()
     api_key_repo = APIKeyRepository()
+    balance_repo = CreditBalanceRepository()
 
     user = await user_repo.create(
         db_session,
@@ -28,6 +30,8 @@ async def test_user_and_api_key_repositories_crud_and_credit_updates(
         credits=10.0,
         bonus_credits=5.0,
     )
+    # Create matching credit_balances row
+    await balance_repo.create(db_session, user.id, credits=10.0, bonus_credits=5.0)
 
     lookup = await user_repo.get_by_email(db_session, "casesensitive@example.com")
     assert lookup is not None
@@ -40,30 +44,27 @@ async def test_user_and_api_key_repositories_crud_and_credit_updates(
         email_verified=True,
         avatar="https://img.local/avatar.png",
     )
-    await user_repo.update_subscription(
-        db_session,
-        user,
-        subscription_plan="plus",
-        subscription_status="active",
-        subscription_billing_cycle="monthly",
-        stripe_customer_id="cus_123",
-        subscription_current_period_end=datetime.now(timezone.utc),
-    )
     await user_repo.set_language(db_session, user, "vi")
     await user_repo.set_active(db_session, user, is_active=False)
 
-    credits_after_deduct = await user_repo.deduct_credits(db_session, user.id, 6.0)
-    assert credits_after_deduct == (9.0, 0.0)
+    # Credit operations now go through CreditBalanceRepository
+    # All methods accept and return Decimal; compare with float() for readability
+    credits_after_deduct = await balance_repo.deduct_credits(db_session, user.id, Decimal("6.0"))
+    # Returns (old_credits, old_bonus, new_credits, new_bonus)
+    # Created with credits=10.0, bonus_credits=5.0; deducting 6.0 uses 5.0 bonus + 1.0 regular
+    assert tuple(float(v) for v in credits_after_deduct) == (10.0, 5.0, 9.0, 0.0)
 
-    credits_after_bonus = await user_repo.add_credits(
-        db_session, user.id, 2.0, is_bonus=True
+    credits_after_bonus = await balance_repo.add_credits(
+        db_session, user.id, Decimal("2.0"), is_bonus=True
     )
-    assert credits_after_bonus == (9.0, 2.0)
+    # Returns (old_credits, old_bonus, new_credits, new_bonus)
+    assert tuple(float(v) for v in credits_after_bonus) == (9.0, 0.0, 9.0, 2.0)
 
-    exact_credits = await user_repo.set_credits(
-        db_session, user.id, 42.0, bonus_amount=3.5
+    exact_credits = await balance_repo.set_credits(
+        db_session, user.id, Decimal("42.0"), bonus_amount=Decimal("3.5")
     )
-    assert exact_credits == (42.0, 3.5)
+    # Returns (old_credits, old_bonus, new_credits, new_bonus)
+    assert tuple(float(v) for v in exact_credits) == (9.0, 2.0, 42.0, 3.5)
 
     api_key = await api_key_repo.create(
         db_session,
@@ -75,15 +76,13 @@ async def test_user_and_api_key_repositories_crud_and_credit_updates(
     active_key = await api_key_repo.get_active_for_user(db_session, user.id)
     assert active_key == "sk-test-123"
 
-    customer_user_id = await user_repo.lookup_by_customer_id(db_session, "cus_123")
-    assert customer_user_id == user.id
-
 
 async def test_user_repository_optional_branches_and_not_found_paths(
     db_session: AsyncSession,
 ) -> None:
     repo = UserRepository()
     api_key_repo = APIKeyRepository()
+    balance_repo = CreditBalanceRepository()
     user = await repo.create(
         db_session,
         email="branches@example.com",
@@ -91,6 +90,8 @@ async def test_user_repository_optional_branches_and_not_found_paths(
         credits=5.0,
         bonus_credits=2.0,
     )
+    # Create matching credit_balances row
+    await balance_repo.create(db_session, user.id, credits=5.0, bonus_credits=2.0)
 
     loaded = await repo.get_by_id(db_session, user.id)
     assert loaded is not None
@@ -120,26 +121,16 @@ async def test_user_repository_optional_branches_and_not_found_paths(
     )
     assert user.first_name == "Final Name"
 
-    await repo.update_subscription(
-        db_session,
-        user,
-        subscription_billing_cycle=None,
-        credits=11.5,
-    )
-    assert user.subscription_billing_cycle is None
-    assert user.credits == 11.5
+    # Credit operations now go through CreditBalanceRepository
+    regular_credit_update = await balance_repo.add_credits(db_session, user.id, Decimal("3.0"), is_bonus=False)
+    # Returns (old_credits, old_bonus, new_credits, new_bonus)
+    assert tuple(float(v) for v in regular_credit_update) == (5.0, 2.0, 8.0, 2.0)
 
-    await repo.update_subscription(db_session, user)
-    assert user.subscription_billing_cycle is None
+    no_bonus_override = await balance_repo.set_credits(db_session, user.id, Decimal("9.0"))
+    # Returns (old_credits, old_bonus, new_credits, new_bonus)
+    assert tuple(float(v) for v in no_bonus_override) == (8.0, 2.0, 9.0, 2.0)
 
-    regular_credit_update = await repo.add_credits(db_session, user.id, 3.0, is_bonus=False)
-    assert regular_credit_update == (14.5, 2.0)
-
-    no_bonus_override = await repo.set_credits(db_session, user.id, 9.0)
-    assert no_bonus_override == (9.0, 2.0)
-
-    assert await repo.deduct_credits(db_session, user.id, 1000.0) is None
-    assert await repo.lookup_by_customer_id(db_session, "missing-customer") is None
+    assert await balance_repo.deduct_credits(db_session, user.id, Decimal("1000.0")) is None
     assert await api_key_repo.get_active_for_user(db_session, user.id) is None
 
 

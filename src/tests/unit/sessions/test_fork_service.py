@@ -2,6 +2,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from ii_agent.workers.celery.model_imports import import_model_modules
+
+import_model_modules()  # resolve all cross-model ORM relationships
+
 from ii_agent.sessions.exceptions import SessionNotFoundError, SessionValidationError
 from ii_agent.sessions.fork_service import SessionForkService
 from ii_agent.sessions.schemas import ForkContext, ForkSessionRequest, ForkType, SandboxMode

@@ -13,37 +13,41 @@ def test_parse_iso_date_handles_timezone_and_invalid_values():
     assert annual_refresh._parse_iso_date("not-a-date") is None
 
 
-@pytest.mark.asyncio
-async def test_refresh_user_credits_skips_if_already_refreshed_this_month(settings_factory, monkeypatch):
+def test_should_refresh_skips_if_already_refreshed_this_month(settings_factory, monkeypatch):
     monkeypatch.setattr(annual_refresh, "get_settings", lambda: settings_factory())
     now = datetime(2026, 2, 1, tzinfo=timezone.utc)
     user = SimpleNamespace(
         id="u1",
-        subscription_plan="plus",
-        subscription_current_period_end=now,
         user_metadata={"last_annual_credit_refresh": now.isoformat()},
         credits=0.0,
     )
 
-    refreshed = await annual_refresh._refresh_user_credits(user, now=now)
+    should, monthly = annual_refresh._should_refresh(
+        user,
+        now=now,
+        plan_id="plus",
+        period_end=now,
+    )
 
-    assert refreshed is False
+    assert should is False
+    assert monthly is None
 
 
-@pytest.mark.asyncio
-async def test_refresh_user_credits_updates_when_eligible(settings_factory, monkeypatch):
+def test_should_refresh_returns_true_when_eligible(settings_factory, monkeypatch):
     monkeypatch.setattr(annual_refresh, "get_settings", lambda: settings_factory())
     now = datetime(2026, 2, 1, tzinfo=timezone.utc)
     user = SimpleNamespace(
         id="u1",
-        subscription_plan="plus",
-        subscription_current_period_end=now,
         user_metadata={},
         credits=0.0,
     )
 
-    refreshed = await annual_refresh._refresh_user_credits(user, now=now)
+    should, monthly = annual_refresh._should_refresh(
+        user,
+        now=now,
+        plan_id="plus",
+        period_end=now,
+    )
 
-    assert refreshed is True
-    assert user.credits == 100.0
-    assert annual_refresh.REFRESH_METADATA_KEY in user.user_metadata
+    assert should is True
+    assert monthly == 100.0

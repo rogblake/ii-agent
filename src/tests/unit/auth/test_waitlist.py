@@ -23,6 +23,7 @@ async def test_waitlist_disabled_allows_all(settings_factory):
         user_repo=_Repo(),
         api_key_repo=_Repo(),
         waitlist_repo=_WaitlistRepo(),
+        credit_service=_Repo(),
         config=settings_factory(credits={"waitlist_enabled": False}),
     )
 
@@ -35,6 +36,7 @@ async def test_waitlist_allows_internal_domain(settings_factory):
         user_repo=_Repo(),
         api_key_repo=_Repo(),
         waitlist_repo=_WaitlistRepo(),
+        credit_service=_Repo(),
         config=settings_factory(credits={"waitlist_enabled": True}),
     )
 
@@ -47,6 +49,7 @@ async def test_waitlist_rejects_non_whitelisted_email(settings_factory):
         user_repo=_Repo(),
         api_key_repo=_Repo(),
         waitlist_repo=_WaitlistRepo(),
+        credit_service=_Repo(),
         config=settings_factory(credits={"waitlist_enabled": True}),
     )
 

@@ -272,7 +272,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
     session_service = AsyncMock()
     session_service.get_session_details.return_value = {"id": "session-1"}
     edit_service = AsyncMock()
-    credit_service = AsyncMock()
+    usage_service = AsyncMock()
     db = AsyncMock()
     db.rollback = AsyncMock()
 
@@ -284,7 +284,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
         _user(),
         service,
         edit_service,
-        credit_service,
+        usage_service,
         session_service,
         db,
     )
@@ -298,7 +298,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
         _user(),
         service,
         edit_service,
-        credit_service,
+        usage_service,
         session_service,
         db,
     )
@@ -316,7 +316,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
         _user(),
         service,
         edit_service,
-        credit_service,
+        usage_service,
         session_service,
         db,
     )
@@ -330,7 +330,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
         _user(),
         service,
         edit_service,
-        credit_service,
+        usage_service,
         session_service,
         db,
     )
@@ -340,7 +340,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
         _session("sb-3", "session-1"),
         1.0,
     )
-    credit_service.deduct_and_track_session_usage.return_value = False
+    usage_service.deduct_and_track_session_usage.return_value = False
     with pytest.raises(PaymentRequiredError):
         await save_storybook_edits(
             "sb-1",
@@ -348,7 +348,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
             _user(),
             service,
             edit_service,
-            credit_service,
+            usage_service,
             session_service,
             db,
         )

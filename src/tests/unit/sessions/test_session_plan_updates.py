@@ -3,6 +3,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from ii_agent.workers.celery.model_imports import import_model_modules
+
+import_model_modules()  # resolve all cross-model ORM relationships
+
 from ii_agent.agent.events.models import EventType
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.service import SessionService

@@ -515,7 +515,7 @@ class TestStorybookVoiceServiceGetGenerationStatus:
             repo=MagicMock(),
             storybook_service=MagicMock(),
             config=SimpleNamespace(),
-            credit_service=MagicMock(),
+            usage_service=MagicMock(),
         )
 
     def test_returns_status_from_style_json(self):
@@ -547,12 +547,15 @@ class TestStorybookVoiceServiceGetGenerationStatus:
 
 
 class TestStorybookVoiceServiceGenerateVoiceoverAndDeductCredits:
-    def _make_service(self, *, repo=None, credit_service=None):
+    def _make_service(self, *, repo=None, usage_service=None):
+        if usage_service is None:
+            usage_service = MagicMock()
+        usage_service.require_billing_ok = AsyncMock()
         return StorybookVoiceService(
             repo=repo or MagicMock(),
             storybook_service=MagicMock(),
             config=SimpleNamespace(),
-            credit_service=credit_service or MagicMock(),
+            usage_service=usage_service,
         )
 
     @pytest.mark.asyncio
@@ -610,14 +613,20 @@ class TestStorybookVoiceServiceGenerateVoiceoverAndDeductCredits:
 
     @pytest.mark.asyncio
     async def test_deducts_credits_when_cost_present(self):
-        mock_credit_service = AsyncMock()
-        mock_credit_service.deduct_and_track_session_usage = AsyncMock(return_value=True)
-        service = self._make_service(credit_service=mock_credit_service)
+        mock_usage_service = AsyncMock()
+        mock_usage_service.deduct_and_track_session_usage = AsyncMock(return_value=True)
+        service = self._make_service(usage_service=mock_usage_service)
         sb = _make_storybook()
-        with patch.object(
-            service,
-            "generate_voiceover",
-            new=AsyncMock(return_value=(sb, True, 0.10)),
+        with (
+            patch.object(
+                service,
+                "generate_voiceover",
+                new=AsyncMock(return_value=(sb, True, 0.10)),
+            ),
+            patch(
+                "ii_agent.content.storybook.voice_service.get_or_generate_request_id",
+                return_value="req-voice-1",
+            ),
         ):
             db = AsyncMock()
             result = await service.generate_voiceover_and_deduct_credits(
@@ -626,14 +635,20 @@ class TestStorybookVoiceServiceGenerateVoiceoverAndDeductCredits:
                 user_id="user-1",
                 session_id="sess-1",
             )
-        mock_credit_service.deduct_and_track_session_usage.assert_called_once()
+        mock_usage_service.deduct_and_track_session_usage.assert_called_once()
+        assert (
+            mock_usage_service.deduct_and_track_session_usage.call_args.kwargs[
+                "idempotency_key"
+            ]
+            == "storybook:voice:sb-001:req-voice-1"
+        )
         assert result.success
 
     @pytest.mark.asyncio
     async def test_insufficient_credits_returns_error(self):
-        mock_credit_service = AsyncMock()
-        mock_credit_service.deduct_and_track_session_usage = AsyncMock(return_value=False)
-        service = self._make_service(credit_service=mock_credit_service)
+        mock_usage_service = AsyncMock()
+        mock_usage_service.deduct_and_track_session_usage = AsyncMock(return_value=False)
+        service = self._make_service(usage_service=mock_usage_service)
         sb = _make_storybook()
         with patch.object(
             service,
@@ -650,6 +665,33 @@ class TestStorybookVoiceServiceGenerateVoiceoverAndDeductCredits:
             )
         assert not result.success
         assert "Insufficient" in result.error
+
+    @pytest.mark.asyncio
+    async def test_explicit_idempotency_key_is_forwarded(self):
+        mock_usage_service = AsyncMock()
+        mock_usage_service.deduct_and_track_session_usage = AsyncMock(return_value=True)
+        service = self._make_service(usage_service=mock_usage_service)
+        sb = _make_storybook()
+        with patch.object(
+            service,
+            "generate_voiceover",
+            new=AsyncMock(return_value=(sb, True, 0.10)),
+        ):
+            result = await service.generate_voiceover_and_deduct_credits(
+                db=AsyncMock(),
+                storybook_id="sb-001",
+                user_id="user-1",
+                session_id="sess-1",
+                idempotency_key="manual-key",
+            )
+
+        assert result.success
+        assert (
+            mock_usage_service.deduct_and_track_session_usage.call_args.kwargs[
+                "idempotency_key"
+            ]
+            == "manual-key"
+        )
 
 
 # ============================================================================

@@ -714,53 +714,6 @@ class TestChatServiceValidateSessionAccess:
 
 
 # ============================================================================
-# ChatService - check_sufficient_credits
-# ============================================================================
-
-
-class TestChatServiceCheckSufficientCredits:
-    def _make_service(self, credit_service=None):
-        from ii_agent.chat.application.chat_service import ChatService
-
-        return ChatService(
-            file_processor=SimpleNamespace(_config=_make_settings()),
-            tool_service=SimpleNamespace(),
-            llm_loop=SimpleNamespace(),
-            message_history=SimpleNamespace(),
-            message_service=SimpleNamespace(),
-            session_repo=SimpleNamespace(),
-            chat_run_service=SimpleNamespace(),
-            llm_setting_service=SimpleNamespace(),
-            credit_service=credit_service,
-            container=SimpleNamespace(),
-            title_service=_make_title_service(),
-        )
-
-    @pytest.mark.asyncio
-    async def test_returns_true_when_no_credit_service(self):
-        service = self._make_service(credit_service=None)
-        result = await service.check_sufficient_credits(AsyncMock(), user_id="u1")
-        assert result is True
-
-    @pytest.mark.asyncio
-    async def test_delegates_to_credit_service(self):
-        credit_service = AsyncMock()
-        credit_service.has_sufficient = AsyncMock(return_value=True)
-        service = self._make_service(credit_service=credit_service)
-        result = await service.check_sufficient_credits(AsyncMock(), user_id="u1")
-        assert result is True
-        credit_service.has_sufficient.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_returns_false_when_insufficient(self):
-        credit_service = AsyncMock()
-        credit_service.has_sufficient = AsyncMock(return_value=False)
-        service = self._make_service(credit_service=credit_service)
-        result = await service.check_sufficient_credits(AsyncMock(), user_id="u1")
-        assert result is False
-
-
-# ============================================================================
 # ChatService - validate_model_for_chat
 # ============================================================================
 

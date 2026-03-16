@@ -641,6 +641,58 @@ class TestAnthropicProviderSendDeep:
         assert len(upload_called_with) == 0 or upload_called_with[0].file_ids is None
 
 
+class TestAnthropicProviderStreamDeep:
+    """Deep tests for AnthropicProvider.stream()."""
+
+    @pytest.mark.asyncio
+    async def test_stream_preserves_max_tokens_when_adding_skills(self):
+        import anthropic
+        from ii_agent.chat.llm.anthropic.provider import AnthropicProvider
+
+        class _EmptyStream:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                raise StopAsyncIteration
+
+        class _FakeMessagesAPI:
+            def __init__(self):
+                self.stream = MagicMock(return_value=_EmptyStream())
+
+        class _FakeBetaAPI:
+            def __init__(self):
+                self.messages = _FakeMessagesAPI()
+
+        class _FakeAsyncAnthropic:
+            def __init__(self, **kwargs):
+                self.beta = _FakeBetaAPI()
+
+        with patch.object(anthropic, "AsyncAnthropic", _FakeAsyncAnthropic):
+            provider = AnthropicProvider(_make_llm_config())
+            with patch.object(provider, "_prepare_request_params", return_value=({}, [])) as mock_prepare:
+                provider_options = {"anthropic": {"max_tokens": 321}}
+                events = [
+                    event
+                    async for event in provider.stream(
+                        messages=[_user_message()],
+                        provider_options=provider_options,
+                    )
+                ]
+
+        assert events == []
+        anthropic_options = mock_prepare.call_args.args[2]
+        assert anthropic_options["max_tokens"] == 321
+        assert anthropic_options["container"]["skills"]
+        assert provider_options == {"anthropic": {"max_tokens": 321}}
+
+
 class TestAnthropicProviderPrepareRequestParamsDeep:
     """Deeper coverage of _prepare_request_params."""
 

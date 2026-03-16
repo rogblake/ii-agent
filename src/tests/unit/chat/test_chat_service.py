@@ -206,6 +206,3 @@ async def test_validate_session_access_denies_non_owner(chat_service):
         )
 
 
-@pytest.mark.asyncio
-async def test_check_sufficient_credits_defaults_to_allow(chat_service):
-    assert await chat_service.check_sufficient_credits(db=None, user_id="u1") is True

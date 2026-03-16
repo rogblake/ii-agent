@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import ANY, AsyncMock
 
 import pytest
 
@@ -118,6 +118,7 @@ async def test_generate_storybook_page_async_early_status_branches(monkeypatch):
         )
         monkeypatch.setattr(tasks.cancel, "is_cancelled", AsyncMock(return_value=cancelled))
         monkeypatch.setattr(tasks, "_fail_storybook", AsyncMock())
+        monkeypatch.setattr(tasks, "_finalize_storybook_billing", AsyncMock())
         return await tasks._generate_storybook_page_async(payload, "task-1")
 
     failed_storybook = type(
@@ -263,7 +264,8 @@ async def test_generate_storybook_page_async_completed_with_existing_image(monke
     monkeypatch.setattr(tasks.cancel, "is_cancelled", AsyncMock(return_value=False))
     monkeypatch.setattr(tasks, "_setup_storybook_tool", lambda payload, session_id: _Tool())
     monkeypatch.setattr(tasks, "_mark_scene_completed", AsyncMock(return_value=True))
-    monkeypatch.setattr(tasks, "_deduct_storybook_credits", AsyncMock(return_value=True))
+    finalize_billing = AsyncMock()
+    monkeypatch.setattr(tasks, "_finalize_storybook_billing", finalize_billing)
     create_result = AsyncMock()
     monkeypatch.setattr(tasks, "_create_storybook_tool_result", create_result)
 
@@ -273,6 +275,7 @@ async def test_generate_storybook_page_async_completed_with_existing_image(monke
     )
 
     assert result == {"status": "completed", "completed_pages": 1}
+    finalize_billing.assert_awaited_once_with("sb-1", terminal_status="completed")
     create_result.assert_awaited_once()
     assert update_status.await_count >= 2
 
@@ -330,7 +333,9 @@ async def test_generate_storybook_page_async_queued_after_scene_generation(monke
     monkeypatch.setattr(tasks.cancel, "is_cancelled", AsyncMock(return_value=False))
     monkeypatch.setattr(tasks, "_setup_storybook_tool", lambda payload, session_id: _Tool())
     monkeypatch.setattr(tasks, "_mark_scene_completed", AsyncMock(return_value=False))
-    queue_mock = AsyncMock(return_value="next-task")
+    finalize_billing = AsyncMock()
+    monkeypatch.setattr(tasks, "_finalize_storybook_billing", finalize_billing)
+    queue_mock = lambda *args, **kwargs: "next-task"
     monkeypatch.setattr(tasks, "queue_task", queue_mock)
 
     result = await tasks._generate_storybook_page_async(
@@ -339,7 +344,7 @@ async def test_generate_storybook_page_async_queued_after_scene_generation(monke
     )
 
     assert result == {"status": "queued", "next_scene_index": 1}
-    assert queue_mock.call_count == 1
+    finalize_billing.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -406,3 +411,89 @@ async def test_handle_storybook_page_failure_marks_failed(monkeypatch):
     await tasks._handle_storybook_page_failure({"storybook_id": "sb-1"}, "boom")
 
     fail_storybook.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_finalize_storybook_billing_settles_reserved_storybook(monkeypatch):
+    storybook = SimpleNamespace(
+        style_json={
+            "generation": {
+                "reservation_id": "res-1",
+                "run_id": "run-1",
+                "tool_name": "generate_storybook",
+                "actual_cost_usd_total": 0.37,
+            }
+        }
+    )
+
+    class _Repo:
+        async def get_by_id(self, db_session, storybook_id):
+            return storybook
+
+    @asynccontextmanager
+    async def _db_cm():
+        db = SimpleNamespace(commit=AsyncMock())
+        yield db
+
+    llm_billing = SimpleNamespace(
+        settle_tool_call_by_reservation_id=AsyncMock(),
+        release_tool_call_by_reservation_id=AsyncMock(),
+    )
+    monkeypatch.setattr("ii_agent.core.db.manager.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.content.storybook.repository.StorybookRepository", lambda: _Repo())
+    monkeypatch.setattr(
+        tasks,
+        "get_celery_container",
+        lambda: SimpleNamespace(llm_billing_service=llm_billing),
+    )
+
+    await tasks._finalize_storybook_billing("sb-1", terminal_status="completed")
+
+    llm_billing.settle_tool_call_by_reservation_id.assert_awaited_once()
+    llm_billing.release_tool_call_by_reservation_id.assert_not_awaited()
+    kwargs = llm_billing.settle_tool_call_by_reservation_id.await_args.kwargs
+    assert kwargs["reservation_id"] == "res-1"
+    assert kwargs["actual_cost_usd"] == 0.37
+    assert kwargs["extra_usage_metadata"]["run_id"] == "run-1"
+
+
+@pytest.mark.asyncio
+async def test_finalize_storybook_billing_releases_unused_reservation(monkeypatch):
+    storybook = SimpleNamespace(
+        style_json={
+            "generation": {
+                "reservation_id": "res-1",
+                "actual_cost_usd_total": 0.0,
+            }
+        }
+    )
+
+    class _Repo:
+        async def get_by_id(self, db_session, storybook_id):
+            return storybook
+
+    @asynccontextmanager
+    async def _db_cm():
+        db = SimpleNamespace(commit=AsyncMock())
+        yield db
+
+    llm_billing = SimpleNamespace(
+        settle_tool_call_by_reservation_id=AsyncMock(),
+        release_tool_call_by_reservation_id=AsyncMock(),
+    )
+    monkeypatch.setattr("ii_agent.core.db.manager.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.content.storybook.repository.StorybookRepository", lambda: _Repo())
+    monkeypatch.setattr(
+        tasks,
+        "get_celery_container",
+        lambda: SimpleNamespace(llm_billing_service=llm_billing),
+    )
+
+    await tasks._finalize_storybook_billing("sb-1", terminal_status="failed")
+
+    llm_billing.release_tool_call_by_reservation_id.assert_awaited_once_with(
+        ANY,
+        reservation_id="res-1",
+        reason="storybook_failed",
+    )
+    llm_billing.settle_tool_call_by_reservation_id.assert_not_awaited()

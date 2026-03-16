@@ -59,6 +59,18 @@ class FakeWaitlistRepo:
         return None
 
 
+class FakeCreditService:
+    def __init__(self):
+        self.ensured = []
+
+    async def ensure_balance_exists(self, db, user_id, **kwargs):
+        from decimal import Decimal
+        credits = Decimal(str(kwargs.get("credits", 0)))
+        bonus = Decimal(str(kwargs.get("bonus_credits", 0)))
+        self.ensured.append((user_id, credits, bonus))
+        return (credits, bonus)
+
+
 @pytest.fixture
 def user_service(settings_factory):
     config = settings_factory()
@@ -66,6 +78,7 @@ def user_service(settings_factory):
         user_repo=FakeUserRepo(),
         api_key_repo=FakeAPIKeyRepo(),
         waitlist_repo=FakeWaitlistRepo(),
+        credit_service=FakeCreditService(),
         config=config,
     )
 
@@ -80,8 +93,8 @@ async def test_create_user_applies_defaults_and_creates_api_key(user_service):
 
     assert user.email == "demo@example.com"
     assert len(user_service._user_repo.created) == 1
-    assert user_service._user_repo.created[0]["credits"] == 10.0
-    assert user_service._user_repo.created[0]["subscription_plan"] == "free"
+    assert "credits" not in user_service._user_repo.created[0]
+    assert "subscription_plan" not in user_service._user_repo.created[0]
     assert len(user_service._api_key_repo.created) == 1
 
 

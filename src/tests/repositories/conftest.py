@@ -19,6 +19,9 @@ os.environ.setdefault("COMPOSIO_CACHE_DIR", "/tmp/.composio")
 import ii_agent.auth.models  # noqa: F401
 import ii_agent.auth.users.models  # noqa: F401
 import ii_agent.billing.models  # noqa: F401
+import ii_agent.billing.customers.models  # noqa: F401
+import ii_agent.billing.credits.balance_models  # noqa: F401
+import ii_agent.billing.credits.ledger_models  # noqa: F401
 import ii_agent.billing.usage.models  # noqa: F401
 import ii_agent.chat.messages.models  # noqa: F401
 import ii_agent.chat.providers.models  # noqa: F401

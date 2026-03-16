@@ -75,6 +75,18 @@ class FakeWaitlistRepo:
         return None
 
 
+class FakeCreditService:
+    def __init__(self):
+        self.ensured = []
+
+    async def ensure_balance_exists(self, db, user_id, **kwargs):
+        from decimal import Decimal
+        credits = Decimal(str(kwargs.get("credits", 0)))
+        bonus = Decimal(str(kwargs.get("bonus_credits", 0)))
+        self.ensured.append((user_id, credits, bonus))
+        return (credits, bonus)
+
+
 def _make_service(*, waitlist_enabled=False, active_key="test-key") -> UserService:
     config = SimpleNamespace(
         credits=SimpleNamespace(
@@ -87,6 +99,7 @@ def _make_service(*, waitlist_enabled=False, active_key="test-key") -> UserServi
         user_repo=FakeUserRepo(),
         api_key_repo=FakeAPIKeyRepo(active_key=active_key),
         waitlist_repo=FakeWaitlistRepo(),
+        credit_service=FakeCreditService(),
         config=config,
     )
 
@@ -157,8 +170,8 @@ class TestCreateUser:
         svc = _make_service()
         user = await svc.create_user(None, email="new@test.com")
         assert user.email == "new@test.com"
-        assert user.credits == 10.0
-        assert user.subscription_plan == "free"
+        assert not hasattr(user, "credits")
+        assert not hasattr(user, "subscription_plan")
 
     @pytest.mark.asyncio
     async def test_creates_api_key_for_user(self):
@@ -176,12 +189,10 @@ class TestCreateUser:
             last_name="Last",
             avatar="https://avatar.url",
             email_verified=True,
-            bonus_credits=5.0,
             login_provider="google",
         )
         assert user.first_name == "First"
         assert user.last_name == "Last"
-        assert user.bonus_credits == 5.0
         assert user.login_provider == "google"
 
 
@@ -337,7 +348,8 @@ class TestFindOrCreateOAuthUser:
         user = await svc.find_or_create_oauth_user(
             None, email="bonus@x.com", bonus_credits=50.0
         )
-        assert user.bonus_credits == 50.0
+        # bonus_credits is now stored in credit_balances, not on the user row
+        assert user.email == "bonus@x.com"
 
     @pytest.mark.asyncio
     async def test_creates_with_login_provider(self):

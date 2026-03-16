@@ -31,10 +31,12 @@ from ii_agent.core.exceptions import ValidationError
 # ---------------------------------------------------------------------------
 
 def _make_service():
+    usage_svc = MagicMock()
+    usage_svc.require_billing_ok = AsyncMock()
     return StorybookAIEditService(
         session_service=MagicMock(),
         user_service=MagicMock(),
-        credit_service=MagicMock(),
+        usage_service=usage_svc,
         llm_setting_service=MagicMock(),
         llm_execution=MagicMock(),
         config=MagicMock(),
@@ -390,7 +392,7 @@ async def test_resolve_storybook_llm_config_invalid_session_and_valid_setting():
 @pytest.mark.asyncio
 async def test_deduct_image_credits_no_cost_skips_service():
     service = _make_service()
-    service._credit_service.deduct_and_track_session_usage = AsyncMock()
+    service._usage_service.deduct_and_track_session_usage = AsyncMock()
     await service._deduct_image_credits(
         db=MagicMock(),
         user_id="u1",
@@ -398,7 +400,7 @@ async def test_deduct_image_credits_no_cost_skips_service():
         raw_cost=None,
         context="ctx",
     )
-    service._credit_service.deduct_and_track_session_usage.assert_awaited_once()
+    service._usage_service.deduct_and_track_session_usage.assert_awaited_once()
 
     await service._deduct_image_credits(
         db=MagicMock(),
@@ -407,13 +409,13 @@ async def test_deduct_image_credits_no_cost_skips_service():
         raw_cost=-0.5,
         context="ctx",
     )
-    assert service._credit_service.deduct_and_track_session_usage.await_count == 1
+    assert service._usage_service.deduct_and_track_session_usage.await_count == 1
 
 
 @pytest.mark.asyncio
 async def test_deduct_image_credits_tracks_when_service_says_no_funds():
     service = _make_service()
-    service._credit_service.deduct_and_track_session_usage = AsyncMock(return_value=False)
+    service._usage_service.deduct_and_track_session_usage = AsyncMock(return_value=False)
     await service._deduct_image_credits(
         db=MagicMock(),
         user_id="u1",
@@ -421,7 +423,7 @@ async def test_deduct_image_credits_tracks_when_service_says_no_funds():
         raw_cost=0.5,
         context="ctx",
     )
-    service._credit_service.deduct_and_track_session_usage.assert_awaited_once()
+    service._usage_service.deduct_and_track_session_usage.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

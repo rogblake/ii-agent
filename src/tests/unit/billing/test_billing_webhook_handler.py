@@ -21,9 +21,23 @@ class _FakeBillingRepo:
     def __init__(self):
         self.events: dict = {}
         self.created: list = []
+        self.claimed: list = []
+        self.updated: list = []
 
     async def get_by_event_id(self, db, event_id):
         return self.events.get(event_id)
+
+    async def claim_event(self, db, *, user_id, stripe_event_id):
+        if stripe_event_id in self.events:
+            return False  # Already claimed
+        self.events[stripe_event_id] = {"user_id": user_id, "status": "processing"}
+        self.claimed.append((user_id, stripe_event_id))
+        return True
+
+    async def update_by_event_id(self, db, *, stripe_event_id, **values):
+        if stripe_event_id in self.events:
+            self.events[stripe_event_id].update(values)
+            self.updated.append((stripe_event_id, values))
 
     async def create(self, db, user_id, stripe_event_id, **values):
         record = {"user_id": user_id, **values}
@@ -47,12 +61,45 @@ class _FakeUserRepo:
         self.subscriptions.append({"user": user, **kwargs})
 
 
-def _make_handler(settings_factory, *, user_repo=None, billing_repo=None, webhook_secret="whsec_test"):
+class _FakeBillingCustomerService:
+    def __init__(self):
+        self.customers = {}
+        self.subscription_updates = []
+
+    async def get_or_create(self, db, *, user_id, provider="stripe", external_customer_id, **kwargs):
+        key = (user_id, provider)
+        if key not in self.customers:
+            self.customers[key] = {"user_id": user_id, "provider": provider, "external_customer_id": external_customer_id}
+        return SimpleNamespace(**self.customers[key])
+
+    async def update_subscription(self, db, user_id, *, provider="stripe", **kwargs):
+        key = (user_id, provider)
+        customer = self.customers.get(key)
+        if customer is None:
+            return None
+
+        for field, value in kwargs.items():
+            if value is not ...:
+                customer[field] = value
+
+        update = {"user_id": user_id, **kwargs}
+        self.subscription_updates.append(update)
+        return SimpleNamespace(**customer)
+
+    async def lookup_user_id(self, db, external_customer_id, provider="stripe"):
+        for key, val in self.customers.items():
+            if val["external_customer_id"] == external_customer_id:
+                return val["user_id"]
+        return None
+
+
+def _make_handler(settings_factory, *, user_repo=None, billing_repo=None, billing_customer_service=None, webhook_secret="whsec_test"):
     settings = settings_factory(stripe={"webhook_secret": webhook_secret})
     return StripeWebhookHandler(
         stripe_config=StripeConfig(config=settings),
         billing_repo=billing_repo or _FakeBillingRepo(),
         user_repo=user_repo or _FakeUserRepo(),
+        billing_customer_service=billing_customer_service or _FakeBillingCustomerService(),
     )
 
 
@@ -177,47 +224,61 @@ class TestHandleWebhookEventDispatch:
 
 
 # ---------------------------------------------------------------------------
-# _record_transaction
+# _claim_event and _finalize_transaction
 # ---------------------------------------------------------------------------
 
-class TestRecordTransaction:
+class TestClaimEvent:
     @pytest.mark.asyncio
-    async def test_stores_transaction(self, settings_factory):
+    async def test_claim_returns_true_for_new_event(self, settings_factory):
         billing_repo = _FakeBillingRepo()
         handler = _make_handler(settings_factory, billing_repo=billing_repo)
-        await handler._record_transaction(
-            db=None,
-            event_id="evt_1",
-            user_id="u1",
-            values={"status": "paid", "plan_id": "pro"},
-        )
-        assert "evt_1" in billing_repo.events
-        assert len(billing_repo.created) == 1
+        result = await handler._claim_event(db=None, event_id="evt_1", user_id="u1")
+        assert result is True
+        assert len(billing_repo.claimed) == 1
 
     @pytest.mark.asyncio
-    async def test_is_idempotent_on_duplicate_event(self, settings_factory):
+    async def test_claim_returns_false_for_duplicate_event(self, settings_factory):
         billing_repo = _FakeBillingRepo()
         handler = _make_handler(settings_factory, billing_repo=billing_repo)
-        for _ in range(3):
-            await handler._record_transaction(
-                db=None,
-                event_id="evt_dup",
-                user_id="u1",
-                values={"status": "paid"},
-            )
-        assert len(billing_repo.created) == 1
+        result1 = await handler._claim_event(db=None, event_id="evt_dup", user_id="u1")
+        result2 = await handler._claim_event(db=None, event_id="evt_dup", user_id="u1")
+        assert result1 is True
+        assert result2 is False
+        assert len(billing_repo.claimed) == 1
+
+    @pytest.mark.asyncio
+    async def test_claim_allows_processing_when_event_id_is_none(self, settings_factory):
+        billing_repo = _FakeBillingRepo()
+        handler = _make_handler(settings_factory, billing_repo=billing_repo)
+        result = await handler._claim_event(db=None, event_id=None, user_id="u1")
+        assert result is True
+        assert len(billing_repo.claimed) == 0
+
+
+class TestFinalizeTransaction:
+    @pytest.mark.asyncio
+    async def test_updates_claimed_transaction(self, settings_factory):
+        billing_repo = _FakeBillingRepo()
+        handler = _make_handler(settings_factory, billing_repo=billing_repo)
+        await handler._claim_event(db=None, event_id="evt_1", user_id="u1")
+        await handler._finalize_transaction(
+            db=None,
+            event_id="evt_1",
+            values={"status": "paid", "plan_id": "pro"},
+        )
+        assert len(billing_repo.updated) == 1
+        assert billing_repo.events["evt_1"]["status"] == "paid"
 
     @pytest.mark.asyncio
     async def test_skips_when_event_id_is_none(self, settings_factory):
         billing_repo = _FakeBillingRepo()
         handler = _make_handler(settings_factory, billing_repo=billing_repo)
-        await handler._record_transaction(
+        await handler._finalize_transaction(
             db=None,
             event_id=None,
-            user_id="u1",
-            values={},
+            values={"status": "paid"},
         )
-        assert len(billing_repo.created) == 0
+        assert len(billing_repo.updated) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +357,7 @@ class TestHandleCheckoutSessionCompleted:
 
         session_obj = {"metadata": {}, "subscription": None, "customer": "cus_1"}
         await handler._handle_checkout_session_completed(None, "evt_1", session_obj)
-        assert len(billing_repo.created) == 0
+        assert len(billing_repo.claimed) == 0
 
     @pytest.mark.asyncio
     async def test_skips_when_user_not_found(self, settings_factory):
@@ -322,14 +383,17 @@ class TestHandleCheckoutSessionCompleted:
             )
         )):
             await handler._handle_checkout_session_completed(None, "evt_1", session_obj)
-        assert len(billing_repo.created) == 0
+        # Event NOT claimed — user not found returns before claiming so
+        # Stripe retries can succeed once the user exists.
+        assert len(billing_repo.claimed) == 0
 
     @pytest.mark.asyncio
     async def test_updates_user_subscription_and_records_transaction(self, settings_factory):
         user = _make_user("user-1")
         user_repo = _FakeUserRepo(users={"user-1": user})
         billing_repo = _FakeBillingRepo()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo)
+        billing_customer_service = _FakeBillingCustomerService()
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
 
         session_obj = {
             "id": "cs_test_123",
@@ -352,11 +416,45 @@ class TestHandleCheckoutSessionCompleted:
         with patch.object(handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)):
             await handler._handle_checkout_session_completed(None, "evt_1", session_obj)
 
-        assert len(user_repo.subscriptions) == 1
-        assert len(billing_repo.created) == 1
-        tx = billing_repo.created[0]
-        assert tx[0] == "user-1"
-        assert tx[1] == "evt_1"
+        assert len(billing_customer_service.subscription_updates) == 1
+        assert len(billing_repo.claimed) == 1
+        assert billing_repo.claimed[0] == ("user-1", "evt_1")
+        assert len(billing_repo.updated) == 1
+
+    @pytest.mark.asyncio
+    async def test_duplicate_event_skips_all_mutations(self, settings_factory):
+        """Concurrent duplicate delivery: second call skips all business logic."""
+        user = _make_user("user-1")
+        user_repo = _FakeUserRepo(users={"user-1": user})
+        billing_repo = _FakeBillingRepo()
+        billing_customer_service = _FakeBillingCustomerService()
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+
+        session_obj = {
+            "id": "cs_test_123",
+            "metadata": {"user_id": "user-1", "plan_id": "pro", "billing_cycle": "monthly"},
+            "subscription": "sub_1",
+            "customer": "cus_1",
+            "status": "complete",
+        }
+
+        ctx = SubscriptionContext(
+            subscription={"status": "active"},
+            user_id="user-1",
+            plan_id="pro",
+            billing_cycle="monthly",
+            customer_id="cus_1",
+            period_end=1999999999,
+            credits=250.0,
+        )
+
+        with patch.object(handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)):
+            await handler._handle_checkout_session_completed(None, "evt_dup", session_obj)
+            await handler._handle_checkout_session_completed(None, "evt_dup", session_obj)
+
+        # Only one subscription update should have happened
+        assert len(billing_customer_service.subscription_updates) == 1
+        assert len(billing_repo.claimed) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -367,9 +465,13 @@ class TestHandleInvoicePaymentSucceeded:
     @pytest.mark.asyncio
     async def test_looks_up_user_by_customer_id_when_metadata_missing(self, settings_factory):
         user = _make_user("user-2")
-        user_repo = _FakeUserRepo(users={"user-2": user}, customer_map={"cus_2": "user-2"})
+        user_repo = _FakeUserRepo(users={"user-2": user})
         billing_repo = _FakeBillingRepo()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo)
+        billing_customer_service = _FakeBillingCustomerService()
+        billing_customer_service.customers[("user-2", "stripe")] = {
+            "user_id": "user-2", "provider": "stripe", "external_customer_id": "cus_2"
+        }
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
 
         invoice_obj = {
             "id": "inv_1",
@@ -396,7 +498,7 @@ class TestHandleInvoicePaymentSucceeded:
         with patch.object(handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)):
             await handler._handle_invoice_payment_succeeded(None, "evt_2", invoice_obj)
 
-        assert len(user_repo.subscriptions) == 1
+        assert len(billing_customer_service.subscription_updates) == 1
 
     @pytest.mark.asyncio
     async def test_skips_when_no_user_found(self, settings_factory):
@@ -429,14 +531,15 @@ class TestHandleInvoicePaymentSucceeded:
         with patch.object(handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)):
             await handler._handle_invoice_payment_succeeded(None, "evt_3", invoice_obj)
 
-        assert len(billing_repo.created) == 0
+        assert len(billing_repo.claimed) == 0
 
     @pytest.mark.asyncio
     async def test_resolves_plan_from_line_items(self, settings_factory):
         user = _make_user("user-3")
         user_repo = _FakeUserRepo(users={"user-3": user})
         billing_repo = _FakeBillingRepo()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo)
+        billing_customer_service = _FakeBillingCustomerService()
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
 
         invoice_obj = {
             "id": "inv_3",
@@ -464,8 +567,8 @@ class TestHandleInvoicePaymentSucceeded:
             await handler._handle_invoice_payment_succeeded(None, "evt_4", invoice_obj)
 
         # Plan should be resolved to 'plus' from price_plus_m
-        assert len(user_repo.subscriptions) == 1
-        sub_call = user_repo.subscriptions[0]
+        assert len(billing_customer_service.subscription_updates) == 1
+        sub_call = billing_customer_service.subscription_updates[0]
         assert sub_call.get("subscription_plan") == "plus"
 
 
@@ -479,7 +582,8 @@ class TestHandleSubscriptionDeleted:
         user = _make_user("user-4")
         user_repo = _FakeUserRepo(users={"user-4": user})
         billing_repo = _FakeBillingRepo()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo)
+        billing_customer_service = _FakeBillingCustomerService()
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
 
         sub_obj = {
             "id": "sub_del_1",
@@ -493,17 +597,22 @@ class TestHandleSubscriptionDeleted:
 
         await handler._handle_subscription_deleted(None, "evt_5", sub_obj)
 
-        assert len(user_repo.subscriptions) == 1
-        sub = user_repo.subscriptions[0]
-        assert sub["subscription_plan"] == "free"
-        assert sub["subscription_status"] == "canceled"
+        assert len(billing_customer_service.subscription_updates) == 1
+        assert billing_customer_service.customers[("user-4", "stripe")]["external_customer_id"] == "cus_4"
+        sub = billing_customer_service.subscription_updates[0]
+        assert sub.get("subscription_plan") == "free"
+        assert sub.get("subscription_status") == "canceled"
 
     @pytest.mark.asyncio
     async def test_looks_up_user_by_customer_when_no_metadata(self, settings_factory):
         user = _make_user("user-5")
-        user_repo = _FakeUserRepo(users={"user-5": user}, customer_map={"cus_5": "user-5"})
+        user_repo = _FakeUserRepo(users={"user-5": user})
         billing_repo = _FakeBillingRepo()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo)
+        billing_customer_service = _FakeBillingCustomerService()
+        billing_customer_service.customers[("user-5", "stripe")] = {
+            "user_id": "user-5", "provider": "stripe", "external_customer_id": "cus_5"
+        }
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
 
         sub_obj = {
             "id": "sub_del_2",
@@ -516,7 +625,7 @@ class TestHandleSubscriptionDeleted:
         }
 
         await handler._handle_subscription_deleted(None, "evt_6", sub_obj)
-        assert len(user_repo.subscriptions) == 1
+        assert len(billing_customer_service.subscription_updates) == 1
 
     @pytest.mark.asyncio
     async def test_skips_when_no_user_id(self, settings_factory):
@@ -535,14 +644,15 @@ class TestHandleSubscriptionDeleted:
         }
 
         await handler._handle_subscription_deleted(None, "evt_7", sub_obj)
-        assert len(billing_repo.created) == 0
+        assert len(billing_repo.claimed) == 0
 
     @pytest.mark.asyncio
     async def test_uses_canceled_at_if_no_period_end(self, settings_factory):
         user = _make_user("user-6")
         user_repo = _FakeUserRepo(users={"user-6": user})
         billing_repo = _FakeBillingRepo()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo)
+        billing_customer_service = _FakeBillingCustomerService()
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
 
         sub_obj = {
             "id": "sub_del_4",
@@ -555,7 +665,7 @@ class TestHandleSubscriptionDeleted:
         }
 
         await handler._handle_subscription_deleted(None, "evt_8", sub_obj)
-        sub = user_repo.subscriptions[0]
+        sub = billing_customer_service.subscription_updates[0]
         assert sub.get("subscription_current_period_end") is not None
 
 
@@ -569,7 +679,8 @@ class TestHandleSubscriptionUpdated:
         user = _make_user("user-7")
         user_repo = _FakeUserRepo(users={"user-7": user})
         billing_repo = _FakeBillingRepo()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo)
+        billing_customer_service = _FakeBillingCustomerService()
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
 
         sub_obj = {
             "id": "sub_upd_1",
@@ -582,9 +693,9 @@ class TestHandleSubscriptionUpdated:
 
         await handler._handle_subscription_updated(None, "evt_9", sub_obj)
 
-        assert len(user_repo.subscriptions) == 1
-        sub = user_repo.subscriptions[0]
-        assert sub["subscription_plan"] == "pro"
+        assert len(billing_customer_service.subscription_updates) == 1
+        sub = billing_customer_service.subscription_updates[0]
+        assert sub.get("subscription_plan") == "pro"
 
     @pytest.mark.asyncio
     async def test_skips_when_user_id_not_found(self, settings_factory):
@@ -602,14 +713,15 @@ class TestHandleSubscriptionUpdated:
         }
 
         await handler._handle_subscription_updated(None, "evt_10", sub_obj)
-        assert len(billing_repo.created) == 0
+        assert len(billing_repo.claimed) == 0
 
     @pytest.mark.asyncio
     async def test_falls_back_to_recurring_interval_for_billing_cycle(self, settings_factory):
         user = _make_user("user-8")
         user_repo = _FakeUserRepo(users={"user-8": user})
         billing_repo = _FakeBillingRepo()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo)
+        billing_customer_service = _FakeBillingCustomerService()
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
 
         sub_obj = {
             "id": "sub_upd_3",
@@ -622,15 +734,16 @@ class TestHandleSubscriptionUpdated:
 
         await handler._handle_subscription_updated(None, "evt_11", sub_obj)
 
-        sub = user_repo.subscriptions[0]
-        assert sub["subscription_billing_cycle"] == "year"
+        sub = billing_customer_service.subscription_updates[0]
+        assert sub.get("subscription_billing_cycle") == "annually"
 
     @pytest.mark.asyncio
     async def test_falls_back_to_plan_interval(self, settings_factory):
         user = _make_user("user-9")
         user_repo = _FakeUserRepo(users={"user-9": user})
         billing_repo = _FakeBillingRepo()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo)
+        billing_customer_service = _FakeBillingCustomerService()
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
 
         sub_obj = {
             "id": "sub_upd_4",
@@ -648,15 +761,19 @@ class TestHandleSubscriptionUpdated:
 
         await handler._handle_subscription_updated(None, "evt_12", sub_obj)
 
-        sub = user_repo.subscriptions[0]
-        assert sub["subscription_billing_cycle"] == "month"
+        sub = billing_customer_service.subscription_updates[0]
+        assert sub.get("subscription_billing_cycle") == "monthly"
 
     @pytest.mark.asyncio
     async def test_looks_up_user_by_customer_id(self, settings_factory):
         user = _make_user("user-10")
-        user_repo = _FakeUserRepo(users={"user-10": user}, customer_map={"cus_10": "user-10"})
+        user_repo = _FakeUserRepo(users={"user-10": user})
         billing_repo = _FakeBillingRepo()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo)
+        billing_customer_service = _FakeBillingCustomerService()
+        billing_customer_service.customers[("user-10", "stripe")] = {
+            "user_id": "user-10", "provider": "stripe", "external_customer_id": "cus_10"
+        }
+        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
 
         sub_obj = {
             "id": "sub_upd_5",
@@ -668,7 +785,7 @@ class TestHandleSubscriptionUpdated:
         }
 
         await handler._handle_subscription_updated(None, "evt_13", sub_obj)
-        assert len(user_repo.subscriptions) == 1
+        assert len(billing_customer_service.subscription_updates) == 1
 
     @pytest.mark.asyncio
     async def test_records_transaction_for_update(self, settings_factory):
@@ -687,9 +804,9 @@ class TestHandleSubscriptionUpdated:
         }
 
         await handler._handle_subscription_updated(None, "evt_14", sub_obj)
-        assert len(billing_repo.created) == 1
-        tx = billing_repo.created[0]
-        assert tx[0] == "user-11"
+        assert len(billing_repo.claimed) == 1
+        assert billing_repo.claimed[0] == ("user-11", "evt_14")
+        assert len(billing_repo.updated) == 1
 
 
 # ---------------------------------------------------------------------------

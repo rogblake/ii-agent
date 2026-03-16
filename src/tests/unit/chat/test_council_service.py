@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from uuid import uuid4
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -9,29 +9,17 @@ from ii_agent.chat.application.council_service import CouncilService
 from ii_agent.chat.types import (
     CouncilModelConfig,
     CouncilPreferences,
-    EventType,
+    FinishReason,
     Message,
     MessageRole,
-    RunResponseEvent,
+    RunResponseOutput,
     TextContent,
 )
+from ii_agent.billing.usage.models import TokenUsage
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.core.llm.execution_service import LLMExecutionService
 
 pytestmark = pytest.mark.unit
-
-
-class RecordingProvider:
-    def __init__(self, events: list[RunResponseEvent], terminal_error: Exception | None = None):
-        self._events = events
-        self._terminal_error = terminal_error
-        self.calls: list[dict] = []
-
-    async def stream(self, **kwargs):
-        self.calls.append(kwargs)
-        for event in self._events:
-            yield event
-        if self._terminal_error:
-            raise self._terminal_error
 
 
 def _make_message(session_id: str = "session-123") -> Message:
@@ -64,32 +52,56 @@ def _make_llm_configs() -> dict[str, LLMConfig]:
     }
 
 
+def _make_response(content: str) -> RunResponseOutput:
+    return RunResponseOutput(
+        content=[TextContent(text=content)],
+        usage=TokenUsage(prompt_tokens=10, completion_tokens=5),
+        finish_reason=FinishReason.END_TURN,
+    )
+
+
+def _make_execution_service(response_map: dict[str, str]) -> LLMExecutionService:
+    """Build a mock LLMExecutionService that returns canned responses by model."""
+    svc = LLMExecutionService(llm_billing=None, llm_invocation_repo=None)
+
+    original_send_once = svc.send_once
+
+    async def _mock_send_once(*, client, messages, billing_context=None, usage_key=None, **kwargs):
+        # Determine which model this is for from billing_context
+        model_id = billing_context.model_id if billing_context else None
+        if model_id and model_id in response_map:
+            return _make_response(response_map[model_id])
+        return _make_response("")
+
+    svc.send_once = _mock_send_once
+    return svc
+
+
 @pytest.mark.asyncio
-async def test_stream_council_response_passes_session_id_to_synthesis_provider(monkeypatch):
+async def test_stream_council_response_bills_all_models(monkeypatch):
     monkeypatch.setattr(
         "ii_agent.chat.application.council_service.cancel.raise_if_cancelled",
         AsyncMock(return_value=None),
     )
 
-    providers = {
-        "member-1": RecordingProvider(
-            [RunResponseEvent(type=EventType.CONTENT_DELTA, content="Alpha")]
-        ),
-        "member-2": RecordingProvider(
-            [RunResponseEvent(type=EventType.CONTENT_DELTA, content="Beta")]
-        ),
-        "synth-1": RecordingProvider(
-            [RunResponseEvent(type=EventType.CONTENT_DELTA, content="Combined")]
-        ),
+    response_map = {
+        "member-1": "Alpha",
+        "member-2": "Beta",
+        "synth-1": "Combined",
     }
 
+    execution_service = _make_execution_service(response_map)
+    db = AsyncMock()
+
     with patch(
-        "ii_agent.chat.application.council_service.LLMProviderFactory.create_provider",
-        side_effect=lambda config: providers[config.model],
+        "ii_agent.chat.application.council_service.get_client",
+        side_effect=lambda config: MagicMock(name=f"client-{config.model}"),
     ):
         events = [
             event
             async for event in CouncilService.stream_council_response(
+                db=db,
+                user_id="user-1",
                 messages=[_make_message()],
                 user_question="How should we solve this?",
                 council_preferences=_make_preferences(),
@@ -100,10 +112,11 @@ async def test_stream_council_response_passes_session_id_to_synthesis_provider(m
                     "synth-1": "Synth Model",
                 },
                 run_id="run-123",
+                session_id="session-123",
+                llm_execution_service=execution_service,
             )
         ]
 
-    assert providers["synth-1"].calls[0]["session_id"] == "session-123"
     assert any(
         event["type"] == "council_synthesis_complete" and event["content"] == "Combined"
         for event in events
@@ -119,32 +132,39 @@ async def test_stream_council_response_passes_session_id_to_synthesis_provider(m
 
 
 @pytest.mark.asyncio
-async def test_stream_council_response_preserves_partial_output_when_member_errors(monkeypatch):
+async def test_stream_council_response_handles_member_error(monkeypatch):
     monkeypatch.setattr(
         "ii_agent.chat.application.council_service.cancel.raise_if_cancelled",
         AsyncMock(return_value=None),
     )
 
-    providers = {
-        "member-1": RecordingProvider(
-            [RunResponseEvent(type=EventType.CONTENT_DELTA, content="Partial answer")],
-            terminal_error=RuntimeError("provider boom"),
-        ),
-        "member-2": RecordingProvider(
-            [RunResponseEvent(type=EventType.CONTENT_DELTA, content="Stable answer")]
-        ),
-        "synth-1": RecordingProvider(
-            [RunResponseEvent(type=EventType.CONTENT_DELTA, content="Summary")]
-        ),
-    }
+    execution_service = LLMExecutionService(llm_billing=None, llm_invocation_repo=None)
+
+    call_count = 0
+
+    async def _mock_send_once(*, client, messages, billing_context=None, usage_key=None, **kwargs):
+        nonlocal call_count
+        model_id = billing_context.model_id if billing_context else None
+        if model_id == "member-1":
+            raise RuntimeError("provider boom")
+        if model_id == "member-2":
+            return _make_response("Stable answer")
+        if model_id == "synth-1":
+            return _make_response("Summary")
+        return _make_response("")
+
+    execution_service.send_once = _mock_send_once
+    db = AsyncMock()
 
     with patch(
-        "ii_agent.chat.application.council_service.LLMProviderFactory.create_provider",
-        side_effect=lambda config: providers[config.model],
+        "ii_agent.chat.application.council_service.get_client",
+        side_effect=lambda config: MagicMock(name=f"client-{config.model}"),
     ):
         events = [
             event
             async for event in CouncilService.stream_council_response(
+                db=db,
+                user_id="user-1",
                 messages=[_make_message()],
                 user_question="How should we solve this?",
                 council_preferences=_make_preferences(),
@@ -155,6 +175,8 @@ async def test_stream_council_response_preserves_partial_output_when_member_erro
                     "synth-1": "Synth Model",
                 },
                 run_id="run-456",
+                session_id="session-123",
+                llm_execution_service=execution_service,
             )
         ]
 
@@ -166,9 +188,6 @@ async def test_stream_council_response_preserves_partial_output_when_member_erro
     )
 
     result_event = next(event for event in events if event["type"] == "council_result")
-    assert result_event["member_outputs"] == {
-        "member-1": "Partial answer",
-        "member-2": "Stable answer",
-    }
+    assert result_event["member_outputs"] == {"member-2": "Stable answer"}
     assert result_event["synthesis_content"] == "Summary"
     assert result_event["had_error"] is True

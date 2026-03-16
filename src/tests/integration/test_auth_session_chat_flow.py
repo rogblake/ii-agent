@@ -43,6 +43,14 @@ class WaitlistRepo:
         return {"email": email}
 
 
+class FakeCreditService:
+    async def ensure_balance_exists(self, db, user_id, **kwargs):
+        from decimal import Decimal
+        credits = Decimal(str(kwargs.get("credits", 0)))
+        bonus = Decimal(str(kwargs.get("bonus_credits", 0)))
+        return (credits, bonus)
+
+
 class SessionRepo:
     def __init__(self):
         self.sessions = {}
@@ -69,6 +77,7 @@ async def test_auth_session_chat_flow(settings_factory):
         user_repo=UserRepo(),
         api_key_repo=APIKeyRepo(),
         waitlist_repo=WaitlistRepo(),
+        credit_service=FakeCreditService(),
         config=settings_factory(),
     )
 

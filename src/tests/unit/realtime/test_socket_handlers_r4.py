@@ -115,7 +115,6 @@ def _mock_container(**overrides) -> MagicMock:
     container.agent_service.create_plan_agent_v1 = AsyncMock()
     container.agent_service.create_plan_suggestions_agent_v1 = AsyncMock()
     container.llm_billing_service = MagicMock()
-    container.llm_billing_service.deduct_for_llm_usage = AsyncMock()
 
     for k, v in overrides.items():
         setattr(container, k, v)

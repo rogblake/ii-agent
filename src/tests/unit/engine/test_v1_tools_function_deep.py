@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import pytest
 from typing import Optional, List
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from functools import partial
 
@@ -223,6 +224,11 @@ class TestFunctionFromToolDeep:
         tool.stop_after_tool_call = True
         fn = Function.from_tool(tool)
         assert fn.stop_after_tool_call is True
+
+    def test_from_tool_stores_tool_instance_for_billing(self):
+        tool = make_base_agent_tool()
+        fn = Function.from_tool(tool)
+        assert getattr(fn, "_tool", None) is tool
 
     def test_from_tool_with_user_input_fields_generates_schema(self):
         from ii_agent.agent.runtime.tools.base import BaseAgentTool
@@ -804,3 +810,142 @@ class TestFunctionExecutionResultDeep:
         assert result.audios is None
         assert result.files is None
         assert result.updated_session_state is None
+
+
+class TestFunctionCallBillingFinalizationDeep:
+    @pytest.mark.asyncio
+    async def test_reserve_tool_billing_uses_from_tool_instance(self):
+        from contextlib import asynccontextmanager
+        from ii_agent.agent.runtime.run.base import RunContext
+        from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult as BaseToolResult
+        from ii_agent.billing.reservations.types import BillingQuote, ReservationHold
+        from ii_agent.core.llm.billing_service import ReservedToolCall
+
+        class _Tool(BaseAgentTool):
+            name = "demo_tool"
+            description = "Demo tool"
+            input_schema = {"type": "object", "properties": {}, "required": []}
+            read_only = True
+            display_name = "Demo Tool"
+
+            async def execute(self, tool_input: dict) -> BaseToolResult:
+                return BaseToolResult(llm_content="ok", cost=0.2)
+
+        tool = _Tool()
+        quote = BillingQuote(strategy="bounded", reserve_usd=0.2, max_usd=0.2)
+        tool.quote_cost = AsyncMock(return_value=quote)
+        reservation = ReservedToolCall(
+            hold=ReservationHold(
+                reservation_id="res-1",
+                idempotency_key="idem-1",
+                reserved_credits=1,
+                reserved_bonus_credits=0,
+                quoted_usd=0.2,
+                max_usd=0.2,
+            ),
+            quote=quote,
+        )
+        llm_billing = SimpleNamespace(
+            reserve_tool_call=AsyncMock(return_value=reservation),
+        )
+
+        function = Function.from_tool(tool)
+        object.__setattr__(
+            function,
+            "_run_context",
+            RunContext(run_id="run-1", session_id="session-1", user_id="user-1"),
+        )
+        object.__setattr__(
+            function,
+            "_dependencies",
+            SimpleNamespace(
+                container=SimpleNamespace(
+                    llm_billing_service=llm_billing,
+                )
+            ),
+        )
+
+        fc = FunctionCall(function=function, arguments={}, call_id="call-1")
+
+        @asynccontextmanager
+        async def _db_cm():
+            db = SimpleNamespace(commit=AsyncMock())
+            yield db
+
+        with patch("ii_agent.core.db.manager.get_db_session_local", _db_cm):
+            await fc._reserve_tool_billing()
+
+        tool.quote_cost.assert_awaited_once_with({})
+        llm_billing.reserve_tool_call.assert_awaited_once()
+        assert fc.billing_reservation == reservation
+
+    @pytest.mark.asyncio
+    async def test_successful_tool_settlement_failure_does_not_release_hold(self):
+        from contextlib import asynccontextmanager
+        from ii_agent.agent.runtime.run.base import RunContext
+        from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult as BaseToolResult
+        from ii_agent.billing.reservations.types import BillingQuote, ReservationHold
+        from ii_agent.core.llm.billing_service import ReservedToolCall
+
+        class _Tool(BaseAgentTool):
+            name = "demo_tool"
+            description = "Demo tool"
+            input_schema = {"type": "object", "properties": {}, "required": []}
+            read_only = True
+            display_name = "Demo Tool"
+
+            async def execute(self, tool_input: dict) -> BaseToolResult:
+                return BaseToolResult(llm_content="ok", cost=0.2)
+
+        tool = _Tool()
+        llm_billing = SimpleNamespace(
+            settle_tool_call=AsyncMock(side_effect=RuntimeError("boom")),
+            release_tool_call=AsyncMock(),
+        )
+
+        function = Function.from_tool(tool)
+        object.__setattr__(
+            function,
+            "_run_context",
+            RunContext(run_id="run-1", session_id="session-1", user_id="user-1"),
+        )
+        object.__setattr__(
+            function,
+            "_dependencies",
+            SimpleNamespace(
+                container=SimpleNamespace(
+                    llm_billing_service=llm_billing,
+                )
+            ),
+        )
+
+        fc = FunctionCall(
+            function=function,
+            arguments={},
+            billing_reservation=ReservedToolCall(
+                hold=ReservationHold(
+                    reservation_id="res-1",
+                    idempotency_key="idem-1",
+                    reserved_credits=1,
+                    reserved_bonus_credits=0,
+                    quoted_usd=0.2,
+                    max_usd=0.2,
+                ),
+                quote=BillingQuote(strategy="bounded", reserve_usd=0.2, max_usd=0.2),
+            ),
+        )
+
+        @asynccontextmanager
+        async def _db_cm():
+            db = SimpleNamespace(commit=AsyncMock())
+            yield db
+
+        with patch("ii_agent.core.db.manager.get_db_session_local", _db_cm):
+            await fc._finalize_tool_billing(
+                function_execution_result=FunctionExecutionResult(
+                    status="success",
+                    result=BaseToolResult(llm_content="ok", cost=0.2),
+                )
+            )
+
+        llm_billing.release_tool_call.assert_not_awaited()

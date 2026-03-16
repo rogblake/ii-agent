@@ -7,9 +7,11 @@ Model IDs follow the v1 models convention from src/ii_agent/v1/models/:
 """
 
 from typing import Dict, Optional
+
 from pydantic import BaseModel, Field
 
 from ii_agent.agent.types import Provider
+from ii_agent.core.logger import logger
 
 
 class ModelPricing(BaseModel):
@@ -30,6 +32,10 @@ class ModelPricing(BaseModel):
     )
     cache_read_price_per_million: float = Field(
         default=0.0, description="Price per million cache read tokens"
+    )
+    is_fallback: bool = Field(
+        default=False,
+        description="True when pricing was resolved via provider/global fallback, not exact match",
     )
 
     @classmethod
@@ -208,6 +214,12 @@ class ModelPricing(BaseModel):
                 )
 
         # Provider-based defaults
+        logger.error(
+            "BILLING_PRICING_FALLBACK: No exact or prefix pricing match "
+            "for model '%s' (provider=%s) — using provider default. "
+            "Add this model to the pricing table to ensure correct billing.",
+            model_id, provider,
+        )
         if provider:
             provider_defaults = {
                 Provider.ANTHROPIC: cls(
@@ -217,6 +229,7 @@ class ModelPricing(BaseModel):
                     output_price_per_million=15.0,
                     cache_write_price_per_million=3.75,
                     cache_read_price_per_million=0.3,
+                    is_fallback=True,
                 ),
                 Provider.OPENAI: cls(
                     model_id=model_id,
@@ -224,22 +237,32 @@ class ModelPricing(BaseModel):
                     input_price_per_million=2.5,
                     output_price_per_million=10.0,
                     cache_read_price_per_million=1.25,
+                    is_fallback=True,
                 ),
                 Provider.GOOGLE: cls(
                     model_id=model_id,
                     provider=Provider.GOOGLE,
                     input_price_per_million=0.15,
                     output_price_per_million=0.6,
+                    is_fallback=True,
                 ),
             }
             if provider in provider_defaults:
                 return provider_defaults[provider]
 
-        # Default pricing (conservative estimate)
+        # No provider either — this should not happen in production.
+        # Log at error level so monitoring/alerting catches it.
+        logger.error(
+            "BILLING_PRICING_MISSING: No provider default for model '%s' "
+            "(provider=%s) — using global conservative fallback. "
+            "This model is being billed at an estimated rate.",
+            model_id, provider,
+        )
         return cls(
             model_id=model_id,
             provider=provider,
             input_price_per_million=2.5,
             output_price_per_million=10.0,
             cache_read_price_per_million=1.25,
+            is_fallback=True,
         )

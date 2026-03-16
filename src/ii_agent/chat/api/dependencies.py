@@ -115,21 +115,12 @@ LLMTurnLoopServiceDep = Annotated[LLMTurnLoopService, Depends(get_llm_loop_servi
 
 # ==================== Chat Run Dependencies ====================
 
-
-def get_chat_run_repository() -> ChatRunRepository:
-    """Provide ChatRunRepository instance."""
-    return ChatRunRepository()
-
-
-ChatRunRepositoryDep = Annotated[ChatRunRepository, Depends(get_chat_run_repository)]
-
-
-def get_chat_run_service(repo: ChatRunRepositoryDep) -> ChatRunService:
-    """Provide ChatRunService instance."""
-    return ChatRunService(repo=repo)
-
-
-ChatRunServiceDep = Annotated[ChatRunService, Depends(get_chat_run_service)]
+from ii_agent.chat.runs.dependencies import (  # noqa: E402
+    ChatRunRepositoryDep,
+    ChatRunServiceDep,
+    get_chat_run_repository,
+    get_chat_run_service,
+)
 
 
 # ==================== Service Dependencies ====================

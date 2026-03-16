@@ -32,6 +32,12 @@ class ChatRunService:
             status=status,
         )
 
+    async def get_last_by_session_id(
+        self, db: AsyncSession, session_id: uuid.UUID
+    ) -> ChatRun | None:
+        """Get the most recent chat run for a session."""
+        return await self._repo.find_last_by_session_id(db, session_id)
+
     async def find_running_for_cancel(
         self, db: AsyncSession, *, session_id: uuid.UUID
     ) -> ChatRun | None:

@@ -1,4 +1,10 @@
-"""Add chat_runs table and migrate chat data from agent_run_tasks.
+"""Add chat_runs table and backfill from agent_run_tasks.
+
+Phase 1 of expand-contract migration: creates chat_runs and copies
+chat-session rows from agent_run_tasks.  The originals are kept in
+agent_run_tasks so that existing readers (session endpoints) continue
+to work.  A future migration will delete them once all readers have
+been migrated to use chat_runs.
 
 Revision ID: o7p8q9r0s1t2
 Revises: n6o7p8q9r0s1
@@ -51,7 +57,8 @@ def upgrade() -> None:
         "ix_chat_runs_session_status", "chat_runs", ["session_id", "status"]
     )
 
-    # 2. Backfill: copy agent_run_tasks rows for chat sessions into chat_runs
+    # 2. Backfill: copy agent_run_tasks rows for chat sessions into chat_runs.
+    #    Originals are intentionally kept in agent_run_tasks (expand phase).
     op.execute(
         """
         INSERT INTO chat_runs (id, session_id, user_message_id, status, error_message, version, created_at, updated_at)
@@ -59,28 +66,13 @@ def upgrade() -> None:
         FROM agent_run_tasks art
         JOIN sessions s ON s.id = art.session_id
         WHERE s.agent_type = 'chat'
-        """
-    )
-
-    # 3. Delete the now-migrated rows from agent_run_tasks
-    op.execute(
-        """
-        DELETE FROM agent_run_tasks
-        WHERE session_id IN (SELECT id FROM sessions WHERE agent_type = 'chat')
+        ON CONFLICT (id) DO NOTHING
         """
     )
 
 
 def downgrade() -> None:
-    # Move chat_runs data back to agent_run_tasks
-    op.execute(
-        """
-        INSERT INTO agent_run_tasks (id, session_id, user_message_id, status, error_message, version, created_at, updated_at)
-        SELECT id, session_id, user_message_id, status, error_message, version, created_at, updated_at
-        FROM chat_runs
-        """
-    )
-
+    # Originals still exist in agent_run_tasks — just drop the copy.
     op.drop_index("ix_chat_runs_session_status", table_name="chat_runs")
     op.drop_index("ix_chat_runs_status", table_name="chat_runs")
     op.drop_index("ix_chat_runs_session_id", table_name="chat_runs")

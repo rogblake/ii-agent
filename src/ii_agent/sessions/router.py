@@ -9,6 +9,7 @@ from fastapi import APIRouter, Query
 from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.core.exceptions import InternalError
 from ii_agent.agent.dependencies import AgentRunServiceDep
+from ii_agent.chat.runs.dependencies import ChatRunServiceDep
 from ii_agent.files.dependencies import FileServiceDep
 from ii_agent.sessions.dependencies import SessionForkServiceDep, SessionServiceDep
 from ii_agent.sessions.exceptions import SessionNotFoundError, SessionValidationError
@@ -24,6 +25,7 @@ from ii_agent.sessions.schemas import (
     SessionUpdate,
 )
 from ii_agent.agent.socket.schemas import EventInfo, EventResponse
+from ii_agent.sessions.models import AppKind
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +105,7 @@ async def get_session_events(
     current_user: CurrentUser,
     session_service: SessionServiceDep,
     agent_run_service: AgentRunServiceDep,
+    chat_run_service: ChatRunServiceDep,
 ) -> EventResponse:
     """Get all events for a specific session."""
     session_data = await session_service.get_session_details(
@@ -117,11 +120,16 @@ async def get_session_events(
 
     run_status = None
     try:
-        last_task = await agent_run_service.get_last_by_session_id(
-            db, uuid.UUID(session_id)
-        )
-        if last_task:
-            run_status = last_task.status
+        if session_data.get("app_kind") == AppKind.CHAT:
+            last_run = await chat_run_service.get_last_by_session_id(
+                db, uuid.UUID(session_id)
+            )
+        else:
+            last_run = await agent_run_service.get_last_by_session_id(
+                db, uuid.UUID(session_id)
+            )
+        if last_run:
+            run_status = last_run.status
     except Exception as e:
         logger.warning(f"Failed to get run status for session {session_id}: {e}")
 
@@ -214,6 +222,7 @@ async def get_public_session_events(
     db: DBSession,
     session_service: SessionServiceDep,
     agent_run_service: AgentRunServiceDep,
+    chat_run_service: ChatRunServiceDep,
 ) -> EventResponse:
     """Get all events for a public session without authentication."""
     session_data = await session_service.get_public_session_details(db, session_id)
@@ -226,11 +235,16 @@ async def get_public_session_events(
 
     run_status = None
     try:
-        last_task = await agent_run_service.get_last_by_session_id(
-            db, uuid.UUID(session_id)
-        )
-        if last_task:
-            run_status = last_task.status
+        if session_data.get("app_kind") == AppKind.CHAT:
+            last_run = await chat_run_service.get_last_by_session_id(
+                db, uuid.UUID(session_id)
+            )
+        else:
+            last_run = await agent_run_service.get_last_by_session_id(
+                db, uuid.UUID(session_id)
+            )
+        if last_run:
+            run_status = last_run.status
     except Exception as e:
         logger.warning(f"Failed to get run status for session {session_id}: {e}")
 

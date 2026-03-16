@@ -39,6 +39,13 @@ class SessionStateEnum(str, Enum):
     PAUSE = "pause"
 
 
+class AppKind(str, Enum):
+    """Application kind for sessions."""
+
+    AGENT = "agent"
+    CHAT = "chat"
+
+
 class Session(Base):
     """Database model for agent sessions."""
 
@@ -65,7 +72,7 @@ class Session(Base):
     agent_state_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     state_storage_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     agent_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    app_kind: Mapped[str] = mapped_column(String, nullable=False, default="agent", server_default="agent")
+    app_kind: Mapped[str] = mapped_column(String, nullable=False, default=AppKind.AGENT, server_default=AppKind.AGENT)
     public_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, default=False)
     api_version: Mapped[str] = mapped_column(String, default="v0")

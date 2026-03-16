@@ -36,6 +36,18 @@ class ChatRunRepository:
         await db.refresh(chat_run)
         return chat_run
 
+    async def find_last_by_session_id(
+        self, db: AsyncSession, session_id: uuid.UUID
+    ) -> ChatRun | None:
+        """Find the most recent chat run for a session."""
+        result = await db.execute(
+            select(ChatRun)
+            .where(ChatRun.session_id == str(session_id))
+            .order_by(ChatRun.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def find_running_by_session(
         self, db: AsyncSession, session_id: uuid.UUID
     ) -> ChatRun | None:

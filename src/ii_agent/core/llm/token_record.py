@@ -47,6 +47,6 @@ class TokenTracker:
             output_tokens=usage.completion_tokens,
             cache_read_tokens=usage.cache_read_tokens,
             cache_write_tokens=usage.cache_write_tokens,
-            reasoning_tokens=0,
+            reasoning_tokens=usage.reasoning_tokens,
             model_id=usage.model_name or "",
         )

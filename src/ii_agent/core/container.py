@@ -21,12 +21,31 @@ from ii_agent.auth.users.dependencies import (
     get_waitlist_repository,
 )
 from ii_agent.billing.credits.dependencies import (
+    get_credit_balance_repository,
     get_credit_service,
+    get_credit_ledger_repository,
+)
+from ii_agent.billing.reservations.dependencies import (
+    get_credit_reservation_repository,
+    get_credit_reservation_service,
+)
+from ii_agent.billing.outbox.dependencies import (
+    get_billing_usage_fact_repository,
+    get_billing_usage_fact_service,
+)
+from ii_agent.billing.usage.dependencies import (
+    get_llm_invocation_repository,
     get_metrics_repository,
+    get_usage_record_repository,
+    get_usage_service,
 )
 from ii_agent.billing.dependencies import (
     get_billing_service,
     get_stripe_config,
+)
+from ii_agent.billing.customers.dependencies import (
+    get_billing_customer_repository,
+    get_billing_customer_service,
 )
 from ii_agent.content.media.dependencies import (
     get_media_template_repository,
@@ -116,7 +135,10 @@ if TYPE_CHECKING:
     from ii_agent.agent.application.execution_service import ExecutionService
     from ii_agent.agent.application.plan_service import PlanService
     from ii_agent.billing.service import BillingService
+    from ii_agent.billing.outbox.service import BillingUsageFactService
     from ii_agent.billing.credits.service import CreditService
+    from ii_agent.billing.reservations.service import CreditReservationService
+    from ii_agent.billing.usage.service import UsageService
     from ii_agent.integrations.connectors.composio.service import ComposioService
     from ii_agent.integrations.connectors.service import ConnectorService
     from ii_agent.core.config.settings import Settings
@@ -158,6 +180,9 @@ class ServiceContainer:
 
     config: Settings
     credit_service: CreditService
+    credit_reservation_service: CreditReservationService
+    billing_usage_fact_service: BillingUsageFactService
+    usage_service: UsageService
     llm_billing_service: LLMBillingService
     llm_execution_service: LLMExecutionService
     llm_config_resolver: LLMConfigResolver
@@ -216,10 +241,30 @@ class ServiceContainer:
         skill_repo = get_skill_repository()
         storybook_repo = get_storybook_repository()
         metrics_repo = get_metrics_repository()
+        usage_record_repo = get_usage_record_repository()
+        llm_invocation_repo = get_llm_invocation_repository()
         connector_repo = get_connector_repository()
+        credit_balance_repo = get_credit_balance_repository()
+        credit_ledger_repo = get_credit_ledger_repository()
+        credit_reservation_repo = get_credit_reservation_repository()
+        billing_usage_fact_repo = get_billing_usage_fact_repository()
+        billing_customer_repo = get_billing_customer_repository()
 
         # ── Leaf services (depend only on repos / config) ────────────────────
-        credit_svc = get_credit_service(user_repo, metrics_repo)
+        credit_svc = get_credit_service(credit_balance_repo, credit_ledger_repo)
+        usage_svc = get_usage_service(credit_svc, metrics_repo, usage_record_repo)
+        credit_reservation_svc = get_credit_reservation_service(
+            credit_balance_repo,
+            credit_ledger_repo,
+            credit_reservation_repo,
+            credit_svc,
+            usage_svc,
+        )
+        billing_usage_fact_svc = get_billing_usage_fact_service(
+            billing_usage_fact_repo,
+            credit_reservation_repo,
+            credit_reservation_svc,
+        )
         agent_run_svc = get_agent_run_service(agent_run_repo)
         event_svc = build_event_service(
             event_repo,
@@ -236,7 +281,7 @@ class ServiceContainer:
         stripe_config = get_stripe_config()
 
         # ── Services with cross-service deps ─────────────────────────────────
-        user_svc = get_user_service(user_repo, api_key_repo, waitlist_repo)
+        user_svc = get_user_service(user_repo, api_key_repo, waitlist_repo, credit_svc)
         session_svc = get_session_service(
             session_repo, event_repo, sandbox_repo, agent_run_svc
         )
@@ -245,7 +290,12 @@ class ServiceContainer:
         llm_setting_svc = get_llm_setting_service(llm_setting_repo, session_repo)
         composio_svc = get_composio_service(mcp_setting_svc, composio_repo)
         sandbox_svc = get_sandbox_service(sandbox_repo, mcp_setting_svc, composio_svc)
-        billing_svc = get_billing_service(stripe_config, user_repo)
+        billing_customer_svc = get_billing_customer_service(billing_customer_repo)
+        billing_svc = get_billing_service(
+            stripe_config,
+            user_repo,
+            billing_customer_svc,
+        )
         project_svc = get_project_service(project_repo, session_repo)
         deployments_svc = get_deployments_service(project_repo, deployments_repo)
         media_template_svc = get_media_template_service(media_template_repo)
@@ -256,12 +306,21 @@ class ServiceContainer:
         slide_design_repo = get_slide_design_repository(session_repo, slide_repo)
 
         # ── LLM infrastructure & validation ──────────────────────────────────
-        llm_billing_svc = get_llm_billing_service(credit_svc, cfg)
-        llm_execution_svc = get_llm_execution_service(llm_billing_svc)
+        llm_billing_svc = get_llm_billing_service(
+            usage_svc,
+            credit_svc,
+            credit_reservation_svc,
+            cfg,
+            billing_usage_fact_svc,
+        )
+        llm_execution_svc = get_llm_execution_service(
+            llm_billing_svc,
+            llm_invocation_repo,
+        )
         llm_config_resolver = get_llm_config_resolver(llm_setting_svc, cfg)
         title_svc = get_session_title_service()
         session_validation_svc = get_session_validation_service(
-            session_svc, credit_svc, title_svc
+            session_svc, title_svc, balance_repo=credit_balance_repo
         )
 
         project_design_svc = get_project_design_service(
@@ -275,6 +334,9 @@ class ServiceContainer:
         return cls(
             config=cfg,
             credit_service=credit_svc,
+            credit_reservation_service=credit_reservation_svc,
+            billing_usage_fact_service=billing_usage_fact_svc,
+            usage_service=usage_svc,
             llm_billing_service=llm_billing_svc,
             llm_execution_service=llm_execution_svc,
             llm_config_resolver=llm_config_resolver,

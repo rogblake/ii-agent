@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router'
 
 dayjs.extend(utc)
 
@@ -25,6 +26,7 @@ interface CreditUsageProps {
 
 const CreditUsage = ({ className, perPage = 20 }: CreditUsageProps) => {
     const { t } = useTranslation()
+    const navigate = useNavigate()
     const [page, setPage] = useState(1)
 
     // Use RTK Query hooks instead of Redux dispatch and selectors
@@ -111,7 +113,12 @@ const CreditUsage = ({ className, perPage = 20 }: CreditUsageProps) => {
                             usage?.sessions?.map((s) => (
                                 <TableRow
                                     key={s.session_id}
-                                    className="border-0"
+                                    className="border-0 cursor-pointer hover:!bg-transparent opacity-75 hover:opacity-100 transition-opacity"
+                                    onClick={() =>
+                                        navigate(
+                                            `/settings/usage/${s.session_id}`
+                                        )
+                                    }
                                 >
                                     <TableCell className="pt-4 pr-4 text-sm w-[60%] whitespace-normal">
                                         <span className="line-clamp-1">

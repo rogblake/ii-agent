@@ -138,6 +138,36 @@ const createAppRouter = () =>
                     }
                 },
                 {
+                    path: 'settings/usage/:sessionId',
+                    async lazy() {
+                        const { Component } = await import(
+                            '@/app/routes/session-usage'
+                        )
+                        return {
+                            Component: () => (
+                                <ProtectedRoute>
+                                    <Component />
+                                </ProtectedRoute>
+                            )
+                        }
+                    }
+                },
+                {
+                    path: 'settings/ledger/:sessionId',
+                    async lazy() {
+                        const { Component } = await import(
+                            '@/app/routes/session-ledger'
+                        )
+                        return {
+                            Component: () => (
+                                <ProtectedRoute>
+                                    <Component />
+                                </ProtectedRoute>
+                            )
+                        }
+                    }
+                },
+                {
                     path: 'chat',
                     async lazy() {
                         const { Component } = await import('@/app/routes/chat')

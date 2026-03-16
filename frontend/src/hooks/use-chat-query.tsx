@@ -2232,8 +2232,9 @@ function useChatProviderValue(): ChatContextValue {
                         onError: (message, code) => {
                             if (code === 'insufficient_credits') {
                                 toast.error(
-                                    'Insufficient credits. Please check your credit balance.'
+                                    'You have run out of credits. Redirecting to upgrade your plan...'
                                 )
+                                window.location.href = '/settings/subscription'
                             } else if (code === 'anthropic_image_too_large') {
                                 toast.error(
                                     'Anthropic models cannot process images over 5 MB. Please switch to a different model (e.g. OpenAI) or upload a smaller image.'

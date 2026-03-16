@@ -4,7 +4,12 @@ import type {
     FetchArgs,
     FetchBaseQueryError
 } from '@reduxjs/toolkit/query'
-import type { CreditBalanceResponse, CreditUsageResponse } from '@/typings/user'
+import type {
+    CreditBalanceResponse,
+    CreditUsageResponse,
+    LedgerHistoryResponse,
+    SessionUsageDetailResponse
+} from '@/typings/user'
 import { ACCESS_TOKEN } from '@/constants/auth'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -40,7 +45,7 @@ const baseQueryWithReauth: BaseQueryFn<
 export const userApi = createApi({
     reducerPath: 'userApi',
     baseQuery: baseQueryWithReauth,
-    tagTypes: ['CreditBalance', 'CreditUsage'],
+    tagTypes: ['CreditBalance', 'CreditUsage', 'SessionUsageDetail', 'SessionLedger'],
     endpoints: (builder) => ({
         getCreditBalance: builder.query<CreditBalanceResponse, void>({
             query: () => '/credits/balance',
@@ -55,8 +60,33 @@ export const userApi = createApi({
                 params: { page, per_page: perPage }
             }),
             providesTags: ['CreditUsage']
+        }),
+        getSessionUsageDetail: builder.query<
+            SessionUsageDetailResponse,
+            { sessionId: string; page?: number; perPage?: number }
+        >({
+            query: ({ sessionId, page = 1, perPage = 50 }) => ({
+                url: `/credits/usage/${sessionId}`,
+                params: { page, per_page: perPage }
+            }),
+            providesTags: ['SessionUsageDetail']
+        }),
+        getSessionLedger: builder.query<
+            LedgerHistoryResponse,
+            { sessionId: string; page?: number; perPage?: number }
+        >({
+            query: ({ sessionId, page = 1, perPage = 50 }) => ({
+                url: `/credits/ledger/${sessionId}`,
+                params: { page, per_page: perPage }
+            }),
+            providesTags: ['SessionLedger']
         })
     })
 })
 
-export const { useGetCreditBalanceQuery, useGetCreditUsageQuery } = userApi
+export const {
+    useGetCreditBalanceQuery,
+    useGetCreditUsageQuery,
+    useGetSessionUsageDetailQuery,
+    useGetSessionLedgerQuery
+} = userApi

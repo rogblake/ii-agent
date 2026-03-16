@@ -516,6 +516,18 @@ export function useAppEvents() {
                         (data.session_id as string | undefined) ??
                         (data.content.session_id as string | undefined)
 
+                    if (errorType === 'insufficient_credits') {
+                        if (!ignoreClickAction) {
+                            toast.error(
+                                'You have run out of credits. Redirecting to upgrade your plan...'
+                            )
+                            navigate('/settings/subscription')
+                        }
+                        streamingMessageIdsRef.current.thinking.clear()
+                        streamingMessageIdsRef.current.response.clear()
+                        break
+                    }
+
                     if (
                         errorType === 'design_sync_state_error' ||
                         errorType === 'slide_deck_sync_state_error'

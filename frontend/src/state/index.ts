@@ -118,7 +118,9 @@ export * from './slice/session-state'
 export {
     userApi,
     useGetCreditBalanceQuery,
-    useGetCreditUsageQuery
+    useGetCreditUsageQuery,
+    useGetSessionUsageDetailQuery,
+    useGetSessionLedgerQuery
 } from './api/user.api'
 export {
     sessionApi,

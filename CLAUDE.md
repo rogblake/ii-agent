@@ -23,9 +23,11 @@ src/ii_agent/
 ├── auth/                       # Authentication & authorization (OAuth, JWT, API keys)
 │   └── users/                  # User profiles, waitlist, user CRUD
 │
-├── billing/                    # Stripe integration (subscriptions, checkout, webhooks)
-│   ├── credits/                # Credit balance & usage tracking
-│   └── usage/                  # Usage tracking & reporting
+├── billing/                    # Credit ledger, reservations, outbox, Stripe webhooks
+│   ├── credits/                # Credit balance, ledger, pricing, service
+│   ├── reservations/           # Reserve → settle → release state machine
+│   ├── outbox/                 # Durable billing usage facts (capture → process → retry)
+│   └── usage/                  # Usage records, LLM/tool invocation telemetry
 │
 ├── sessions/                   # Chat sessions management (CRUD, state, fork, validation)
 │   └── wishlist/               # Session wishlist/bookmarks
@@ -316,6 +318,305 @@ python -c "from ii_agent.sessions import Session, session_service; print('OK')"
 # Health check
 curl http://localhost:8000/health
 ```
+
+## Billing & Credit System
+
+### Overview
+
+All paid work (LLM calls, tool executions) is billed through a **credit ledger** with a **reserve → settle → release** lifecycle. Credits are the internal unit of account; USD costs are converted via `usd_to_credits()` / `credits_to_usd()` in `billing/credits/utils.py`.
+
+### Domain Structure
+
+```
+billing/
+├── credits/
+│   ├── balance_models.py       # credit_balances table (one row per user)
+│   ├── balance_repository.py   # Atomic balance mutations with FOR UPDATE locks
+│   ├── ledger_models.py        # credit_ledger table (append-only audit trail)
+│   ├── ledger_repository.py    # Idempotent ledger appends (ON CONFLICT DO NOTHING)
+│   ├── service.py              # CreditService — lock → ledger → balance in SAVEPOINT
+│   ├── pricing.py              # ModelPricing — per-model token prices
+│   ├── utils.py                # usd_to_credits / credits_to_usd conversion
+│   └── constants.py            # Default credit allocations
+├── reservations/
+│   ├── models.py               # credit_reservations table
+│   ├── repository.py           # Reservation CRUD with row locking
+│   ├── service.py              # CreditReservationService — reserve/settle/release state machine
+│   └── types.py                # BillingQuote, ReservationHold, BillingSettlementResult
+├── outbox/
+│   ├── models.py               # billing_usage_facts table (durable outbox)
+│   ├── repository.py           # Fact CRUD with batch dispatch
+│   └── service.py              # BillingUsageFactService — capture → process → retry
+├── usage/
+│   ├── service.py              # UsageService — usage_records + session_metrics accumulation
+│   ├── llm_invocation_models.py    # llm_invocations telemetry table
+│   └── tool_invocation_models.py   # tool_invocations telemetry table
+├── exceptions.py               # InsufficientCreditsError, BillingReconciliationRequiredError
+└── webhook_handler.py          # Stripe webhook → credit grants on invoice.payment_succeeded
+```
+
+### Credit Lifecycle: Reserve → Settle → Release
+
+Every billable operation follows this three-phase pattern. **Never call `CreditService.deduct()` directly for LLM or tool billing** — always go through the reservation system.
+
+```
+1. RESERVE   — Before work starts, hold credits from the user's balance
+2. SETTLE    — After work completes, finalize to actual cost (refund overage or charge shortfall)
+3. RELEASE   — If work fails/cancels before completion, refund the full hold
+```
+
+#### Reservation State Machine
+
+```
+RESERVED ──settle()──→ SETTLED       (actual cost charged, overage refunded)
+    │
+    ├──release()──→ RELEASED          (full refund, no work delivered)
+    │
+    ├──expire_stale()──→ EXPIRED      (cron refund after 30 min timeout)
+    │
+    └──mark_settlement_failed()──→ SETTLEMENT_FAILED
+                                      (work delivered but settle threw;
+                                       blocks auto-expiry refund;
+                                       outbox retries later)
+```
+
+#### Atomicity Guarantees
+
+All credit mutations use this pattern inside `CreditReservationService` and `CreditService`:
+
+```python
+async with db.begin_nested():           # SAVEPOINT
+    balance = lock_balance_state(...)    # SELECT ... FOR UPDATE
+    ledger_entry = ledger.append(...)    # INSERT with idempotency_key
+    if ledger_entry is None:             # Duplicate → skip balance mutation
+        return existing
+    apply_delta_locked(...)              # UPDATE balance
+```
+
+- **Row lock** serializes concurrent operations for the same user
+- **SAVEPOINT** ensures ledger and balance are atomic (both succeed or both roll back)
+- **Idempotency key** on the ledger prevents double-charging on retries
+
+### LLM Billing Integration
+
+#### Orchestration Layer: `LLMBillingService` (`core/llm/billing_service.py`)
+
+This is the **single entry point** for all LLM and tool billing. It sits between the runtime layers and the reservation system.
+
+```python
+class LLMBillingService:
+    # LLM calls
+    reserve_chat_llm_call()    / reserve_agent_llm_call()
+    settle_chat_llm_call()     / settle_agent_llm_call()
+    release_llm_call()
+    mark_settlement_failed()
+
+    # Tool calls
+    reserve_tool_call()
+    settle_tool_call()         / settle_tool_call_by_reservation_id()
+    release_tool_call()        / release_tool_call_by_reservation_id()
+```
+
+#### How LLM Quoting Works (`_quote_llm_call`)
+
+```
+1. Estimate input tokens (tiktoken or len/4 fallback)
+2. Look up ModelPricing for the model
+3. Compute:
+   - input_cost     = input_tokens × input_price_per_million
+   - cache_reserve  = 25% of input_tokens × cache_write_price (conservative)
+   - output_cost    = output_cap × output_price_per_million
+   - safety_margin  = $0.001
+4. Compute affordable output cap from user's remaining balance
+5. If output_cap < 128 tokens → raise InsufficientCreditsError
+6. Return BillingQuote(reserve_usd, max_usd) + output_token_cap
+```
+
+The output cap is enforced on the provider via `_apply_reserved_output_cap()` (agent) or `provider_options` (chat), so the provider physically cannot exceed what was reserved.
+
+### Two Runtime Paths
+
+There are two runtime paths that invoke LLM billing. Both follow the same reserve → settle → release pattern.
+
+#### Path 1: Agent Runtime (`agent/runtime/models/base.py`)
+
+Used by socket command handlers (query, continue, plan). Billing happens **per LLM call** inside the agent's streaming loop.
+
+```python
+# In Model.aprocess_response_stream():
+reservation = await self._reserve_llm_billing(messages, assistant_message, run_response)
+self._apply_reserved_output_cap(reservation)
+try:
+    async for delta in self._ainvoke_stream_with_retry(...):
+        yield delta
+    await self._settle_llm_billing(reservation, run_response, metrics)
+except Exception:
+    if metrics and metrics.total_tokens > 0:
+        await self._settle_llm_billing(...)    # Charge for partial usage
+    else:
+        await self._release_llm_billing(...)   # Full refund
+    raise
+```
+
+Key points:
+- Each LLM call in the agent loop gets its own reservation
+- Reserve and settle use separate DB sessions (reserve must commit before provider call)
+- Idempotency key: `agent-llm:{run_id}:{message_id}`
+- Tool billing follows the same pattern in `Function._reserve_tool_billing()` / `_finalize_tool_billing()`
+
+#### Path 2: `LLMExecutionService` (`core/llm/execution_service.py`)
+
+Used for **single LLM invocations** outside the agent loop (e.g., storybook AI edits, content generation, any service that needs one LLM call with billing).
+
+```python
+# Single call:
+response = await execution_service.send_once(
+    client=client,
+    messages=messages,
+    tools=tools,
+    billing_context=LLMBillingContext(db=db, user_id=..., session_id=..., llm_config=...),
+    usage_key="my_feature:unique_key",
+)
+
+# Multi-step tool loop:
+result = await execution_service.run_tool_loop_until_final(
+    client=client,
+    messages=messages,
+    tools=tools,
+    final_tool_name="submit_result",
+    tool_registry=registry,
+    max_loops=5,
+    billing_context=billing_context,
+)
+```
+
+`LLMExecutionService` handles the full reserve → settle → release lifecycle internally:
+- `_reserve_if_needed()` → `LLMBillingService.reserve_chat_llm_call()`
+- `_settle_if_needed()` → `LLMBillingService.settle_chat_llm_call()`
+- `_release_reservation()` → `LLMBillingService.release_llm_call()`
+- `_mark_settlement_failed()` on settle exceptions
+- Records `llm_invocations` telemetry for each call
+
+### Rules for New Code
+
+#### Adding a new feature that calls an LLM
+
+**Always use `LLMExecutionService`** for any new code that needs to make LLM calls outside the agent runtime loop. Do NOT call LLM providers directly or use `CreditService.deduct()`.
+
+```python
+from ii_agent.core.llm.execution_service import LLMExecutionService, LLMBillingContext
+
+# 1. Get the execution service from the container
+execution_service = container.llm_execution_service
+
+# 2. Create billing context
+billing_context = LLMBillingContext(
+    db=db,
+    user_id=user.id,
+    session_id=session_id,
+    llm_config=llm_config,
+    model_id=llm_config.model,
+    run_id=run_id,
+)
+
+# 3. Call send_once (single LLM call) or run_tool_loop_until_final (multi-turn)
+response = await execution_service.send_once(
+    client=LLMExecutionService.create_client(llm_config),
+    messages=messages,
+    billing_context=billing_context,
+    usage_key="my_feature:unique_operation_id",
+)
+```
+
+#### Adding a new agent flow
+
+New agent flows (new socket command handlers, new agent types) must follow the same pattern as `query_handler` / `plan_handler`:
+
+1. **Pre-validation**: Call `validate_and_update_session()` to check `BillingStatus == OK` (account health only — do not check credit balance here)
+2. **Agent creation**: Wire `llm_billing_service` into the model via `ToolDependencies` / factory
+3. **Execution**: The agent's `arun()` / `aresponse_stream()` loop handles per-call billing automatically through `Model.aprocess_response_stream()`
+4. **No post-run billing**: Do NOT add billing logic after the agent loop — all billing is handled per-call inside the loop
+
+#### Adding a new billable tool
+
+Tools that incur external costs must:
+
+1. Set `max_cost_usd` on the tool class (upper bound for reservation)
+2. Override `quote_cost()` if the cost depends on input parameters
+3. Return the actual cost in `ToolResult(cost=actual_usd)`
+
+```python
+class MyTool(BaseAgentTool):
+    max_cost_usd: float = 0.10
+
+    async def quote_cost(self, tool_input: dict) -> BillingQuote | None:
+        estimated = calculate_cost(tool_input)
+        return BillingQuote(strategy="bounded", reserve_usd=estimated, max_usd=estimated)
+
+    async def arun(self, ...) -> ToolResult:
+        result = await external_api(...)
+        return ToolResult(llm_content="done", cost=result.actual_cost)
+```
+
+The `Function` wrapper handles `_reserve_tool_billing()` → execute → `_finalize_tool_billing()` automatically.
+
+#### Anti-patterns (DO NOT)
+
+```python
+# BAD: Direct credit deduction for LLM/tool work
+await credit_service.deduct(db, user_id, amount, ...)
+# No reservation hold, no refund on failure, no idempotency
+
+# BAD: Calling LLM providers without billing
+response = await client.send(messages=messages)
+# No credit check, no cost tracking, no usage record
+
+# BAD: Building custom reserve/settle logic outside the billing services
+reservation = await reservation_service.reserve(db, ...)
+response = await provider.send(...)
+await reservation_service.settle(db, ...)
+# Use LLMBillingService or LLMExecutionService instead — they handle
+# quoting, token estimation, output cap, error paths, and telemetry
+
+# BAD: Post-run bulk billing in handlers
+total_cost = sum(metrics)
+await credit_service.deduct(db, user_id, total_cost)
+# Billing is per-call inside the agent loop, not post-run
+```
+
+### Outbox Pattern for Durability
+
+When `BillingUsageFactService` is configured (production), settlement goes through the durable outbox:
+
+```
+1. capture_llm_fact() / capture_tool_fact()   — INSERT into billing_usage_facts (status=captured)
+2. process_fact()                              — settle reservation + mark processed
+3. On exception: mark retryable (up to 5 attempts), then manual_review
+```
+
+Cron jobs in `workers/cron/billing_recovery.py`:
+- `expire_stale_reservations` (every 15 min) — releases RESERVED holds past `expires_at`
+- `retry_billing_usage_facts` (every 1 min) — retries captured/stale facts
+- `alert_settlement_failures` (every 5 min) — logs SETTLEMENT_FAILED reservations
+
+### Validation Flow
+
+Pre-execution validation (`agent/application/validation_service.py`) checks **account health only** — whether `billing_status == OK`. It does NOT check credit balance sufficiency. The actual credit gate is the first `_reserve_llm_billing()` call inside the agent loop, which raises `InsufficientCreditsError` if the user can't afford at least 128 output tokens.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `core/llm/billing_service.py` | `LLMBillingService` — quoting, reserve/settle/release orchestration |
+| `core/llm/execution_service.py` | `LLMExecutionService` — single LLM calls & tool loops with billing |
+| `billing/reservations/service.py` | `CreditReservationService` — reservation state machine |
+| `billing/credits/service.py` | `CreditService` — ledger + balance mutations |
+| `billing/outbox/service.py` | `BillingUsageFactService` — durable outbox |
+| `billing/credits/pricing.py` | `ModelPricing` — per-model token prices |
+| `agent/runtime/models/base.py` | Agent runtime billing hooks (`_reserve/_settle/_release_llm_billing`) |
+| `agent/runtime/tools/function.py` | Agent tool billing hooks |
+| `billing/usage/service.py` | `UsageService` — usage_records + session_metrics |
+| `workers/cron/billing_recovery.py` | Cron jobs for stale reservation cleanup and fact retry |
 
 ## Key Files
 

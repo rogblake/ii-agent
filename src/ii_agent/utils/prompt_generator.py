@@ -68,7 +68,7 @@ async def enhance_user_prompt(
             client=client,
             messages=[system_message, user_message],
             billing_context=billing_context,
-            usage_key="enhance_prompt",
+            usage_key=f"enhance_prompt:{uuid.uuid4().hex[:12]}",
         )
         enhanced_prompt = llm_execution_service.extract_text_content(response.content).strip()
 

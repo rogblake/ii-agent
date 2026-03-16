@@ -17,6 +17,10 @@ from ii_agent.chat.application.tool_service import ChatToolService
 from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
 from ii_agent.chat.messages.history_service import ChatMessageHistoryService
 from ii_agent.auth.users.dependencies import UserServiceDep
+from ii_agent.billing.usage.dependencies import (
+    LLMInvocationRepositoryDep,
+    ToolInvocationRepositoryDep,
+)
 from ii_agent.settings.llm.dependencies import LLMSettingServiceDep
 from ii_agent.billing.credits.dependencies import CreditServiceDep
 from ii_agent.core.llm.dependencies import LLMBillingServiceDep
@@ -93,10 +97,17 @@ ChatMessageHistoryServiceDep = Annotated[ChatMessageHistoryService, Depends(get_
 
 def get_llm_loop_service(
     llm_billing: LLMBillingServiceDep,
+    llm_invocation_repo: LLMInvocationRepositoryDep,
     message_service: MessageServiceDep,
+    tool_invocation_repo: ToolInvocationRepositoryDep,
 ) -> LLMTurnLoopService:
     """Provide LLMTurnLoopService instance."""
-    return LLMTurnLoopService(message_service=message_service, llm_billing=llm_billing)
+    return LLMTurnLoopService(
+        message_service=message_service,
+        llm_billing=llm_billing,
+        llm_invocation_repo=llm_invocation_repo,
+        tool_invocation_repo=tool_invocation_repo,
+    )
 
 
 LLMTurnLoopServiceDep = Annotated[LLMTurnLoopService, Depends(get_llm_loop_service)]

@@ -203,7 +203,10 @@ def create_call_tool_handler(mcp_server: "FastMCP") -> callable:
                 # Get user details and generate access token (similar to Google login)
                 if user_id:
                     async with get_db_session_local() as db:
-                        user = await UserService(config=get_settings(), user_repo=UserRepository(), waitlist_repo=WaitlistRepository(), api_key_repo=APIKeyRepository()).get_user_by_id(db, user_id)
+                        from ii_agent.billing.credits.balance_repository import CreditBalanceRepository
+                        from ii_agent.billing.credits.ledger_repository import CreditLedgerRepository
+                        from ii_agent.billing.credits.service import CreditService
+                        user = await UserService(config=get_settings(), user_repo=UserRepository(), waitlist_repo=WaitlistRepository(), api_key_repo=APIKeyRepository(), credit_service=CreditService(balance_repo=CreditBalanceRepository(), ledger_repo=CreditLedgerRepository())).get_user_by_id(db, user_id)
                     if user:
                         user_access_token = jwt_handler.create_access_token(
                             user_id=str(user.id),

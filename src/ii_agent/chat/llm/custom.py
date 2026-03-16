@@ -227,6 +227,7 @@ class CustomProvider(LLMClient):
         """Send messages and get complete response using litellm."""
         litellm_messages = self._convert_messages(messages)
         litellm_tools = self._convert_tools(tools)
+        custom_opts = (provider_options or {}).get("custom", {})
 
         # Prepend system prompt if not already present
         if not litellm_messages or litellm_messages[0].get("role") != "system":
@@ -254,6 +255,8 @@ class CustomProvider(LLMClient):
             params["tools"] = litellm_tools
         if self.llm_config.temperature is not None:
             params["temperature"] = self.llm_config.temperature
+        if custom_opts.get("max_tokens") is not None:
+            params["max_tokens"] = custom_opts["max_tokens"]
 
         try:
             response = await acompletion(**params)
@@ -328,6 +331,7 @@ class CustomProvider(LLMClient):
         """Stream response events using litellm."""
         litellm_messages = self._convert_messages(messages)
         litellm_tools = self._convert_tools(tools)
+        custom_opts = (provider_options or {}).get("custom", {})
 
         # Prepend system prompt if not already present
         if not litellm_messages or litellm_messages[0].get("role") != "system":
@@ -356,6 +360,8 @@ class CustomProvider(LLMClient):
             params["tools"] = litellm_tools
         if self.llm_config.temperature is not None:
             params["temperature"] = self.llm_config.temperature
+        if custom_opts.get("max_tokens") is not None:
+            params["max_tokens"] = custom_opts["max_tokens"]
 
         try:
             stream = await acompletion(**params)

@@ -27,6 +27,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_IMAGE_GENERATION_MAX_COST_USD = 0.05
+
 
 # Model-specific resolution and aspect ratio configurations
 # GPT Image 1.5: Only supports fixed resolutions - 1024x1024, 1536x1024, 1024x1536
@@ -46,6 +48,8 @@ DEFAULT_ASPECT_RATIOS = ["16:9", "1:1", "9:16", "4:3", "3:4"]
 
 class ImageGenerationTool(BaseTool):
     """Generate images from text prompts."""
+
+    max_cost_usd = DEFAULT_IMAGE_GENERATION_MAX_COST_USD
 
     def __init__(
         self,
@@ -207,6 +211,7 @@ class ImageGenerationTool(BaseTool):
                 background=background,
             )
             image_url = response.get("url")
+            image_cost = response.get("cost") or 0.0
             if not image_url:
                 raise RuntimeError("Image generation did not return an image URL")
 
@@ -233,6 +238,7 @@ class ImageGenerationTool(BaseTool):
             # Return image URL result
             return ToolResponse(
                 output=ArrayResultContent(value=[ImageUrlContentPart(url=image_url)]),
+                cost_usd=image_cost,
             )
 
         except Exception as e:

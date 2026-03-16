@@ -80,6 +80,13 @@ class ChatService:
         self._container = container
         self._title_service = title_service
 
+    @staticmethod
+    def _chat_run_error_code(exc: Exception, *, is_cancelled: bool) -> str:
+        """Normalize chat-run error codes for telemetry."""
+        if is_cancelled:
+            return "cancelled"
+        return exc.__class__.__name__
+
     async def create_chat_session(
         self, db: AsyncSession, *, user_message: str, user_id: str, model_id: str
     ) -> SessionMetadata:
@@ -156,13 +163,6 @@ class ChatService:
         session = await self._session_repo.get_public_by_id(db, session_id)
         if not session:
             raise SessionNotFoundError("Session not found or not public")
-
-    async def check_sufficient_credits(
-        self, db: AsyncSession, *, user_id: str
-    ) -> bool:
-        if not self._credit_service:
-            return True
-        return await self._credit_service.has_sufficient(db, user_id, 0.01)
 
     async def validate_model_for_chat(
         self, db: AsyncSession, *, model_id: str, user_id: str
@@ -286,6 +286,7 @@ class ChatService:
             db,
             session_id=uuid.UUID(session_id),
             user_message_id=user_message.id,
+            model_id=model_id,
             status=ChatRunStatus.RUNNING,
         )
         await db.commit()
@@ -337,6 +338,18 @@ class ChatService:
         llm_config = await self.get_llm_config(
             db, model_id=model_id, user_id=user_id
         )
+        resolved_model_id = (
+            llm_config.setting_id
+            or llm_config.application_model_name
+            or model_id
+            or llm_config.model
+        )
+        await self._chat_run_service.set_provider(
+            db,
+            chat_run=chat_run,
+            provider=llm_config.api_type.value,
+            model_id=resolved_model_id,
+        )
         provider = LLMProviderFactory.create_provider(llm_config)
         is_code_interpreter_enabled = bool(tools and tools.get("code_interpreter"))
 
@@ -352,6 +365,8 @@ class ChatService:
 
         # Phase 3: Run LLM turn loop
         try:
+            assistant_message_id: uuid.UUID | None = None
+            finish_reason: str | None = None
             async for event in self._llm_loop.run(
                 db,
                 messages=messages,
@@ -368,11 +383,20 @@ class ChatService:
                 chat_request=chat_request,
                 tool_service=self._tool_service,
             ):
+                if event.get("type") == EventType.COMPLETE.value:
+                    message_id = event.get("message_id")
+                    finish_reason = event.get("finish_reason")
+                    if message_id:
+                        assistant_message_id = uuid.UUID(str(message_id))
                 yield event
 
-            # Update ChatRun status to COMPLETED
             await db.refresh(chat_run)
-            chat_run.status = ChatRunStatus.COMPLETED
+            await self._chat_run_service.complete_run(
+                db,
+                chat_run=chat_run,
+                assistant_message_id=assistant_message_id,
+                finish_reason=finish_reason,
+            )
             await db.commit()
 
             await cancel.cleanup_run(run_id)
@@ -387,7 +411,15 @@ class ChatService:
                 logger.error(f"Chat streaming error: {e}", exc_info=True)
 
             await db.refresh(chat_run)
-            chat_run.status = ChatRunStatus.ABORTED if is_cancelled else ChatRunStatus.FAILED
+            await self._chat_run_service.fail_run(
+                db,
+                chat_run=chat_run,
+                status=(
+                    ChatRunStatus.ABORTED if is_cancelled else ChatRunStatus.FAILED
+                ),
+                error_message=None if is_cancelled else str(e),
+                error_code=self._chat_run_error_code(e, is_cancelled=is_cancelled),
+            )
             await db.commit()
 
             await self._message_service.mark_messages_incomplete(
@@ -560,12 +592,16 @@ class ChatService:
 
         try:
             async for event in CouncilService.stream_council_response(
+                db=db,
+                user_id=user_id,
                 messages=messages,
                 user_question=display_content,
                 council_preferences=council_prefs,
                 llm_configs=llm_configs,
                 model_names=model_names,
                 run_id=run_id,
+                session_id=session_id,
+                llm_execution_service=self._container.llm_execution_service,
             ):
                 event_type = event.get("type")
 

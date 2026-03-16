@@ -206,6 +206,7 @@ class ChatToolService:
                 tool_call_id=tool_call_id,
                 name=tool_name,
                 output=tool_response.output,
+                cost_usd=tool_response.cost_usd,
             )
 
         except Exception as e:

@@ -25,6 +25,8 @@ from ii_agent.core.exceptions import BadGatewayError, InternalError, ValidationE
 from ii_agent.auth.exceptions import InvalidTokenException
 from ii_agent.auth.users.schemas import UserPublic
 from ii_agent.auth.users.dependencies import UserServiceDep
+from ii_agent.billing.customers.dependencies import BillingCustomerServiceDep
+from ii_agent.billing.customers.service import EffectiveBillingProfile
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -86,6 +88,26 @@ def _make_token_payload(user_id: str, email: str, role: str) -> dict:
         "token_type": "bearer",
         "expires_in": jwt_handler.access_token_expire_minutes * 60,
     }
+
+
+def _serialize_user_public(
+    current_user: Any,
+    billing_profile: EffectiveBillingProfile,
+) -> UserPublic:
+    """Serialize a user with effective billing state from the new billing domain."""
+    return UserPublic(
+        id=str(current_user.id),
+        email=str(current_user.email),
+        role=str(current_user.role),
+        first_name=str(current_user.first_name or ""),
+        last_name=str(current_user.last_name or ""),
+        avatar=current_user.avatar,
+        subscription_status=billing_profile.subscription_status,
+        subscription_plan=billing_profile.subscription_plan,
+        subscription_billing_cycle=billing_profile.subscription_billing_cycle,
+        subscription_current_period_end=billing_profile.subscription_current_period_end,
+        language=str(current_user.language or "en"),
+    )
 
 
 async def _exchange_code_for_token(
@@ -377,5 +399,14 @@ async def google_callback(
 
 
 @router.get("/me", response_model=UserPublic)
-async def reader_user_me(current_user: CurrentUser) -> Any:
-    return current_user
+async def reader_user_me(
+    db: DBSession,
+    current_user: CurrentUser,
+    billing_customer_service: BillingCustomerServiceDep,
+) -> UserPublic:
+    billing_profile = await billing_customer_service.get_effective_profile(
+        db,
+        user_id=current_user.id,
+        provider="stripe",
+    )
+    return _serialize_user_public(current_user, billing_profile)

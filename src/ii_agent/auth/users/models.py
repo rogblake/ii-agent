@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from ii_agent.sessions.pin.models import SessionPin
     from ii_agent.integrations.connectors.models import Connector, ComposioProfile
     from ii_agent.billing.models import BillingTransaction
+    from ii_agent.billing.customers.models import BillingCustomer
     from ii_agent.projects.models import Project
     from ii_agent.content.skills.models import Skill
 
@@ -80,7 +81,7 @@ class User(Base):
         TIMESTAMP(timezone=True),
         nullable=True
     )
-    credits: Mapped[float] = mapped_column(Float)
+    credits: Mapped[float] = mapped_column(Float, default=0.0)
     bonus_credits: Mapped[float] = mapped_column(Float, default=0.0)
     language: Mapped[str] = mapped_column(String, default="en")
 
@@ -132,6 +133,11 @@ class User(Base):
     )
     billing_transactions: Mapped[list["BillingTransaction"]] = relationship(
         "BillingTransaction",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    billing_customers: Mapped[list["BillingCustomer"]] = relationship(
+        "BillingCustomer",
         back_populates="user",
         cascade="all, delete-orphan"
     )

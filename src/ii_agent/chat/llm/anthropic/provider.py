@@ -1,6 +1,7 @@
 """Anthropic provider using official SDK."""
 
 import asyncio
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
 import io
@@ -66,6 +67,12 @@ logger = logging.getLogger(__name__)
 
 CODEX_EXECUTION_TOOL = {"type": "code_execution_20250825", "name": "code_execution"}
 ANTHROPIC_INLINE_IMAGE_LIMIT_BYTES = 5 * 1024 * 1024
+DEFAULT_ANTHROPIC_SKILLS = [
+    {"type": "anthropic", "skill_id": "pptx", "version": "latest"},
+    {"type": "anthropic", "skill_id": "xlsx", "version": "latest"},
+    {"type": "anthropic", "skill_id": "pdf", "version": "latest"},
+    {"type": "anthropic", "skill_id": "docx", "version": "latest"},
+]
 
 
 class SkillConfig(BaseModel):
@@ -353,7 +360,11 @@ class AnthropicProvider(LLMClient):
         params = {
             "model": self.model_name,
             "messages": anthropic_messages,
-            "max_tokens": 8192,
+            "max_tokens": (
+                anthropic_options.get("max_tokens", 8192)
+                if anthropic_options
+                else 8192
+            ),
         }
 
         if has_skills:
@@ -467,6 +478,31 @@ class AnthropicProvider(LLMClient):
                     logger.warning(f"Unknown content block type: {type(block)}")
 
         return content
+
+    def _build_stream_provider_options(
+        self,
+        provider_options: Optional[Dict[str, Any]],
+        *,
+        container_id: Optional[str],
+    ) -> Dict[str, Any]:
+        """Preserve request caps while layering Anthropic stream container settings."""
+        merged_options = deepcopy(provider_options) if provider_options else {}
+
+        if isinstance(self.client, anthropic.AsyncAnthropic):
+            anthropic_options = merged_options.setdefault("anthropic", {})
+            container_options = anthropic_options.setdefault("container", {})
+            container_options.setdefault(
+                "skills",
+                deepcopy(DEFAULT_ANTHROPIC_SKILLS),
+            )
+
+        if container_id:
+            anthropic_options = merged_options.setdefault("anthropic", {})
+            container_options = anthropic_options.setdefault("container", {})
+            container_options["id"] = container_id
+            logger.info(f"Reusing container ID: {container_id} from previous messages")
+
+        return merged_options
 
     async def send(
         self,
@@ -592,43 +628,10 @@ class AnthropicProvider(LLMClient):
                     container_id = container["id"]
                     break
 
-        ## NOTE: Currently hardcoding skills
-        provider_options = (
-            {
-                "anthropic": {
-                    "container": {
-                        "skills": [
-                            {
-                                "type": "anthropic",
-                                "skill_id": "pptx",
-                                "version": "latest",
-                            },
-                            {
-                                "type": "anthropic",
-                                "skill_id": "xlsx",
-                                "version": "latest",
-                            },
-                            {
-                                "type": "anthropic",
-                                "skill_id": "pdf",
-                                "version": "latest",
-                            },
-                            {
-                                "type": "anthropic",
-                                "skill_id": "docx",
-                                "version": "latest",
-                            },
-                        ],
-                    }
-                }
-            }
-            if isinstance(self.client, anthropic.AsyncAnthropic)
-            else provider_options
-        )  # Vertex does not support skills yet
-
-        if container_id:
-            provider_options["anthropic"]["container"]["id"] = container_id
-            logger.info(f"Reusing container ID: {container_id} from previous messages")
+        provider_options = self._build_stream_provider_options(
+            provider_options,
+            container_id=container_id,
+        )
         anthropic_options = (
             provider_options.get("anthropic", {}) if provider_options else {}
         )

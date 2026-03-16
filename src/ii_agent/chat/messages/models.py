@@ -26,7 +26,11 @@ class ChatMessage(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    session_id: Mapped[str] = mapped_column(String, nullable=False)
+    session_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     role: Mapped[str] = mapped_column(
         String, nullable=False
     )  # "user", "assistant", "system", or "tool"
@@ -62,6 +66,7 @@ class ChatMessage(Base):
     )
     parent_message_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         PG_UUID(as_uuid=True),
+        ForeignKey("chat_messages.id", ondelete="SET NULL"),
         nullable=True,
     )  # Link to parent message (user message for assistant responses)
     is_finished: Mapped[Optional[bool]] = mapped_column(

@@ -896,6 +896,7 @@ class OpenAIProvider(LLMClient):
         instructions = template.substitute(
             current_date=datetime.now().strftime("%Y-%m-%d")
         )
+        openai_opts = (provider_options or {}).get("openai", {})
         user_messages = []
 
         for msg in openai_messages:
@@ -918,6 +919,7 @@ class OpenAIProvider(LLMClient):
             instructions=instructions,
             tools=openai_tools,
             stream=False,
+            max_output_tokens=openai_opts.get("max_output_tokens"),
             reasoning={"effort": "medium", "summary": "auto"},
         )
 
@@ -1042,6 +1044,7 @@ class OpenAIProvider(LLMClient):
         instructions = template.substitute(
             current_date=datetime.now().strftime("%Y-%m-%d")
         )
+        openai_opts = (provider_options or {}).get("openai", {})
         # Convert tools to Responses API format (with container if code interpreter enabled)
         openai_tools = self._convert_tools(
             tools,
@@ -1056,6 +1059,7 @@ class OpenAIProvider(LLMClient):
             instructions=instructions,
             tools=openai_tools,
             stream=True,
+            max_output_tokens=openai_opts.get("max_output_tokens"),
             reasoning={"effort": "medium", "summary": "auto"},
             previous_response_id=previous_response_id,
         )

@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.billing.credits.dependencies import CreditServiceDep
+from ii_agent.billing.usage.dependencies import UsageServiceDep
 from ii_agent.content.storybook.repository import StorybookRepository
 from ii_agent.content.storybook.service import StorybookService
 from ii_agent.content.storybook.export_service import StorybookExportService
@@ -65,14 +65,14 @@ def get_storybook_version_service(
 def get_storybook_voice_service(
     repo: StorybookRepositoryDep,
     storybook_service: StorybookServiceDep,
-    credit_service: CreditServiceDep,
+    usage_service: UsageServiceDep,
 ) -> StorybookVoiceService:
     """Provide StorybookVoiceService instance."""
     return StorybookVoiceService(
         repo=repo,
         storybook_service=storybook_service,
         config=get_settings(),
-        credit_service=credit_service,
+        usage_service=usage_service,
     )
 
 
@@ -90,7 +90,7 @@ def get_storybook_edit_service(
 def get_storybook_ai_edit_service(
     session_service: SessionServiceDep,
     user_service: UserServiceDep,
-    credit_service: CreditServiceDep,
+    usage_service: UsageServiceDep,
     llm_setting_service: LLMSettingServiceDep,
     llm_execution: LLMExecutionServiceDep,
 ) -> StorybookAIEditService:
@@ -98,7 +98,7 @@ def get_storybook_ai_edit_service(
     return StorybookAIEditService(
         session_service=session_service,
         user_service=user_service,
-        credit_service=credit_service,
+        usage_service=usage_service,
         llm_setting_service=llm_setting_service,
         llm_execution=llm_execution,
         config=get_settings(),

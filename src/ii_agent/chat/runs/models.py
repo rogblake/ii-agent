@@ -36,10 +36,26 @@ class ChatRun(Base):
         String, ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
     )
     user_message_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID, nullable=True)
+    assistant_message_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID,
+        nullable=True,
+    )
+    model_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    provider: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    finish_reason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    error_code: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(
         String, nullable=False, default=ChatRunStatus.RUNNING.value
     )
     error_message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    started_at: Mapped[Optional[datetime]] = mapped_column(
+        TimestampColumn,
+        nullable=True,
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        TimestampColumn,
+        nullable=True,
+    )
 
     # Optimistic locking
     version: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)

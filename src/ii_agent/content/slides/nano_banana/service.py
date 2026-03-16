@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.chat.types import BinaryContent, MessageRole, TextContent, ToolCall
 from ii_agent.core.config.llm_config import LLMConfig
-from ii_agent.core.llm.execution_service import LLMExecutionService
+from ii_agent.core.llm.execution_service import LLMBillingContext, LLMExecutionService
 from ii_agent.projects.design.utils.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
     DESIGN_MODE_RUNTIME_SCRIPT,
@@ -225,6 +225,9 @@ class NanoBananaService:
         try:
             components, img_width, img_height = await self._run_detection(
                 image_url=request.image_url,
+                db=db,
+                user_id=user_id,
+                session_id=request.session_id,
             )
 
             overlay_html = None
@@ -498,8 +501,14 @@ class NanoBananaService:
     async def _run_detection(
         self,
         image_url: str,
+        *,
+        db: AsyncSession,
+        user_id: str,
+        session_id: str,
     ) -> Tuple[List[DetectedComponent], int, int]:
         """Detect visual components in a slide image via LLM tool calling."""
+        import uuid as _uuid_mod
+
         image_bytes, mime_type = await self._download_image(image_url)
         width, height = self._get_image_dimensions(image_bytes)
 
@@ -509,7 +518,7 @@ class NanoBananaService:
         messages = [
             self._llm_execution_service.new_message(
                 role=MessageRole.USER,
-                session_id="nano-banana-detect",
+                session_id=session_id,
                 parts=[
                     BinaryContent(path="slide-image", mime_type=mime_type, data=image_bytes),
                     TextContent(text=prompt),
@@ -530,6 +539,14 @@ class NanoBananaService:
                     ),
                 },
             },
+            billing_context=LLMBillingContext(
+                db=db,
+                user_id=user_id,
+                session_id=session_id,
+                llm_config=self._llm_config,
+                model_id=self._llm_config.model,
+            ),
+            usage_key=f"nano_banana_detect:{session_id}:{_uuid_mod.uuid4().hex[:12]}",
         )
 
         # Extract the structured payload from the tool call

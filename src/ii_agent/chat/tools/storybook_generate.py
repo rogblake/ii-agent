@@ -29,6 +29,7 @@ from ii_agent.content.storybook.html_generator import (
     generate_text_only_page_html,
 )
 
+from ii_agent.billing.reservations.types import BillingQuote
 from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
 
 if TYPE_CHECKING:
@@ -43,6 +44,8 @@ DEFAULT_TEXT_POSITION = "right"
 DEFAULT_TEXT_PERCENTAGE = 30
 STORYBOOK_TASK_EXPIRES_SECONDS = 300
 MAX_CONTENT_SCENES = 50
+# Per-page image generation cost used for upfront reservation
+_STORYBOOK_PER_PAGE_COST_USD = 0.05
 MAX_RETRIES = 3
 
 TextPositionLiteral = Literal[
@@ -550,6 +553,23 @@ class StorybookGenerationTool(BaseTool):
 
         return (page_results, image_url, voice_cost_usd)
 
+    async def quote_cost(self, tool_call: ToolCallInput) -> BillingQuote | None:
+        """Bounded quote based on scene count × per-page image cost."""
+        try:
+            params = json.loads(tool_call.input)
+            scenes = params.get("scenes", [])
+            page_count = max(len(scenes), 1)
+            page_count = min(page_count, MAX_CONTENT_SCENES)
+        except (json.JSONDecodeError, KeyError):
+            page_count = 5  # safe default
+        reserve_usd = page_count * _STORYBOOK_PER_PAGE_COST_USD
+        return BillingQuote(
+            strategy="bounded",
+            reserve_usd=reserve_usd,
+            max_usd=reserve_usd,
+            metadata={"tool_name": self.name, "page_count": page_count},
+        )
+
     async def run(self, tool_call: ToolCallInput) -> ToolResponse:
         return ToolResponse(
             output=ErrorTextContent(
@@ -564,6 +584,8 @@ class StorybookGenerationTool(BaseTool):
         *,
         parent_message_id: uuid.UUID,
         model_id: str,
+        run_id: str | None = None,
+        reservation_id: str | None = None,
     ) -> ToolResponse:
         """Start storybook generation via Celery and return initial progress."""
         try:
@@ -647,10 +669,12 @@ class StorybookGenerationTool(BaseTool):
                         "cancelled": False,
                         "scenes": scenes,
                         "completed_scenes": [],
-                        "credits_checked": False,
+                        "actual_cost_usd_total": 0.0,
                         "tool_call_id": tool_call.id,
                         "parent_message_id": str(parent_message_id) if parent_message_id else None,
                         "model_id": model_id,
+                        "run_id": run_id,
+                        "reservation_id": reservation_id,
                         "tool_name": self.name,
                     },
                 )

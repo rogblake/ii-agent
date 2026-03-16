@@ -10,6 +10,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 
 from ii_agent.auth.dependencies import DBSession, CurrentUser
+from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.core.exceptions import InternalError, PaymentRequiredError
 from ii_agent.chat.api.dependencies import ChatServiceDep
 from ii_agent.chat.api.schemas import (
@@ -139,14 +140,6 @@ async def send_chat_message(
         model_id=request.model_id,
         user_id=str(current_user.id),
     )
-
-    # Check credits
-    has_credits = await chat_service.check_sufficient_credits(
-        db_session,
-        user_id=str(current_user.id)
-    )
-    if not has_credits:
-        raise PaymentRequiredError("Insufficient credits")
 
     # Use existing session or create new one
     session_metadata = None
@@ -410,6 +403,18 @@ async def send_chat_message(
                     }
                     yield f"event: complete\ndata: {json.dumps(complete_event)}\n\n"
 
+        except PaymentRequiredError as e:
+            error_event = {
+                "status": "error",
+                "message": str(e),
+                "code": "insufficient_credits",
+                "retryable": False,
+            }
+            if isinstance(e, InsufficientCreditsError):
+                error_event["billing_context"] = e.billing_context
+            elif hasattr(e, "to_billing_payload"):
+                error_event.update(e.to_billing_payload())
+            yield f"event: error\ndata: {json.dumps(error_event)}\n\n"
         except Exception as e:
             logger.error(f"Chat streaming error: {e}", exc_info=True)
             error_event = {

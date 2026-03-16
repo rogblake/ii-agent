@@ -14,7 +14,7 @@ from ii_agent.core.exceptions import PaymentRequiredError, ValidationError
 from ii_agent.sessions.dependencies import SessionServiceDep
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.auth.dependencies import CurrentUser, DBSession
-from ii_agent.billing.credits.dependencies import CreditServiceDep
+from ii_agent.billing.usage.dependencies import UsageServiceDep
 from ii_agent.content.storybook.exceptions import (
     StorybookAccessDeniedError,
     StorybookExportError,
@@ -53,6 +53,7 @@ from ii_agent.content.storybook.schemas import (
 from ii_agent.auth.users.dependencies import UserServiceDep
 from ii_agent.billing.credits.utils import usd_to_credits
 from ii_agent.content.media.service import _generate_image
+from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.core.storage.dependencies import MediaTemplateStorageDep
 
 logger = logging.getLogger(__name__)
@@ -151,6 +152,9 @@ async def generate_storybook_voiceover(
         session_id=storybook.session_id,
         language_code=language,
         force=force,
+        idempotency_key=(
+            f"storybook:voice:{storybook_id}:{get_or_generate_request_id()}"
+        ),
     )
 
 
@@ -369,7 +373,7 @@ async def save_storybook_edits(
     current_user: CurrentUser,
     service: StorybookServiceDep,
     edit_service: StorybookEditServiceDep,
-    credit_service: CreditServiceDep,
+    usage_service: UsageServiceDep,
     session_service: SessionServiceDep,
     db: DBSession,
 ) -> SaveEditsResponse:
@@ -412,6 +416,8 @@ async def save_storybook_edits(
     if not page_changes and not image_urls:
         return SaveEditsResponse(success=False, error="No changes to save")
 
+    await usage_service.require_billing_ok(db, str(current_user.id))
+
     try:
         new_storybook, total_voice_cost_usd = await edit_service.save_all_page_edits(
             db,
@@ -427,12 +433,16 @@ async def save_storybook_edits(
         return SaveEditsResponse(success=False, error="Failed to save changes")
 
     if total_voice_cost_usd > 0:
-        credits_to_deduct = usd_to_credits(total_voice_cost_usd)
-        deduct_success = await credit_service.deduct_and_track_session_usage(
+        credits_to_deduct = float(usd_to_credits(total_voice_cost_usd))
+        deduct_success = await usage_service.deduct_and_track_session_usage(
             db,
             user_id=str(current_user.id),
             session_id=storybook.session_id,
             amount=credits_to_deduct,
+            source_domain="voice_generation",
+            idempotency_key=(
+                f"storybook:edit-voice:{storybook_id}:{get_or_generate_request_id()}"
+            ),
         )
         if deduct_success:
             logger.info(

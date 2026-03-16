@@ -285,6 +285,8 @@ class GeminiProvider(LLMClient):
             config_dict["temperature"] = self.llm_config.temperature
         if gemini_tools:
             config_dict["tools"] = gemini_tools
+        if gemini_opts.get("max_output_tokens") is not None:
+            config_dict["max_output_tokens"] = gemini_opts["max_output_tokens"]
 
         # System instruction: provider_options override > inline SYSTEM messages > default
         inline_system = self._extract_system_text(messages)
@@ -486,6 +488,8 @@ class GeminiProvider(LLMClient):
             config_dict["temperature"] = self.llm_config.temperature
         if gemini_tools:
             config_dict["tools"] = gemini_tools
+        if gemini_opts.get("max_output_tokens") is not None:
+            config_dict["max_output_tokens"] = gemini_opts["max_output_tokens"]
 
         # System instruction: provider_options override > inline SYSTEM messages > default
         inline_system = self._extract_system_text(messages)

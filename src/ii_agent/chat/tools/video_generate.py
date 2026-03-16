@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import uuid
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 from urllib.parse import urlparse
 
+from ii_agent.billing.reservations.types import BillingQuote
 from ii_agent.chat.types import (
     ArrayResultContent,
     ErrorTextContent,
@@ -63,6 +65,8 @@ TRUSTED_DOMAINS = [
     "storage.googleapis.com",
     "sfile.ii.inc",
 ]
+
+DEFAULT_VIDEO_COST_USD_PER_8S_SEGMENT = 0.75
 
 
 
@@ -213,6 +217,24 @@ class VideoGenerationTool(BaseTool):
                 },
             },
             required=["prompt"],
+        )
+
+    async def quote_cost(self, tool_call: ToolCallInput) -> BillingQuote | None:
+        """Reserve a bounded amount based on requested duration/segment count."""
+        try:
+            params = json.loads(tool_call.input)
+        except (TypeError, json.JSONDecodeError):
+            params = {}
+
+        duration = params.get("duration") or getattr(self.video_settings, "duration", "6s")
+        seconds = DURATION_TO_SECONDS.get(str(duration), 6)
+        segments = max(1, math.ceil(seconds / MAX_SINGLE_SEGMENT_SECONDS))
+        max_usd = segments * DEFAULT_VIDEO_COST_USD_PER_8S_SEGMENT
+        return BillingQuote(
+            strategy="bounded",
+            reserve_usd=max_usd,
+            max_usd=max_usd,
+            metadata={"segments": segments, "requested_seconds": seconds},
         )
 
     async def run(self, tool_call: ToolCallInput) -> ToolResponse:
@@ -457,6 +479,7 @@ class VideoGenerationTool(BaseTool):
                         )
                     ]
                 ),
+                cost_usd=video_cost,
             )
 
         except Exception as e:

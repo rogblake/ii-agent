@@ -6,11 +6,16 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from typing import TYPE_CHECKING
+
 from ii_agent.core.config.settings import Settings
 from ii_agent.auth.users.exceptions import UserDisabledException, WaitlistDeniedException
 from ii_agent.auth.users.models import APIKey, User
 from ii_agent.auth.users.repository import APIKeyRepository, UserRepository
 from ii_agent.auth.users.waitlist_repository import WaitlistRepository
+
+if TYPE_CHECKING:
+    from ii_agent.billing.credits.service import CreditService
 
 # Valid language codes accepted by update_language
 VALID_LANGUAGES = ("en", "vi", "hi", "ja")
@@ -25,12 +30,14 @@ class UserService:
         user_repo: UserRepository,
         api_key_repo: APIKeyRepository,
         waitlist_repo: WaitlistRepository,
+        credit_service: "CreditService",
         config: Settings,
     ) -> None:
         self._config = config
         self._user_repo = user_repo
         self._api_key_repo = api_key_repo
         self._waitlist_repo = waitlist_repo
+        self._credit_service = credit_service
 
     # ------------------------------------------------------------------
     # Queries
@@ -77,12 +84,16 @@ class UserService:
             last_name=last_name,
             avatar=avatar,
             email_verified=email_verified,
-            credits=self._config.credits.default_user_credits,
-            bonus_credits=bonus_credits,
-            subscription_plan=self._config.credits.default_subscription_plan,
             login_provider=login_provider,
         )
         await self.create_api_key(db, user_id=user.id)
+        # Create credit_balances row + initial_balance ledger entry atomically.
+        await self._credit_service.ensure_balance_exists(
+            db,
+            user.id,
+            credits=self._config.credits.default_user_credits,
+            bonus_credits=bonus_credits,
+        )
         return user
 
     async def create_api_key(self, db: AsyncSession, *, user_id: str) -> APIKey:

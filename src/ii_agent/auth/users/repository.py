@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import case, desc, func, select, update
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.auth.users.models import APIKey, User
@@ -29,14 +29,6 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
-    async def lookup_by_customer_id(self, db: AsyncSession, customer_id: str) -> Optional[str]:
-        """Look up a user ID by their Stripe customer ID."""
-        result = await db.execute(
-            select(User.id).where(User.stripe_customer_id == customer_id)
-        )
-        row = result.first()
-        return row[0] if row else None
-
     async def create(
         self,
         db: AsyncSession,
@@ -46,27 +38,32 @@ class UserRepository:
         last_name: str = "",
         avatar: Optional[str] = None,
         email_verified: bool = False,
-        credits: float = 0.0,
-        bonus_credits: float = 0.0,
+        credits: Optional[float] = None,
+        bonus_credits: Optional[float] = None,
         subscription_plan: Optional[str] = None,
         login_provider: Optional[str] = None,
     ) -> User:
         """Create a new user and persist it."""
-        user = User(
-            id=str(uuid.uuid4()),
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            avatar=avatar,
-            role="user",
-            is_active=True,
-            email_verified=email_verified,
-            credits=credits,
-            bonus_credits=bonus_credits,
-            last_login_at=datetime.now(timezone.utc),
-            subscription_plan=subscription_plan,
-            login_provider=login_provider,
-        )
+        user_kwargs: dict[str, Any] = {
+            "id": str(uuid.uuid4()),
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "avatar": avatar,
+            "role": "user",
+            "is_active": True,
+            "email_verified": email_verified,
+            "last_login_at": datetime.now(timezone.utc),
+            "login_provider": login_provider,
+        }
+        if credits is not None:
+            user_kwargs["credits"] = credits
+        if bonus_credits is not None:
+            user_kwargs["bonus_credits"] = bonus_credits
+        if subscription_plan is not None:
+            user_kwargs["subscription_plan"] = subscription_plan
+
+        user = User(**user_kwargs)
         db.add(user)
         await db.flush()
         return user
@@ -103,37 +100,6 @@ class UserRepository:
         user.last_login_at = datetime.now(timezone.utc)
         await db.flush()
 
-    async def update_subscription(
-        self,
-        db: AsyncSession,
-        user: User,
-        *,
-        subscription_plan: Optional[str] = None,
-        subscription_status: Optional[str] = None,
-        subscription_billing_cycle: Optional[str] = ...,
-        stripe_customer_id: Optional[str] = None,
-        subscription_current_period_end: Optional[datetime] = None,
-        credits: Optional[float] = None,
-    ) -> None:
-        """Update subscription-related fields on a user.
-
-        Uses sentinel default ``...`` for ``subscription_billing_cycle`` so that
-        callers can explicitly pass ``None`` to clear the value.
-        """
-        if subscription_plan is not None:
-            user.subscription_plan = subscription_plan
-        if subscription_status is not None:
-            user.subscription_status = subscription_status
-        if subscription_billing_cycle is not ...:
-            user.subscription_billing_cycle = subscription_billing_cycle
-        if stripe_customer_id is not None:
-            user.stripe_customer_id = stripe_customer_id
-        if subscription_current_period_end is not None:
-            user.subscription_current_period_end = subscription_current_period_end
-        if credits is not None:
-            user.credits = credits
-        await db.flush()
-
     async def set_active(self, db: AsyncSession, user: User, *, is_active: bool) -> None:
         """Activate or deactivate a user account."""
         user.is_active = is_active
@@ -144,96 +110,6 @@ class UserRepository:
         user.language = language
         await db.flush()
 
-    # ------------------------------------------------------------------
-    # Credit operations (atomic SQL to prevent race conditions)
-    # ------------------------------------------------------------------
-
-    async def deduct_credits(
-        self, db: AsyncSession, user_id: str, amount: float
-    ) -> tuple[float, float] | None:
-        """Atomically deduct credits (bonus first, then regular).
-
-        Returns ``(credits, bonus_credits)`` after deduction, or ``None``
-        if the user was not found or had insufficient balance.
-        """
-        result = await db.execute(
-            update(User)
-            .where(
-                (User.id == user_id)
-                & ((User.credits + User.bonus_credits) >= amount)
-            )
-            .values(
-                bonus_credits=case(
-                    (User.bonus_credits >= amount, User.bonus_credits - amount),
-                    else_=0.0,
-                ),
-                credits=case(
-                    (User.bonus_credits >= amount, User.credits),
-                    else_=User.credits - (amount - User.bonus_credits),
-                ),
-                updated_at=datetime.now(timezone.utc),
-            )
-            .returning(User.credits, User.bonus_credits)
-        )
-        row = result.first()
-        return (row.credits, row.bonus_credits) if row else None
-
-    async def add_credits(
-        self, db: AsyncSession, user_id: str, amount: float, *, is_bonus: bool = False
-    ) -> tuple[float, float] | None:
-        """Atomically add credits to a user.
-
-        Returns ``(credits, bonus_credits)`` after addition, or ``None``
-        if the user was not found.
-        """
-        if is_bonus:
-            values: dict[str, Any] = {
-                "bonus_credits": User.bonus_credits + amount,
-                "updated_at": datetime.now(timezone.utc),
-            }
-        else:
-            values = {
-                "credits": User.credits + amount,
-                "updated_at": datetime.now(timezone.utc),
-            }
-
-        result = await db.execute(
-            update(User)
-            .where(User.id == user_id)
-            .values(**values)
-            .returning(User.credits, User.bonus_credits)
-        )
-        row = result.first()
-        return (row.credits, row.bonus_credits) if row else None
-
-    async def set_credits(
-        self,
-        db: AsyncSession,
-        user_id: str,
-        amount: float,
-        *,
-        bonus_amount: float | None = None,
-    ) -> tuple[float, float] | None:
-        """Set a user's credit balance to exact amounts.
-
-        Returns ``(credits, bonus_credits)`` after update, or ``None``
-        if the user was not found.
-        """
-        values: dict[str, Any] = {
-            "credits": amount,
-            "updated_at": datetime.now(timezone.utc),
-        }
-        if bonus_amount is not None:
-            values["bonus_credits"] = bonus_amount
-
-        result = await db.execute(
-            update(User)
-            .where(User.id == user_id)
-            .values(**values)
-            .returning(User.credits, User.bonus_credits)
-        )
-        row = result.first()
-        return (row.credits, row.bonus_credits) if row else None
 
 
 class APIKeyRepository:

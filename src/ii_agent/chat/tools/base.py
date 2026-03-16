@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 from pydantic import BaseModel
 
+from ii_agent.billing.reservations.types import BillingQuote
 from ii_agent.chat.types import ToolResultContent
 
 
@@ -25,6 +26,7 @@ class ToolResponse(BaseModel):
 
     output: ToolResultContent
     metadata: Optional[Dict[str, Any]] = None
+    cost_usd: float | None = None
 
 
 class ToolCallInput(BaseModel):
@@ -42,6 +44,8 @@ class BaseTool(ABC):
     Follows Go pattern: simple Run() method that takes ToolCall and returns ToolResponse.
     No complex confirmation flows, MCP wrappers, or multi-format support.
     """
+
+    max_cost_usd: float | None = None
 
     @abstractmethod
     def info(self) -> ToolInfo:
@@ -66,3 +70,14 @@ class BaseTool(ABC):
             ToolResponse with content and error status
         """
         pass
+
+    async def quote_cost(self, tool_call: ToolCallInput) -> BillingQuote | None:
+        """Return an upfront exact or bounded quote when the tool is platform-billable."""
+        if self.max_cost_usd is None:
+            return None
+        return BillingQuote(
+            strategy="bounded",
+            reserve_usd=self.max_cost_usd,
+            max_usd=self.max_cost_usd,
+            metadata={"tool_name": self.name},
+        )

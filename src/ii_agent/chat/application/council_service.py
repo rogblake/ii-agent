@@ -4,23 +4,23 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid as _uuid_mod
 from typing import Any, AsyncIterator, Dict, List
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from ii_agent.chat.types import (
-    EventType,
     Message,
     TextContent,
     MessageRole,
     CouncilPreferences,
 )
-from ii_agent.chat.llm import LLMProviderFactory
+from ii_agent.chat.llm import get_client
 from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.core.llm.execution_service import LLMBillingContext, LLMExecutionService
 from ii_agent.core.redis import cancel
 
 logger = logging.getLogger(__name__)
-
-# Sentinel value to signal the end of council member outputs
-_SENTINEL = object()
 
 COUNCIL_MODEL_TIMEOUT = 180  # seconds per model
 MIN_COUNCIL_MODELS = 2
@@ -75,27 +75,35 @@ class CouncilService:
     async def stream_council_response(
         cls,
         *,
+        db: AsyncSession,
+        user_id: str,
         messages: List[Message],
         user_question: str,
         council_preferences: CouncilPreferences,
         llm_configs: Dict[str, LLMConfig],
         model_names: Dict[str, str],
         run_id: str,
+        session_id: str,
+        llm_execution_service: LLMExecutionService,
     ) -> AsyncIterator[Dict[str, Any]]:
-        """Run council models in parallel, then synthesize.
+        """Run council models in parallel with billing, then synthesize.
 
         Yields dict events:
-          - council_member_start / council_member_delta / council_member_complete / council_member_error
-          - council_synthesis_start / council_synthesis_delta / council_synthesis_complete
-          - Standard content events for the synthesis phase
+          - council_member_start / council_member_complete / council_member_error
+          - council_synthesis_start / council_synthesis_complete
+          - council_result with final metadata
 
         Args:
+            db: Database session for billing operations
+            user_id: User ID for billing
             messages: Conversation context messages (user + history)
             user_question: The raw user question text
             council_preferences: Council config with model list and synthesis model
             llm_configs: Map of model_id -> LLMConfig for each council model + synthesis
             model_names: Map of model_id -> display name
             run_id: Run ID for cancellation tracking
+            session_id: Session ID for billing context
+            llm_execution_service: Execution service with billing integration
         """
         cls.validate_preferences(council_preferences)
 
@@ -104,11 +112,10 @@ class CouncilService:
         council_had_error = False
         member_outputs: Dict[str, str] = {}  # model_id -> collected content
 
-        async def run_single_model(model_id: str, config: LLMConfig) -> None:
-            """Execute a single council member model with streaming."""
+        async def run_single_model(model_id: str, config: LLMConfig, member_idx: int) -> None:
+            """Execute a single council member model with billing."""
             nonlocal council_had_error
             display_name = model_names.get(model_id, model_id)
-            session_id = messages[-1].session_id or "" if messages else ""
 
             try:
                 await queue.put({
@@ -117,28 +124,35 @@ class CouncilService:
                     "model_name": display_name,
                 })
 
-                provider = LLMProviderFactory.create_provider(config)
-                collected_content = ""
+                try:
+                    _run_uuid = _uuid_mod.UUID(run_id) if run_id else None
+                except (ValueError, AttributeError):
+                    _run_uuid = None
 
-                async def _stream_model() -> str:
-                    nonlocal collected_content
-                    async for event in provider.stream(
+                billing_context = LLMBillingContext(
+                    db=db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    llm_config=config,
+                    model_id=model_id,
+                    run_id=_run_uuid,
+                )
+
+                client = get_client(config)
+
+                async def _send_model() -> str:
+                    response = await llm_execution_service.send_once(
+                        client=client,
                         messages=messages,
-                        session_id=session_id,
-                        tools=[],
-                    ):
-                        if event.type == EventType.CONTENT_DELTA and event.content:
-                            collected_content += event.content
-                            await queue.put({
-                                "type": "council_member_delta",
-                                "model_id": model_id,
-                                "model_name": display_name,
-                                "delta": event.content,
-                            })
-                    return collected_content
+                        billing_context=billing_context,
+                        usage_key=f"council_member:{run_id}:{member_idx}:{model_id}",
+                    )
+                    return llm_execution_service.extract_text_content(
+                        response.content if isinstance(response.content, list) else []
+                    ) or (response.content if isinstance(response.content, str) else "")
 
                 content = await asyncio.wait_for(
-                    _stream_model(),
+                    _send_model(),
                     timeout=COUNCIL_MODEL_TIMEOUT,
                 )
 
@@ -153,9 +167,6 @@ class CouncilService:
 
             except asyncio.TimeoutError:
                 council_had_error = True
-                # Still save partial content if we got some before timeout
-                if collected_content:
-                    member_outputs[model_id] = collected_content
                 logger.warning(f"Council model {model_id} timed out after {COUNCIL_MODEL_TIMEOUT}s")
                 await queue.put({
                     "type": "council_member_error",
@@ -165,9 +176,6 @@ class CouncilService:
                 })
             except Exception as e:
                 council_had_error = True
-                # Save partial content if we got some before the error
-                if collected_content:
-                    member_outputs[model_id] = collected_content
                 logger.error(f"Council model {model_id} failed: {e}", exc_info=True)
                 await queue.put({
                     "type": "council_member_error",
@@ -178,13 +186,13 @@ class CouncilService:
 
         try:
             # Phase 1: Launch all council models in parallel
-            for model_config in council_preferences.council_models:
+            for member_idx, model_config in enumerate(council_preferences.council_models):
                 mid = model_config.model_id
                 config = llm_configs.get(mid)
                 if not config:
                     logger.warning(f"No LLM config for council model {mid}, skipping")
                     continue
-                task = asyncio.create_task(run_single_model(mid, config))
+                task = asyncio.create_task(run_single_model(mid, config, member_idx))
                 tasks.append(task)
 
             # Monitor task completion and drain queue
@@ -243,7 +251,7 @@ class CouncilService:
             )
 
             synthesis_message = Message(
-                id=messages[-1].id,  # Reuse message ID
+                id=messages[-1].id,
                 role=MessageRole.USER,
                 parts=[TextContent(text=synthesis_prompt)],
                 session_id=messages[-1].session_id,
@@ -253,25 +261,37 @@ class CouncilService:
 
             yield {"type": "council_synthesis_start", "model_id": synthesis_model_id}
 
-            synthesis_provider = LLMProviderFactory.create_provider(synthesis_config)
-            synthesis_content = ""
+            try:
+                _synth_run_uuid = _uuid_mod.UUID(run_id) if run_id else None
+            except (ValueError, AttributeError):
+                _synth_run_uuid = None
 
-            session_id = messages[-1].session_id or ""
-            async for event in synthesis_provider.stream(
-                messages=[synthesis_message],
+            synthesis_billing_context = LLMBillingContext(
+                db=db,
+                user_id=user_id,
                 session_id=session_id,
-                tools=[],
-            ):
-                # Cancellation checkpoint 3: during synthesis streaming
-                await cancel.raise_if_cancelled(run_id)
+                llm_config=synthesis_config,
+                model_id=synthesis_model_id,
+                run_id=_synth_run_uuid,
+            )
 
-                if event.type == EventType.CONTENT_DELTA and event.content:
-                    synthesis_content += event.content
-                    yield {
-                        "type": "council_synthesis_delta",
-                        "model_id": synthesis_model_id,
-                        "delta": event.content,
-                    }
+            synthesis_client = get_client(synthesis_config)
+            synthesis_response = await llm_execution_service.send_once(
+                client=synthesis_client,
+                messages=[synthesis_message],
+                billing_context=synthesis_billing_context,
+                usage_key=f"council_synthesis:{run_id}:{synthesis_model_id}",
+            )
+
+            synthesis_content = llm_execution_service.extract_text_content(
+                synthesis_response.content
+                if isinstance(synthesis_response.content, list)
+                else []
+            ) or (
+                synthesis_response.content
+                if isinstance(synthesis_response.content, str)
+                else ""
+            )
 
             yield {
                 "type": "council_synthesis_complete",

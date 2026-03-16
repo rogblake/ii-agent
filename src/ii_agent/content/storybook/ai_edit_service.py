@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.auth.users.service import UserService
-from ii_agent.billing.credits.service import CreditService
+from ii_agent.billing.usage.service import UsageService
 from ii_agent.billing.credits.utils import usd_to_credits
 from ii_agent.chat.llm.factory import get_client
 from ii_agent.chat.types import ImageURLContent, MessageRole, TextContent
@@ -21,6 +21,7 @@ from ii_agent.content.storybook.schemas import StorybookDetail
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.exceptions import ValidationError
 from ii_agent.core.llm.execution_service import LLMBillingContext, LLMExecutionService
+from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.sessions.service import SessionService
 from ii_agent.settings.llm.service import LLMSettingService, get_system_llm_config
 
@@ -335,14 +336,14 @@ class StorybookAIEditService:
         *,
         session_service: SessionService,
         user_service: UserService,
-        credit_service: CreditService,
+        usage_service: UsageService,
         llm_setting_service: LLMSettingService,
         llm_execution: LLMExecutionService,
         config: Settings,
     ) -> None:
         self._session_service = session_service
         self._user_service = user_service
-        self._credit_service = credit_service
+        self._usage_service = usage_service
         self._llm_setting_service = llm_setting_service
         self._llm_execution = llm_execution
         self._config = config
@@ -403,7 +404,7 @@ class StorybookAIEditService:
                 llm_config=llm_config,
                 model_id=model_id,
             ),
-            usage_key="storybook_ai_rewrite",
+            usage_key=f"storybook_ai_rewrite:{storybook.id}:{uuid.uuid4().hex[:12]}",
         )
         texts = []
         for part in result.content:
@@ -429,6 +430,8 @@ class StorybookAIEditService:
         """Generate or outpaint a storybook background image."""
         if not prompt or not prompt.strip():
             raise ValidationError("No prompt provided for image generation")
+
+        await self._usage_service.require_billing_ok(db, user_id)
 
         user_api_key = await self._user_service.get_active_api_key(db, user_id)
         if not user_api_key:
@@ -474,6 +477,8 @@ class StorybookAIEditService:
         """Generate a replacement storybook page image with layout awareness."""
         if not prompt or not prompt.strip():
             raise ValidationError("No prompt provided for image regeneration")
+
+        await self._usage_service.require_billing_ok(db, user_id)
 
         page = _extract_page(storybook, page_number)
         if not page:
@@ -660,17 +665,24 @@ class StorybookAIEditService:
         session_id: str,
         raw_cost: Any,
         context: str,
+        idempotency_key: str | None = None,
     ) -> None:
         """Best-effort image credit deduction after a successful generation."""
-        credits_to_deduct = usd_to_credits(raw_cost or DEFAULT_IMAGE_COST_USD)
+        credits_to_deduct = float(usd_to_credits(raw_cost or DEFAULT_IMAGE_COST_USD))
         if credits_to_deduct <= 0:
             return
 
-        deduct_success = await self._credit_service.deduct_and_track_session_usage(
+        deduct_success = await self._usage_service.deduct_and_track_session_usage(
             db,
             user_id=user_id,
             session_id=session_id,
             amount=credits_to_deduct,
+            source_domain="image_generation",
+            idempotency_key=(
+                idempotency_key
+                or "storybook:image:"
+                f"{get_or_generate_request_id()}:{context.replace(' ', ':')}"
+            ),
         )
         if not deduct_success:
             logger.warning(

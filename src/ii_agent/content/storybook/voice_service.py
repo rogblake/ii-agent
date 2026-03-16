@@ -7,8 +7,8 @@ from typing import Optional, Dict, Any, TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.billing.credits.service import CreditService
 from ii_agent.billing.credits.utils import usd_to_credits
+from ii_agent.billing.usage.service import UsageService
 from ii_agent.content.storybook.repository import StorybookRepository
 from ii_agent.content.storybook.schemas import (
     StorybookDetail,
@@ -16,6 +16,7 @@ from ii_agent.content.storybook.schemas import (
 )
 from ii_agent.content.storybook.service import _storybook_to_detail
 from ii_agent.core.config.settings import Settings
+from ii_agent.core.request_context import get_or_generate_request_id
 
 if TYPE_CHECKING:
     from ii_agent.content.storybook.service import StorybookService
@@ -128,12 +129,12 @@ class StorybookVoiceService:
         repo: StorybookRepository,
         storybook_service: StorybookService,
         config: Settings,
-        credit_service: CreditService,
+        usage_service: UsageService,
     ) -> None:
         self._repo = repo
         self._storybook_service = storybook_service
         self._config = config
-        self._credit_service = credit_service
+        self._usage_service = usage_service
 
     async def generate_voiceover(
         self,
@@ -217,8 +218,11 @@ class StorybookVoiceService:
         session_id: str,
         language_code: Optional[str] = None,
         force: bool = False,
+        idempotency_key: Optional[str] = None,
     ) -> StorybookVoiceOverResponse:
         """Generate voice-over and deduct credits in one service call."""
+        await self._usage_service.require_billing_ok(db, user_id)
+
         updated_storybook, generated_any, total_voice_cost_usd = (
             await self.generate_voiceover(
                 db,
@@ -250,12 +254,18 @@ class StorybookVoiceService:
             )
 
         if total_voice_cost_usd > 0:
-            credits_to_deduct = usd_to_credits(total_voice_cost_usd)
-            deduct_success = await self._credit_service.deduct_and_track_session_usage(
+            credits_to_deduct = float(usd_to_credits(total_voice_cost_usd))
+            request_scoped_key = (
+                idempotency_key
+                or f"storybook:voice:{storybook_id}:{get_or_generate_request_id()}"
+            )
+            deduct_success = await self._usage_service.deduct_and_track_session_usage(
                 db,
                 user_id=user_id,
                 session_id=session_id,
                 amount=credits_to_deduct,
+                source_domain="voice_generation",
+                idempotency_key=request_scoped_key,
             )
             if deduct_success:
                 logger.info(

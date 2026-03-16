@@ -586,6 +586,8 @@ class ToolResult(BaseContentPart):
     name: str
     output: ToolResultContent
     provider_options: Optional[Dict[str, Any]] = None
+    cost_usd: float | None = None
+    credits_charged: float | None = None
 
 
 class Finish(BaseContentPart):

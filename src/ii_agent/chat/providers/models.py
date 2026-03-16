@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 import uuid
 
-from sqlalchemy import BigInteger, Index, String
+from sqlalchemy import BigInteger, ForeignKey, Index, String
 from sqlalchemy import (
     UUID,
     Column,
@@ -25,7 +25,11 @@ class ChatProviderContainer(Base):
     __tablename__ = "chat_provider_containers"
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
-    session_id = Column(String, nullable=False)
+    session_id = Column(
+        String,
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     provider = Column(String, nullable=False)  # 'openai', 'anthropic', etc.
     container_id = Column(String, nullable=False)  # Provider's container ID
     name = Column(String, nullable=True)  # Container name
@@ -61,8 +65,16 @@ class ChatProviderFile(Base):
     __tablename__ = "chat_provider_files"
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
-    file_id = Column(String, nullable=False)
-    session_id = Column(String, nullable=False)
+    file_id = Column(
+        String,
+        ForeignKey("file_uploads.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    session_id = Column(
+        String,
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     provider = Column(String, nullable=False)  # 'openai', 'anthropic', 'gemini', etc.
     provider_file_id = Column(
         String, nullable=False
@@ -100,7 +112,11 @@ class ChatProviderVectorStore(Base):
     __tablename__ = "chat_provider_vector_stores"
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
-    user_id = Column(String, nullable=False)
+    user_id = Column(
+        String,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     provider = Column(String, nullable=False)  # 'openai', 'anthropic', 'gemini', etc.
     vector_store_id = Column(String, nullable=False)  # Provider's vector store ID
     version = Column(BigInteger, default=0, nullable=False)

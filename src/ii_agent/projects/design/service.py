@@ -233,6 +233,7 @@ class ProjectDesignService:
                     session_id=request.session_id,
                     llm_config=llm_config,
                 ),
+                usage_key_prefix=f"design_ai_change:{request.session_id}:{uuid.uuid4().hex[:12]}",
             )
             payload = result.final_payload
         except Exception as exc:
@@ -348,6 +349,7 @@ class ProjectDesignService:
                     session_id=request.session_id,
                     llm_config=llm_config,
                 ),
+                usage_key_prefix=f"design_iframe:{request.session_id}:{uuid.uuid4().hex[:12]}",
             )
             payload = result.final_payload
         except Exception as exc:

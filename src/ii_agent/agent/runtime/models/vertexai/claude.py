@@ -121,11 +121,7 @@ class Claude(AnthropicClaude):
         if self.request_params:
             _request_params.update(self.request_params)
 
-        if _request_params:
-            logger.debug(
-                f"Calling {self.provider} with request parameters: {_request_params}",
-                log_level=2,
-            )
+        self._log_request_params(_request_params)
         return _request_params
 
     def _prepare_request_kwargs(
@@ -170,9 +166,5 @@ class Claude(AnthropicClaude):
         if tools:
             request_kwargs["tools"] = format_tools_for_model(tools)
 
-        if request_kwargs:
-            logger.debug(
-                f"Calling {self.provider} with request parameters: {request_kwargs}",
-                log_level=2,
-            )
+        self._log_request_params(request_kwargs)
         return request_kwargs

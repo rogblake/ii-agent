@@ -689,11 +689,7 @@ class Claude(Model):
         if output_format:
             request_kwargs["output_format"] = output_format
 
-        if request_kwargs:
-            logger.debug(
-                f"Calling {self.provider} with request parameters: {request_kwargs}",
-                log_level=2,
-            )
+        self._log_request_params(request_kwargs)
         return request_kwargs
 
     async def ainvoke(

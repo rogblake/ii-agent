@@ -28,6 +28,7 @@ from ii_agent.agent.runtime.models.metrics import Metrics
 from ii_agent.agent.runtime.models.response import ModelResponse
 from ii_agent.agent.runtime.exceptions import AgentRunException, ModelProviderError
 from ii_agent.agent.runtime.tools.function import Function
+from ii_agent.core.logger import logger
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +146,22 @@ class TestModelBillingFinalizationDeep:
             )
 
         llm_billing.release_llm_call.assert_not_called()
+
+
+class TestModelDebugRequestLogging:
+    def test_log_request_params_handles_dict_values_with_debug_sink(self):
+        model = _ConcreteModel(name="test-model")
+
+        sink_id = logger.add(lambda _: None, level="DEBUG")
+        try:
+            model._log_request_params(
+                {
+                    "max_tokens": 123,
+                    "nested": {"tool_choice": "auto"},
+                }
+            )
+        finally:
+            logger.remove(sink_id)
 
 
 # ---------------------------------------------------------------------------

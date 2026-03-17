@@ -280,6 +280,15 @@ class Model(ABC):
     def get_provider(self) -> str:
         return self.provider or self.name or self.__class__.__name__
 
+    def _log_request_params(self, request_params: Dict[str, Any]) -> None:
+        """Log request params without treating dict braces as format placeholders."""
+        if request_params:
+            logger.bind(log_level=2).debug(
+                "Calling {} with request parameters: {}",
+                self.get_provider(),
+                request_params,
+            )
+
     @abstractmethod
     async def ainvoke(self, *args, **kwargs) -> ModelResponse:
         pass

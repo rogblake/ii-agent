@@ -264,11 +264,7 @@ class OpenAIChat(Model):
         if self.request_params:
             request_params.update(self.request_params)
 
-        if request_params:
-            logger.debug(
-                f"Calling {self.provider} with request parameters: {request_params}",
-                log_level=2,
-            )
+        self._log_request_params(request_params)
         return request_params
 
     def to_dict(self) -> Dict[str, Any]:

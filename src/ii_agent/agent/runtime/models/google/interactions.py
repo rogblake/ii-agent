@@ -285,11 +285,7 @@ class GeminiInteractions(Model):
         if self.timeout is not None:
             request_params["timeout"] = self.timeout
 
-        if request_params:
-            logger.debug(
-                f"Calling {self.provider} with request parameters: {request_params}",
-                log_level=2,
-            )
+        self._log_request_params(request_params)
         # TODO: support builtin tools config
         return request_params
 

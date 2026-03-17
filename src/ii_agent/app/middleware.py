@@ -1,0 +1,49 @@
+"""HTTP middleware and exception handler registration."""
+
+from __future__ import annotations
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+
+from ii_agent.core.config.settings import Settings
+from ii_agent.core.exceptions import IIAgentError
+from ii_agent.core.middleware import (
+    exception_logging_middleware,
+    ii_agent_error_handler,
+    request_tracing_middleware,
+)
+
+
+def configure_middleware(app: FastAPI, settings: Settings) -> None:
+    """Register middleware in the same order as the legacy bootstrap."""
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.oauth.session_secret_key,
+        same_site="lax",
+        https_only=False,
+    )
+
+    app.middleware("http")(request_tracing_middleware)
+    app.middleware("http")(exception_logging_middleware)
+    app.add_middleware(GZipMiddleware)
+
+    @app.middleware("http")
+    async def normalize_mcp_path(request: Request, call_next):
+        if request.scope.get("path") == "/mcp":
+            request.scope["path"] = "/mcp/"
+        return await call_next(request)
+
+
+def configure_exception_handlers(app: FastAPI) -> None:
+    """Register application exception handlers."""
+    app.exception_handler(IIAgentError)(ii_agent_error_handler)

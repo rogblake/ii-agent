@@ -38,7 +38,7 @@ async def test_db_session_manager_commit_and_rollback_paths(monkeypatch):
     assert session.committed == 1
 
     with pytest.raises(exc.SQLAlchemyError):
-        async with db_manager.get_db():
+        async with db_manager.get_db_session_local():
             raise exc.SQLAlchemyError("boom")
 
     assert session.rolled_back == 1

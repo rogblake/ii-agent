@@ -23,7 +23,7 @@ from ii_agent.workers.cron.jobs.extend_sandbox_timeout import (
 
 
 def _make_ctx_db():
-    """Return (ctx_fn, db_mock) mirroring how get_db() works."""
+    """Return (ctx_fn, db_mock) mirroring how get_db_session_local() works."""
     db = AsyncMock()
     db.execute = AsyncMock()
 
@@ -263,7 +263,7 @@ class TestRun:
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(return_value=_make_scalars_result([]))
 
-        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db", new=ctx):
+        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx):
             result = await extender.run()
 
         assert result["status"] == "success"
@@ -282,7 +282,7 @@ class TestRun:
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(return_value=_make_scalars_result(sessions))
 
-        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db", new=ctx):
+        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx):
             result = await extender.run()
 
         assert result["status"] == "success"
@@ -311,7 +311,7 @@ class TestRun:
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(return_value=_make_scalars_result(sessions))
 
-        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db", new=ctx):
+        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx):
             result = await extender.run()
 
         assert result["status"] == "partial"
@@ -324,7 +324,7 @@ class TestRun:
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(side_effect=RuntimeError("DB failure"))
 
-        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db", new=ctx):
+        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx):
             with pytest.raises(RuntimeError, match="DB failure"):
                 await extender.run()
 
@@ -334,7 +334,7 @@ class TestRun:
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(return_value=_make_scalars_result([]))
 
-        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db", new=ctx):
+        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx):
             result = await extender.run()
 
         assert "duration_seconds" in result
@@ -355,7 +355,7 @@ class TestRun:
 
         # Prevent actual sleeping between batches
         with (
-            patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db", new=ctx),
+            patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
             result = await extender.run()

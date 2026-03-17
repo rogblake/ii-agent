@@ -56,7 +56,7 @@ def make_agent_run_task(run_id=None, status=RunStatus.RUNNING) -> MagicMock:
 
 
 def make_db_context(result=None):
-    """Create a mock async context manager for get_db()."""
+    """Create a mock async context manager for get_db_session_local()."""
     db = AsyncMock()
     cm = AsyncMock()
     cm.__aenter__ = AsyncMock(return_value=db)
@@ -92,7 +92,7 @@ class TestGetOrCreateRunTask:
         cm, db = make_db_context()
         setup_scalar_result(db, existing_task)
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             result = await store.get_or_create_run_task(
                 session_id="session-001",
                 run_id=run_id,
@@ -122,7 +122,7 @@ class TestGetOrCreateRunTask:
 
         db.execute = AsyncMock(side_effect=execute_side_effect)
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             with patch("ii_agent.agent.runtime.agent_sessions.store.AgentRunTask", return_value=new_task) as MockTask:
                 # When task is not found, the store creates a new one
                 # We patch AgentRunTask so it returns new_task
@@ -147,7 +147,7 @@ class TestGetOrCreateRunTask:
         db.execute = AsyncMock(side_effect=RuntimeError("db error"))
         db.rollback = AsyncMock()
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             with pytest.raises(RuntimeError, match="db error"):
                 await store.get_or_create_run_task(
                     session_id="session-001",
@@ -172,13 +172,16 @@ class TestUpdateRunStatus:
         db.refresh = AsyncMock()
 
         # Mock RunStatus.runable_states to include RUNNING
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             with patch.object(RunStatus, "runable_states", return_value=[RunStatus.RUNNING]):
-                result = await store.update_run_status(
-                    run_id=run_id,
-                    status=RunStatus.COMPLETED,
-                )
+                with patch("ii_agent.agent.runtime.agent_sessions.store.entity_cache") as mock_cache:
+                    mock_cache.evict = AsyncMock()
+                    result = await store.update_run_status(
+                        run_id=run_id,
+                        status=RunStatus.COMPLETED,
+                    )
         db.commit.assert_awaited_once()
+        mock_cache.evict.assert_awaited_once_with(f"agent_task:{run_id}")
 
     @pytest.mark.asyncio
     async def test_raises_value_error_when_task_not_found(self):
@@ -188,12 +191,13 @@ class TestUpdateRunStatus:
         cm, db = make_db_context()
         setup_scalar_result(db, None)  # Task not found
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
-            with pytest.raises(ValueError, match="not found"):
-                await store.update_run_status(
-                    run_id=run_id,
-                    status=RunStatus.COMPLETED,
-                )
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
+            with patch("ii_agent.agent.runtime.agent_sessions.store.entity_cache"):
+                with pytest.raises(ValueError, match="not found"):
+                    await store.update_run_status(
+                        run_id=run_id,
+                        status=RunStatus.COMPLETED,
+                    )
 
     @pytest.mark.asyncio
     async def test_raises_stale_data_error_when_not_running(self):
@@ -204,13 +208,14 @@ class TestUpdateRunStatus:
         cm, db = make_db_context()
         setup_scalar_result(db, task)
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
-            with patch.object(RunStatus, "runable_states", return_value=[RunStatus.RUNNING]):
-                with pytest.raises(StaleDataError):
-                    await store.update_run_status(
-                        run_id=run_id,
-                        status=RunStatus.FAILED,
-                    )
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
+            with patch("ii_agent.agent.runtime.agent_sessions.store.entity_cache"):
+                with patch.object(RunStatus, "runable_states", return_value=[RunStatus.RUNNING]):
+                    with pytest.raises(StaleDataError):
+                        await store.update_run_status(
+                            run_id=run_id,
+                            status=RunStatus.FAILED,
+                        )
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +232,7 @@ class TestGetRunTask:
         cm, db = make_db_context()
         setup_scalar_result(db, task)
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             result = await store.get_run_task(run_id)
         assert result is task
 
@@ -239,7 +244,7 @@ class TestGetRunTask:
         cm, db = make_db_context()
         setup_scalar_result(db, None)
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             result = await store.get_run_task(run_id)
         assert result is None
 
@@ -251,7 +256,7 @@ class TestGetRunTask:
         cm, db = make_db_context()
         db.execute = AsyncMock(side_effect=RuntimeError("connection error"))
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             with pytest.raises(RuntimeError):
                 await store.get_run_task(run_id)
 
@@ -282,12 +287,15 @@ class TestSaveRun:
         ])
 
         from ii_agent.core.exceptions import NotFoundError
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
-            with pytest.raises(NotFoundError):
-                await store.save_run(run)
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
+            with patch("ii_agent.agent.runtime.agent_sessions.store.entity_cache") as mock_cache:
+                mock_cache.evict = AsyncMock()
+                with pytest.raises(NotFoundError):
+                    await store.save_run(run)
+        mock_cache.evict.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_creates_new_message_record_when_not_exists(self):
+    async def test_creates_new_message_record_and_evicts_cache_when_not_exists(self):
         """Verify save_run calls db.add when task and message records need to be persisted."""
         store = make_store()
         run = make_run_output()
@@ -296,34 +304,31 @@ class TestSaveRun:
         task = make_agent_run_task(run_id=run.run_id)
         cm, db = make_db_context()
 
-        call_count = [0]
-        def execute_side_effect(*args, **kwargs):
-            result = MagicMock()
-            if call_count[0] == 0:
-                result.scalar_one_or_none.return_value = task  # task found
-            else:
-                result.scalar_one_or_none.return_value = None  # message not found
-            call_count[0] += 1
-            return result
-
-        db.execute = AsyncMock(side_effect=execute_side_effect)
+        db.execute = AsyncMock(side_effect=[
+            MagicMock(scalar_one_or_none=MagicMock(return_value=task)),   # task found
+            MagicMock(scalar_one_or_none=MagicMock(return_value=None)),   # message not found
+        ])
         db.add = MagicMock()
         db.flush = AsyncMock()
         db.commit = AsyncMock()
 
         # Patch the store module to avoid SQLAlchemy select() with mocked class
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
-            with patch("ii_agent.agent.runtime.agent_sessions.store.AgentRunMessage") as MockMsg, \
-                 patch("ii_agent.agent.runtime.agent_sessions.store.select") as mock_select:
-                mock_msg = MagicMock()
-                MockMsg.return_value = mock_msg
-                mock_select.return_value = MagicMock()  # stub select() call
-                try:
-                    await store.save_run(run)
-                except Exception:
-                    pass  # May still fail due to SQLAlchemy internals, but that's OK
-                # Verify db context was entered
-                assert cm.__aenter__.called
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
+            with patch("ii_agent.agent.runtime.agent_sessions.store.entity_cache") as mock_cache:
+                mock_cache.evict = AsyncMock()
+                with patch("ii_agent.agent.runtime.agent_sessions.store.AgentRunMessage") as MockMsg, \
+                     patch("ii_agent.agent.runtime.agent_sessions.store.select") as mock_select:
+                    mock_msg = MagicMock()
+                    MockMsg.return_value = mock_msg
+                    mock_select.return_value = MagicMock()  # stub select() call
+                    try:
+                        await store.save_run(run)
+                    except Exception:
+                        pass  # May still fail due to SQLAlchemy internals, but that's OK
+        mock_cache.evict.assert_awaited_once_with(f"agent_task:{run.run_id}")
+        db.add.assert_called_once()
+        db.flush.assert_awaited_once()
+        db.commit.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
@@ -340,7 +345,7 @@ class TestGetSessionMessages:
         msg_result.scalars.return_value.all.return_value = []
         db.execute = AsyncMock(return_value=msg_result)
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             result = await store.get_session_messages("session-001")
         assert result == []
 
@@ -368,7 +373,7 @@ class TestGetSessionMessages:
         msg_result.scalars.return_value.all.return_value = rows
         db.execute = AsyncMock(return_value=msg_result)
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             with patch.object(RunOutput, "from_dict", return_value=MagicMock(spec=RunOutput)):
                 result = await store.get_session_messages("session-001", last_n_runs=3)
         assert len(result) == 3
@@ -396,7 +401,7 @@ class TestGetSessionMessages:
         msg_result.scalars.return_value.all.return_value = rows
         db.execute = AsyncMock(return_value=msg_result)
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             with patch.object(RunOutput, "from_dict", return_value=MagicMock(spec=RunOutput)):
                 result = await store.get_session_messages("session-001", skip_parent_runs=True)
 
@@ -547,23 +552,18 @@ class TestDeleteSession:
     async def test_returns_false_when_session_not_found(self):
         store = make_store()
         cm, db = make_db_context()
-
-        call_count = [0]
-        def execute_side_effect(*args, **kwargs):
-            result = MagicMock()
-            if call_count[0] < 2:  # First two are delete statements
-                result.rowcount = 0
-            else:  # Session select
-                result.scalar_one_or_none.return_value = None
-            call_count[0] += 1
-            return result
-
-        db.execute = AsyncMock(side_effect=execute_side_effect)
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = None
+        db.execute = AsyncMock(return_value=result)
+        db.delete = AsyncMock()
         db.commit = AsyncMock()
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             result = await store.delete_session("nonexistent-session")
         assert result is False
+        assert db.execute.await_count == 1
+        db.delete.assert_not_called()
+        db.commit.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_returns_true_when_session_deleted(self):
@@ -574,10 +574,10 @@ class TestDeleteSession:
         call_count = [0]
         def execute_side_effect(*args, **kwargs):
             result = MagicMock()
-            if call_count[0] < 2:  # Delete statements
-                result.rowcount = 1
-            else:  # Session select
+            if call_count[0] == 0:  # Session select
                 result.scalar_one_or_none.return_value = session_row
+            else:  # Delete statements
+                result.rowcount = 1
             call_count[0] += 1
             return result
 
@@ -585,6 +585,9 @@ class TestDeleteSession:
         db.delete = AsyncMock()
         db.commit = AsyncMock()
 
-        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db", return_value=cm):
+        with patch("ii_agent.agent.runtime.agent_sessions.store.get_db_session_local", return_value=cm):
             result = await store.delete_session("session-001")
         assert result is True
+        assert db.execute.await_count == 3
+        db.delete.assert_awaited_once_with(session_row)
+        db.commit.assert_awaited_once()

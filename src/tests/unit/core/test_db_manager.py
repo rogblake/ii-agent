@@ -19,7 +19,7 @@ class _FakeSession:
 
 
 @pytest.mark.asyncio
-async def test_get_db_rolls_back_on_sqlalchemy_error(monkeypatch):
+async def test_get_db_session_local_rolls_back_on_sqlalchemy_error(monkeypatch):
     session = _FakeSession()
 
     @asynccontextmanager
@@ -29,7 +29,7 @@ async def test_get_db_rolls_back_on_sqlalchemy_error(monkeypatch):
     monkeypatch.setattr(manager, "get_session_factory", lambda: _session_cm)
 
     with pytest.raises(exc.SQLAlchemyError):
-        async with manager.get_db():
+        async with manager.get_db_session_local():
             raise exc.SQLAlchemyError("boom")
 
     assert session.rollbacks == 1

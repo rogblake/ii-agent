@@ -14,7 +14,7 @@ from ii_agent.chat.types import (
     MediaPreferences,
     VideoSettings,
 )
-from ii_agent.chat.tools import BaseTool
+from ii_agent.chat.tools.base import BaseTool
 from ii_agent.chat.tools.video_generate import (
     VideoGenerationTool,
     DURATION_TO_SECONDS,

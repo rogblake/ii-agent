@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from ii_agent.billing.reservations.repository import CreditReservationRepository
 from ii_agent.billing.reservations.service import CreditReservationService
 from ii_agent.core.container import ServiceContainer
-from ii_agent.core.db.manager import get_db
+from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.logger import logger
 
 
@@ -47,7 +47,7 @@ async def expire_stale_reservations() -> None:
         svc = _build_reservation_service()
         cutoff = datetime.now(timezone.utc)
 
-        async with get_db() as db:
+        async with get_db_session_local() as db:
             expired_count = await svc.expire_stale(
                 db, older_than=cutoff, limit=_EXPIRE_BATCH_LIMIT
             )
@@ -78,7 +78,7 @@ async def retry_billing_usage_facts() -> None:
     try:
         llm_billing = _build_container().llm_billing_service
 
-        async with get_db() as db:
+        async with get_db_session_local() as db:
             retried = await llm_billing.retry_captured_usage_facts(
                 db,
                 limit=_RETRY_FACT_BATCH_LIMIT,
@@ -113,7 +113,7 @@ async def alert_settlement_failures() -> None:
     try:
         repo = CreditReservationRepository()
 
-        async with get_db() as db:
+        async with get_db_session_local() as db:
             failed = await repo.list_settlement_failed(
                 db, limit=_FAILED_SETTLEMENT_BATCH
             )

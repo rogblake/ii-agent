@@ -10,7 +10,7 @@ from ii_agent.chat.types import (
     TextContent,
     MediaPreferences,
 )
-from ii_agent.chat.tools import ImageGenerationTool
+from ii_agent.chat.tools.image_generate import ImageGenerationTool
 from ii_agent.chat.application.file_processor import process_files_for_message
 from ii_agent.core.storage.client import storage
 from ..modes.base import BaseModeStrategy

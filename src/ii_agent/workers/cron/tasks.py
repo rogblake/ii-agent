@@ -9,7 +9,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select
 from ii_agent.agent.events.models import EventType, RealtimeEvent
 from ii_agent.agent.events.repository import EventRepository
-from ii_agent.core.db.manager import get_db
+from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.agent.runs.models import AgentRunTask, RunStatus
 from ii_agent.chat.runs.models import ChatRun, ChatRunStatus
 from ii_agent.core.logger import logger
@@ -33,7 +33,7 @@ async def cleanup_long_running_tasks():
 
         logger.info(f"Starting cleanup of AgentRunTasks older than {cutoff_time}")
 
-        async with get_db() as db:
+        async with get_db_session_local() as db:
             while total_processed < max_processed:
                 # Select tasks older than 45 minutes with FOR UPDATE SKIP LOCKED
                 # This ensures we don't block on locked rows and prevents concurrent updates
@@ -115,7 +115,7 @@ async def cleanup_long_running_chat_runs():
 
         logger.info(f"Starting cleanup of ChatRuns older than {cutoff_time}")
 
-        async with get_db() as db:
+        async with get_db_session_local() as db:
             while total_processed < max_processed:
                 stmt = (
                     select(ChatRun)

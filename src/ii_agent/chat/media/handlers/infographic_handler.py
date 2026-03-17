@@ -11,7 +11,7 @@ from ii_agent.chat.types import (
     MediaPreferences,
     TextContent,
 )
-from ii_agent.chat.tools import ImageGenerationTool
+from ii_agent.chat.tools.image_generate import ImageGenerationTool
 from ..modes.base import BaseModeStrategy
 from ..modes.mini_tools_mode import MiniToolsModeStrategy
 from ..modes.normal_mode import NormalModeStrategy

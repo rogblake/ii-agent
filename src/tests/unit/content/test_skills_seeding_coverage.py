@@ -25,7 +25,7 @@ async def test_ensure_builtin_skills_synced_runs_once_for_successful_sync(monkey
         "ii_agent.agent.runtime.skills.loader.sync_builtin_to_db",
         sync_mock,
     )
-    monkeypatch.setattr("ii_agent.core.db.manager.get_db", lambda: _FakeDbSession())
+    monkeypatch.setattr("ii_agent.core.db.manager.get_db_session_local", lambda: _FakeDbSession())
 
     await skills_seeding.ensure_builtin_skills_synced()
     await skills_seeding.ensure_builtin_skills_synced()
@@ -41,7 +41,7 @@ async def test_ensure_builtin_skills_sync_error_does_not_raise(monkeypatch):
         "ii_agent.agent.runtime.skills.loader.sync_builtin_to_db",
         AsyncMock(side_effect=RuntimeError("boom")),
     )
-    monkeypatch.setattr("ii_agent.core.db.manager.get_db", lambda: _FakeDbSession())
+    monkeypatch.setattr("ii_agent.core.db.manager.get_db_session_local", lambda: _FakeDbSession())
 
     await skills_seeding.ensure_builtin_skills_synced()
 

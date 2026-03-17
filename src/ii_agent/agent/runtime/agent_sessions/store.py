@@ -16,13 +16,15 @@ from __future__ import annotations
 import uuid
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
 from ii_agent.core.exceptions import NotFoundError
-from ii_agent.core.db.manager import get_db
+from ii_agent.core.db.manager import get_db_session_local
+from ii_agent.core.redis import entity_cache
 from ii_agent.agent.runs.models import AgentRunTask, RunStatus
+from ii_agent.agent.runs.service import KEY_PATTERN as TASK_CACHE_KEY_PATTERN
 from ii_agent.sessions.models import Session
 from ii_agent.agent.runs.message import AgentRunMessage
 from ii_agent.agent.runs.summary import AgentSummary
@@ -36,7 +38,7 @@ class AgentSessionStore(SessionStore):
     """
     Manages database session lifecycle for agent operations.
 
-    Uses get_db() from core.db.manager to acquire short-lived sessions
+    Uses get_db_session_local() from core.db.manager to acquire short-lived sessions
     rather than holding connections for long-running tasks.
 
     This store handles:
@@ -78,7 +80,7 @@ class AgentSessionStore(SessionStore):
             Exception: If an error occurs during creation.
         """
 
-        async with get_db() as db:
+        async with get_db_session_local() as db:
             try:
                 task_id = uuid.UUID(run_id)
                 msg_id = uuid.UUID(user_message_id) if user_message_id else None
@@ -105,7 +107,6 @@ class AgentSessionStore(SessionStore):
                 return run_task
             except Exception as e:
                 logger.error(f"Error creating run task for session {session_id}: {e}")
-                await db.rollback()
                 raise
 
     async def update_run_status(
@@ -135,7 +136,7 @@ class AgentSessionStore(SessionStore):
             ValueError: If task not found.
         """
         try:
-            async with get_db() as db:
+            async with get_db_session_local() as db:
                 task_uuid = uuid.UUID(run_id)
 
                 # Fetch the task via ORM (enables optimistic locking)
@@ -159,6 +160,7 @@ class AgentSessionStore(SessionStore):
 
                 await db.commit()
                 await db.refresh(task)
+                await entity_cache.evict(TASK_CACHE_KEY_PATTERN.format(task_id=run_id))
                 logger.debug(f"Updated run task {run_id} status to {status}")
                 return task
 
@@ -179,7 +181,7 @@ class AgentSessionStore(SessionStore):
             AgentRunTask if found, None otherwise.
         """
         try:
-            async with get_db() as db:
+            async with get_db_session_local() as db:
                 task_uuid = uuid.UUID(run_id)
                 result = await db.execute(select(AgentRunTask).where(AgentRunTask.id == task_uuid))
                 return result.scalar_one_or_none()
@@ -218,7 +220,7 @@ class AgentSessionStore(SessionStore):
             raise ValueError("run_id is required - create_run_task must be called first")
 
         try:
-            async with get_db() as db:
+            async with get_db_session_local() as db:
                 run_uuid = uuid.UUID(run.run_id)
 
                 # Fetch the existing run task (must exist)
@@ -320,6 +322,7 @@ class AgentSessionStore(SessionStore):
                         db.add(new_summary)
 
                 await db.commit()
+                await entity_cache.evict(TASK_CACHE_KEY_PATTERN.format(task_id=run.run_id))
         except (StaleDataError, ValueError) as e:
             logger.error(f"Error saving run to session {run.session_id}: {e}")
             raise
@@ -429,7 +432,7 @@ class AgentSessionStore(SessionStore):
             List of RunOutput objects ordered by creation time (oldest first).
         """
         try:
-            async with get_db() as db:
+            async with get_db_session_local() as db:
                 stmt = (
                     select(AgentRunMessage)
                     .where(AgentRunMessage.session_id == session_id)
@@ -493,7 +496,7 @@ class AgentSessionStore(SessionStore):
             RunOutput if found, None otherwise.
         """
         try:
-            async with get_db() as db:
+            async with get_db_session_local() as db:
                 stmt = select(AgentRunMessage).where(
                     AgentRunMessage.session_id == session_id,
                     AgentRunMessage.run_id == run_id,
@@ -545,7 +548,7 @@ class AgentSessionStore(SessionStore):
             RunOutput if found, None otherwise.
         """
         try:
-            async with get_db() as db:
+            async with get_db_session_local() as db:
                 stmt = (
                     select(AgentRunMessage)
                     .where(AgentRunMessage.session_id == session_id)
@@ -605,7 +608,7 @@ class AgentSessionStore(SessionStore):
             Exception: If an error occurs during retrieval.
         """
         try:
-            async with get_db() as db:
+            async with get_db_session_local() as db:
                 # 1. Query the Session table
                 session_stmt = select(Session).where(
                     Session.id == session_id, Session.user_id == user_id
@@ -657,25 +660,20 @@ class AgentSessionStore(SessionStore):
             True if deleted, False if not found.
         """
         try:
-            async with get_db() as db:
-                # Delete messages first (foreign key constraint)
-                from sqlalchemy import delete
-
-                # Delete run messages
-                await db.execute(
-                    delete(AgentRunMessage).where(AgentRunMessage.session_id == session_id)
-                )
-
-                # Delete run tasks
-                await db.execute(delete(AgentRunTask).where(AgentRunTask.session_id == session_id))
-
-                # Delete session
+            async with get_db_session_local() as db:
                 session_stmt = select(Session).where(Session.id == session_id)
                 result = await db.execute(session_stmt)
                 session_row = result.scalar_one_or_none()
 
                 if session_row is None:
                     return False
+
+                # Delete messages first (foreign key constraint)
+                await db.execute(
+                    delete(AgentRunMessage).where(AgentRunMessage.session_id == session_id)
+                )
+
+                await db.execute(delete(AgentRunTask).where(AgentRunTask.session_id == session_id))
 
                 await db.delete(session_row)
                 await db.commit()

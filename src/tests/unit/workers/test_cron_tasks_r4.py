@@ -428,7 +428,7 @@ class TestCleanupLongRunningTasks:
         mock_ctx.__aenter__ = AsyncMock(return_value=mock_db)
         mock_ctx.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("ii_agent.workers.cron.tasks.get_db", return_value=mock_ctx):
+        with patch("ii_agent.workers.cron.tasks.get_db_session_local", return_value=mock_ctx):
             await cleanup_long_running_tasks()
 
     @pytest.mark.asyncio
@@ -465,7 +465,7 @@ class TestCleanupLongRunningTasks:
         mock_event_repo.save = AsyncMock()
 
         with (
-            patch("ii_agent.workers.cron.tasks.get_db", return_value=mock_ctx),
+            patch("ii_agent.workers.cron.tasks.get_db_session_local", return_value=mock_ctx),
             patch("ii_agent.workers.cron.tasks.EventRepository", return_value=mock_event_repo),
         ):
             await cleanup_long_running_tasks()

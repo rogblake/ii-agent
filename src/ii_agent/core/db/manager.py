@@ -2,7 +2,7 @@
 
 This module provides:
 - Migration utilities (run_migrations)
-- Session context managers (get_db, get_db_session_local)
+- Session context manager (get_db_session_local)
 
 All engine/session-factory creation is delegated to core.db.base
 (lazy, singleton) so importing this module has NO side effects.
@@ -35,22 +35,6 @@ def run_migrations():
     except Exception as e:
         logger.error(f"Error running migrations: {e}")
         raise
-
-
-@asynccontextmanager
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Get a database session as a context manager.
-
-    Yields:
-        A database session that will be automatically rolled back on error.
-    """
-    async with get_session_factory()() as db:
-        try:
-            yield db
-        except exc.SQLAlchemyError as db_exc:
-            await db.rollback()
-            logger.error(f"Database session rollback due to exception, {db_exc}")
-            raise
 
 
 @asynccontextmanager

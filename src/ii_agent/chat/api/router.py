@@ -21,7 +21,7 @@ from ii_agent.chat.api.schemas import (
     AdvancedModeState,
     AdvancedModeUpdateRequest,
 )
-from ii_agent.chat.media import MediaOrchestrator
+from ii_agent.chat.media.orchestrator import MediaOrchestrator
 
 logger = logging.getLogger(__name__)
 

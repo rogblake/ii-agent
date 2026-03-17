@@ -1,22 +1,20 @@
 """Agent service for managing agent lifecycle."""
 
 from typing import Any, Dict, List, Optional
-from uuid import UUID
 
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.logger import logger
 from ii_agent.agent.prompts.plan_mode_prompt import get_plan_mode_prompt
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.core.storage.base import BaseStorage
 from ii_agent.utils.workspace_manager import WorkspaceManager
-
-# Removed unused import that conflicts with local variable
 from ii_agent.agent.runtime.agents.agent import IIAgent
-from ii_agent.agent.runtime.factory import AgentFactory
-from ii_agent.agent.types import AgentType
 from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
-from ii_agent.core.storage.client import storage
+from ii_agent.agent.runtime.factory.factory import AgentFactory
+from ii_agent.agent.runtime.skills.db_creator import DbSkillCreator
+from ii_agent.agent.runtime.tools.connectors.connector_tool import ConnectorTool
+from ii_agent.agent.types import AgentType
 
 
 class AgentService:
@@ -37,10 +35,6 @@ class AgentService:
         metadata: Optional[Dict[str, Any]] = None,
         default_repository: Optional[Dict[str, str]] = None,
     ) -> IIAgent:
-        # Create skill creator for loading user-specific skills
-        from ii_agent.agent.runtime.tools.connectors import ConnectorTool
-        from ii_agent.agent.runtime.skills.db_creator import DbSkillCreator
-
         logger.info(f"[Agent Service] Creating V1 agent for user {session_info.user_id} with storage support for custom skills")
         skill_creator = DbSkillCreator(user_id=session_info.user_id, storage=self.file_store)
         connector_tool = ConnectorTool(
@@ -84,9 +78,6 @@ class AgentService:
         Returns:
             Configured IIAgent instance for plan mode
         """
-        from ii_agent.agent.runtime.tools.connectors import ConnectorTool
-        from ii_agent.agent.runtime.skills.db_creator import DbSkillCreator
-
         logger.info(
             f"[Agent Service] Creating V1 plan agent for user {session_info.user_id}"
         )
@@ -147,9 +138,6 @@ class AgentService:
         Returns:
             Configured IIAgent instance for plan suggestions
         """
-        from ii_agent.agent.runtime.tools.connectors import ConnectorTool
-        from ii_agent.agent.runtime.skills.db_creator import DbSkillCreator
-
         logger.info(
             f"[Agent Service] Creating V1 plan suggestions agent for user {session_info.user_id}"
         )

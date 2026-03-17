@@ -1,5 +1,7 @@
 """FastAPI dependencies for chat domain."""
 
+from __future__ import annotations
+
 from typing import Annotated
 
 from fastapi import Depends

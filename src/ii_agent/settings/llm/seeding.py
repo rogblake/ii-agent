@@ -20,7 +20,7 @@ async def seed_admin_llm_settings():
     """Seed LLM settings for admin user with system models from LLM_CONFIGS."""
     from ii_agent.auth.users.models import User
     from ii_agent.settings.llm.models import LLMSetting
-    from ii_agent.core.db.manager import get_db
+    from ii_agent.core.db.manager import get_db_session_local
 
     llm_configs_str = get_settings().llm_configs_json
     if not llm_configs_str:
@@ -35,7 +35,7 @@ async def seed_admin_llm_settings():
         logger.error(f"Error parsing LLM_CONFIGS: {e}")
         return
 
-    async with get_db() as db_session:
+    async with get_db_session_local() as db_session:
         try:
             admin_user = (
                 await db_session.execute(
@@ -154,7 +154,6 @@ async def seed_admin_llm_settings():
             await db_session.commit()
             logger.info("Successfully seeded admin LLM settings")
         except Exception:
-            await db_session.rollback()
             raise
 
 

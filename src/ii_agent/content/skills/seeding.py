@@ -16,9 +16,9 @@ async def ensure_builtin_skills_synced():
     if not _skills_synced:
         try:
             from ii_agent.agent.runtime.skills.loader import sync_builtin_to_db
-            from ii_agent.core.db.manager import get_db
+            from ii_agent.core.db.manager import get_db_session_local
 
-            async with get_db() as db_session:
+            async with get_db_session_local() as db_session:
                 count = await sync_builtin_to_db(db_session)
                 logger.info(f"Synced {count} builtin skills to database")
             _skills_synced = True

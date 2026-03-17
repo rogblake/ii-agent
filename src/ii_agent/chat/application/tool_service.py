@@ -10,20 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.integrations.connectors.repository import ConnectorRepository
 from ii_agent.integrations.connectors.models import ConnectorTypeEnum
 from ii_agent.agent.runtime.tools.clients import _get_client
-from ii_agent.chat.tools import (
-    WebSearchTool,
-    ImageSearchTool,
-    WebVisitTool,
-    FileSearchTool,
-    GitHubTool,
-    ToolCallInput,
-    ImageGenerationTool,
-)
+from ii_agent.chat.tools.base import ToolCallInput
+from ii_agent.chat.tools.file_search import FileSearchTool
+from ii_agent.chat.tools.github import GitHubTool
+from ii_agent.chat.tools.image_search import ImageSearchTool
+from ii_agent.chat.tools.web_search import WebSearchTool
+from ii_agent.chat.tools.web_visit import WebVisitTool
 from ii_agent.chat.types import (
     ErrorTextContent,
     ToolResult,
 )
-from ii_agent.chat.media import MediaOrchestrator
+from ii_agent.chat.media.orchestrator import MediaOrchestrator
 
 if TYPE_CHECKING:
     from ii_agent.chat.tools.base import BaseTool

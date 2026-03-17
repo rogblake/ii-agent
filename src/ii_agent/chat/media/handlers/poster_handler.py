@@ -13,7 +13,7 @@ from ii_agent.chat.types import (
     MediaPreferences,
     TextContent,
 )
-from ii_agent.chat.tools import ImageGenerationTool
+from ii_agent.chat.tools.image_generate import ImageGenerationTool
 from ..modes.base import BaseModeStrategy
 from ..modes.normal_mode import NormalModeStrategy
 from ..modes.template_reference_mode import TemplateReferenceModeStrategy

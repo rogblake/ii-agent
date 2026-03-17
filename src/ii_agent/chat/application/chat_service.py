@@ -25,7 +25,7 @@ from ii_agent.chat.api.schemas import ChatMessageRequest, SessionMetadata
 from ii_agent.chat.exceptions import AnthropicImageTooLargeError
 from ii_agent.chat.llm import LLMProviderFactory
 from ii_agent.chat.messages.service import MessageService
-from ii_agent.chat.media import MediaOrchestrator
+from ii_agent.chat.media.orchestrator import MediaOrchestrator
 from ii_agent.chat.application.context_service import ContextWindowManager
 from ii_agent.chat.application.file_processing_service import ChatFileProcessor
 from ii_agent.chat.application.tool_service import ChatToolService

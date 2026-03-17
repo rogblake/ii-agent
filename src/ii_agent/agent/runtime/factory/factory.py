@@ -11,11 +11,11 @@ from ii_agent.utils.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.agents.agent import IIAgent
 from ii_agent.agent.types import AgentType, Provider
 from ii_agent.agent.runtime.skills.base import SkillCreator
-from ii_agent.agent.runtime.tools.connectors import BaseConnectorTool
 from ii_agent.agent.runtime.factory.tools import AgentConfigManager
 from ii_agent.agent.runtime.factory.tool_manager import AgentToolManager
 from ii_agent.agent.runtime.models.utils import get_model
 from ii_agent.agent.runtime.agent_sessions import SessionStore
+from ii_agent.agent.runtime.tools.connectors.base import BaseConnectorTool
 from ii_agent.agent.runtime.tools.task import SYSTEM_PROMPT, TaskAgentTool, DESCRIPTION
 from ii_agent.agent.runtime.tools.dependencies import ToolDependencies
 from ii_agent.core.logger import logger

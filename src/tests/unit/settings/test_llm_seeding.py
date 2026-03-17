@@ -42,7 +42,7 @@ import ii_agent.auth.users.models  # noqa: F401 – User + APIKey etc
 def _make_ctx_db():
     """
     Return (ctx_fn, db_mock) where ctx_fn() returns an async context manager
-    that yields db_mock.  This mimics ``get_db()``.
+    that yields db_mock.  This mimics ``get_db_session_local()``.
     """
     db = AsyncMock()
     db.add = MagicMock()
@@ -147,7 +147,7 @@ class TestSeedWithExistingAdmin:
 
         with (
             patch("ii_agent.settings.llm.seeding.get_settings", return_value=mock_settings),
-            patch("ii_agent.core.db.manager.get_db", new=ctx),
+            patch("ii_agent.core.db.manager.get_db_session_local", new=ctx),
         ):
             await seed_admin_llm_settings()
 
@@ -188,7 +188,7 @@ class TestSeedWithExistingAdmin:
 
         with (
             patch("ii_agent.settings.llm.seeding.get_settings", return_value=mock_settings),
-            patch("ii_agent.core.db.manager.get_db", new=ctx),
+            patch("ii_agent.core.db.manager.get_db_session_local", new=ctx),
         ):
             await seed_admin_llm_settings()
 
@@ -196,8 +196,8 @@ class TestSeedWithExistingAdmin:
         # Update path: db.add should NOT be called (existing setting is updated in-place)
         db.add.assert_not_called()
 
-    async def test_exception_triggers_rollback(self):
-        """If an error occurs inside the DB block, session.rollback() is called."""
+    async def test_exception_propagates_on_db_error(self):
+        """If an error occurs inside the DB block, rollback handled by get_db_session_local."""
         mock_settings = MagicMock()
         mock_settings.llm_configs_json = json.dumps({"m": {"model": "x", "api_type": "openai", "api_key": None}})
 
@@ -206,12 +206,10 @@ class TestSeedWithExistingAdmin:
 
         with (
             patch("ii_agent.settings.llm.seeding.get_settings", return_value=mock_settings),
-            patch("ii_agent.core.db.manager.get_db", new=ctx),
+            patch("ii_agent.core.db.manager.get_db_session_local", new=ctx),
         ):
             with pytest.raises(RuntimeError, match="DB error"):
                 await seed_admin_llm_settings()
-
-        db.rollback.assert_called_once()
 
     async def test_api_key_encrypted_when_provided(self):
         """When config has an api_key, the encryption manager is called.
@@ -250,7 +248,7 @@ class TestSeedWithExistingAdmin:
 
         with (
             patch("ii_agent.settings.llm.seeding.get_settings", return_value=mock_settings),
-            patch("ii_agent.core.db.manager.get_db", new=ctx),
+            patch("ii_agent.core.db.manager.get_db_session_local", new=ctx),
             patch("ii_agent.core.secrets.encryption.encryption_manager", mock_enc),
         ):
             await seed_admin_llm_settings()

@@ -3,6 +3,7 @@
 import logging
 import mimetypes
 from datetime import datetime, timezone, timedelta
+from functools import lru_cache
 from typing import Any, Optional
 import uuid
 
@@ -546,4 +547,7 @@ class OpenAIVectorStore(VectorStore):
             raise
 
 
-openai_vector_store = OpenAIVectorStore()
+@lru_cache(maxsize=1)
+def get_openai_vector_store() -> OpenAIVectorStore:
+    """Return a lazily-created singleton ``OpenAIVectorStore``."""
+    return OpenAIVectorStore()

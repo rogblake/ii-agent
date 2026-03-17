@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.sessions.models import Session
-from ii_agent.core.db.manager import get_db
+from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -95,7 +95,7 @@ class SandboxTimeoutExtender:
 
         logger.info("Starting sandbox timeout extension job")
 
-        async with get_db() as db:
+        async with get_db_session_local() as db:
             try:
                 sessions = await self.get_permanent_sessions(db)
 

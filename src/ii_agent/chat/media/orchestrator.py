@@ -18,9 +18,24 @@ from ii_agent.chat.api.schemas import (
     ChatMessageRequest,
     AdvancedModeState,
 )
-from ii_agent.chat.tools import BaseTool
+from ii_agent.chat.tools.base import BaseTool
 from .registry import get_handler
 from .utils import AdvancedModeStateManager
+
+_handlers_loaded = False
+
+
+def _ensure_handlers_registered() -> None:
+    """Import handler modules so their ``@register_handler`` decorators fire."""
+    global _handlers_loaded
+    if _handlers_loaded:
+        return
+    # Import each handler sub-module to trigger @register_handler decorators.
+    from .handlers import image_handler  # noqa: F401
+    from .handlers import infographic_handler  # noqa: F401
+    from .handlers import poster_handler  # noqa: F401
+    from .handlers import storybook_handler  # noqa: F401
+    _handlers_loaded = True
 
 if TYPE_CHECKING:
     from ii_agent.core.container import ServiceContainer
@@ -95,6 +110,9 @@ class MediaOrchestrator:
         Returns:
             List of BaseTool instances ready for use
         """
+        # Ensure handlers are registered before lookup
+        _ensure_handlers_registered()
+
         # Get handler for media type
         handler_class = get_handler(media_type)
         if not handler_class:
@@ -151,6 +169,9 @@ class MediaOrchestrator:
         Raises:
             ValueError: If media type handler is not registered
         """
+        # Ensure handlers are registered before lookup
+        _ensure_handlers_registered()
+
         # 1. Get handler for media type
         handler_class = get_handler(media_preferences.type)
         if not handler_class:

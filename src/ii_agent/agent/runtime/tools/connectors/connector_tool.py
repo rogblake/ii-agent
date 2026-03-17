@@ -5,10 +5,13 @@ from typing import List, Optional, Dict, Set
 from sqlalchemy import select
 
 from ii_agent.core.db.manager import get_db_session_local
+from ii_agent.core.config.settings import get_settings
 from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
 from ii_agent.utils.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.tools.base import BaseAgentTool
 from ii_agent.agent.runtime.tools.connectors.base import BaseConnectorTool
+from ii_agent.agent.runtime.tools.connectors.composio_mcp import load_composio_tools_for_user
+from ii_agent.agent.runtime.tools.connectors.custom_mcp import load_custom_mcp_tools_for_user
 from ii_agent.agent.runtime.tools.connectors.github import GitHubAgentTool
 from ii_agent.core.logger import logger
 
@@ -84,7 +87,6 @@ class ConnectorTool(BaseConnectorTool):
 
     async def _load_composio_tools(
         self,
-        existing_names: Set[str],
     ) -> List[BaseAgentTool]:
         """Load Composio-based connector tools from database.
         
@@ -96,9 +98,6 @@ class ConnectorTool(BaseConnectorTool):
         tools: List[BaseAgentTool] = []
 
         try:
-            from ii_agent.core.config.settings import get_settings
-            from ii_agent.agent.runtime.tools.connectors.composio_mcp import load_composio_tools_for_user
-
             logger.info(f"[V1 Connector] Loading Composio tools for user {self._user_id}")
 
             # Load tools from database via composio_mcp module
@@ -127,8 +126,6 @@ class ConnectorTool(BaseConnectorTool):
         tools: List[BaseAgentTool] = []
 
         try:
-            from ii_agent.agent.runtime.tools.connectors.custom_mcp import load_custom_mcp_tools_for_user
-
             logger.info(f"[V1 Connector] Loading custom MCP tools for user {self._user_id}")
 
             # Load tools from database via custom_mcp module
@@ -173,13 +170,13 @@ class ConnectorTool(BaseConnectorTool):
         # _add_tools_without_duplicates(tools, db_tools, existing_names)
 
         # Load Composio tools
-        composio_tools = await self._load_composio_tools(existing_names)
-        tools.extend(composio_tools)
+        composio_tools = await self._load_composio_tools()
+        _add_tools_without_duplicates(tools, composio_tools, existing_names)
         logger.debug(f"[V1 Connector] Loaded {len(composio_tools)} Composio connector tools for {composio_tools}")
 
         # Load custom MCP tools
         custom_mcp_tools = await self._load_custom_mcp_tools()
-        tools.extend(custom_mcp_tools)
+        _add_tools_without_duplicates(tools, custom_mcp_tools, existing_names)
         logger.debug(f"[V1 Connector] Loaded {len(custom_mcp_tools)} custom MCP connector tools")
 
         # Log summary

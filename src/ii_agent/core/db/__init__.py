@@ -7,8 +7,8 @@ Import pattern:
     # For base utilities
     from ii_agent.core.db import Base, TimestampColumn
 
-    # For session context managers
-    from ii_agent.core.db.manager import get_db, get_db_session_local
+    # For session context manager
+    from ii_agent.core.db.manager import get_db_session_local
 
     # For models - import from domain modules
     from ii_agent.sessions import Session

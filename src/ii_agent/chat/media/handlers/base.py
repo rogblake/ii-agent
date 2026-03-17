@@ -12,7 +12,7 @@ from ii_agent.chat.types import (
     TextContent,
     MediaPreferences,
 )
-from ii_agent.chat.tools import BaseTool
+from ii_agent.chat.tools.base import BaseTool
 from ii_agent.chat.media.modes.base import BaseModeStrategy
 
 if TYPE_CHECKING:

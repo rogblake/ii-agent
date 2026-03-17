@@ -24,7 +24,7 @@ from ii_agent.agent.runtime.factory.factory import AgentFactory
 from ii_agent.agent.types import AgentType
 from ii_agent.agent.runtime.factory.tools import echo_message, generate_random_number
 from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
-from ii_agent.agent.runtime.tools.connectors import ConnectorTool
+from ii_agent.agent.runtime.tools.connectors.connector_tool import ConnectorTool
 from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
 from ii_agent.core.logger import logger
 

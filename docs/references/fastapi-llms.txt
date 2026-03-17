@@ -1,0 +1,29 @@
+# FastAPI Reference for II-Agent Development
+
+> Key patterns and links for building FastAPI endpoints in this codebase.
+> See CLAUDE.md for II-Agent-specific patterns (Dep aliases, router registration).
+
+## Core Patterns Used
+
+- Dependency Injection: https://fastapi.tiangolo.com/tutorial/dependencies/
+- Annotated Dependencies: https://fastapi.tiangolo.com/tutorial/dependencies/#use-annotated
+- Path Parameters: https://fastapi.tiangolo.com/tutorial/path-params/
+- Query Parameters: https://fastapi.tiangolo.com/tutorial/query-params/
+- Request Body (Pydantic): https://fastapi.tiangolo.com/tutorial/body/
+- Response Model: https://fastapi.tiangolo.com/tutorial/response-model/
+- APIRouter: https://fastapi.tiangolo.com/tutorial/bigger-applications/
+- Background Tasks: https://fastapi.tiangolo.com/tutorial/background-tasks/
+- HTTPException: https://fastapi.tiangolo.com/tutorial/handling-errors/
+- Middleware: https://fastapi.tiangolo.com/tutorial/middleware/
+- CORS: https://fastapi.tiangolo.com/tutorial/cors/
+- Lifespan Events: https://fastapi.tiangolo.com/advanced/events/
+- Streaming Response: https://fastapi.tiangolo.com/advanced/custom-response/#streamingresponse
+- Server-Sent Events: Use StreamingResponse with media_type="text/event-stream"
+
+## II-Agent Specifics
+
+- All routers registered in app.py via app.include_router()
+- Auth: CurrentUser = Annotated[User, Depends(get_current_user)]
+- DB: DBSession = Annotated[AsyncSession, Depends(_db_session_dependency)]
+- Services injected via Dep aliases, never instantiated in endpoints
+- HTTPException only in routers, never in services (services raise domain exceptions)

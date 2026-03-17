@@ -1,0 +1,35 @@
+# E2B Sandbox Reference for II-Agent Development
+
+> Key concepts for working with E2B sandboxes in this codebase.
+> E2B provides isolated code execution environments for agent tasks.
+
+## What E2B Does
+
+- Provides isolated Linux containers for code execution
+- Each agent session gets its own sandbox (or shares one via fork)
+- Supports file system operations, shell commands, and persistent state
+- Sandboxes have configurable timeouts and resource limits
+
+## II-Agent Integration
+
+- Sandbox management: agent/sandboxes/ (SandboxRepository, SandboxService)
+- Sandbox ID stored on Session model (sessions.sandbox_id)
+- Session forking can share or create new sandboxes (SandboxMode: SHARE | NEW)
+- Environment variables synced to sandbox via SandboxEnvSyncService
+- Project secrets encrypted and injected into sandbox environment
+
+## E2B Documentation
+
+- Overview: https://e2b.dev/docs
+- SDK Reference: https://e2b.dev/docs/sdk-reference
+- Sandbox Lifecycle: https://e2b.dev/docs/sandbox/overview
+- File System: https://e2b.dev/docs/sandbox/filesystem
+- Process Execution: https://e2b.dev/docs/sandbox/process
+- Custom Templates: https://e2b.dev/docs/sandbox/templates
+
+## Key Patterns
+
+- Sandbox created on first agent run for a session
+- Sandbox ID cached on Session for reuse across runs
+- Timeout extension via workers/scripts (run_sandbox_timeout_extension.sh)
+- Cleanup handled by cron jobs in workers/

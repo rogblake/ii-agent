@@ -497,6 +497,35 @@ class LLMBillingService:
             },
         )
 
+    async def record_zero_cost_tool_usage(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+        run_id: str | None,
+        tool_name: str,
+        succeeded: bool,
+        app_kind: str = "agent",
+    ) -> int | None:
+        """Record a usage record for a tool that has no billing cost."""
+        return await self._usage_service.record_settled_usage(
+            db,
+            user_id=user_id,
+            session_id=session_id,
+            run_id=run_id,
+            amount=0.0,
+            source_domain=SourceDomain.AGENT_TOOL,
+            billing_kind=BillingKind.TOOL_USAGE,
+            tool_name=tool_name,
+            cost_usd=0.0,
+            app_kind=app_kind,
+            usage_metadata={
+                "tool_name": tool_name,
+                "succeeded": succeeded,
+            },
+        )
+
     async def _settle_tool_direct(
         self,
         db: AsyncSession,

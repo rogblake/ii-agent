@@ -19,13 +19,10 @@ from ii_agent.agent.socket.command.command_handler import (
     UserCommandType,
 )
 from ii_agent.utils.workspace_manager import WorkspaceManager
-from ii_agent.agent.runtime.run.agent import RunCancelledEvent, RunCompletedEvent, RunErrorEvent, RunOutput, ToolCallCompletedEvent
-from ii_agent.agent.runtime.tools.base import ToolResult as BaseToolResult
+from ii_agent.agent.runtime.run.agent import RunCancelledEvent, RunCompletedEvent, RunOutput
 from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
 from ii_agent.agent.runtime.media import Image, File as UrlFile
 from ii_agent.billing.exceptions import InsufficientCreditsError
-from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
-from ii_agent.core.llm.token_record import TokenTracker
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -37,7 +34,6 @@ class UserQueryHandler(CommandHandler):
 
     def __init__(self, event_stream: EventStream, container: ServiceContainer) -> None:
         super().__init__(event_stream=event_stream, container=container)
-        self._llm_invocation_repo = LLMInvocationRepository()
 
     def get_command_type(self) -> UserCommandType:
         return UserCommandType.QUERY
@@ -160,20 +156,6 @@ class UserQueryHandler(CommandHandler):
 
                 if isinstance(event, RunCancelledEvent):
                     final_status = RunStatus.ABORTED
-                if isinstance(event, RunErrorEvent):
-                    async with get_db_session_local() as db:
-                        await self._record_llm_invocation_best_effort(
-                            db,
-                            run_id=uuid.UUID(event.run_id) if event.run_id else running_task.id,
-                            session_id=str(session_info.id),
-                            user_id=str(session_info.user_id),
-                            provider=event.model_provider,
-                            model=event.model,
-                            request_kind="agent_query",
-                            success=False,
-                            error_code=event.error_type or "run_error",
-                        )
-
                 if isinstance(event, RunOutput):
                     # Use v1 Metrics format directly
                     await self.send_event(
@@ -221,14 +203,6 @@ class UserQueryHandler(CommandHandler):
                 for evt in reset_events:
                     await self.send_event(evt)
             raise
-
-    async def _record_llm_invocation_best_effort(self, db, **kwargs) -> None:
-        """Write agent LLM telemetry without affecting billing or run handling."""
-        try:
-            async with db.begin_nested():
-                await self._llm_invocation_repo.create(db, **kwargs)
-        except Exception:
-            logger.warning("Failed to write llm_invocation for agent query", exc_info=True)
 
     async def _prepare_files(
         self,

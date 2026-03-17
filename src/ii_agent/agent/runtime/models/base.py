@@ -41,6 +41,7 @@ from ii_agent.agent.runtime.tools.function import (
     FunctionExecutionResult,
     UserInputField,
 )
+from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
 from ii_agent.core.llm.token_record import TokenTracker
 from ii_agent.agent.runtime.utils.timer import Timer
 from ii_agent.core.logger import logger
@@ -204,6 +205,7 @@ class Model(ABC):
     exponential_backoff: bool = False
     bill_with_platform_credits: bool = True
     llm_billing_service: Any = None
+    llm_invocation_repo: LLMInvocationRepository = field(default_factory=LLMInvocationRepository)
 
     def __post_init__(self):
         if self.provider is None and self.name is not None:
@@ -754,15 +756,21 @@ class Model(ABC):
             self._populate_assistant_message_from_stream_data(
                 assistant_message=assistant_message, stream_data=stream_data
             )
-            await self._settle_llm_billing(
+            settlement = await self._settle_llm_billing(
                 reservation=billing_reservation,
                 run_response=run_response,
                 metrics=stream_data.response_metrics,
             )
             self._restore_output_cap(previous_output_caps)
-        except Exception:
+            await self._record_llm_invocation(
+                run_response=run_response,
+                metrics=stream_data.response_metrics,
+                settlement_result=settlement,
+            )
+        except Exception as exc:
+            settlement = None
             if stream_data.response_metrics is not None and stream_data.response_metrics.total_tokens > 0:
-                await self._settle_llm_billing(
+                settlement = await self._settle_llm_billing(
                     reservation=billing_reservation,
                     run_response=run_response,
                     metrics=stream_data.response_metrics,
@@ -773,6 +781,13 @@ class Model(ABC):
                     reason="provider_error",
                 )
             self._restore_output_cap(previous_output_caps)
+            await self._record_llm_invocation(
+                run_response=run_response,
+                metrics=stream_data.response_metrics,
+                settlement_result=settlement,
+                success=False,
+                error_code=type(exc).__name__,
+            )
             raise
 
     async def aresponse_stream(
@@ -996,22 +1011,25 @@ class Model(ABC):
         reservation,
         run_response: Optional[RunOutput],
         metrics: Optional[Metrics],
-    ) -> None:
-        """Settle reserved agent LLM credits using actual provider usage."""
+    ) -> Any:
+        """Settle reserved agent LLM credits using actual provider usage.
+
+        Returns the BillingSettlementResult on success, or None.
+        """
         if (
             reservation is None
             or self.llm_billing_service is None
             or run_response is None
             or metrics is None
         ):
-            return
+            return None
 
         try:
             from ii_agent.core.db.manager import get_db_session_local
 
             record = TokenTracker.from_agent_metrics(metrics, self.id)
             async with get_db_session_local() as db:
-                await self.llm_billing_service.settle_agent_llm_call(
+                result = await self.llm_billing_service.settle_agent_llm_call(
                     db,
                     reservation=reservation,
                     run_id=run_response.run_id or "",
@@ -1024,6 +1042,7 @@ class Model(ABC):
                     ),
                 )
                 await db.commit()
+                return result
         except Exception:
             reservation_id = getattr(
                 getattr(reservation, "hold", None),
@@ -1039,6 +1058,7 @@ class Model(ABC):
                 reservation_id=reservation_id,
                 error="agent_llm_settle_exception",
             )
+            return None
 
     async def _mark_llm_settlement_failed(
         self,
@@ -1081,6 +1101,63 @@ class Model(ABC):
                 await db.commit()
         except Exception:
             logger.warning("Failed to release agent LLM reservation", exc_info=True)
+
+    async def _record_llm_invocation(
+        self,
+        *,
+        run_response: Optional[RunOutput],
+        metrics: Optional[Metrics] = None,
+        settlement_result: Optional[Any] = None,
+        success: bool = True,
+        error_code: str | None = None,
+    ) -> None:
+        """Write one row to llm_invocations (best-effort, never raises).
+
+        Called from aprocess_response_stream for every LLM call regardless
+        of whether billing is enabled.
+        """
+        if (
+            run_response is None
+            or not run_response.user_id
+            or not run_response.session_id
+        ):
+            return
+
+        try:
+            from ii_agent.core.db.manager import get_db_session_local
+
+            credits_charged = None
+            if settlement_result is not None:
+                credits_charged = float(settlement_result.total_charged)
+
+            latency_ms = (
+                int(metrics.duration * 1000)
+                if metrics is not None and metrics.duration is not None
+                else None
+            )
+
+            async with get_db_session_local() as db:
+                await self.llm_invocation_repo.create(
+                    db,
+                    run_id=run_response.run_id,
+                    session_id=run_response.session_id,
+                    user_id=run_response.user_id,
+                    provider=str(self.provider) if self.provider is not None else None,
+                    model=self.id,
+                    request_kind="agent_llm",
+                    prompt_tokens=metrics.input_tokens if metrics else 0,
+                    completion_tokens=metrics.output_tokens if metrics else 0,
+                    cache_read_tokens=metrics.cache_read_tokens if metrics else 0,
+                    cache_write_tokens=metrics.cache_write_tokens if metrics else 0,
+                    reasoning_tokens=metrics.reasoning_tokens if metrics else 0,
+                    latency_ms=latency_ms,
+                    credits_charged=credits_charged,
+                    success=success,
+                    error_code=error_code,
+                )
+                await db.commit()
+        except Exception:
+            logger.warning("Failed to write llm_invocation for agent LLM call", exc_info=True)
 
     def _apply_reserved_output_cap(self, reservation) -> dict[str, Any]:
         """Temporarily clamp provider output limits to the reserved cap."""

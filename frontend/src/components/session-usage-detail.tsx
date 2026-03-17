@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { useNavigate, useParams } from 'react-router'
@@ -17,6 +18,7 @@ import {
     TableRow
 } from './ui/table'
 import { Icon } from './ui/icon'
+import { Checkbox } from './ui/checkbox'
 
 const formatCredit = (value: number) =>
     value.toLocaleString('en-US', {
@@ -52,11 +54,18 @@ const SessionUsageDetail = () => {
     const { t } = useTranslation()
     const navigate = useNavigate()
     const { sessionId } = useParams<{ sessionId: string }>()
+    const [hideZeroCost, setHideZeroCost] = useState(false)
 
     const { data, isLoading } = useGetSessionUsageDetailQuery(
         { sessionId: sessionId! },
         { skip: !sessionId }
     )
+
+    const filteredItems = useMemo(() => {
+        if (!data?.items) return []
+        if (!hideZeroCost) return data.items
+        return data.items.filter((item) => item.credits_charged !== 0)
+    }, [data?.items, hideZeroCost])
 
     const handleBack = () => {
         navigate('/settings')
@@ -86,6 +95,20 @@ const SessionUsageDetail = () => {
                             </span>
                         )}
                     </div>
+                </div>
+
+                <div className="flex items-center gap-2 mb-3">
+                    <Checkbox
+                        id="hide-zero-usage"
+                        checked={hideZeroCost}
+                        onCheckedChange={(v) => setHideZeroCost(v === true)}
+                    />
+                    <label
+                        htmlFor="hide-zero-usage"
+                        className="text-xs text-black/60 dark:text-white/60 cursor-pointer select-none"
+                    >
+                        Hide zero-cost entries
+                    </label>
                 </div>
 
                 <div className="rounded-2xl overflow-x-hidden">
@@ -125,7 +148,7 @@ const SessionUsageDetail = () => {
                                     </TableRow>
                                 )}
                                 {!isLoading &&
-                                    data?.items?.length === 0 && (
+                                    filteredItems.length === 0 && (
                                         <TableRow>
                                             <TableCell
                                                 className="py-6 pl-6"
@@ -137,7 +160,7 @@ const SessionUsageDetail = () => {
                                     )}
 
                                 {!isLoading &&
-                                    data?.items?.map((item) => {
+                                    filteredItems.map((item) => {
                                         const type = getBillingType(item)
                                         return (
                                             <TableRow

@@ -139,9 +139,6 @@ class UsageService:
         app_kind: str | None = None,
     ) -> int | None:
         """Record already-settled usage and update session metrics."""
-        if amount <= 0:
-            return None
-
         usage_record_id: int | None = None
         if self._usage_record_repo is not None:
             usage_record = await self._usage_record_repo.create(

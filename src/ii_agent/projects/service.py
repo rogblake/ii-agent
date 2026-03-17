@@ -146,9 +146,7 @@ class ProjectService:
         secrets: dict[str, Any],
     ) -> Optional[Project]:
         """Persist the latest secrets for the user's session project."""
-        project = await self._project_repo.get_by_id(
-            db, project_id=project_id
-        )
+        project = await self._project_repo.get_by_id(db, project_id)
         if not project:
             return None
 

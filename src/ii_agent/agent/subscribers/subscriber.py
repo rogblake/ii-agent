@@ -34,7 +34,7 @@ class EventSubscriber(ABC):
         if not task_run:
             raise ValueError(f"Task run not found for id: {event.run_id}")
 
-        return task_run.status == RunStatus.RUNNING
+        return task_run.status in (RunStatus.RUNNING, RunStatus.PAUSED)
 
     def _get_agent_run_service(self):
         """Get agent_run_service - subclasses with a container use it, otherwise fallback to global."""

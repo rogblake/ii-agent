@@ -23,12 +23,9 @@ from ii_agent.agent.socket.command.command_handler import (
 )
 from ii_agent.utils.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-from ii_agent.agent.runtime.run.agent import RunCancelledEvent, RunCompletedEvent, RunOutput, ToolCallCompletedEvent
-from ii_agent.agent.runtime.tools.base import ToolResult as BaseToolResult
+from ii_agent.agent.runtime.run.agent import RunCompletedEvent, RunOutput
 from ii_agent.agent.runtime.media import Image, File as UrlFile
 from ii_agent.agent.runtime.tools.plan import MilestoneTool, PlanModificationSuggestionsTool
-from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
-from ii_agent.core.llm.token_record import TokenTracker
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -46,7 +43,6 @@ class PlanHandler(CommandHandler):
 
     def __init__(self, event_stream: EventStream, container: ServiceContainer) -> None:
         super().__init__(event_stream=event_stream, container=container)
-        self._llm_invocation_repo = LLMInvocationRepository()
 
     def get_command_type(self) -> UserCommandType:
         return UserCommandType.PLAN
@@ -448,14 +444,6 @@ class PlanHandler(CommandHandler):
                         },
                     )
                 )
-
-    async def _record_llm_invocation_best_effort(self, db, **kwargs) -> None:
-        """Write agent LLM telemetry without affecting billing or run handling."""
-        try:
-            async with db.begin_nested():
-                await self._llm_invocation_repo.create(db, **kwargs)
-        except Exception:
-            logger.warning("Failed to write llm_invocation for agent plan", exc_info=True)
 
     async def _emit_plan_modification_suggestions(
         self,

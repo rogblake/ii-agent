@@ -1022,9 +1022,6 @@ class FunctionCall(BaseModel):
         function_execution_result: Optional[FunctionExecutionResult],
     ) -> None:
         """Settle or release a tool reservation after execution."""
-        if self.billing_reservation is None:
-            return
-
         tool = self._resolve_billing_tool()
         if tool is None:
             return
@@ -1049,6 +1046,30 @@ class FunctionCall(BaseModel):
         result_obj = function_execution_result.result if function_execution_result else None
         if isinstance(result_obj, BaseToolResult):
             actual_cost_usd = result_obj.cost or 0.0
+
+        # No reservation → zero-cost tool. Record usage directly for monitoring.
+        if self.billing_reservation is None:
+            if not run_context.user_id or not run_context.session_id:
+                return
+            try:
+                async with get_db_session_local() as db:
+                    await dependencies.container.llm_billing_service.record_zero_cost_tool_usage(
+                        db,
+                        user_id=run_context.user_id,
+                        session_id=run_context.session_id,
+                        run_id=run_context.run_id,
+                        tool_name=tool.name,
+                        succeeded=succeeded,
+                        app_kind="agent",
+                    )
+                    await db.commit()
+            except Exception:
+                logger.debug(
+                    "Failed to record zero-cost tool usage for %s",
+                    tool.name,
+                    exc_info=True,
+                )
+            return
 
         try:
             async with get_db_session_local() as db:

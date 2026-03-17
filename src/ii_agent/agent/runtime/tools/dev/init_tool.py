@@ -416,7 +416,7 @@ class FullStackInitTool(MCPTool):
                     }
                 return None
         except Exception as exc:  # pragma: no cover - defensive
-            logger.error("Failed to persist project metadata: %s", exc)
+            logger.error(f"Failed to persist project metadata: {exc}")
             return None
 
     async def _save_database_url_to_secrets(
@@ -451,4 +451,4 @@ class FullStackInitTool(MCPTool):
                 )
             logger.info(f"Saved DATABASE_URL to project secrets for session {session_id}")
         except Exception as exc:
-            logger.error("Failed to save DATABASE_URL to project secrets: %s", exc)
+            logger.error(f"Failed to save DATABASE_URL to project secrets: {exc}")

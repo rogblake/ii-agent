@@ -16,6 +16,7 @@ import {
     TableRow
 } from './ui/table'
 import { Icon } from './ui/icon'
+import { Checkbox } from './ui/checkbox'
 
 const formatDecimal = (value: number) =>
     value.toLocaleString('en-US', {
@@ -51,12 +52,23 @@ const SessionReservationsDetail = () => {
     const navigate = useNavigate()
     const { sessionId } = useParams<{ sessionId: string }>()
     const [page, setPage] = useState(1)
+    const [hideZeroCost, setHideZeroCost] = useState(false)
     const perPage = 50
 
     const { data, isLoading } = useGetSessionReservationsQuery(
         { sessionId: sessionId!, page, perPage },
         { skip: !sessionId }
     )
+
+    const filteredEntries = useMemo(() => {
+        if (!data?.entries) return []
+        if (!hideZeroCost) return data.entries
+        return data.entries.filter(
+            (e) =>
+                (e.actual_usd != null && e.actual_usd !== 0) ||
+                e.quoted_usd !== 0
+        )
+    }, [data?.entries, hideZeroCost])
 
     const totalPages = useMemo(() => {
         if (!data?.total) return 1
@@ -89,6 +101,20 @@ const SessionReservationsDetail = () => {
                             {sessionId}
                         </span>
                     </div>
+                </div>
+
+                <div className="flex items-center gap-2 mb-3">
+                    <Checkbox
+                        id="hide-zero-reservations"
+                        checked={hideZeroCost}
+                        onCheckedChange={(v) => setHideZeroCost(v === true)}
+                    />
+                    <label
+                        htmlFor="hide-zero-reservations"
+                        className="text-xs text-black/60 dark:text-white/60 cursor-pointer select-none"
+                    >
+                        Hide zero-cost entries
+                    </label>
                 </div>
 
                 <div className="rounded-2xl overflow-auto max-h-[75vh]">
@@ -148,7 +174,7 @@ const SessionReservationsDetail = () => {
                                 </TableRow>
                             )}
                             {!isLoading &&
-                                data?.entries?.length === 0 && (
+                                filteredEntries.length === 0 && (
                                     <TableRow>
                                         <TableCell
                                             className="py-6 pl-4"
@@ -159,7 +185,7 @@ const SessionReservationsDetail = () => {
                                     </TableRow>
                                 )}
                             {!isLoading &&
-                                data?.entries?.map((entry) => (
+                                filteredEntries.map((entry) => (
                                     <TableRow
                                         key={entry.id}
                                         className="border-0"

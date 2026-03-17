@@ -323,11 +323,52 @@ class CreditReservationService:
                 reservation.last_error = None
                 await db.flush()
 
+                # Record zero-cost usage for monitoring visibility.
+                usage_record_id: int | None = None
+                if usage_payload:
+                    usage_metadata = {
+                        **usage_payload,
+                        "reservation_id": reservation.id,
+                        "reserved_credits": float(
+                            Decimal(str(reservation.reserved_credits))
+                            + Decimal(str(reservation.reserved_bonus_credits))
+                        ),
+                        "actual_requested_credits": 0.0,
+                        "settlement_status": ReservationStatus.RELEASED,
+                        "released_credits": float(
+                            Decimal(str(reservation.reserved_credits))
+                            + Decimal(str(reservation.reserved_bonus_credits))
+                        ),
+                    }
+                    usage_record_id = await self._usage_service.record_settled_usage(
+                        db,
+                        user_id=reservation.user_id,
+                        session_id=reservation.session_id,
+                        run_id=reservation.run_id,
+                        amount=0.0,
+                        source_domain=reservation.source_domain,
+                        billing_kind=reservation.billing_kind,
+                        model_id=reservation.model_id,
+                        tool_name=reservation.tool_name,
+                        ledger_entry_id=reservation.reserve_ledger_entry_id,
+                        usage_metadata=usage_metadata,
+                        provider=usage_payload.get("provider"),
+                        input_tokens=usage_payload.get("input_tokens", 0),
+                        output_tokens=usage_payload.get("output_tokens", 0),
+                        cache_read_tokens=usage_payload.get("cache_read_tokens", 0),
+                        cache_write_tokens=usage_payload.get("cache_write_tokens", 0),
+                        reasoning_tokens=usage_payload.get("reasoning_tokens", 0),
+                        latency_ms=usage_payload.get("latency_ms"),
+                        cost_usd=0.0,
+                        app_kind=usage_payload.get("app_kind"),
+                    )
+
                 return BillingSettlementResult(
                     reservation_id=reservation.id,
                     status=ReservationStatus.RELEASED,
                     released_credits=Decimal(str(reservation.reserved_credits)),
                     released_bonus_credits=Decimal(str(reservation.reserved_bonus_credits)),
+                    usage_record_id=usage_record_id,
                 )
 
             reserved_regular = Decimal(str(reservation.reserved_credits))
@@ -418,7 +459,7 @@ class CreditReservationService:
             settled_total = total_regular + total_bonus
 
             usage_record_id: int | None = None
-            if settled_total > 0 and settlement_status == ReservationStatus.SETTLED:
+            if settlement_status == ReservationStatus.SETTLED:
                 usage_metadata = {
                     **usage_payload,
                     "reservation_id": reservation.id,

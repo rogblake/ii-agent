@@ -4,26 +4,25 @@ from __future__ import annotations
 
 import json
 import subprocess
-from datetime import datetime, timezone
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.mobile.apple.fastlane_auth import FastlaneAuthClient
-from ii_agent.mobile.apple.exceptions import (
+from ii_agent.integrations.mobile.apple.fastlane_auth import FastlaneAuthClient
+from ii_agent.integrations.mobile.apple.exceptions import (
     AppleAccountLockedError,
     AppleAuthenticationError,
     AppleInvalidCredentialsError,
     AppleRateLimitError,
     AppleSessionExpiredError,
 )
-from ii_agent.mobile.apple.types import AppleAuthState, AppleSession, AppleTeam
+from ii_agent.integrations.mobile.apple.types import AppleAuthState, AppleSession, AppleTeam
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_client() -> FastlaneAuthClient:
     """Create a FastlaneAuthClient without running _check_fastlane_installed."""
@@ -49,6 +48,7 @@ def _make_session(
 # ---------------------------------------------------------------------------
 # _check_fastlane_installed
 # ---------------------------------------------------------------------------
+
 
 class TestCheckFastlaneInstalled:
     def test_returns_true_when_installed(self):
@@ -82,6 +82,7 @@ class TestCheckFastlaneInstalled:
 # _get_user_cookie_path
 # ---------------------------------------------------------------------------
 
+
 class TestGetUserCookiePath:
     def test_returns_path_containing_user_id(self):
         client = _make_client()
@@ -106,6 +107,7 @@ class TestGetUserCookiePath:
 # ---------------------------------------------------------------------------
 # _run_ruby_script
 # ---------------------------------------------------------------------------
+
 
 class TestRunRubyScript:
     def _make_successful_result(self, data: dict) -> MagicMock:
@@ -212,6 +214,7 @@ class TestRunRubyScript:
 # ---------------------------------------------------------------------------
 # initiate_login
 # ---------------------------------------------------------------------------
+
 
 class TestInitiateLogin:
     @pytest.mark.asyncio
@@ -320,6 +323,7 @@ class TestInitiateLogin:
 # verify_2fa_code
 # ---------------------------------------------------------------------------
 
+
 class TestVerify2faCode:
     @pytest.mark.asyncio
     async def test_verify_success_updates_session(self):
@@ -341,7 +345,7 @@ class TestVerify2faCode:
     @pytest.mark.asyncio
     async def test_verify_invalid_code_raises(self):
         client = _make_client()
-        from ii_agent.mobile.apple.exceptions import Apple2FAInvalidCodeError
+        from ii_agent.integrations.mobile.apple.exceptions import Apple2FAInvalidCodeError
 
         result = {
             "success": False,
@@ -377,6 +381,7 @@ class TestVerify2faCode:
 # get_teams
 # ---------------------------------------------------------------------------
 
+
 class TestGetTeams:
     @pytest.mark.asyncio
     async def test_returns_teams_from_session(self):
@@ -401,6 +406,7 @@ class TestGetTeams:
 # select_team
 # ---------------------------------------------------------------------------
 
+
 class TestSelectTeam:
     @pytest.mark.asyncio
     async def test_select_valid_team(self):
@@ -424,6 +430,7 @@ class TestSelectTeam:
 # ---------------------------------------------------------------------------
 # create_distribution_certificate
 # ---------------------------------------------------------------------------
+
 
 class TestCreateDistributionCertificate:
     @pytest.mark.asyncio
@@ -453,7 +460,7 @@ class TestCreateDistributionCertificate:
 
     @pytest.mark.asyncio
     async def test_max_certificates_raises(self):
-        from ii_agent.mobile.apple.exceptions import AppleCertificateError
+        from ii_agent.integrations.mobile.apple.exceptions import AppleCertificateError
 
         client = _make_client()
         result = {
@@ -497,6 +504,7 @@ class TestCreateDistributionCertificate:
 # ---------------------------------------------------------------------------
 # register_bundle_id
 # ---------------------------------------------------------------------------
+
 
 class TestRegisterBundleId:
     @pytest.mark.asyncio
@@ -549,7 +557,7 @@ class TestRegisterBundleId:
 
     @pytest.mark.asyncio
     async def test_unknown_error_raises_bundle_id_error(self):
-        from ii_agent.mobile.apple.exceptions import AppleBundleIdError
+        from ii_agent.integrations.mobile.apple.exceptions import AppleBundleIdError
 
         client = _make_client()
         result = {
@@ -575,6 +583,7 @@ class TestRegisterBundleId:
 # ---------------------------------------------------------------------------
 # list_apps
 # ---------------------------------------------------------------------------
+
 
 class TestListApps:
     @pytest.mark.asyncio
@@ -638,6 +647,7 @@ class TestListApps:
 # generate_eas_credentials
 # ---------------------------------------------------------------------------
 
+
 class TestGenerateEasCredentials:
     @pytest.mark.asyncio
     async def test_generates_credentials_successfully(self):
@@ -673,7 +683,7 @@ class TestGenerateEasCredentials:
 
     @pytest.mark.asyncio
     async def test_bundle_id_not_found_raises(self):
-        from ii_agent.mobile.apple.exceptions import AppleBundleIdError
+        from ii_agent.integrations.mobile.apple.exceptions import AppleBundleIdError
 
         client = _make_client()
         result = {

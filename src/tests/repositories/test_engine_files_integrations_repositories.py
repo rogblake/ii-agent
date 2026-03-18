@@ -13,13 +13,12 @@ from ii_agent.agent.runs.models import RunStatus
 from ii_agent.agent.runs.repository import AgentRunTaskRepository
 from ii_agent.agent.sandboxes.models import AgentSandbox
 from ii_agent.agent.sandboxes.repository import SandboxRepository
-from ii_agent.files.models import FileUpload
 from ii_agent.files.repository import FileRepository
 from ii_agent.integrations.connectors.models import ComposioProfile, Connector
 from ii_agent.integrations.connectors.repository import ConnectorRepository
 from ii_agent.integrations.connectors.composio.repository import ComposioProfileRepository
-from ii_agent.mobile.apple.models import AppleAuthStateEnum, AppleCredential
-from ii_agent.mobile.apple.repository import AppleCredentialRepository
+from ii_agent.integrations.mobile.apple.models import AppleAuthStateEnum, AppleCredential
+from ii_agent.integrations.mobile.apple.repository import AppleCredentialRepository
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 

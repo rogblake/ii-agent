@@ -6,8 +6,8 @@ from datetime import datetime, timedelta, timezone
 import json
 
 from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.mobile.apple.models import AppleAuthStateEnum, AppleCredential
-from ii_agent.mobile.apple.repository import AppleCredentialRepository
+from ii_agent.integrations.mobile.apple.models import AppleAuthStateEnum, AppleCredential
+from ii_agent.integrations.mobile.apple.repository import AppleCredentialRepository
 from ii_agent.core.secrets.encryption import encryption_manager
 
 

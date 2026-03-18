@@ -56,9 +56,7 @@ class AppleSessionExpiredError(AppleAuthenticationError):
 class AppleRateLimitError(AppleAPIError):
     """Rate limited by Apple API."""
 
-    def __init__(
-        self, message: str = "Too many requests. Please wait a moment and try again."
-    ):
+    def __init__(self, message: str = "Too many requests. Please wait a moment and try again."):
         super().__init__(message, status_code=429)
 
 
@@ -78,9 +76,7 @@ class AppleBundleIdExistsError(AppleBundleIdError):
     """Bundle identifier already exists."""
 
     def __init__(self, bundle_id: str):
-        super().__init__(
-            f"Bundle identifier '{bundle_id}' already exists.", status_code=409
-        )
+        super().__init__(f"Bundle identifier '{bundle_id}' already exists.", status_code=409)
 
 
 class AppleCertificateError(AppleAPIError):
@@ -110,7 +106,10 @@ class AppleAppNameTakenError(AppleAppCreationError):
 
     def __init__(self, app_name: str, message: str | None = None):
         self.app_name = app_name
-        msg = message or f"The app name '{app_name}' is already taken on the App Store. Please choose a different name."
+        msg = (
+            message
+            or f"The app name '{app_name}' is already taken on the App Store. Please choose a different name."
+        )
         super().__init__(msg, status_code=409)
 
 
@@ -123,5 +122,8 @@ class AppleAppBundleIdTakenError(AppleAppCreationError):
 
     def __init__(self, bundle_id: str, message: str | None = None):
         self.bundle_id = bundle_id
-        msg = message or f"The bundle ID '{bundle_id}' is already registered by another developer. Please use a different bundle ID."
+        msg = (
+            message
+            or f"The bundle ID '{bundle_id}' is already registered by another developer. Please use a different bundle ID."
+        )
         super().__init__(msg, status_code=409)

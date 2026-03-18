@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.mobile.apple import AppleAuthStateEnum
+from ii_agent.integrations.mobile.apple import AppleAuthStateEnum
 from ii_agent.agent.events.models import EventType
 from ii_agent.agent.socket.command.submit_testflight_handler import (
     SubmitTestflightHandler,

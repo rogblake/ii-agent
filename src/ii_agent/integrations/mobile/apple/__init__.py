@@ -1,6 +1,6 @@
-"""Apple mobile auth/TestFlight domain exports."""
+"""Apple mobile platform integration exports."""
 
-from ii_agent.mobile.apple.exceptions import (
+from ii_agent.integrations.mobile.apple.exceptions import (
     Apple2FAInvalidCodeError,
     Apple2FARequiredError,
     AppleAccountLockedError,
@@ -18,11 +18,11 @@ from ii_agent.mobile.apple.exceptions import (
     AppleSessionExpiredError,
     AppleTeamAccessError,
 )
-from ii_agent.mobile.apple.fastlane_auth import FastlaneAuthClient
-from ii_agent.mobile.apple.models import AppleAuthStateEnum, AppleCredential
-from ii_agent.mobile.apple.repository import AppleCredentialRepository
-from ii_agent.mobile.apple.service import AppleCredentialService, AppleCredentials
-from ii_agent.mobile.apple.types import AppleAuthState, AppleSession, AppleTeam
+from ii_agent.integrations.mobile.apple.fastlane_auth import FastlaneAuthClient
+from ii_agent.integrations.mobile.apple.models import AppleAuthStateEnum, AppleCredential
+from ii_agent.integrations.mobile.apple.repository import AppleCredentialRepository
+from ii_agent.integrations.mobile.apple.service import AppleCredentialService, AppleCredentials
+from ii_agent.integrations.mobile.apple.types import AppleAuthState, AppleSession, AppleTeam
 
 __all__ = [
     "AppleAPIError",

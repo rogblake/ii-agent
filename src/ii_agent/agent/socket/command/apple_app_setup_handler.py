@@ -11,7 +11,7 @@ import logging
 import uuid
 from typing import TYPE_CHECKING, Any
 
-from ii_agent.mobile.apple import (
+from ii_agent.integrations.mobile.apple import (
     AppleAppBundleIdTakenError,
     AppleAppNameTakenError,
     AppleAuthStateEnum,
@@ -51,9 +51,7 @@ class AppleAppSetupHandler(CommandHandler):
     def get_command_type(self) -> UserCommandType:
         return UserCommandType.APPLE_APP_SETUP
 
-    async def handle(
-        self, content: dict[str, Any], session_info: SessionInfo
-    ) -> None:
+    async def handle(self, content: dict[str, Any], session_info: SessionInfo) -> None:
         """Handle app setup request.
 
         This registers the bundle ID and creates/verifies the iOS Distribution
@@ -96,9 +94,7 @@ class AppleAppSetupHandler(CommandHandler):
 
         try:
             # Get authenticated credential
-            credential = await AppleCredentials.get_active_session(
-                str(session_info.user_id)
-            )
+            credential = await AppleCredentials.get_active_session(str(session_info.user_id))
 
             if not credential:
                 await self._send_error_event(
@@ -289,7 +285,9 @@ class AppleAppSetupHandler(CommandHandler):
 
         except AppleSessionExpiredError:
             # Clear the stored credentials so user must re-authenticate
-            logger.warning(f"Session expired for user {session_info.user_id}, clearing stored credentials")
+            logger.warning(
+                f"Session expired for user {session_info.user_id}, clearing stored credentials"
+            )
             try:
                 await AppleCredentials.update_auth_state(
                     str(session_info.user_id),
@@ -309,11 +307,11 @@ class AppleAppSetupHandler(CommandHandler):
 
             # Check if this is actually a session/auth expiration error
             is_auth_error = (
-                "session expired" in error_msg or
-                "re-authenticate" in error_msg or
-                "invalid username and password" in error_msg or
-                "authentication error" in error_msg or
-                "invalid credentials" in error_msg
+                "session expired" in error_msg
+                or "re-authenticate" in error_msg
+                or "invalid username and password" in error_msg
+                or "authentication error" in error_msg
+                or "invalid credentials" in error_msg
             )
 
             if is_auth_error:
@@ -391,9 +389,7 @@ class AppleAppSetupHandler(CommandHandler):
         **kwargs,
     ) -> None:
         """Send app setup status event."""
-        session_uuid = (
-            uuid.UUID(session_id) if isinstance(session_id, str) else session_id
-        )
+        session_uuid = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
 
         content = {
             "status": status,
@@ -423,18 +419,14 @@ class AppleListAppsHandler(CommandHandler):
     def get_command_type(self) -> UserCommandType:
         return UserCommandType.APPLE_LIST_APPS
 
-    async def handle(
-        self, content: dict[str, Any], session_info: SessionInfo
-    ) -> None:
+    async def handle(self, content: dict[str, Any], session_info: SessionInfo) -> None:
         """Handle list apps request.
 
         This lists all apps from App Store Connect for the authenticated user.
         """
         try:
             # Get authenticated credential
-            credential = await AppleCredentials.get_active_session(
-                str(session_info.user_id)
-            )
+            credential = await AppleCredentials.get_active_session(str(session_info.user_id))
 
             if not credential:
                 await self._send_error_event(
@@ -481,9 +473,7 @@ class AppleListAppsHandler(CommandHandler):
 
             # Send apps list event
             session_uuid = (
-                uuid.UUID(session_info.id)
-                if isinstance(session_info.id, str)
-                else session_info.id
+                uuid.UUID(session_info.id) if isinstance(session_info.id, str) else session_info.id
             )
             await self.send_event(
                 RealtimeEvent(

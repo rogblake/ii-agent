@@ -12,7 +12,11 @@ from typing import TYPE_CHECKING, Any
 from fastmcp.client.client import CallToolResult
 
 from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.mobile.apple import AppleAuthStateEnum, AppleCredentials, FastlaneAuthClient
+from ii_agent.integrations.mobile.apple import (
+    AppleAuthStateEnum,
+    AppleCredentials,
+    FastlaneAuthClient,
+)
 from ii_agent.agent.events.models import EventType, RealtimeEvent
 from ii_agent.agent.events.stream import EventStream
 from ii_agent.agent.socket.command.command_handler import (
@@ -42,9 +46,7 @@ class SubmitTestflightHandler(CommandHandler):
     def get_command_type(self) -> UserCommandType:
         return UserCommandType.SUBMIT_TESTFLIGHT
 
-    async def handle(
-        self, content: dict[str, Any], session_info: SessionInfo
-    ) -> None:
+    async def handle(self, content: dict[str, Any], session_info: SessionInfo) -> None:
         """Handle TestFlight build and submission request.
 
         This handler retrieves stored Apple credentials and Expo token,
@@ -64,9 +66,7 @@ class SubmitTestflightHandler(CommandHandler):
 
         try:
             # Get authenticated Apple credential
-            credential = await AppleCredentials.get_active_session(
-                str(session_info.user_id)
-            )
+            credential = await AppleCredentials.get_active_session(str(session_info.user_id))
 
             if not credential:
                 await self._send_error_event(
@@ -124,7 +124,9 @@ class SubmitTestflightHandler(CommandHandler):
                 logger.info("Saved new App-Specific Password for user")
             else:
                 # Get stored App-Specific Password
-                app_specific_password = AppleCredentials.get_decrypted_app_specific_password(credential)
+                app_specific_password = AppleCredentials.get_decrypted_app_specific_password(
+                    credential
+                )
 
             if not app_specific_password:
                 await self._send_error_event(
@@ -178,7 +180,9 @@ class SubmitTestflightHandler(CommandHandler):
 
             # Add App-Specific Password for auto-submit to TestFlight
             escaped_app_specific_password = app_specific_password.replace("'", "'\\''")
-            env_exports.append(f"export EXPO_APPLE_APP_SPECIFIC_PASSWORD='{escaped_app_specific_password}'")
+            env_exports.append(
+                f"export EXPO_APPLE_APP_SPECIFIC_PASSWORD='{escaped_app_specific_password}'"
+            )
 
             env_string = " && ".join(env_exports)
 
@@ -277,9 +281,9 @@ fi
                         "Using cached iOS signing credentials (valid certificate found)...",
                         status="running",
                     )
-                    p12_base64 = cached_credentials['p12_base64']
-                    p12_password = cached_credentials['p12_password']
-                    profile_base64 = cached_credentials['provisioning_profile_base64']
+                    p12_base64 = cached_credentials["p12_base64"]
+                    p12_password = cached_credentials["p12_password"]
+                    profile_base64 = cached_credentials["provisioning_profile_base64"]
                     logger.info(
                         f"Reusing cached iOS credentials for bundle {bundle_identifier}, "
                         f"cert_id={cached_credentials.get('certificate_id')}, "
@@ -302,13 +306,15 @@ fi
                             team_id=team_id,
                             bundle_identifier=bundle_identifier,
                             user_id=str(session_info.user_id),
-                            team_name=credential.team_name if hasattr(credential, 'team_name') else None,
+                            team_name=credential.team_name
+                            if hasattr(credential, "team_name")
+                            else None,
                         )
 
                         # Extract credentials from result
-                        p12_base64 = cred_result.get('p12_base64')
-                        p12_password = cred_result.get('p12_password', '')
-                        profile_base64 = cred_result.get('provisioning_profile_base64')
+                        p12_base64 = cred_result.get("p12_base64")
+                        p12_password = cred_result.get("p12_password", "")
+                        profile_base64 = cred_result.get("provisioning_profile_base64")
 
                         # Verify credentials were generated
                         if not p12_base64 or not profile_base64:
@@ -335,16 +341,12 @@ fi
                                 p12_base64=p12_base64,
                                 p12_password=p12_password,
                                 provisioning_profile_base64=profile_base64,
-                                certificate_id=cred_result.get('certificate_id'),
+                                certificate_id=cred_result.get("certificate_id"),
                             )
-                            logger.info(
-                                f"Cached iOS credentials for bundle {bundle_identifier}"
-                            )
+                            logger.info(f"Cached iOS credentials for bundle {bundle_identifier}")
                         except Exception as cache_error:
                             # Non-fatal: credentials were generated, just couldn't cache
-                            logger.warning(
-                                f"Failed to cache iOS credentials: {cache_error}"
-                            )
+                            logger.warning(f"Failed to cache iOS credentials: {cache_error}")
 
                     except Exception as cred_error:
                         logger.error(f"Failed to generate credentials: {cred_error}")
@@ -451,8 +453,8 @@ fi
                         "provisioningProfilePath": "certs/profile.mobileprovision",
                         "distributionCertificate": {
                             "path": "certs/distribution.p12",
-                            "password": p12_password
-                        }
+                            "password": p12_password,
+                        },
                     }
                 }
 
@@ -464,28 +466,22 @@ fi
                 if asc_app_id:
                     submit_ios_config["ascAppId"] = asc_app_id
 
-                eas_json_content = json.dumps({
-                    "cli": {"version": ">= 3.0.0"},
-                    "build": {
-                        "development": {
-                            "developmentClient": True,
-                            "distribution": "internal",
-                            "credentialsSource": "local"
+                eas_json_content = json.dumps(
+                    {
+                        "cli": {"version": ">= 3.0.0"},
+                        "build": {
+                            "development": {
+                                "developmentClient": True,
+                                "distribution": "internal",
+                                "credentialsSource": "local",
+                            },
+                            "preview": {"distribution": "internal", "credentialsSource": "local"},
+                            "production": {"credentialsSource": "local"},
                         },
-                        "preview": {
-                            "distribution": "internal",
-                            "credentialsSource": "local"
-                        },
-                        "production": {
-                            "credentialsSource": "local"
-                        }
+                        "submit": {"production": {"ios": submit_ios_config}},
                     },
-                    "submit": {
-                        "production": {
-                            "ios": submit_ios_config
-                        }
-                    }
-                }, indent=2)
+                    indent=2,
+                )
 
                 eas_json_path = f"{project_dir}/eas.json"
 
@@ -505,13 +501,13 @@ fi
                         return
                 else:
                     # Fallback: use MCP Bash for non-v1 sessions
-                    create_eas_json_cmd = f'''
+                    create_eas_json_cmd = f"""
 cd {project_dir} && \\
 cat > eas.json << 'EASJSON'
 {eas_json_content}
 EASJSON
 echo "Created eas.json with local credentials"
-'''
+"""
                     await client.call_tool(
                         "Bash",
                         {
@@ -532,10 +528,14 @@ echo "Created eas.json with local credentials"
                 if sandbox_manager:
                     # Use sandbox manager's write_file for v1 sessions (more reliable for large files)
                     try:
-                        await sandbox_manager.write_file(credentials_file_path, credentials_json_str)
+                        await sandbox_manager.write_file(
+                            credentials_file_path, credentials_json_str
+                        )
                         logger.info("Successfully wrote credentials.json via sandbox manager")
                     except Exception as write_error:
-                        logger.error(f"Failed to write credentials.json via sandbox manager: {write_error}")
+                        logger.error(
+                            f"Failed to write credentials.json via sandbox manager: {write_error}"
+                        )
                         await self._send_testflight_log(
                             session_info.id,
                             f"Failed to write credentials.json: {str(write_error)}",
@@ -549,12 +549,12 @@ echo "Created eas.json with local credentials"
                     credentials_b64 = base64.b64encode(credentials_json_str.encode()).decode()
 
                     # Write using printf which handles large strings better than echo
-                    write_credentials_cmd = f'''
+                    write_credentials_cmd = f"""
 cd {project_dir} && \\
 printf '%s' '{credentials_b64}' | base64 -d > credentials.json && \\
 echo "Created credentials.json" && \\
 ls -la credentials.json
-'''
+"""
                     await client.call_tool(
                         "Bash",
                         {
@@ -601,11 +601,11 @@ ls -la credentials.json
 
                 # Run eas init to create/link the EAS project
                 # The slug is now based on bundle_identifier so it should be unique per app
-                eas_init_cmd = f'''
+                eas_init_cmd = f"""
 cd {project_dir} && \\
 {env_string} && \\
 eas init 2>&1
-'''
+"""
                 init_result = await client.call_tool(
                     "Bash",
                     {
@@ -636,11 +636,11 @@ eas init 2>&1
 
                 # Build the iOS app with --auto-submit
                 # Use --no-wait so we don't block (free plan builds can be queued)
-                build_command = f'''
+                build_command = f"""
 cd {project_dir} && \\
 {env_string} && \\
 npx eas-cli build --platform ios --profile production --auto-submit --non-interactive --no-wait 2>&1
-'''
+"""
                 build_result = await client.call_tool(
                     "Bash",
                     {
@@ -663,7 +663,10 @@ npx eas-cli build --platform ios --profile production --auto-submit --non-intera
 
                 # Check if build was queued successfully
                 build_queued = "Uploaded to EAS" in build_output or "See logs:" in build_output
-                has_error = "error" in build_output.lower() and "build command failed" in build_output.lower()
+                has_error = (
+                    "error" in build_output.lower()
+                    and "build command failed" in build_output.lower()
+                )
 
                 if has_error and not build_queued:
                     await self._send_testflight_log(
@@ -676,10 +679,11 @@ npx eas-cli build --platform ios --profile production --auto-submit --non-intera
 
                 # Extract build URL from output
                 build_url = None
-                for line in build_output.split('\n'):
-                    if 'expo.dev' in line and '/builds/' in line:
+                for line in build_output.split("\n"):
+                    if "expo.dev" in line and "/builds/" in line:
                         import re
-                        url_match = re.search(r'https://expo\.dev[^\s]+', line)
+
+                        url_match = re.search(r"https://expo\.dev[^\s]+", line)
                         if url_match:
                             build_url = url_match.group(0)
                             break
@@ -688,9 +692,7 @@ npx eas-cli build --platform ios --profile production --auto-submit --non-intera
                 success_message = "Build queued on EAS servers with auto-submit enabled! "
                 if build_url:
                     success_message += f"Monitor progress at: {build_url} "
-                success_message += (
-                    "Your app will be automatically submitted to TestFlight after the build completes."
-                )
+                success_message += "Your app will be automatically submitted to TestFlight after the build completes."
 
                 await self._send_testflight_log(
                     session_info.id,
@@ -714,12 +716,10 @@ npx eas-cli build --platform ios --profile production --auto-submit --non-intera
         """Get the sandbox URL and manager for the session."""
         try:
             async with get_db_session_local() as db:
-                sandbox_record = (
-                    await self.container.sandbox_service.resolve_sandbox_for_session(
-                        db,
-                        session_info.id,
-                        session_service=self.container.session_service,
-                    )
+                sandbox_record = await self.container.sandbox_service.resolve_sandbox_for_session(
+                    db,
+                    session_info.id,
+                    session_service=self.container.session_service,
                 )
 
             if not sandbox_record or not sandbox_record.provider_sandbox_id:
@@ -774,9 +774,7 @@ npx eas-cli build --platform ios --profile production --auto-submit --non-intera
         is_error: bool = False,
     ) -> None:
         """Send TestFlight log event to the frontend."""
-        session_uuid = (
-            uuid.UUID(session_id) if isinstance(session_id, str) else session_id
-        )
+        session_uuid = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
 
         await self.send_event(
             RealtimeEvent(

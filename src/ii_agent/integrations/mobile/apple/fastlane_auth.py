@@ -102,7 +102,7 @@ class FastlaneAuthClient:
         """Check if fastlane is installed."""
         try:
             result = subprocess.run(
-                ['fastlane', '--version'],
+                ["fastlane", "--version"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -113,18 +113,11 @@ class FastlaneAuthClient:
             return False
 
     def _run_ruby_script(
-        self,
-        script: str,
-        env: dict[str, str],
-        timeout: int = 60
+        self, script: str, env: dict[str, str], timeout: int = 60
     ) -> dict[str, Any]:
         """Run a Ruby script and parse JSON output."""
         # Create a temporary file for the script
-        with tempfile.NamedTemporaryFile(
-            mode='w',
-            suffix='.rb',
-            delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".rb", delete=False) as f:
             f.write(script)
             script_path = f.name
 
@@ -135,7 +128,7 @@ class FastlaneAuthClient:
 
             # Run the script
             result = subprocess.run(
-                ['ruby', script_path],
+                ["ruby", script_path],
                 env=run_env,
                 capture_output=True,
                 text=True,
@@ -149,47 +142,45 @@ class FastlaneAuthClient:
 
             # Parse JSON output
             output = result.stdout
-            if '---JSON_OUTPUT_START---' in output:
-                json_start = output.find('---JSON_OUTPUT_START---') + len('---JSON_OUTPUT_START---')
-                json_end = output.find('---JSON_OUTPUT_END---')
+            if "---JSON_OUTPUT_START---" in output:
+                json_start = output.find("---JSON_OUTPUT_START---") + len("---JSON_OUTPUT_START---")
+                json_end = output.find("---JSON_OUTPUT_END---")
                 json_str = output[json_start:json_end].strip()
                 parsed = json.loads(json_str)
                 logger.info(f"Parsed Ruby output: {parsed}")
                 return parsed
             else:
                 # Check stderr for errors
-                logger.error(f"Ruby script failed - no JSON output. stdout: {result.stdout}, stderr: {result.stderr}")
+                logger.error(
+                    f"Ruby script failed - no JSON output. stdout: {result.stdout}, stderr: {result.stderr}"
+                )
 
                 # Check if stderr contains 2FA-related messages
-                stderr_lower = (result.stderr or '').lower()
-                if 'two-factor' in stderr_lower or '2fa' in stderr_lower or 'verification' in stderr_lower:
+                stderr_lower = (result.stderr or "").lower()
+                if (
+                    "two-factor" in stderr_lower
+                    or "2fa" in stderr_lower
+                    or "verification" in stderr_lower
+                ):
                     return {
-                        'success': False,
-                        'requires_2fa': True,
-                        'error': '2fa_required',
-                        'message': 'Two-factor authentication required'
+                        "success": False,
+                        "requires_2fa": True,
+                        "error": "2fa_required",
+                        "message": "Two-factor authentication required",
                     }
 
                 return {
-                    'success': False,
-                    'error': 'script_error',
-                    'message': result.stderr or 'Unknown error'
+                    "success": False,
+                    "error": "script_error",
+                    "message": result.stderr or "Unknown error",
                 }
 
         except subprocess.TimeoutExpired:
             logger.error("Ruby script timed out")
-            return {
-                'success': False,
-                'error': 'timeout',
-                'message': 'Authentication timed out'
-            }
+            return {"success": False, "error": "timeout", "message": "Authentication timed out"}
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON output: {e}")
-            return {
-                'success': False,
-                'error': 'parse_error',
-                'message': str(e)
-            }
+            return {"success": False, "error": "parse_error", "message": str(e)}
         finally:
             # Clean up temp file
             try:
@@ -197,9 +188,7 @@ class FastlaneAuthClient:
             except Exception:
                 pass
 
-    async def initiate_login(
-        self, apple_id: str, password: str, user_id: str
-    ) -> LoginResponse:
+    async def initiate_login(self, apple_id: str, password: str, user_id: str) -> LoginResponse:
         """Initiate Apple ID login using fastlane.
 
         Args:
@@ -220,37 +209,39 @@ class FastlaneAuthClient:
             self._run_ruby_script,
             FASTLANE_AUTH_SCRIPT,
             {
-                'APPLE_ID': apple_id,
-                'APPLE_PASSWORD': password,
-                'FASTLANE_DONT_STORE_PASSWORD': '1',
-                'FASTLANE_SKIP_UPDATE_CHECK': '1',
-                'FORCE_FRESH_LOGIN': '1',  # Clear cache for initial login
-                'SPACESHIP_COOKIE_PATH': cookie_path,  # User-specific session
+                "APPLE_ID": apple_id,
+                "APPLE_PASSWORD": password,
+                "FASTLANE_DONT_STORE_PASSWORD": "1",
+                "FASTLANE_SKIP_UPDATE_CHECK": "1",
+                "FORCE_FRESH_LOGIN": "1",  # Clear cache for initial login
+                "SPACESHIP_COOKIE_PATH": cookie_path,  # User-specific session
             },
             120,  # 2 minute timeout for login
         )
 
         # Log the result for debugging
-        logger.info(f"Fastlane auth result: success={result.get('success')}, "
-                   f"requires_2fa={result.get('requires_2fa')}, "
-                   f"error={result.get('error')}")
+        logger.info(
+            f"Fastlane auth result: success={result.get('success')}, "
+            f"requires_2fa={result.get('requires_2fa')}, "
+            f"error={result.get('error')}"
+        )
 
-        if result.get('success'):
+        if result.get("success"):
             # Login succeeded
             session = AppleSession(
                 session_id=str(uuid.uuid4()),
-                scnt='',
-                x_apple_id_session_id=result.get('session_id', ''),
+                scnt="",
+                x_apple_id_session_id=result.get("session_id", ""),
                 auth_state=AppleAuthState.PENDING_TEAM_SELECTION,
                 apple_id=apple_id,
-                cookies=result.get('cookies', {}),
+                cookies=result.get("cookies", {}),
                 teams=[
                     AppleTeam(
-                        team_id=t['team_id'],
-                        name=t['name'],
-                        team_type=t['team_type'],
+                        team_id=t["team_id"],
+                        name=t["name"],
+                        team_type=t["team_type"],
                     )
-                    for t in result.get('teams', [])
+                    for t in result.get("teams", [])
                 ],
                 expiry=datetime.now(timezone.utc) + timedelta(days=SESSION_DURATION_DAYS),
             )
@@ -260,12 +251,12 @@ class FastlaneAuthClient:
                 auth_type=None,
             )
 
-        elif result.get('requires_2fa') or result.get('error') == '2fa_required':
+        elif result.get("requires_2fa") or result.get("error") == "2fa_required":
             # 2FA required - store the session tokens for verification
             session = AppleSession(
                 session_id=str(uuid.uuid4()),
-                scnt=result.get('scnt', ''),
-                x_apple_id_session_id=result.get('session_id', ''),
+                scnt=result.get("scnt", ""),
+                x_apple_id_session_id=result.get("session_id", ""),
                 auth_state=AppleAuthState.PENDING_2FA,
                 apple_id=apple_id,
                 cookies={},
@@ -276,19 +267,19 @@ class FastlaneAuthClient:
             return LoginResponse(
                 session=session,
                 requires_2fa=True,
-                auth_type=result.get('auth_type', 'hsa2'),
+                auth_type=result.get("auth_type", "hsa2"),
             )
 
         else:
             # Handle errors
-            error = result.get('error', 'unknown')
-            message = result.get('message', 'Authentication failed')
+            error = result.get("error", "unknown")
+            message = result.get("message", "Authentication failed")
 
-            if error == 'invalid_credentials':
+            if error == "invalid_credentials":
                 raise AppleInvalidCredentialsError()
-            elif error == 'account_locked':
+            elif error == "account_locked":
                 raise AppleAccountLockedError()
-            elif error == 'rate_limit':
+            elif error == "rate_limit":
                 raise AppleRateLimitError()
             else:
                 raise AppleAuthenticationError(message)
@@ -325,36 +316,37 @@ class FastlaneAuthClient:
             self._run_ruby_script,
             FASTLANE_AUTH_SCRIPT,
             {
-                'APPLE_ID': session.apple_id,
-                'APPLE_PASSWORD': password,
-                'VERIFICATION_CODE': code,
-                'FASTLANE_DONT_STORE_PASSWORD': '1',
-                'FASTLANE_SKIP_UPDATE_CHECK': '1',
-                'SPACESHIP_COOKIE_PATH': cookie_path,  # User-specific session
+                "APPLE_ID": session.apple_id,
+                "APPLE_PASSWORD": password,
+                "VERIFICATION_CODE": code,
+                "FASTLANE_DONT_STORE_PASSWORD": "1",
+                "FASTLANE_SKIP_UPDATE_CHECK": "1",
+                "SPACESHIP_COOKIE_PATH": cookie_path,  # User-specific session
             },
             120,
         )
 
         logger.info(f"2FA verification result: {result}")
 
-        if result.get('success'):
+        if result.get("success"):
             # Update session with teams from successful login
             session.auth_state = AppleAuthState.PENDING_TEAM_SELECTION
             session.teams = [
                 AppleTeam(
-                    team_id=t['team_id'],
-                    name=t['name'],
-                    team_type=t['team_type'],
+                    team_id=t["team_id"],
+                    name=t["name"],
+                    team_type=t["team_type"],
                 )
-                for t in result.get('teams', [])
+                for t in result.get("teams", [])
             ]
             return session
         else:
-            error = result.get('error', 'unknown')
-            message = result.get('message', 'Verification failed')
+            error = result.get("error", "unknown")
+            message = result.get("message", "Verification failed")
 
-            if error == 'invalid_code':
+            if error == "invalid_code":
                 from .exceptions import Apple2FAInvalidCodeError
+
                 raise Apple2FAInvalidCodeError()
             else:
                 raise AppleAuthenticationError(message)
@@ -413,17 +405,17 @@ class FastlaneAuthClient:
 
         loop = asyncio.get_event_loop()
         env = {
-            'APPLE_ID': apple_id,
-            'APPLE_PASSWORD': password,
-            'TEAM_ID': team_id,
-            'FASTLANE_DONT_STORE_PASSWORD': '1',
-            'FASTLANE_SKIP_UPDATE_CHECK': '1',
-            'SPACESHIP_COOKIE_PATH': cookie_path,  # User-specific session
+            "APPLE_ID": apple_id,
+            "APPLE_PASSWORD": password,
+            "TEAM_ID": team_id,
+            "FASTLANE_DONT_STORE_PASSWORD": "1",
+            "FASTLANE_SKIP_UPDATE_CHECK": "1",
+            "SPACESHIP_COOKIE_PATH": cookie_path,  # User-specific session
         }
         if verification_code:
-            env['VERIFICATION_CODE'] = verification_code
+            env["VERIFICATION_CODE"] = verification_code
         if team_name:
-            env['TEAM_NAME'] = team_name
+            env["TEAM_NAME"] = team_name
 
         result = await loop.run_in_executor(
             None,
@@ -435,29 +427,32 @@ class FastlaneAuthClient:
 
         logger.info(f"Certificate creation result: {result}")
 
-        if result.get('success'):
+        if result.get("success"):
             return {
-                'certificate_id': result.get('certificate_id'),
-                'name': result.get('name'),
-                'expiry': result.get('expiry'),
-                'created': result.get('created', False),
-                'existing_count': result.get('existing_count', 0),
+                "certificate_id": result.get("certificate_id"),
+                "name": result.get("name"),
+                "expiry": result.get("expiry"),
+                "created": result.get("created", False),
+                "existing_count": result.get("existing_count", 0),
             }
         else:
-            error = result.get('error', 'unknown')
-            message = result.get('message', 'Certificate creation failed')
+            error = result.get("error", "unknown")
+            message = result.get("message", "Certificate creation failed")
 
-            if error == 'max_certificates':
+            if error == "max_certificates":
                 from .exceptions import AppleCertificateError
+
                 raise AppleCertificateError(
                     "Maximum number of iOS Distribution Certificates reached. "
                     "Please revoke an existing certificate in the Apple Developer Portal."
                 )
-            elif error == 'session_expired':
+            elif error == "session_expired":
                 from .exceptions import AppleSessionExpiredError
+
                 raise AppleSessionExpiredError()
             else:
                 from .exceptions import AppleCertificateError
+
                 raise AppleCertificateError(message)
 
     async def register_bundle_id(
@@ -491,19 +486,19 @@ class FastlaneAuthClient:
 
         loop = asyncio.get_event_loop()
         env = {
-            'APPLE_ID': apple_id,
-            'APPLE_PASSWORD': password,
-            'TEAM_ID': team_id,
-            'BUNDLE_IDENTIFIER': bundle_identifier,
-            'APP_NAME': app_name,
-            'FASTLANE_DONT_STORE_PASSWORD': '1',
-            'FASTLANE_SKIP_UPDATE_CHECK': '1',
-            'SPACESHIP_COOKIE_PATH': cookie_path,  # User-specific session
+            "APPLE_ID": apple_id,
+            "APPLE_PASSWORD": password,
+            "TEAM_ID": team_id,
+            "BUNDLE_IDENTIFIER": bundle_identifier,
+            "APP_NAME": app_name,
+            "FASTLANE_DONT_STORE_PASSWORD": "1",
+            "FASTLANE_SKIP_UPDATE_CHECK": "1",
+            "SPACESHIP_COOKIE_PATH": cookie_path,  # User-specific session
         }
         if verification_code:
-            env['VERIFICATION_CODE'] = verification_code
+            env["VERIFICATION_CODE"] = verification_code
         if team_name:
-            env['TEAM_NAME'] = team_name
+            env["TEAM_NAME"] = team_name
 
         result = await loop.run_in_executor(
             None,
@@ -515,28 +510,30 @@ class FastlaneAuthClient:
 
         logger.info(f"Bundle ID registration result: {result}")
 
-        if result.get('success'):
+        if result.get("success"):
             return {
-                'bundle_id': result.get('bundle_id'),
-                'name': result.get('name'),
-                'created': result.get('created', False),
+                "bundle_id": result.get("bundle_id"),
+                "name": result.get("name"),
+                "created": result.get("created", False),
             }
         else:
-            error = result.get('error', 'unknown')
-            message = result.get('message', 'Bundle ID registration failed')
+            error = result.get("error", "unknown")
+            message = result.get("message", "Bundle ID registration failed")
 
-            if error == 'already_exists':
+            if error == "already_exists":
                 # This is actually fine - bundle ID already exists
                 return {
-                    'bundle_id': bundle_identifier,
-                    'name': app_name,
-                    'created': False,
+                    "bundle_id": bundle_identifier,
+                    "name": app_name,
+                    "created": False,
                 }
-            elif error == 'session_expired':
+            elif error == "session_expired":
                 from .exceptions import AppleSessionExpiredError
+
                 raise AppleSessionExpiredError()
             else:
                 from .exceptions import AppleBundleIdError
+
                 raise AppleBundleIdError(message)
 
     async def create_app_store_connect_app(
@@ -572,19 +569,19 @@ class FastlaneAuthClient:
 
         loop = asyncio.get_event_loop()
         env = {
-            'APPLE_ID': apple_id,
-            'APPLE_PASSWORD': password,
-            'TEAM_ID': team_id,
-            'BUNDLE_IDENTIFIER': bundle_identifier,
-            'APP_NAME': app_name,
-            'FASTLANE_DONT_STORE_PASSWORD': '1',
-            'FASTLANE_SKIP_UPDATE_CHECK': '1',
-            'SPACESHIP_COOKIE_PATH': cookie_path,
+            "APPLE_ID": apple_id,
+            "APPLE_PASSWORD": password,
+            "TEAM_ID": team_id,
+            "BUNDLE_IDENTIFIER": bundle_identifier,
+            "APP_NAME": app_name,
+            "FASTLANE_DONT_STORE_PASSWORD": "1",
+            "FASTLANE_SKIP_UPDATE_CHECK": "1",
+            "SPACESHIP_COOKIE_PATH": cookie_path,
         }
         if verification_code:
-            env['VERIFICATION_CODE'] = verification_code
+            env["VERIFICATION_CODE"] = verification_code
         if team_name:
-            env['TEAM_NAME'] = team_name
+            env["TEAM_NAME"] = team_name
 
         result = await loop.run_in_executor(
             None,
@@ -596,36 +593,38 @@ class FastlaneAuthClient:
 
         logger.info(f"App Store Connect app creation result: {result}")
 
-        if result.get('success'):
+        if result.get("success"):
             return {
-                'app_id': result.get('app_id'),
-                'bundle_id': result.get('bundle_id'),
-                'name': result.get('name'),
-                'created': result.get('created', False),
+                "app_id": result.get("app_id"),
+                "bundle_id": result.get("bundle_id"),
+                "name": result.get("name"),
+                "created": result.get("created", False),
             }
         else:
-            error = result.get('error', 'unknown')
-            message = result.get('message', 'App creation failed')
-            conflict_type = result.get('conflict_type')
+            error = result.get("error", "unknown")
+            message = result.get("message", "App creation failed")
+            conflict_type = result.get("conflict_type")
 
-            if error == 'already_exists' and conflict_type == 'unknown':
+            if error == "already_exists" and conflict_type == "unknown":
                 # Generic already exists with unknown conflict - treat as partial success
                 # The app might be ours or might be a name/bundle conflict
                 return {
-                    'app_id': result.get('app_id'),
-                    'bundle_id': bundle_identifier,
-                    'name': app_name,
-                    'created': False,
+                    "app_id": result.get("app_id"),
+                    "bundle_id": bundle_identifier,
+                    "name": app_name,
+                    "created": False,
                 }
-            elif error == 'name_taken':
+            elif error == "name_taken":
                 # Name is globally unique and taken by someone else
                 from .exceptions import AppleAppNameTakenError
+
                 raise AppleAppNameTakenError(app_name, message)
-            elif error == 'bundle_id_taken':
+            elif error == "bundle_id_taken":
                 # Bundle ID registered by another developer
                 from .exceptions import AppleAppBundleIdTakenError
+
                 raise AppleAppBundleIdTakenError(bundle_identifier, message)
-            elif error == 'session_expired':
+            elif error == "session_expired":
                 raise AppleSessionExpiredError()
             else:
                 raise AppleAuthenticationError(message)
@@ -656,17 +655,17 @@ class FastlaneAuthClient:
 
         loop = asyncio.get_event_loop()
         env = {
-            'APPLE_ID': apple_id,
-            'APPLE_PASSWORD': password,
-            'TEAM_ID': team_id,
-            'FASTLANE_DONT_STORE_PASSWORD': '1',
-            'FASTLANE_SKIP_UPDATE_CHECK': '1',
-            'SPACESHIP_COOKIE_PATH': cookie_path,
+            "APPLE_ID": apple_id,
+            "APPLE_PASSWORD": password,
+            "TEAM_ID": team_id,
+            "FASTLANE_DONT_STORE_PASSWORD": "1",
+            "FASTLANE_SKIP_UPDATE_CHECK": "1",
+            "SPACESHIP_COOKIE_PATH": cookie_path,
         }
         if verification_code:
-            env['VERIFICATION_CODE'] = verification_code
+            env["VERIFICATION_CODE"] = verification_code
         if team_name:
-            env['TEAM_NAME'] = team_name
+            env["TEAM_NAME"] = team_name
 
         result = await loop.run_in_executor(
             None,
@@ -678,11 +677,11 @@ class FastlaneAuthClient:
 
         logger.info(f"List apps result: {result}")
 
-        if result.get('success'):
-            return result.get('apps', [])
+        if result.get("success"):
+            return result.get("apps", [])
         else:
-            error = result.get('error', 'unknown')
-            if error == 'session_expired':
+            error = result.get("error", "unknown")
+            if error == "session_expired":
                 raise AppleSessionExpiredError()
             return []
 
@@ -724,18 +723,18 @@ class FastlaneAuthClient:
 
         loop = asyncio.get_event_loop()
         env = {
-            'APPLE_ID': apple_id,
-            'APPLE_PASSWORD': password,
-            'TEAM_ID': team_id,
-            'BUNDLE_IDENTIFIER': bundle_identifier,
-            'FASTLANE_DONT_STORE_PASSWORD': '1',
-            'FASTLANE_SKIP_UPDATE_CHECK': '1',
-            'SPACESHIP_COOKIE_PATH': cookie_path,
+            "APPLE_ID": apple_id,
+            "APPLE_PASSWORD": password,
+            "TEAM_ID": team_id,
+            "BUNDLE_IDENTIFIER": bundle_identifier,
+            "FASTLANE_DONT_STORE_PASSWORD": "1",
+            "FASTLANE_SKIP_UPDATE_CHECK": "1",
+            "SPACESHIP_COOKIE_PATH": cookie_path,
         }
         if verification_code:
-            env['VERIFICATION_CODE'] = verification_code
+            env["VERIFICATION_CODE"] = verification_code
         if team_name:
-            env['TEAM_NAME'] = team_name
+            env["TEAM_NAME"] = team_name
 
         result = await loop.run_in_executor(
             None,
@@ -747,32 +746,32 @@ class FastlaneAuthClient:
 
         logger.info(f"EAS credentials generation result: {result}")
 
-        if result.get('success'):
+        if result.get("success"):
             return {
-                'p12_base64': result.get('p12_base64'),
-                'p12_password': result.get('p12_password', ''),
-                'provisioning_profile_base64': result.get('provisioning_profile_base64'),
-                'certificate_id': result.get('certificate_id'),
-                'certificate_name': result.get('certificate_name'),
-                'certificate_expiry': result.get('certificate_expiry'),
-                'profile_id': result.get('profile_id'),
-                'profile_name': result.get('profile_name'),
-                'profile_expiry': result.get('profile_expiry'),
-                'has_private_key': result.get('has_private_key', False),
-                'message': result.get('message'),
+                "p12_base64": result.get("p12_base64"),
+                "p12_password": result.get("p12_password", ""),
+                "provisioning_profile_base64": result.get("provisioning_profile_base64"),
+                "certificate_id": result.get("certificate_id"),
+                "certificate_name": result.get("certificate_name"),
+                "certificate_expiry": result.get("certificate_expiry"),
+                "profile_id": result.get("profile_id"),
+                "profile_name": result.get("profile_name"),
+                "profile_expiry": result.get("profile_expiry"),
+                "has_private_key": result.get("has_private_key", False),
+                "message": result.get("message"),
             }
         else:
-            error = result.get('error', 'unknown')
-            message = result.get('message', 'Credential generation failed')
+            error = result.get("error", "unknown")
+            message = result.get("message", "Credential generation failed")
 
-            if error == 'max_certificates':
+            if error == "max_certificates":
                 raise AppleCertificateError(
                     "Maximum number of iOS Distribution Certificates reached. "
                     "Please revoke an existing certificate in the Apple Developer Portal."
                 )
-            elif error == 'session_expired':
+            elif error == "session_expired":
                 raise AppleSessionExpiredError()
-            elif error == 'bundle_id_not_found':
+            elif error == "bundle_id_not_found":
                 raise AppleBundleIdError(
                     f"Bundle ID {bundle_identifier} not registered. "
                     "Please complete the App Setup step first."

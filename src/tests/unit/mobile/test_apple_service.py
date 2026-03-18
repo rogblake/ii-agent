@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from ii_agent.mobile.apple.models import AppleAuthStateEnum
-from ii_agent.mobile.apple.service import AppleCredentialService
+from ii_agent.integrations.mobile.apple.models import AppleAuthStateEnum
+from ii_agent.integrations.mobile.apple.service import AppleCredentialService
 
 
 class FakeAppleRepo:
@@ -73,9 +73,9 @@ async def test_save_or_update_credential_uses_pending_and_updates_fields(monkeyp
     async def _db_cm():
         yield db
 
-    monkeypatch.setattr("ii_agent.mobile.apple.service.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.integrations.mobile.apple.service.get_db_session_local", _db_cm)
     monkeypatch.setattr(
-        "ii_agent.mobile.apple.service.encryption_manager.encrypt",
+        "ii_agent.integrations.mobile.apple.service.encryption_manager.encrypt",
         lambda payload: f"enc:{payload}",
     )
 
@@ -119,7 +119,7 @@ async def test_get_active_session_marks_expired_and_returns_none(monkeypatch):
     async def _db_cm():
         yield db
 
-    monkeypatch.setattr("ii_agent.mobile.apple.service.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.integrations.mobile.apple.service.get_db_session_local", _db_cm)
 
     result = await service.get_active_session("u1")
 
@@ -138,13 +138,19 @@ def test_get_decrypted_session_data_handles_null_and_parse_failures(monkeypatch)
         "enc-empty": None,
     }
     monkeypatch.setattr(
-        "ii_agent.mobile.apple.service.encryption_manager.decrypt",
+        "ii_agent.integrations.mobile.apple.service.encryption_manager.decrypt",
         lambda value: decrypted_map.get(value),
     )
 
     assert service.get_decrypted_session_data(SimpleNamespace(encrypted_session_data=None)) is None
-    assert service.get_decrypted_session_data(SimpleNamespace(encrypted_session_data="enc-empty")) is None
-    assert service.get_decrypted_session_data(SimpleNamespace(encrypted_session_data="enc-bad")) is None
+    assert (
+        service.get_decrypted_session_data(SimpleNamespace(encrypted_session_data="enc-empty"))
+        is None
+    )
+    assert (
+        service.get_decrypted_session_data(SimpleNamespace(encrypted_session_data="enc-bad"))
+        is None
+    )
     assert service.get_decrypted_session_data(
         SimpleNamespace(encrypted_session_data="enc-good")
     ) == {"token": "ok"}
@@ -162,17 +168,17 @@ async def test_save_and_get_expo_token_paths(monkeypatch):
     async def _db_cm():
         yield db
 
-    monkeypatch.setattr("ii_agent.mobile.apple.service.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.integrations.mobile.apple.service.get_db_session_local", _db_cm)
     monkeypatch.setattr(
-        "ii_agent.mobile.apple.service.encryption_manager.encrypt",
+        "ii_agent.integrations.mobile.apple.service.encryption_manager.encrypt",
         lambda value: f"enc:{value}",
     )
     monkeypatch.setattr(
-        "ii_agent.mobile.apple.service.encryption_manager.decrypt",
+        "ii_agent.integrations.mobile.apple.service.encryption_manager.decrypt",
         lambda value: value.replace("enc:", "", 1),
     )
     monkeypatch.setattr(
-        "ii_agent.mobile.apple.service.AppleCredential",
+        "ii_agent.integrations.mobile.apple.service.AppleCredential",
         lambda **kwargs: SimpleNamespace(**kwargs),
     )
 
@@ -198,17 +204,17 @@ async def test_save_and_get_app_specific_password_paths(monkeypatch):
     async def _db_cm():
         yield db
 
-    monkeypatch.setattr("ii_agent.mobile.apple.service.get_db_session_local", _db_cm)
+    monkeypatch.setattr("ii_agent.integrations.mobile.apple.service.get_db_session_local", _db_cm)
     monkeypatch.setattr(
-        "ii_agent.mobile.apple.service.encryption_manager.encrypt",
+        "ii_agent.integrations.mobile.apple.service.encryption_manager.encrypt",
         lambda value: f"enc:{value}",
     )
     monkeypatch.setattr(
-        "ii_agent.mobile.apple.service.encryption_manager.decrypt",
+        "ii_agent.integrations.mobile.apple.service.encryption_manager.decrypt",
         lambda value: value.replace("enc:", "", 1),
     )
     monkeypatch.setattr(
-        "ii_agent.mobile.apple.service.AppleCredential",
+        "ii_agent.integrations.mobile.apple.service.AppleCredential",
         lambda **kwargs: SimpleNamespace(**kwargs),
     )
 

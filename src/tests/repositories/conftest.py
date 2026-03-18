@@ -33,7 +33,7 @@ import ii_agent.agent.runs.models  # noqa: F401
 import ii_agent.agent.sandboxes.models  # noqa: F401
 import ii_agent.files.models  # noqa: F401
 import ii_agent.integrations.connectors.models  # noqa: F401
-import ii_agent.mobile.apple.models  # noqa: F401
+import ii_agent.integrations.mobile.apple.models  # noqa: F401
 import ii_agent.projects.databases.models  # noqa: F401
 import ii_agent.projects.deployments.models  # noqa: F401
 import ii_agent.projects.models  # noqa: F401

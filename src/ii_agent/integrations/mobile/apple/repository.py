@@ -6,7 +6,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.db.repository import BaseRepository
-from ii_agent.mobile.apple.models import AppleCredential
+from ii_agent.integrations.mobile.apple.models import AppleCredential
 
 
 class AppleCredentialRepository(BaseRepository[AppleCredential]):

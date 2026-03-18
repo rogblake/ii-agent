@@ -70,7 +70,8 @@ src/ii_agent/
 │   ├── a2a/                # Agent-to-Agent protocol
 │   ├── connectors/         # External connectors (GitHub, Google Drive via Composio)
 │   ├── enhance_prompt/     # Prompt enhancement
-│   └── mcp_sse/            # MCP SSE server for ChatGPT integration
+│   ├── mcp_sse/            # MCP SSE server for ChatGPT integration
+│   └── mobile/             # Mobile platform integrations (Apple, future Android)
 │
 ├── projects/               # Project & deployment management
 │   ├── cloud_run/          # Google Cloud Run deployment
@@ -84,7 +85,6 @@ src/ii_agent/
 │   ├── llm/                # User LLM model preferences
 │   └── mcp/                # MCP server configuration
 │
-├── mobile/                 # Mobile-specific endpoints
 ├── utils/                  # Shared utilities
 ├── workers/                # Background jobs (Celery cron)
 ├── scripts/                # Admin scripts

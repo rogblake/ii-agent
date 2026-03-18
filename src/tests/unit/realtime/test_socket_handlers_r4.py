@@ -15,11 +15,8 @@ Internal logic executes naturally wherever possible.
 
 from __future__ import annotations
 
-import base64
 import uuid
 from contextlib import asynccontextmanager
-from types import SimpleNamespace
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -92,15 +89,25 @@ def _mock_container(**overrides) -> MagicMock:
     container.file_service = MagicMock()
     container.file_service.prepare_agent_files = AsyncMock(return_value=([], []))
     container.deployment_orchestration_service = MagicMock()
-    container.deployment_orchestration_service.create_deployment_context = AsyncMock(return_value=None)
+    container.deployment_orchestration_service.create_deployment_context = AsyncMock(
+        return_value=None
+    )
     container.deployment_orchestration_service.update_deployment_status = AsyncMock()
     container.deployment_orchestration_service.finalize_successful_deployment = AsyncMock()
-    container.deployment_orchestration_service.append_success_marker = MagicMock(side_effect=lambda x: x + " ##SUCCESS##")
+    container.deployment_orchestration_service.append_success_marker = MagicMock(
+        side_effect=lambda x: x + " ##SUCCESS##"
+    )
     container.deployment_orchestration_service.command_succeeded = MagicMock(return_value=True)
-    container.deployment_orchestration_service.shell_quote = MagicMock(side_effect=lambda x: f"'{x}'")
+    container.deployment_orchestration_service.shell_quote = MagicMock(
+        side_effect=lambda x: f"'{x}'"
+    )
     container.deployment_orchestration_service.cleanup_output = MagicMock(side_effect=lambda x: x)
-    container.deployment_orchestration_service.cleanup_output_for_display = MagicMock(side_effect=lambda x: x)
-    container.deployment_orchestration_service.extract_deployment_url = MagicMock(return_value="https://app.vercel.app")
+    container.deployment_orchestration_service.cleanup_output_for_display = MagicMock(
+        side_effect=lambda x: x
+    )
+    container.deployment_orchestration_service.extract_deployment_url = MagicMock(
+        return_value="https://app.vercel.app"
+    )
     container.session_validation_service = MagicMock()
     container.session_validation_service.validate_and_prepare_session = AsyncMock()
     container.llm_setting_service = MagicMock()
@@ -526,9 +533,7 @@ class TestCloudRunPublishHandlerHelpers:
 
     def test_extract_env_vars_from_credentials(self):
         handler = self._get_handler()
-        result = handler._extract_env_vars(
-            {"credentials": {"environment": {"ENV_KEY": "env_val"}}}
-        )
+        result = handler._extract_env_vars({"credentials": {"environment": {"ENV_KEY": "env_val"}}})
         assert result == {"ENV_KEY": "env_val"}
 
     def test_extract_env_vars_converts_none_to_empty_string(self):
@@ -537,17 +542,17 @@ class TestCloudRunPublishHandlerHelpers:
         assert result["KEY"] == ""
 
     def test_publisher_property_initialises_lazily(self):
-        from ii_agent.agent.socket.command.cloud_run_publish_handler import (
-            CloudRunPublishHandler,
-        )
         from ii_agent.projects.cloud_run.service import CloudRunPublisher
 
         handler = self._get_handler()
-        with patch(
-            "ii_agent.agent.socket.command.cloud_run_publish_handler.CloudRunConfig.from_env"
-        ) as mock_cfg, patch(
-            "ii_agent.agent.socket.command.cloud_run_publish_handler.CloudRunPublisher"
-        ) as mock_pub:
+        with (
+            patch(
+                "ii_agent.agent.socket.command.cloud_run_publish_handler.CloudRunConfig.from_env"
+            ) as mock_cfg,
+            patch(
+                "ii_agent.agent.socket.command.cloud_run_publish_handler.CloudRunPublisher"
+            ) as mock_pub,
+        ):
             mock_cfg.return_value = MagicMock()
             mock_pub.return_value = MagicMock(spec=CloudRunPublisher)
             p = handler.publisher
@@ -645,11 +650,12 @@ class TestCloudRunPublishHandlerHandle:
         handler = CloudRunPublishHandler(event_stream=stream, container=container)
         session_info = _make_session_info()
 
-        with patch(
-            "ii_agent.agent.socket.command.cloud_run_publish_handler.get_db_session_local",
-            return_value=_noop_db_cm(),
-        ), patch(
-            "ii_agent.agent.socket.command.cloud_run_publish_handler.E2BSandboxManager"
+        with (
+            patch(
+                "ii_agent.agent.socket.command.cloud_run_publish_handler.get_db_session_local",
+                return_value=_noop_db_cm(),
+            ),
+            patch("ii_agent.agent.socket.command.cloud_run_publish_handler.E2BSandboxManager"),
         ):
             await handler.handle({}, session_info)
 
@@ -718,9 +724,7 @@ class TestAppleAppSetupHandlerSendSetupStatus:
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
         session_id = uuid.uuid4()
         await handler._send_setup_status(
             session_id,
@@ -743,9 +747,7 @@ class TestAppleAppSetupHandlerSendSetupStatus:
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
         session_id = uuid.uuid4()
         await handler._send_setup_status(
             session_id,
@@ -765,9 +767,7 @@ class TestAppleAppSetupHandlerHandle:
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         await handler.handle({"app_name": "My App"}, session_info)
 
@@ -782,9 +782,7 @@ class TestAppleAppSetupHandlerHandle:
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         await handler.handle({"bundle_identifier": "com.example.app"}, session_info)
 
@@ -799,9 +797,7 @@ class TestAppleAppSetupHandlerHandle:
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         await handler.handle(
             {"bundle_identifier": "invalid", "app_name": "My App"},
@@ -818,9 +814,7 @@ class TestAppleAppSetupHandlerHandle:
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
@@ -841,12 +835,9 @@ class TestAppleAppSetupHandlerHandle:
         from ii_agent.agent.socket.command.apple_app_setup_handler import (
             AppleAppSetupHandler,
         )
-        from ii_agent.mobile.apple import AppleAuthStateEnum
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         cred = MagicMock()
         cred.auth_state = "pending_2fa"  # Not AUTHENTICATED
@@ -869,12 +860,10 @@ class TestAppleAppSetupHandlerHandle:
         from ii_agent.agent.socket.command.apple_app_setup_handler import (
             AppleAppSetupHandler,
         )
-        from ii_agent.mobile.apple import AppleAuthStateEnum
+        from ii_agent.integrations.mobile.apple import AppleAuthStateEnum
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
 
         cred = MagicMock()
@@ -883,12 +872,15 @@ class TestAppleAppSetupHandlerHandle:
         cred.team_name = "My Team"
         cred.apple_id = "user@example.com"
 
-        with patch(
-            "ii_agent.agent.socket.command.apple_app_setup_handler.AppleCredentials.get_active_session",
-            new=AsyncMock(return_value=cred),
-        ), patch(
-            "ii_agent.agent.socket.command.apple_app_setup_handler.AppleCredentials.get_decrypted_session_data",
-            return_value={},  # No _temp_password
+        with (
+            patch(
+                "ii_agent.agent.socket.command.apple_app_setup_handler.AppleCredentials.get_active_session",
+                new=AsyncMock(return_value=cred),
+            ),
+            patch(
+                "ii_agent.agent.socket.command.apple_app_setup_handler.AppleCredentials.get_decrypted_session_data",
+                return_value={},  # No _temp_password
+            ),
         ):
             await handler.handle(
                 {"bundle_identifier": "com.example.app", "app_name": "My App"},
@@ -907,9 +899,7 @@ class TestAppleListAppsHandlerHandle:
         )
 
         stream = CapturingEventStream()
-        handler = AppleListAppsHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleListAppsHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
@@ -945,9 +935,7 @@ class TestAppleAuthLoginHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         await handler.handle({"password": "pass"}, session_info)
 
@@ -960,9 +948,7 @@ class TestAppleAuthLoginHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         await handler.handle({"apple_id": "user@example.com"}, session_info)
 
@@ -972,12 +958,10 @@ class TestAppleAuthLoginHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_for_invalid_credentials(self):
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
-        from ii_agent.mobile.apple import AppleInvalidCredentialsError
+        from ii_agent.integrations.mobile.apple import AppleInvalidCredentialsError
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
         handler.auth_client = MagicMock()
         handler.auth_client.initiate_login = AsyncMock(
             side_effect=AppleInvalidCredentialsError("bad creds")
@@ -996,12 +980,10 @@ class TestAppleAuthLoginHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_for_rate_limit(self):
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
-        from ii_agent.mobile.apple import AppleRateLimitError
+        from ii_agent.integrations.mobile.apple import AppleRateLimitError
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
         handler.auth_client = MagicMock()
         handler.auth_client.initiate_login = AsyncMock(
             side_effect=AppleRateLimitError("rate limit")
@@ -1015,17 +997,18 @@ class TestAppleAuthLoginHandlerHandle:
 
         errors = stream.events_of_type(EventType.ERROR)
         assert len(errors) >= 1
-        assert "rate" in errors[0].content["message"].lower() or "wait" in errors[0].content["message"].lower()
+        assert (
+            "rate" in errors[0].content["message"].lower()
+            or "wait" in errors[0].content["message"].lower()
+        )
 
     @pytest.mark.asyncio
     async def test_sends_error_for_account_locked(self):
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
-        from ii_agent.mobile.apple import AppleAccountLockedError
+        from ii_agent.integrations.mobile.apple import AppleAccountLockedError
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
         handler.auth_client = MagicMock()
         handler.auth_client.initiate_login = AsyncMock(
             side_effect=AppleAccountLockedError("locked")
@@ -1044,12 +1027,10 @@ class TestAppleAuthLoginHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_2fa_required_event(self):
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
-        from ii_agent.mobile.apple.types import AppleSession, AppleAuthState
+        from ii_agent.integrations.mobile.apple.types import AppleSession, AppleAuthState
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
 
         mock_session = MagicMock(spec=AppleSession)
         mock_session.auth_state = AppleAuthState.PENDING_2FA
@@ -1079,12 +1060,10 @@ class TestAppleAuthLoginHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_team_selection_when_no_2fa(self):
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
-        from ii_agent.mobile.apple.types import AppleSession, AppleAuthState
+        from ii_agent.integrations.mobile.apple.types import AppleSession, AppleAuthState
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
 
         mock_session = MagicMock(spec=AppleSession)
         mock_session.auth_state = AppleAuthState.AUTHENTICATED
@@ -1131,9 +1110,7 @@ class TestAppleAuth2FAHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuth2FAHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuth2FAHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         await handler.handle({"code": "123"}, session_info)
 
@@ -1146,9 +1123,7 @@ class TestAppleAuth2FAHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuth2FAHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuth2FAHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         await handler.handle({"code": "ABCDEF"}, session_info)
 
@@ -1160,9 +1135,7 @@ class TestAppleAuth2FAHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuth2FAHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuth2FAHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
@@ -1179,18 +1152,19 @@ class TestAppleAuth2FAHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuth2FAHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuth2FAHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         fake_cred = MagicMock()
 
-        with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
-            new=AsyncMock(return_value=fake_cred),
-        ), patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_session_data",
-            return_value=None,
+        with (
+            patch(
+                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
+                new=AsyncMock(return_value=fake_cred),
+            ),
+            patch(
+                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_session_data",
+                return_value=None,
+            ),
         ):
             await handler.handle({"code": "123456"}, session_info)
 
@@ -1200,13 +1174,11 @@ class TestAppleAuth2FAHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_for_invalid_2fa_code(self):
         from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
-        from ii_agent.mobile.apple import Apple2FAInvalidCodeError
-        from ii_agent.mobile.apple.types import AppleSession, AppleAuthState
+        from ii_agent.integrations.mobile.apple import Apple2FAInvalidCodeError
+        from ii_agent.integrations.mobile.apple.types import AppleSession, AppleAuthState
 
         stream = CapturingEventStream()
-        handler = AppleAuth2FAHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuth2FAHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         fake_cred = MagicMock()
 
@@ -1219,23 +1191,31 @@ class TestAppleAuth2FAHandlerHandle:
             side_effect=Apple2FAInvalidCodeError("invalid")
         )
 
-        with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
-            new=AsyncMock(return_value=fake_cred),
-        ), patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_session_data",
-            return_value={"_temp_password": "mypass", "auth_state": "pending_2fa"},
-        ), patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleAuth2FAHandler.handle",
-            wraps=handler.handle,
+        with (
+            patch(
+                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
+                new=AsyncMock(return_value=fake_cred),
+            ),
+            patch(
+                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_session_data",
+                return_value={"_temp_password": "mypass", "auth_state": "pending_2fa"},
+            ),
+            patch(
+                "ii_agent.agent.socket.command.apple_auth_handler.AppleAuth2FAHandler.handle",
+                wraps=handler.handle,
+            ),
         ):
             # Patch AppleSession.model_validate
-            with patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleSession",
-                return_value=mock_session,
-            ) if False else patch(
-                "ii_agent.mobile.apple.types.AppleSession.model_validate",
-                return_value=mock_session,
+            with (
+                patch(
+                    "ii_agent.agent.socket.command.apple_auth_handler.AppleSession",
+                    return_value=mock_session,
+                )
+                if False
+                else patch(
+                    "ii_agent.integrations.mobile.apple.types.AppleSession.model_validate",
+                    return_value=mock_session,
+                )
             ):
                 await handler.handle({"code": "123456"}, session_info)
 
@@ -1260,9 +1240,7 @@ class TestAppleAuthSelectTeamHandlerHandle:
         )
 
         stream = CapturingEventStream()
-        handler = AppleAuthSelectTeamHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuthSelectTeamHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         await handler.handle({}, session_info)
 
@@ -1277,9 +1255,7 @@ class TestAppleAuthSelectTeamHandlerHandle:
         )
 
         stream = CapturingEventStream()
-        handler = AppleAuthSelectTeamHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuthSelectTeamHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
@@ -1298,9 +1274,7 @@ class TestAppleAuthSelectTeamHandlerHandle:
         )
 
         stream = CapturingEventStream()
-        handler = AppleAuthSelectTeamHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleAuthSelectTeamHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         fake_cred = MagicMock()
         fake_cred.available_teams = [{"team_id": "OTHER_TEAM", "name": "Other"}]
@@ -1333,17 +1307,18 @@ class TestAppleCheckAuthHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import AppleCheckAuthHandler
 
         stream = CapturingEventStream()
-        handler = AppleCheckAuthHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleCheckAuthHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
 
-        with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_active_session",
-            new=AsyncMock(return_value=None),
-        ), patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
-            new=AsyncMock(return_value=None),
+        with (
+            patch(
+                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_active_session",
+                new=AsyncMock(return_value=None),
+            ),
+            patch(
+                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
+                new=AsyncMock(return_value=None),
+            ),
         ):
             await handler.handle({}, session_info)
 
@@ -1357,23 +1332,25 @@ class TestAppleCheckAuthHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import AppleCheckAuthHandler
 
         stream = CapturingEventStream()
-        handler = AppleCheckAuthHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleCheckAuthHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         fake_cred = MagicMock()
         fake_cred.apple_id = "user@example.com"
         fake_cred.team_name = "My Team"
 
-        with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_active_session",
-            new=AsyncMock(return_value=fake_cred),
-        ), patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_expo_token",
-            return_value="expo-token-abc",
-        ), patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_app_specific_password",
-            return_value=None,
+        with (
+            patch(
+                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_active_session",
+                new=AsyncMock(return_value=fake_cred),
+            ),
+            patch(
+                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_expo_token",
+                return_value="expo-token-abc",
+            ),
+            patch(
+                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_app_specific_password",
+                return_value=None,
+            ),
         ):
             await handler.handle({}, session_info)
 
@@ -1387,9 +1364,7 @@ class TestAppleCheckAuthHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import AppleCheckAuthHandler
 
         stream = CapturingEventStream()
-        handler = AppleCheckAuthHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = AppleCheckAuthHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
@@ -1418,9 +1393,7 @@ class TestSaveExpoTokenHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import SaveExpoTokenHandler
 
         stream = CapturingEventStream()
-        handler = SaveExpoTokenHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = SaveExpoTokenHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         await handler.handle({"expo_token": "  "}, session_info)
 
@@ -1433,9 +1406,7 @@ class TestSaveExpoTokenHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import SaveExpoTokenHandler
 
         stream = CapturingEventStream()
-        handler = SaveExpoTokenHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = SaveExpoTokenHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
@@ -1453,9 +1424,7 @@ class TestSaveExpoTokenHandlerHandle:
         from ii_agent.agent.socket.command.apple_auth_handler import SaveExpoTokenHandler
 
         stream = CapturingEventStream()
-        handler = SaveExpoTokenHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = SaveExpoTokenHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
@@ -1532,9 +1501,7 @@ class TestSubmitTestflightHandlerSendTestflightLog:
         )
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
         session_id = uuid.uuid4()
         await handler._send_testflight_log(session_id, "Build started", status="running")
 
@@ -1551,9 +1518,7 @@ class TestSubmitTestflightHandlerSendTestflightLog:
         )
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
         session_id = str(uuid.uuid4())
         await handler._send_testflight_log(session_id, "Error occurred", is_error=True)
 
@@ -1568,9 +1533,7 @@ class TestSubmitTestflightHandlerSendTestflightLog:
         )
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
         session_id = uuid.uuid4()
         await handler._send_testflight_log(session_id, "Starting")
 
@@ -1586,9 +1549,7 @@ class TestSubmitTestflightHandlerHandle:
         )
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
@@ -1608,9 +1569,7 @@ class TestSubmitTestflightHandlerHandle:
         )
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         cred = MagicMock()
         cred.auth_state = "pending"
@@ -1630,30 +1589,33 @@ class TestSubmitTestflightHandlerHandle:
         from ii_agent.agent.socket.command.submit_testflight_handler import (
             SubmitTestflightHandler,
         )
-        from ii_agent.mobile.apple import AppleAuthStateEnum
+        from ii_agent.integrations.mobile.apple import AppleAuthStateEnum
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         cred = MagicMock()
         cred.auth_state = AppleAuthStateEnum.AUTHENTICATED.value
         cred.apple_id = "user@example.com"
         cred.selected_team_id = "TEAM1"
 
-        with patch(
-            "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
-            new=AsyncMock(return_value=cred),
-        ), patch(
-            "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_session_data",
-            return_value={"_temp_password": "mypass"},
-        ), patch(
-            "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_expo_token",
-            return_value=None,
-        ), patch(
-            "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.clear_session_password",
-            new=AsyncMock(),
+        with (
+            patch(
+                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
+                new=AsyncMock(return_value=cred),
+            ),
+            patch(
+                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_session_data",
+                return_value={"_temp_password": "mypass"},
+            ),
+            patch(
+                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_expo_token",
+                return_value=None,
+            ),
+            patch(
+                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.clear_session_password",
+                new=AsyncMock(),
+            ),
         ):
             await handler.handle({}, session_info)  # No expo_token in content
 
@@ -1666,27 +1628,29 @@ class TestSubmitTestflightHandlerHandle:
         from ii_agent.agent.socket.command.submit_testflight_handler import (
             SubmitTestflightHandler,
         )
-        from ii_agent.mobile.apple import AppleAuthStateEnum
+        from ii_agent.integrations.mobile.apple import AppleAuthStateEnum
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(
-            event_stream=stream, container=_mock_container()
-        )
+        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
         session_info = _make_session_info()
         cred = MagicMock()
         cred.auth_state = AppleAuthStateEnum.AUTHENTICATED.value
         cred.apple_id = "user@example.com"
         cred.selected_team_id = "TEAM1"
 
-        with patch(
-            "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
-            new=AsyncMock(return_value=cred),
-        ), patch(
-            "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_session_data",
-            return_value={},  # No _temp_password
-        ), patch(
-            "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_expo_token",
-            return_value="expo-token",
+        with (
+            patch(
+                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
+                new=AsyncMock(return_value=cred),
+            ),
+            patch(
+                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_session_data",
+                return_value={},  # No _temp_password
+            ),
+            patch(
+                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_expo_token",
+                return_value="expo-token",
+            ),
         ):
             await handler.handle({"expo_token": "expo-token"}, session_info)
 
@@ -1715,9 +1679,7 @@ class TestPlanHandlerGetCommandType:
         from ii_agent.agent.socket.command.plan_handler import PlanHandler
         from ii_agent.agent.socket.command.command_handler import UserCommandType
 
-        handler = PlanHandler(
-            event_stream=CapturingEventStream(), container=_mock_container()
-        )
+        handler = PlanHandler(event_stream=CapturingEventStream(), container=_mock_container())
         assert handler.get_command_type() == UserCommandType.PLAN
 
 
@@ -1802,16 +1764,15 @@ class TestPlanHandlerHandle:
             return_value=_noop_db_cm(),
         ):
             await handler.handle(
-                _make_plan_content(build_mode="design"),  # 'design' hits else branch in _handle_plan
+                _make_plan_content(
+                    build_mode="design"
+                ),  # 'design' hits else branch in _handle_plan
                 session_info,
             )
 
         errors = stream.events_of_type(EventType.ERROR)
         assert len(errors) >= 1
-        assert any(
-            "invalid plan mode" in ev.content["message"].lower()
-            for ev in errors
-        )
+        assert any("invalid plan mode" in ev.content["message"].lower() for ev in errors)
 
     @pytest.mark.asyncio
     async def test_returns_early_when_no_task_created(self):
@@ -1849,9 +1810,7 @@ class TestPlanHandlerPrepareFiles:
         from ii_agent.agent.socket.command.plan_handler import PlanHandler
         from ii_agent.agent.socket.schemas import QueryCommandContent
 
-        handler = PlanHandler(
-            event_stream=CapturingEventStream(), container=_mock_container()
-        )
+        handler = PlanHandler(event_stream=CapturingEventStream(), container=_mock_container())
         query = QueryCommandContent(
             text="hi", files=[], model_id="gpt-4o", provider="openai", agent_type="general"
         )

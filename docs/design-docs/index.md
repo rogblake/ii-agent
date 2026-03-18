@@ -8,6 +8,12 @@ This catalogue tracks all design documents in the repository. Each document capt
 |----------|--------|-------------|
 | [core-beliefs.md](core-beliefs.md) | Active | Agent-first operating principles for II-Agent development |
 
+## Database & Schema
+
+| Document | Status | Description |
+|----------|--------|-------------|
+| [platform-db-redesign-review.md](platform-db-redesign-review.md) | In Progress | Review of platform database redesign proposal against actual 45-table schema |
+
 ## Adding a New Design Document
 
 1. Create the document in `docs/design-docs/`.

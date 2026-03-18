@@ -8,6 +8,24 @@ Last comprehensive review: 2026-03-17
 
 ## P0 — Critical (Security & Correctness)
 
+### Project secrets can be persisted in plaintext
+- **What:** `projects/service.py:141-154` writes `project.secrets_json = secrets` directly, while `projects/secrets/utils.py:7-27` supports encrypted payloads. Multiple agent tool paths merge raw secrets or `DATABASE_URL` into `project.secrets_json` and then call the project service instead of the secret service
+- **Impact:** Secrets storage is mixed-mode. Some rows may be encrypted, others plaintext, depending on which code path last updated the project. This is a direct confidentiality risk for project secrets and database credentials
+- **Fix:** Make `SecretService` the only persistence path for project secrets. Encrypt in the write service, reject plaintext payloads at the persistence boundary, and add a data migration to re-encrypt existing plaintext rows
+- **Effort:** 1 day
+
+### Production secret configuration is not fail-closed
+- **What:** `core/secrets/encryption.py:107-128` falls back to hardcoded password/salt values when `ENCRYPTION_KEY` is unset, `core/config/settings.py:338-340` has a default JWT signing secret, and `core/config/oauth.py:132-135` auto-generates a session secret when not configured
+- **Impact:** Production can boot with insecure or non-deterministic secrets. That weakens stored secret encryption, makes JWT signing misconfiguration easy to miss, and causes session invalidation/drift across restarts or multiple instances
+- **Fix:** Add production-only config validation that requires explicit `ENCRYPTION_KEY`, `JWT_SECRET_KEY`, and `SESSION_SECRET_KEY`, and fail startup when any are missing or using placeholder values
+- **Effort:** 4 hours
+
+### Database TLS verification is effectively disabled
+- **What:** `core/db/base.py:74-80` handles `sslmode=require`, `verify-ca`, and `verify-full` by building an SSL context with `check_hostname=False` and `verify_mode=CERT_NONE`
+- **Impact:** The connection string can claim certificate verification semantics that the code does not actually enforce. This weakens database transport security and permits MITM-style trust failures
+- **Fix:** Honor the requested verification mode correctly, or delegate TLS behavior to the driver defaults without overriding verification settings
+- **Effort:** 4 hours
+
 ### CORS wildcard with credentials
 - **What:** `app/middleware.py` sets `allow_origins=["*"]` with `allow_credentials=True`
 - **Impact:** Violates CORS spec. Enables CSRF attacks — any malicious site can make authenticated requests on behalf of users
@@ -48,6 +66,30 @@ Last comprehensive review: 2026-03-17
 
 ## P1 — High (Data Integrity & Performance)
 
+### Project database source of truth is split across legacy JSON and normalized tables
+- **What:** `projects/databases/service.py:92-119` still reads project database connections from `projects.database_json`, while tool flows also create and update rows in `project_databases` via `projects/databases/service.py:162-193`. `projects/service.py:33-79` also still writes `database_json`
+- **Impact:** Two competing sources of truth can drift. Admin/dashboard queries become harder to trust, migrations remain partial, and operational fixes must know which storage path to inspect first
+- **Fix:** Make `project_databases` the canonical store, migrate all reads to it, backfill fully, and retire `projects.database_json`
+- **Effort:** 2-3 days
+
+### Database resources are attached to sessions instead of projects
+- **What:** `projects/databases/models.py:24-71` stores database resources under `session_id`, while `projects/models.py:85-89` enforces a unique `session_id` per project
+- **Impact:** Durable infrastructure is coupled to a transient chat/workspace entity. This blocks cleaner project lifecycle management, future shared-project features, and long-lived admin operations
+- **Fix:** Add `project_id` as the ownership FK for project databases and migrate the domain to treat sessions as activity containers rather than resource parents
+- **Effort:** 3-5 days
+
+### Backend database introspection is a network trust boundary risk
+- **What:** `projects/databases/router.py:16-65` allows schema/record reads, and the service uses server-side `create_engine(connection_url)` against stored connection strings. Agent tooling also syncs user-provided `DATABASE_URL` values into project storage
+- **Impact:** The app server can become a network pivot into arbitrary databases reachable from the backend plane. This is risky for production hardening and creates unclear trust boundaries
+- **Fix:** Restrict introspection to platform-managed databases, or isolate it behind an allowlist / separate worker network with explicit egress controls
+- **Effort:** 1-2 days
+
+### App bootstrap is duplicated
+- **What:** Both `ii_agent/app.py:67-225` and `ii_agent/app/__init__.py:22-88` implement overlapping application startup, while `ii_agent/ws_server.py:5-43` imports the package path
+- **Impact:** Middleware, router registration, lifespan behavior, and startup side effects can drift between the two bootstraps. This increases regression risk and makes debugging startup behavior harder
+- **Fix:** Keep a single canonical app factory and reduce the other path to a thin delegating shim or remove it entirely
+- **Effort:** 1 day
+
 ### Missing database indexes
 - **What:** Several FK columns lack indexes for efficient lookups
 - **Tables affected:**
@@ -86,6 +128,18 @@ Last comprehensive review: 2026-03-17
 ---
 
 ## P2 — Medium (Consistency & Analytics)
+
+### Telemetry tables rely on soft references instead of enforced relationships
+- **What:** `billing/usage/models.py:67-128`, `billing/usage/llm_invocation_models.py:16-62`, `billing/usage/tool_invocation_models.py:15-47`, and `billing/outbox/models.py:16-44` store `session_id`, `run_id`, and `message_id` mostly as plain columns rather than foreign keys
+- **Impact:** Orphan telemetry rows are easier to create, retention/backfill jobs are harder to validate, and admin dashboard aggregates have weaker integrity guarantees
+- **Fix:** Add FKs where lifecycle rules allow them, and where they do not, add documented durable IDs plus reconciliation checks that detect orphaned telemetry
+- **Effort:** 2-3 days
+
+### Session-centric project model limits future admin and analytics work
+- **What:** `projects/models.py:30-55` still keeps database, storage, and secret state on the `projects` row as JSON blobs, while `project_databases` and other project resources are not consistently normalized
+- **Impact:** Building admin tooling requires custom JSON handling instead of relational joins. Analytics pipelines have to special-case project resources and cannot rely on a stable ownership model
+- **Fix:** Normalize project resources around `project_id` with dedicated tables for databases, storage bindings, and secret metadata. Keep encrypted secret values separate from admin-listable metadata
+- **Effort:** 3-5 days
 
 ### Inconsistent pagination patterns
 - **What:** Three different pagination styles across routers:
@@ -271,6 +325,13 @@ system_daily_metrics (date, active_users, new_signups, sessions_created,
 -- Admin audit trail
 admin_actions (admin_user_id, action, target_user_id, details JSONB, created_at)
 ```
+
+### Recommended database strategy from 2026-03-17 repo review
+- Keep **PostgreSQL** as the primary OLTP store. Do not add another transactional database before cleaning up the project/resource ownership model
+- For the admin dashboard, prefer a **Postgres read replica** plus materialized views / rollup tables before introducing a new serving database
+- For future product analytics, add a **warehouse** rather than another app database. On GCP, prefer **BigQuery**. If self-hosted low-latency analytics becomes necessary, evaluate **ClickHouse**
+- Normalize project resources first: move away from `projects.database_json`, `storage_json`, and mixed secret handling before building serious admin/reporting surfaces on top
+- Treat `billing_usage_facts`, `usage_records`, `llm_invocations`, `tool_invocations`, and curated event streams as warehouse feeds, not as the final dashboard query layer
 
 ---
 

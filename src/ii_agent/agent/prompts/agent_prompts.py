@@ -113,8 +113,8 @@ Common task types:
 <tool_rules>
 - For shell commands, prefer non-interactive flags where safe and avoid destructive commands unless necessary.
 - Save substantial scripts to files before execution when appropriate.
-- Prefer text/search tools before full browser automation when they are sufficient.
-- Use browser or UI automation when the task requires interaction, screenshots, console/runtime inspection, or end-to-end UI testing.
+- Prefer text/search tools before activating the `agent-browser` skill when they are sufficient.
+- Use the `agent-browser` skill or equivalent UI automation when the task requires interaction, screenshots, console/runtime inspection, or end-to-end UI testing.
 - Never perform irreversible external actions, sends, purchases, deletions, production writes, or deployments without permission.
 </tool_rules>
 
@@ -143,7 +143,7 @@ Apply only when relevant.
 - Default stack for new web apps: Next.js + TypeScript. Tailwind/shadcn/ui are preferred defaults unless the user or codebase indicates otherwise.
 - If the runtime provides project-init, server-management, or checkpoint tools, follow their returned instructions exactly.
 - Define API contracts before implementing dependent frontend flows when applicable.
-- After major UI changes, test core journeys in the browser, including console errors, broken states, and responsive behavior.
+- After major UI changes, test core journeys with the `agent-browser` skill when available, including console errors, broken states, and responsive behavior.
 - If the host supports Design Mode or similar source-sync systems, preserve stable literal design IDs and any required runtime hooks.
 {specs_first_development_rules}
 - Database Integration: After the user has chosen a database provider via ask_user_select, pass that choice to fullstack_project_init with database_source set to the user's selection. NEVER call fullstack_project_init without asking the user first.
@@ -411,6 +411,7 @@ Design System (use consistently for all slides):
 
 # SLIDE CREATION GUIDELINES
 """
+
 
 async def get_specialized_instructions(
     agent_type: AgentType, metadata: Optional[Dict[str, Any]] = None
@@ -978,9 +979,7 @@ Before finalizing your prompt, ensure you've specified:
     # Get base instructions
     ins = instructions.get(agent_type)
     if not ins:
-        raise ValueError(
-            f"No specialized instructions found for agent type: {agent_type}"
-        )
+        raise ValueError(f"No specialized instructions found for agent type: {agent_type}")
 
     # For SLIDE agent, check if template_id is provided and include template content
     if agent_type == AgentType.SLIDE and metadata:
@@ -995,9 +994,7 @@ Before finalizing your prompt, ensure you've specified:
                     )
                     if template_data and template_data.get("slide_content"):
                         template_content = template_data["slide_content"]
-                        template_name = template_data.get(
-                            "slide_template_name", "Unknown Template"
-                        )
+                        template_name = template_data.get("slide_template_name", "Unknown Template")
 
                         # Add template content to instructions
                         template_section = f"""
@@ -1048,7 +1045,6 @@ async def get_system_prompt_for_agent_type(
     design_document: bool = True,
     researcher: bool = True,
     media: bool = True,
-    browser: bool = True,
     a2a_agents: bool = True,
     task_agent: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
@@ -1067,9 +1063,8 @@ async def get_system_prompt_for_agent_type(
             design_document=False,  # CODEX agent doesn't use design document rules
             researcher=False,  # CODEX agent doesn't use researcher rules
             codex=True,  # Use CODEX system prompt
-            browser=browser,
             a2a_agents=a2a_agents,
-            task_agent=False, # CODEX agent doesn't use task agent rules
+            task_agent=False,  # CODEX agent doesn't use task agent rules
         )
     elif agent_type == AgentType.CLAUDE_CODE:
         return get_system_prompt(
@@ -1077,9 +1072,8 @@ async def get_system_prompt_for_agent_type(
             design_document=False,  # CLAUDE_CODE agent doesn't use design document rules
             researcher=False,  # CLAUDE_CODE agent doesn't use researcher rules
             claude=True,  # Use CLAUDE_CODE system prompt
-            browser=browser,
             a2a_agents=a2a_agents,
-            task_agent=False, # CLAUDE_CODE agent doesn't use task agent rules
+            task_agent=False,  # CLAUDE_CODE agent doesn't use task agent rules
         )
     elif agent_type == AgentType.MOBILE_APP:
         base_prompt = get_system_prompt(
@@ -1087,7 +1081,6 @@ async def get_system_prompt_for_agent_type(
             design_document=design_document,
             researcher=researcher,
             media=media,
-            browser=browser,
             gemini=is_gemini,
             a2a_agents=a2a_agents,
             task_agent=task_agent,
@@ -1101,7 +1094,6 @@ async def get_system_prompt_for_agent_type(
             design_document=design_document,
             researcher=researcher,
             media=media,
-            browser=browser,
             gemini=is_gemini,
             a2a_agents=a2a_agents,
             task_agent=task_agent,

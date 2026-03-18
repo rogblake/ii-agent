@@ -6,23 +6,6 @@ from ii_agent.agent.runtime.tools.sandbox import RegisterPortTool
 from ii_agent.agent.types import AgentType, Provider
 from ii_agent.agent.runtime.tools.agent import SendUserFile
 from ii_agent.agent.runtime.tools.decorator import tool as tool_decorator
-from ii_agent.agent.runtime.tools.browser import (
-    BrowserClickTool,
-    BrowserDragTool,
-    BrowserEnterMultipleTextsTool,
-    BrowserEnterTextTool,
-    BrowserGetSelectOptionsTool,
-    BrowserNavigationTool,
-    BrowserOpenNewTabTool,
-    BrowserPressKeyTool,
-    BrowserRestartTool,
-    BrowserScrollDownTool,
-    BrowserScrollUpTool,
-    BrowserSelectDropdownOptionTool,
-    BrowserSwitchTabTool,
-    BrowserViewTool,
-    BrowserWaitTool,
-)
 from ii_agent.agent.runtime.tools.dev import (
     FullStackInitTool,
     GetDatabaseConnection,
@@ -96,22 +79,6 @@ TOOL_CLASS_MAP = {
     WebVisitCompressTool.name: WebVisitCompressTool,
     WebBatchSearchTool.name: WebBatchSearchTool,
     ImageSearchTool.name: ImageSearchTool,
-    # Browser tools
-    BrowserClickTool.name: BrowserClickTool,
-    BrowserWaitTool.name: BrowserWaitTool,
-    BrowserViewTool.name: BrowserViewTool,
-    BrowserScrollDownTool.name: BrowserScrollDownTool,
-    BrowserScrollUpTool.name: BrowserScrollUpTool,
-    BrowserSwitchTabTool.name: BrowserSwitchTabTool,
-    BrowserOpenNewTabTool.name: BrowserOpenNewTabTool,
-    BrowserGetSelectOptionsTool.name: BrowserGetSelectOptionsTool,
-    BrowserSelectDropdownOptionTool.name: BrowserSelectDropdownOptionTool,
-    BrowserNavigationTool.name: BrowserNavigationTool,
-    BrowserRestartTool.name: BrowserRestartTool,
-    BrowserEnterTextTool.name: BrowserEnterTextTool,
-    BrowserPressKeyTool.name: BrowserPressKeyTool,
-    BrowserDragTool.name: BrowserDragTool,
-    BrowserEnterMultipleTextsTool.name: BrowserEnterMultipleTextsTool,
     # Media tools
     VideoGenerateTool.name: VideoGenerateTool,
     ImageGenerateTool.name: ImageGenerateTool,
@@ -140,7 +107,6 @@ TOOL_CLASS_MAP = {
 }
 
 
-
 @dataclass
 class AgentToolConfig:
     """Tool configuration for an agent type."""
@@ -162,48 +128,47 @@ class AgentConfig:
     tool_config: AgentToolConfig
     max_turns: int = 200
     supports_media: bool = False
-    supports_browser: bool = False
     supports_design_doc: bool = False
 
 
 RESEARCH_TOOL_CONFIG = AgentToolConfig(
-            core_tools=[
-                # Shell tools
-                ShellInit.name,
-                ShellRunCommand.name,
-                ShellView.name,
-                ShellList.name,
-                # File tools
-                FileReadTool.name,
-                FileWriteTool.name,
-                FileEditTool.name,
-                # Web tools
-                WebSearchTool.name,
-                WebVisitTool.name,
-                # Productivity
-                TodoWriteTool.name,
-                # Communicate
-                SendUserFile.name,
-            ],
-            model_exclusions={
-                Provider.OPENAI: [
-                    FileWriteTool.name,
-                    FileEditTool.name,
-                    ShellList.name,
-                    ShellWriteToProcessTool.name,
-                ],
-                Provider.ANTHROPIC: [
-                    FileWriteTool.name,
-                    FileEditTool.name,
-                    ShellList.name,
-                    ShellWriteToProcessTool.name,
-                ],
-            },
-            model_additions={
-                Provider.OPENAI: [ApplyPatchTool.name],
-                Provider.ANTHROPIC: [StrReplaceEditorTool.name],
-            },
-        )
+    core_tools=[
+        # Shell tools
+        ShellInit.name,
+        ShellRunCommand.name,
+        ShellView.name,
+        ShellList.name,
+        # File tools
+        FileReadTool.name,
+        FileWriteTool.name,
+        FileEditTool.name,
+        # Web tools
+        WebSearchTool.name,
+        WebVisitTool.name,
+        # Productivity
+        TodoWriteTool.name,
+        # Communicate
+        SendUserFile.name,
+    ],
+    model_exclusions={
+        Provider.OPENAI: [
+            FileWriteTool.name,
+            FileEditTool.name,
+            ShellList.name,
+            ShellWriteToProcessTool.name,
+        ],
+        Provider.ANTHROPIC: [
+            FileWriteTool.name,
+            FileEditTool.name,
+            ShellList.name,
+            ShellWriteToProcessTool.name,
+        ],
+    },
+    model_additions={
+        Provider.OPENAI: [ApplyPatchTool.name],
+        Provider.ANTHROPIC: [StrReplaceEditorTool.name],
+    },
+)
 
 # Agent configurations
 AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
@@ -253,7 +218,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
             },
         ),
         supports_media=True,
-        supports_browser=True,
         supports_design_doc=True,
     ),
     AgentType.TASK_AGENT: AgentConfig(
@@ -294,7 +258,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         ),
         max_turns=200,
         supports_media=True,
-        supports_browser=True,
     ),
     AgentType.RESEARCHER: AgentConfig(
         agent_type=AgentType.RESEARCHER,
@@ -348,30 +311,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
                 WebSearchTool.name,
                 WebVisitTool.name,
                 TodoWriteTool.name,
-                # MessageUserTool.name,
-            ],
-        ),
-    ),
-    AgentType.BROWSER: AgentConfig(
-        agent_type=AgentType.BROWSER,
-        description="Browser automation agent",
-        tool_config=AgentToolConfig(
-            core_tools=[
-                BrowserClickTool.name,
-                BrowserWaitTool.name,
-                BrowserViewTool.name,
-                BrowserScrollDownTool.name,
-                BrowserScrollUpTool.name,
-                BrowserSwitchTabTool.name,
-                BrowserOpenNewTabTool.name,
-                BrowserGetSelectOptionsTool.name,
-                BrowserSelectDropdownOptionTool.name,
-                BrowserNavigationTool.name,
-                BrowserRestartTool.name,
-                BrowserEnterTextTool.name,
-                BrowserPressKeyTool.name,
-                BrowserDragTool.name,
-                BrowserEnterMultipleTextsTool.name,
                 # MessageUserTool.name,
             ],
         ),
@@ -490,12 +429,11 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         ),
         max_turns=200,
         supports_media=True,
-        supports_browser=True,
     ),
     AgentType.DEEP_RESEARCH: AgentConfig(
         agent_type=AgentType.DEEP_RESEARCH,
         description="Deep research agent for comprehensive investigation and analysis",
-        tool_config=RESEARCH_TOOL_CONFIG
+        tool_config=RESEARCH_TOOL_CONFIG,
     ),
     AgentType.FAST_RESEARCH: AgentConfig(
         agent_type=AgentType.FAST_RESEARCH,
@@ -536,7 +474,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
             },
         ),
         supports_media=True,
-        supports_browser=True,
     ),
     AgentType.MOBILE_APP: AgentConfig(
         agent_type=AgentType.MOBILE_APP,
@@ -582,7 +519,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         ),
         max_turns=200,
         supports_media=True,
-        supports_browser=False,
     ),
 }
 
@@ -607,7 +543,6 @@ class AgentConfigManager:
 
         tool_args = tool_args or {}
         include_media: bool = tool_args.get("media_generation", False)
-        include_browser: bool = tool_args.get("browser", False)
 
         config = AgentConfigManager.get_config(agent_type)
         tools = set(config.tool_config.core_tools)
@@ -634,11 +569,6 @@ class AgentConfigManager:
                 if t in [VideoGenerateTool.name, ImageGenerateTool.name]
             ]
             tools.update(media_tools)
-
-        # Add browser tools if requested and supported
-        if include_browser and config.supports_browser:
-            browser_config = AGENT_CONFIGS[AgentType.BROWSER]
-            tools.update(browser_config.tool_config.core_tools)
 
         return tools
 

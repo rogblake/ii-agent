@@ -39,7 +39,6 @@ const initialState: SettingsState = {
         pdf: true,
         media_generation: false,
         audio_generation: false,
-        browser: true,
         thinking_tokens: 10000,
         enable_reviewer: false,
         codex_tools: false,

@@ -1,7 +1,7 @@
 """Unit tests for v1 tool implementations.
 
 Covers: web tools, plan tools, productivity tools, media tools, dev tools,
-browser tools, file system tools, and base tool patterns.
+file system tools, and base tool patterns.
 The tests let internal logic run; only external I/O is mocked.
 """
 
@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import uuid
 from types import SimpleNamespace
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -68,9 +67,7 @@ class TestWebSearchTool:
         assert "A" in result.llm_content or "http://a.com" in result.llm_content
 
     async def test_is_error_on_exception(self):
-        result = await self._run(
-            {"query": "fail"}, side_effect=Exception("network error")
-        )
+        result = await self._run({"query": "fail"}, side_effect=Exception("network error"))
         assert result.is_error is True
         assert "network error" in result.llm_content
 
@@ -144,9 +141,7 @@ class TestWebVisitTool:
         assert result.is_error is True
 
     async def test_exception_returns_error(self):
-        result = await self._run(
-            {"url": "http://example.com"}, side_effect=Exception("timeout")
-        )
+        result = await self._run({"url": "http://example.com"}, side_effect=Exception("timeout"))
         assert result.is_error is True
         assert "timeout" in result.llm_content
 
@@ -210,16 +205,12 @@ class TestWebBatchSearchTool:
     async def test_success_returns_formatted_output(self):
         items = [{"title": "R1", "url": "http://r1.com", "content": "snippet1"}]
         responses = [SimpleNamespace(result=items, cost=0.01)]
-        result = await self._run(
-            {"queries": ["query1"]}, responses=responses
-        )
+        result = await self._run({"queries": ["query1"]}, responses=responses)
         assert "query1" in result.llm_content
         assert result.is_error is not True
 
     async def test_exception_returns_error(self):
-        result = await self._run(
-            {"queries": ["q"]}, side_effect=Exception("fail")
-        )
+        result = await self._run({"queries": ["q"]}, side_effect=Exception("fail"))
         assert result.is_error is True
 
     async def test_empty_results_returns_no_results_message(self):
@@ -235,9 +226,7 @@ class TestWebBatchSearchTool:
             SimpleNamespace(result=items_a, cost=0.0),
             SimpleNamespace(result=items_b, cost=0.0),
         ]
-        result = await self._run(
-            {"queries": ["first query", "second query"]}, responses=responses
-        )
+        result = await self._run({"queries": ["first query", "second query"]}, responses=responses)
         assert "first query" in result.llm_content
         assert "second query" in result.llm_content
 
@@ -292,9 +281,7 @@ class TestWebVisitCompressTool:
 
     async def test_cost_propagated(self):
         resp = SimpleNamespace(content="data", cost=0.07)
-        result = await self._run(
-            {"urls": ["http://x.com"], "query": "q"}, visit_response=resp
-        )
+        result = await self._run({"urls": ["http://x.com"], "query": "q"}, visit_response=resp)
         assert result.cost == 0.07
 
 
@@ -503,9 +490,7 @@ class TestPlanModificationSuggestionsTool:
 
     async def test_display_content_contains_suggestions(self):
         tool = self._make_tool()
-        suggestions = [
-            {"id": "s1", "label": "L", "description": "D", "prompt_template": "P"}
-        ]
+        suggestions = [{"id": "s1", "label": "L", "description": "D", "prompt_template": "P"}]
         result = await tool.execute({"message": "M", "suggestions": suggestions})
         assert result.user_display_content["suggestions"] == suggestions
 
@@ -514,7 +499,12 @@ class TestPlanModificationSuggestionsTool:
         event_stream.publish = AsyncMock(side_effect=Exception("stream error"))
         tool = self._make_tool(event_stream=event_stream)
         result = await tool.execute(
-            {"message": "M", "suggestions": [{"id": "1", "label": "L", "description": "D", "prompt_template": "P"}]}
+            {
+                "message": "M",
+                "suggestions": [
+                    {"id": "1", "label": "L", "description": "D", "prompt_template": "P"}
+                ],
+            }
         )
         assert result.is_error is True
 
@@ -584,9 +574,7 @@ class TestValidateTodos:
         from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="status"):
-            _validate_todos(
-                [{"id": "1", "content": "c", "status": "INVALID", "priority": "high"}]
-            )
+            _validate_todos([{"id": "1", "content": "c", "status": "INVALID", "priority": "high"}])
 
     def test_invalid_priority_raises(self):
         from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
@@ -600,9 +588,7 @@ class TestValidateTodos:
         from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
 
         with pytest.raises(ValueError, match="empty"):
-            _validate_todos(
-                [{"id": "1", "content": "  ", "status": "pending", "priority": "low"}]
-            )
+            _validate_todos([{"id": "1", "content": "  ", "status": "pending", "priority": "low"}])
 
     def test_multiple_in_progress_raises(self):
         from ii_agent.agent.runtime.tools.productivity.todo_write_tool import _validate_todos
@@ -840,9 +826,7 @@ class TestImageGenerateTool:
         deps = _make_tool_deps()
         tool.dependencies = deps
 
-        result = await tool.execute(
-            {"prompt": "A cat", "output_path": "/workspace/image.jpg"}
-        )
+        result = await tool.execute({"prompt": "A cat", "output_path": "/workspace/image.jpg"})
         assert result.is_error is True
         assert ".png" in result.llm_content
 
@@ -852,39 +836,29 @@ class TestImageGenerateTool:
         deps.tool_client.generate_image = AsyncMock(side_effect=Exception("API down"))
         tool.dependencies = deps
 
-        result = await tool.execute(
-            {"prompt": "A cat", "output_path": "/workspace/image.png"}
-        )
+        result = await tool.execute({"prompt": "A cat", "output_path": "/workspace/image.png"})
         assert result.is_error is True
         assert "API down" in result.llm_content
 
     async def test_no_url_returns_error(self):
         tool = self._make_tool()
         deps = _make_tool_deps()
-        img_resp = SimpleNamespace(
-            url=None, mime_type=None, size=0, search_results=[]
-        )
+        img_resp = SimpleNamespace(url=None, mime_type=None, size=0, search_results=[])
         deps.tool_client.generate_image = AsyncMock(return_value=img_resp)
         tool.dependencies = deps
 
-        result = await tool.execute(
-            {"prompt": "A cat", "output_path": "/workspace/image.png"}
-        )
+        result = await tool.execute({"prompt": "A cat", "output_path": "/workspace/image.png"})
         assert result.is_error is True
 
     async def test_no_url_with_search_results_writes_summary(self):
         tool = self._make_tool()
         deps = _make_tool_deps()
         search_results = [{"title": "Cat", "source": "Google", "image_url": "http://cat.jpg"}]
-        img_resp = SimpleNamespace(
-            url=None, mime_type=None, size=0, search_results=search_results
-        )
+        img_resp = SimpleNamespace(url=None, mime_type=None, size=0, search_results=search_results)
         deps.tool_client.generate_image = AsyncMock(return_value=img_resp)
         tool.dependencies = deps
 
-        result = await tool.execute(
-            {"prompt": "A cat", "output_path": "/workspace/image.png"}
-        )
+        result = await tool.execute({"prompt": "A cat", "output_path": "/workspace/image.png"})
         # Should NOT be error - it writes a summary instead
         assert result.is_error is not True
 
@@ -904,8 +878,6 @@ class TestImageGenerateTool:
         assert "DuckDuckGo" in written_content
 
     async def test_success_returns_markdown_image(self):
-        import httpx
-
         tool = self._make_tool()
         deps = _make_tool_deps()
         img_resp = SimpleNamespace(
@@ -930,9 +902,7 @@ class TestImageGenerateTool:
             mock_client.__aexit__ = AsyncMock(return_value=False)
             mock_client_cls.return_value = mock_client
 
-            result = await tool.execute(
-                {"prompt": "A cat", "output_path": "/workspace/image.png"}
-            )
+            result = await tool.execute({"prompt": "A cat", "output_path": "/workspace/image.png"})
 
         assert "![" in result.llm_content
         assert result.cost == 0.02
@@ -1008,36 +978,6 @@ class TestRegisterPort:
 
 
 # ===========================================================================
-# Browser tool attributes
-# ===========================================================================
-
-
-class TestBrowserToolAttributes:
-    """Verify browser tool class attribute correctness."""
-
-    def test_browser_navigation_tool_name(self):
-        from ii_agent.agent.runtime.tools.browser.navigate import BrowserNavigationTool
-
-        assert BrowserNavigationTool.name == "browser_navigation"
-        assert BrowserNavigationTool.read_only is False
-
-    def test_browser_restart_tool_name(self):
-        from ii_agent.agent.runtime.tools.browser.navigate import BrowserRestartTool
-
-        assert BrowserRestartTool.name == "browser_restart"
-
-    def test_browser_view_tool_name(self):
-        from ii_agent.agent.runtime.tools.browser.view import BrowserViewTool
-
-        assert BrowserViewTool.name == "browser_view_interactive_elements"
-
-    def test_browser_navigation_url_required(self):
-        from ii_agent.agent.runtime.tools.browser.navigate import BrowserNavigationTool
-
-        assert "url" in BrowserNavigationTool.input_schema["required"]
-
-
-# ===========================================================================
 # Base tool – BaseAgentTool & AgentAsTool
 # ===========================================================================
 
@@ -1107,9 +1047,7 @@ class TestAgentAsTool:
         mock_agent.description = "A sub-agent"
         mock_agent.session_id = "s1"
         mock_agent.user_id = "u1"
-        mock_agent.arun = AsyncMock(
-            return_value=SimpleNamespace(content="agent output")
-        )
+        mock_agent.arun = AsyncMock(return_value=SimpleNamespace(content="agent output"))
 
         tool = AgentAsTool(
             agent_instance=mock_agent,

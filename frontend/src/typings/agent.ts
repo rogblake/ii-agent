@@ -168,7 +168,7 @@ export enum TOOL {
 
     GET_DATABASE_CONNECTION = 'get_database_connection',
     GET_OPENAI_KEY = 'get_openai_api_key',
-    // browser tools - synced with SELECTED_TOOLS in playwright.py
+    // Legacy browser action event types retained for historical session playback
     BROWSER_CLICK = 'browser_click',
     BROWSER_CLOSE = 'browser_close',
     BROWSER_CONSOLE_MESSAGES = 'browser_console_messages',
@@ -498,7 +498,6 @@ export interface ToolSettings {
     pdf: boolean
     media_generation: boolean
     audio_generation: boolean
-    browser: boolean
     thinking_tokens: number
     enable_reviewer: boolean
     design_document: boolean

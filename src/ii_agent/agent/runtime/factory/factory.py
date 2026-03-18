@@ -66,7 +66,6 @@ class AgentFactory:
             "pdf": true,
             "media_generation": false,
             "audio_generation": false,
-            "browser": true,
             "enable_reviewer": false,
             "codex_tools": false,
             "claude_code": false
@@ -79,7 +78,7 @@ class AgentFactory:
             agent_type: Type of agent to create
             workspace_manager: Workspace manager instance
             session_store: Session store for persistence
-            tool_args: Tool configuration arguments (media_generation, browser, etc.)
+            tool_args: Tool configuration arguments (media_generation, etc.)
             metadata: Additional metadata
             system_prompt: Optional custom system prompt
             skill_creator: Optional skill creator for loading user-specific skills
@@ -93,7 +92,6 @@ class AgentFactory:
         # Parse tool_args
         tool_args = tool_args or {}
         has_media = tool_args.get("media_generation", False)
-        has_browser = tool_args.get("browser", False)
         has_task_agent = tool_args.get("task_agent", False)
         has_researcher = tool_args.get("deep_research", False)
         has_design_doc = tool_args.get("design_document", False)
@@ -130,10 +128,16 @@ class AgentFactory:
                     workspace_manager=workspace_manager,
                 )
                 if connector_tools:
-                    logger.info(f"[V1 Factory] Received {len(connector_tools)} connector tools from loader")
-                    logger.debug(f"[V1 Factory] Connector tool names: {[t.name for t in connector_tools]}")
+                    logger.info(
+                        f"[V1 Factory] Received {len(connector_tools)} connector tools from loader"
+                    )
+                    logger.debug(
+                        f"[V1 Factory] Connector tool names: {[t.name for t in connector_tools]}"
+                    )
                     agent_tools.extend(connector_tools)
-                    logger.info(f"[V1 Factory] Successfully added {len(connector_tools)} connector tools to agent")
+                    logger.info(
+                        f"[V1 Factory] Successfully added {len(connector_tools)} connector tools to agent"
+                    )
 
             except Exception as e:
                 logger.error(f"[V1 Factory] Failed to load connector tools: {e}", exc_info=True)
@@ -155,7 +159,6 @@ class AgentFactory:
                 design_document=has_design_doc,
                 researcher=has_researcher,
                 media=has_media,
-                browser=has_browser,
                 a2a_agents=has_a2a,
                 task_agent=has_task_agent,
                 metadata=metadata,
@@ -186,7 +189,7 @@ class AgentFactory:
             retries=0,
             stream=True,
             stream_events=True,
-            store_events=True
+            store_events=True,
         )
 
         # Set agent ID

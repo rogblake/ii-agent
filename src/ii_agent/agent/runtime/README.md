@@ -957,9 +957,7 @@ curl -X POST http://localhost:8000/v2/agent/test/agent/general \
     "model_id": "vertex/claude-sonnet-4-5@20250929",
     "session_id": "033a2e5d-6bc7-4ea3-976d-3fe7faef536d",
     "source": "system",
-    "tool_args": {
-        "browser": true
-    }
+    "tool_args": {}
 }'
 ```
 

@@ -37,7 +37,6 @@ enum TOOL {
     DEEP_RESEARCH = 'Deep Research',
     DESIGN_DOCUMENT = 'Design Document',
     MEDIA_GENERATION = 'Media Generation',
-    BROWSER = 'Browser',
     REVIEW_AGENT = 'Review Agent',
     CODEX = 'Codex',
     CLAUDE_CODE = 'Claude Code',
@@ -152,9 +151,6 @@ const ToolSetting = ({ className }: ToolSettingProps) => {
                 case TOOL.MEDIA_GENERATION:
                     isActive = toolSettings?.media_generation || false
                     break
-                case TOOL.BROWSER:
-                    isActive = toolSettings?.browser || false
-                    break
                 case TOOL.REVIEW_AGENT:
                     isActive = toolSettings?.enable_reviewer || false
                     break
@@ -211,9 +207,6 @@ const ToolSetting = ({ className }: ToolSettingProps) => {
                     break
                 case TOOL.MEDIA_GENERATION:
                     newSettings.media_generation = checked
-                    break
-                case TOOL.BROWSER:
-                    newSettings.browser = checked
                     break
                 case TOOL.REVIEW_AGENT:
                     newSettings.enable_reviewer = checked

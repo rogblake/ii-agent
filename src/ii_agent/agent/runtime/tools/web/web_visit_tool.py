@@ -33,7 +33,7 @@ INPUT_SCHEMA = {
     },
     "required": ["url"],
 }
-FAILURE_MESSAGE = "Please try again. If the problem continues, switch to browser tools for manual visiting and let the user know that web visit is temporarily unavailable."
+FAILURE_MESSAGE = "Please try again. If the problem continues, activate the `agent-browser` skill for manual visiting and let the user know that web visit is temporarily unavailable."
 DEFAULT_WEB_VISIT_MAX_COST_USD = 0.05
 
 
@@ -69,7 +69,7 @@ class WebVisitTool(BaseAgentTool):
 
         if content is None or (isinstance(content, str) and not content.strip()):
             return ToolResult(
-                llm_content="The webpage content is empty or un-extractable (e.g. login, paywall, etc.). Please try again with a different URL or use browser tools to visit manually.",
+                llm_content="The webpage content is empty or un-extractable (e.g. login, paywall, etc.). Please try again with a different URL or activate the `agent-browser` skill to visit manually.",
                 is_error=True,
             )
 

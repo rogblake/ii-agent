@@ -2224,10 +2224,6 @@
                 "name": "メディア生成",
                 "description": "画像と動画を生成"
             },
-            "browser": {
-                "name": "ブラウザー",
-                "description": "Web閲覧機能を有効化。注: ビジョンモデルでのみ利用可能。"
-            },
             "codex": {
                 "name": "Codex",
                 "description": "自律的なコード生成とレビューのためにOpenAI Codexを有効化"

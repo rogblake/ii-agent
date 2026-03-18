@@ -2240,10 +2240,6 @@
                 "name": "Tạo media",
                 "description": "Tạo ảnh và video"
             },
-            "browser": {
-                "name": "Trình duyệt",
-                "description": "Bật khả năng duyệt web. Lưu ý: chỉ khả dụng cho model vision."
-            },
             "codex": {
                 "name": "Codex",
                 "description": "Bật OpenAI Codex để tạo và review code tự động"

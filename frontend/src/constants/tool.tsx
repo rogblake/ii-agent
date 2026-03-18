@@ -44,17 +44,6 @@ export const INIT_TOOLS = [
         isRequireKey: false
     },
     {
-        name: 'Browser',
-        nameKey: 'toolCatalog.init.browser.name',
-        description:
-            'Enable web browsing capabilities. Note: Available only for vision models.',
-        descriptionKey: 'toolCatalog.init.browser.description',
-        icon: 'browser',
-        isFill: false,
-        isActive: true,
-        isRequireKey: false
-    },
-    {
         name: 'Codex',
         nameKey: 'toolCatalog.init.codex.name',
         description:

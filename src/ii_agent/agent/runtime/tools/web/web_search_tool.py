@@ -32,7 +32,7 @@ INPUT_SCHEMA = {
 }
 
 MAX_RESULTS = 12
-FAILURE_MESSAGE = "Please try again. If the problem continues, switch to browser tools for manual searching and let the user know that web search is temporarily unavailable."
+FAILURE_MESSAGE = "Please try again. If the problem continues, activate the `agent-browser` skill for manual searching and let the user know that web search is temporarily unavailable."
 DEFAULT_WEB_SEARCH_MAX_COST_USD = 0.05
 
 
@@ -54,7 +54,9 @@ class WebSearchTool(BaseAgentTool):
         query = tool_input["query"]
 
         try:
-            response = await self.dependencies.tool_client.web_search(query, max_results=MAX_RESULTS)
+            response = await self.dependencies.tool_client.web_search(
+                query, max_results=MAX_RESULTS
+            )
             results = response.result[:MAX_RESULTS]
         except Exception as exc:
             return ToolResult(

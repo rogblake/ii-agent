@@ -318,7 +318,7 @@ const AgentBuild = ({ className }: AgentBuildProps) => {
         if (currentActionData?.type === TOOL.BROWSER_USE)
             return t('agent.action.titles.browsing')
 
-        // Handle all new browser tools
+        // Handle legacy browser action events
         if (currentActionData?.type === TOOL.BROWSER_CLICK)
             return t('agent.action.titles.browserClick')
         if (currentActionData?.type === TOOL.BROWSER_CLOSE)

@@ -5,13 +5,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ii_agent.agent.types import AgentType
-from ii_agent.agent.runtime.factory.tools import COMMON_TOOLS, TOOL_CLASS_MAP, TOOL_CONFIRM_MAP, AgentConfigManager
+from ii_agent.agent.runtime.factory.tools import (
+    COMMON_TOOLS,
+    TOOL_CLASS_MAP,
+    TOOL_CONFIRM_MAP,
+    AgentConfigManager,
+)
 from ii_agent.agent.runtime.tools.mcp import MCPTool
 from ii_agent.agent.runtime.tools.base import BaseAgentTool
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
     from ii_agent.agent.runtime.tools.dependencies import ToolDependencies
+
 
 class AgentToolManager:
     """Manages tool selection and configuration for agents."""
@@ -30,12 +36,12 @@ class AgentToolManager:
         This method determines which tools are needed based on:
         1. Core tools from agent type configuration
         2. Model-specific include/exclude rules
-        3. Additional tools based on tool_args (media, browser, etc.)
+        3. Additional tools based on tool_args (media, etc.)
 
         Args:
             agent_type: The agent type
             model_name: Optional model name for model-specific filtering
-            tool_args: Tool configuration arguments (media_generation, browser, etc.)
+            tool_args: Tool configuration arguments (media_generation, etc.)
             dependencies: Optional tool dependencies to inject into tools
 
         Returns:
@@ -45,10 +51,9 @@ class AgentToolManager:
 
         # Get flags from tool_args
         include_media = tool_args.get("media_generation", False)
-        include_browser = tool_args.get("browser", False)
 
         # Get required tool names from configuration
-        # This handles: core tools + model filtering + media/browser additions
+        # This handles: core tools + model filtering + media additions
         required_tool_names = AgentConfigManager.get_tools_for_agent(
             agent_type=agent_type,
             model_name=model_name,
@@ -65,7 +70,7 @@ class AgentToolManager:
 
         logger.info(
             f"Agent {agent_type.value} requires {len(required_tool_names)} tools "
-            f"(media={include_media}, browser={include_browser}, model={model_name or 'default'})"
+            f"(media={include_media}, model={model_name or 'default'})"
         )
         logger.debug(f"Required tools: {', '.join(sorted(required_tool_names))}")
         return all_tools
@@ -113,7 +118,7 @@ class AgentToolManager:
                 input_schema=tool_class.input_schema,
                 read_only=tool_class.read_only,
                 display_name=tool_class.display_name,
-                requires_confirmation=requires_confirmation
+                requires_confirmation=requires_confirmation,
             )
             if dependencies is not None:
                 instance.dependencies = dependencies

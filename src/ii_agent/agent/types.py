@@ -26,7 +26,6 @@ class AgentType(str, Enum):
     RESEARCHER = "researcher"
     DESIGN_DOCUMENT = "design_document"
     MEDIA = "media"
-    BROWSER = "browser"
     SLIDE = "slide"
     SLIDE_NANO_BANANA = "slide_nano_banana"
     WEBSITE_BUILD = "website_build"

@@ -2,7 +2,6 @@
 
 import sys
 import types
-import unittest.mock as mock
 
 import pytest
 
@@ -17,9 +16,17 @@ import pytest
 def _stub_google_genai_interactions():
     """Replace google.genai.interactions with a stub that satisfies the import."""
     symbols = [
-        "InteractionSSEEvent", "InteractionEvent", "ContentStart", "ContentDelta",
-        "Usage", "ContentStop", "Interaction", "InputMessage", "OutputMessage",
-        "InteractionResultEvent", "FunctionCallInteractionResultEvent",
+        "InteractionSSEEvent",
+        "InteractionEvent",
+        "ContentStart",
+        "ContentDelta",
+        "Usage",
+        "ContentStop",
+        "Interaction",
+        "InputMessage",
+        "OutputMessage",
+        "InteractionResultEvent",
+        "FunctionCallInteractionResultEvent",
         "ContentInteractionResultEvent",
     ]
     mod = types.ModuleType("google.genai.interactions")
@@ -41,12 +48,13 @@ from ii_agent.agent.runtime.factory.tools import (  # noqa: E402
     TOOL_CONFIRM_MAP,
     COMMON_TOOLS,
 )
-from ii_agent.agent.types import AgentType, Provider
+from ii_agent.agent.types import AgentType, Provider  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
 # AgentToolConfig dataclass tests
 # ---------------------------------------------------------------------------
+
 
 class TestAgentToolConfig:
     def test_minimal_config(self):
@@ -93,6 +101,7 @@ class TestAgentToolConfig:
 # AgentConfig dataclass tests
 # ---------------------------------------------------------------------------
 
+
 class TestAgentConfig:
     def test_defaults(self):
         tool_config = AgentToolConfig(core_tools=[])
@@ -103,7 +112,6 @@ class TestAgentConfig:
         )
         assert config.max_turns == 200
         assert config.supports_media is False
-        assert config.supports_browser is False
         assert config.supports_design_doc is False
 
     def test_custom_values(self):
@@ -114,12 +122,10 @@ class TestAgentConfig:
             tool_config=tool_config,
             max_turns=50,
             supports_media=True,
-            supports_browser=True,
             supports_design_doc=True,
         )
         assert config.max_turns == 50
         assert config.supports_media is True
-        assert config.supports_browser is True
         assert config.supports_design_doc is True
 
     def test_description_stored(self):
@@ -145,6 +151,7 @@ class TestAgentConfig:
 # AgentConfigManager.get_config tests
 # ---------------------------------------------------------------------------
 
+
 class TestGetConfig:
     def test_get_config_general(self):
         config = AgentConfigManager.get_config(AgentType.GENERAL)
@@ -153,10 +160,6 @@ class TestGetConfig:
     def test_get_config_researcher(self):
         config = AgentConfigManager.get_config(AgentType.RESEARCHER)
         assert config.agent_type == AgentType.RESEARCHER
-
-    def test_get_config_browser(self):
-        config = AgentConfigManager.get_config(AgentType.BROWSER)
-        assert config.agent_type == AgentType.BROWSER
 
     def test_get_config_media(self):
         config = AgentConfigManager.get_config(AgentType.MEDIA)
@@ -184,6 +187,7 @@ class TestGetConfig:
 # ---------------------------------------------------------------------------
 # AgentConfigManager._get_model_family tests
 # ---------------------------------------------------------------------------
+
 
 class TestGetModelFamily:
     def test_gpt_model_returns_openai(self):
@@ -246,6 +250,7 @@ class TestGetModelFamily:
 # AgentConfigManager.get_tools_for_agent tests
 # ---------------------------------------------------------------------------
 
+
 class TestGetToolsForAgent:
     def test_returns_core_tools_for_general_agent(self):
         tools = AgentConfigManager.get_tools_for_agent(AgentType.GENERAL)
@@ -275,9 +280,7 @@ class TestGetToolsForAgent:
             assert added_tool in tools
 
     def test_applies_openai_model_additions(self):
-        tools = AgentConfigManager.get_tools_for_agent(
-            AgentType.GENERAL, model_name="gpt-4o"
-        )
+        tools = AgentConfigManager.get_tools_for_agent(AgentType.GENERAL, model_name="gpt-4o")
         config = AgentConfigManager.get_config(AgentType.GENERAL)
         openai_additions = config.tool_config.model_additions.get(Provider.OPENAI, [])
         for added_tool in openai_additions:
@@ -291,25 +294,6 @@ class TestGetToolsForAgent:
         config = AgentConfigManager.get_config(AgentType.RESEARCHER)
         assert config.supports_media is False
         assert initial_tools == tools_with_media
-
-    def test_does_not_add_browser_when_agent_does_not_support_it(self):
-        initial_tools = AgentConfigManager.get_tools_for_agent(AgentType.RESEARCHER)
-        tools_with_browser = AgentConfigManager.get_tools_for_agent(
-            AgentType.RESEARCHER, tool_args={"browser": True}
-        )
-        config = AgentConfigManager.get_config(AgentType.RESEARCHER)
-        assert config.supports_browser is False
-        assert initial_tools == tools_with_browser
-
-    def test_adds_browser_tools_when_requested_and_supported(self):
-        tools = AgentConfigManager.get_tools_for_agent(
-            AgentType.GENERAL,
-            tool_args={"browser": True},
-        )
-        config = AgentConfigManager.get_config(AgentType.GENERAL)
-        assert config.supports_browser is True
-        from ii_agent.agent.runtime.tools.browser import BrowserClickTool
-        assert BrowserClickTool.name in tools
 
     def test_default_tool_args_as_none(self):
         tools = AgentConfigManager.get_tools_for_agent(AgentType.GENERAL, tool_args=None)
@@ -329,12 +313,14 @@ class TestGetToolsForAgent:
         config = AgentConfigManager.get_config(AgentType.GENERAL)
         assert config.supports_media is True
         from ii_agent.agent.runtime.tools.media import ImageGenerateTool
+
         assert ImageGenerateTool.name in tools
 
 
 # ---------------------------------------------------------------------------
 # AgentConfigManager.is_valid_agent_type tests
 # ---------------------------------------------------------------------------
+
 
 class TestIsValidAgentType:
     def test_valid_agent_type(self):
@@ -349,13 +335,6 @@ class TestIsValidAgentType:
     def test_empty_string_invalid(self):
         assert AgentConfigManager.is_valid_agent_type("") is False
 
-    def test_browser_is_valid(self):
-        assert AgentConfigManager.is_valid_agent_type("browser") is True
-
-
-# ---------------------------------------------------------------------------
-# AgentConfigManager.get_all_agent_types tests
-# ---------------------------------------------------------------------------
 
 class TestGetAllAgentTypes:
     def test_returns_list_of_strings(self):
@@ -381,12 +360,14 @@ class TestGetAllAgentTypes:
 # Global config constants tests
 # ---------------------------------------------------------------------------
 
+
 class TestGlobalConfigConstants:
     def test_tool_class_map_not_empty(self):
         assert len(TOOL_CLASS_MAP) > 0
 
     def test_tool_class_map_values_are_classes(self):
         import inspect
+
         for name, cls in TOOL_CLASS_MAP.items():
             assert inspect.isclass(cls), f"{name} should map to a class"
 
@@ -403,7 +384,6 @@ class TestGlobalConfigConstants:
     def test_agent_configs_covers_main_types(self):
         assert AgentType.GENERAL in AGENT_CONFIGS
         assert AgentType.RESEARCHER in AGENT_CONFIGS
-        assert AgentType.BROWSER in AGENT_CONFIGS
         assert AgentType.MEDIA in AGENT_CONFIGS
         assert AgentType.SLIDE in AGENT_CONFIGS
 
@@ -411,18 +391,9 @@ class TestGlobalConfigConstants:
         config = AGENT_CONFIGS[AgentType.GENERAL]
         assert config.supports_media is True
 
-    def test_general_agent_supports_browser(self):
-        config = AGENT_CONFIGS[AgentType.GENERAL]
-        assert config.supports_browser is True
-
     def test_researcher_agent_minimal_tools(self):
         config = AGENT_CONFIGS[AgentType.RESEARCHER]
         assert len(config.tool_config.core_tools) > 0
-
-    def test_browser_agent_has_browser_tools(self):
-        config = AGENT_CONFIGS[AgentType.BROWSER]
-        from ii_agent.agent.runtime.tools.browser import BrowserClickTool
-        assert BrowserClickTool.name in config.tool_config.core_tools
 
     def test_all_agent_configs_have_descriptions(self):
         for agent_type, config in AGENT_CONFIGS.items():

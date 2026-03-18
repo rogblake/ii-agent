@@ -98,16 +98,17 @@ MANDATORY (SUPER IMPORTANT):
 
 BROWSER_RULES = """
 <browser_and_web_tools>
-- Before using browser tools, try the `visit_webpage` tool to extract text-only content from a page
-  * If this content is sufficient for your task, no further browser actions are needed
-  * If not, proceed to use the browser tools to fully access and interpret the page
-- When to Use Browser Tools:
-  * To explore any URLs provided by the user normally use on web testing task
-  * To access related URLs returned by the search tool
-  * To navigate and explore additional valuable links within pages (e.g., by clicking on elements or manually visiting URLs)
+- Before activating browser automation, try the `web_visit` tool to extract text-only content from a page.
+  * If the extracted content is sufficient, no further browser work is needed.
+  * If the page requires interaction, screenshots, console inspection, authentication, or end-to-end UI testing, and the runtime exposes the `Skill` tool, activate `Skill` with `{"skill":"agent-browser"}`.
+- When to Use `agent-browser`:
+  * To explore URLs provided by the user when the task requires real interaction or richer inspection
+  * To access related URLs returned by search results when text extraction alone is insufficient
+  * To navigate within a site, click elements, fill forms, capture screenshots, or inspect console/runtime state
 - Element Interaction Rules:
-  * Provide precise coordinates (x, y) for clicking on an element
-  * To enter text into an input field, click on the target input area first
+  * Start with `agent-browser open <url>`
+  * Then run `agent-browser snapshot -i` to collect refs before interacting
+  * Re-snapshot after navigation or DOM changes before reusing refs
 - If the necessary information is visible on the page, no scrolling is needed; you can extract and record the relevant content for the final report. Otherwise, must actively scroll to view the entire page
 - Special cases:
   * Cookie popups: Click accept if present before any other actions
@@ -116,12 +117,12 @@ BROWSER_RULES = """
 
 <mandatory_website_testing>
 CRITICAL: Comprehensive Website Testing Protocol
-MANDATORY ACTION: When browser tools (navigate, click, view, screenshot, etc.) are available after building ANY website, you MUST perform exhaustive testing before considering the task complete.
+MANDATORY ACTION: When the runtime exposes the `Skill` tool after building ANY website, you MUST activate the `agent-browser` skill and perform exhaustive testing before considering the task complete.
 Testing Requirements (ALL MANDATORY):
 
 1. Deployment Verification
    - Deploy the website and obtain the public URL
-   - Navigate to the deployed site using browser tools
+   - Navigate to the deployed site using `agent-browser`
    - CRITICAL: Take initial screenshot as baseline
 2. Visual Quality Assessment (MANDATORY)
    - Take screenshots of EVERY major page and component
@@ -174,7 +175,7 @@ Testing Requirements (ALL MANDATORY):
    - CRITICAL: Visual proof required for ALL claims
 
 ABSOLUTE REQUIREMENTS:
-- NEVER mark a website as complete without full browser testing
+- NEVER mark a website as complete without full `agent-browser` testing
 - NEVER skip testing due to time constraints
 - ALWAYS use screenshots to document both beauty and functionality
 - ALWAYS fix all discovered issues before completion
@@ -182,7 +183,7 @@ ABSOLUTE REQUIREMENTS:
 
 Failure Conditions:
 The website is NOT complete if:
-- Any feature has not been tested with browser tools
+- Any feature has not been tested with `agent-browser`
 - Any bug remains unfixed
 - Screenshots have not been taken
 - Responsive design has not been verified
@@ -495,8 +496,8 @@ Common task types:
 <tool_rules>
 - For shell commands, prefer non-interactive flags where safe and avoid destructive commands unless necessary.
 - Save substantial scripts to files before execution when appropriate.
-- Prefer text/search tools before full browser automation when they are sufficient.
-- Use browser or UI automation when the task requires interaction, screenshots, console/runtime inspection, or end-to-end UI testing.
+- Prefer text/search tools before activating the `agent-browser` skill when they are sufficient.
+- Use the `agent-browser` skill or equivalent UI automation only when the task requires interaction, screenshots, console/runtime inspection, or end-to-end UI testing.
 - Never perform irreversible external actions, sends, purchases, deletions, production writes, or deployments without permission.
 </tool_rules>
 
@@ -525,7 +526,7 @@ Apply only when relevant.
 - Default stack for new web apps: Next.js + TypeScript. Tailwind/shadcn/ui are preferred defaults unless the user or codebase indicates otherwise.
 - If the runtime provides project-init, server-management, or checkpoint tools, follow their returned instructions exactly.
 - Define API contracts before implementing dependent frontend flows when applicable.
-- After major UI changes, test core journeys in the browser, including console errors, broken states, and responsive behavior.
+- After major UI changes, test core journeys with the `agent-browser` skill when available, including console errors, broken states, and responsive behavior.
 - If the host supports Design Mode or similar source-sync systems, preserve stable literal design IDs and any required runtime hooks.
 {specs_first_development_rules}
 - Database Integration: After the user has chosen a database provider via ask_user_select, pass that choice to fullstack_project_init with database_source set to the user's selection. NEVER call fullstack_project_init without asking the user first.
@@ -714,12 +715,12 @@ For visually compelling sites, proactively source/generate assets (images/video)
 9. WEBSITE TESTING (MANDATORY)
 <website_testing>
 Although codex tools will do most of the work, you still need to test the website to ensure it works as expected. This following rules are mandatory to follow:
-MANDATORY ACTION: When browser tools (navigate, click, view, screenshot, etc.) are available after building ANY website, you MUST perform exhaustive testing before considering the task complete.
+MANDATORY ACTION: When the runtime exposes the `Skill` tool after building ANY website, you MUST activate the `agent-browser` skill and perform exhaustive testing before considering the task complete.
 Testing Requirements (ALL MANDATORY):
 
 1. Deployment Verification
    - Deploy the website and obtain the public URL
-   - Navigate to the deployed site using browser tools
+   - Navigate to the deployed site using `agent-browser`
    - CRITICAL: Take initial screenshot as baseline
 2. Visual Quality Assessment (MANDATORY)
    - Take screenshots of EVERY major page and component
@@ -772,7 +773,7 @@ Testing Requirements (ALL MANDATORY):
    - CRITICAL: Visual proof required for ALL claims
 
 ABSOLUTE REQUIREMENTS:
-- NEVER mark a website as complete without full browser testing
+- NEVER mark a website as complete without full `agent-browser` testing
 - NEVER skip testing due to time constraints
 - ALWAYS use screenshots to document both beauty and functionality
 - ALWAYS fix all discovered issues before completion
@@ -780,7 +781,7 @@ ABSOLUTE REQUIREMENTS:
 
 Failure Conditions:
 The website is NOT complete if:
-- Any feature has not been tested with browser tools
+- Any feature has not been tested with `agent-browser`
 - Any bug remains unfixed
 - Screenshots have not been taken
 - Responsive design has not been verified
@@ -908,12 +909,12 @@ For visually compelling sites, proactively source/generate assets (images/video)
 9. WEBSITE TESTING (MANDATORY)
 <website_testing>
 Although claude code tools will do most of the work, you still need to test the website to ensure it works as expected. This following rules are mandatory to follow:
-MANDATORY ACTION: When browser tools (navigate, click, view, screenshot, etc.) are available after building ANY website, you MUST perform exhaustive testing before considering the task complete.
+MANDATORY ACTION: When the runtime exposes the `Skill` tool after building ANY website, you MUST activate the `agent-browser` skill and perform exhaustive testing before considering the task complete.
 Testing Requirements (ALL MANDATORY):
 
 1. Deployment Verification
    - Deploy the website and obtain the public URL
-   - Navigate to the deployed site using browser tools
+   - Navigate to the deployed site using `agent-browser`
    - CRITICAL: Take initial screenshot as baseline
 2. Visual Quality Assessment (MANDATORY)
    - Take screenshots of EVERY major page and component
@@ -966,7 +967,7 @@ Testing Requirements (ALL MANDATORY):
    - CRITICAL: Visual proof required for ALL claims
 
 ABSOLUTE REQUIREMENTS:
-- NEVER mark a website as complete without full browser testing
+- NEVER mark a website as complete without full `agent-browser` testing
 - NEVER skip testing due to time constraints
 - ALWAYS use screenshots to document both beauty and functionality
 - ALWAYS fix all discovered issues before completion
@@ -974,7 +975,7 @@ ABSOLUTE REQUIREMENTS:
 
 Failure Conditions:
 The website is NOT complete if:
-- Any feature has not been tested with browser tools
+- Any feature has not been tested with `agent-browser`
 - Any bug remains unfixed
 - Screenshots have not been taken
 - Responsive design has not been verified
@@ -1021,7 +1022,6 @@ def get_system_prompt(
     researcher: bool = True,
     codex: bool = False,
     media: bool = True,
-    browser: bool = True,
     task_agent: bool = False,
     claude: bool = False,
     gemini: bool = False,
@@ -1069,8 +1069,7 @@ def get_system_prompt(
             prompt += RESEARCHER_RULES
         if media:
             prompt += MEDIA_USAGE_RULES
-        if browser:
-            prompt += BROWSER_RULES
+        prompt += BROWSER_RULES
         if a2a_agents:
             prompt += A2A_AGENTS_RULES
         if task_agent:

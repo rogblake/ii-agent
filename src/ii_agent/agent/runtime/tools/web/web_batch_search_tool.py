@@ -35,7 +35,7 @@ INPUT_SCHEMA = {
 }
 
 MAX_RESULTS = 6
-FAILURE_MESSAGE = "Please try again. If the problem continues, switch to browser tools for manual searching and let the user know that web search is temporarily unavailable."
+FAILURE_MESSAGE = "Please try again. If the problem continues, activate the `agent-browser` skill for manual searching and let the user know that web search is temporarily unavailable."
 DEFAULT_WEB_BATCH_QUERY_MAX_COST_USD = 0.05
 
 
@@ -67,7 +67,9 @@ class WebBatchSearchTool(BaseAgentTool):
         queries = tool_input["queries"]
 
         try:
-            response = await self.dependencies.tool_client.web_batch_search(queries, max_results=MAX_RESULTS)
+            response = await self.dependencies.tool_client.web_batch_search(
+                queries, max_results=MAX_RESULTS
+            )
             results = [result.result[:MAX_RESULTS] for result in response]
         except Exception as exc:
             return ToolResult(

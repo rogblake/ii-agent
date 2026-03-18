@@ -1,13 +1,28 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ii_agent.core.config.settings import Settings
 
 
 class WorkspaceManager:
     root: Path
 
-    def __init__(self, root: Path, container_workspace: Optional[Path] = None):
+    def __init__(self, root: Path, container_workspace: Path | None = None):
         self.root = root.absolute()
         self.container_workspace = container_workspace
+
+    @classmethod
+    def from_settings(cls, settings: "Settings") -> "WorkspaceManager":
+        container_workspace = (
+            Path(settings.workspace_path) if settings.use_container_workspace else None
+        )
+        return cls(
+            root=Path(settings.workspace_root),
+            container_workspace=container_workspace,
+        )
 
     def workspace_path(self, path: Path | str) -> Path:
         """Given a path, possibly in a container workspace, return the absolute local path."""
@@ -26,8 +41,7 @@ class WorkspaceManager:
         if not path.is_absolute():
             if self.container_workspace:
                 return self.container_workspace / path
-            else:
-                return self.root / path
+            return self.root / path
         if self.container_workspace and path.is_relative_to(self.root):
             return self.container_workspace / path.relative_to(self.root)
         return path

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 # from ii_agent.v1.models.openai import get_client as get_llm_client
-from ii_agent.utils.workspace_manager import WorkspaceManager
+from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 
 logger = logging.getLogger("a2a_agent")
 

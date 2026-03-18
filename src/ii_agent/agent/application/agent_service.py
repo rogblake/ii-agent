@@ -8,7 +8,7 @@ from ii_agent.core.logger import logger
 from ii_agent.agent.prompts.plan_mode_prompt import get_plan_mode_prompt
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.core.storage.base import BaseStorage
-from ii_agent.utils.workspace_manager import WorkspaceManager
+from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.agents.agent import IIAgent
 from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
 from ii_agent.agent.runtime.factory.factory import AgentFactory

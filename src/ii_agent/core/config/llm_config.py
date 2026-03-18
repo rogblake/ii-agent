@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, SecretStr, SerializationInfo, field_serializer
 from pydantic.json import pydantic_encoder
 
-from ii_agent.utils.constants import DEFAULT_MODEL
+DEFAULT_MODEL = "claude-sonnet-4@20250514"
 
 
 class APITypes(str, Enum):

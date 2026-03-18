@@ -37,7 +37,6 @@ import {
     selectPlanModificationOptions,
     setActiveTab,
     setBuildMode,
-    setGeneratingPrompt,
     setIsCreatingSession,
     setIsFromNewQuestion,
     setIsMobileChatVisible,
@@ -748,12 +747,6 @@ export function useAppEvents() {
                         )
                     }
                     // Status derived from runStatus via selectors — no explicit dispatch needed
-                    break
-                }
-
-                case AgentEvent.PROMPT_GENERATED: {
-                    dispatch(setGeneratingPrompt(false))
-                    dispatch(setCurrentQuestion(data.content.result as string))
                     break
                 }
 

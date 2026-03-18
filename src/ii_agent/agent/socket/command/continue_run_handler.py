@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict
 from uuid import UUID
 
@@ -15,10 +14,10 @@ from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )
-from ii_agent.utils.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
 from ii_agent.agent.runtime.run.agent import RunCompletedEvent, RunOutput
 from ii_agent.agent.runtime.factory.factory import AgentFactory
+from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.agent.types import AgentType
 from ii_agent.agent.runtime.factory.tools import echo_message, generate_random_number
 from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
@@ -177,11 +176,7 @@ class ContinueRunHandler(CommandHandler):
                 )
 
             # Setup workspace
-            workspace_path = Path(self.container.config.workspace_path).resolve()
-            workspace_manager = WorkspaceManager(
-                root=workspace_path,
-                container_workspace=self.container.config.use_container_workspace,
-            )
+            workspace_manager = WorkspaceManager.from_settings(self.container.config)
 
             connector_tool = ConnectorTool(user_id=str(session_info.user_id))
 
@@ -263,4 +258,3 @@ class ContinueRunHandler(CommandHandler):
                 message=f"Failed to continue run: {str(e)}",
                 error_type="execution_error",
             )
-

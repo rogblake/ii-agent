@@ -25,7 +25,7 @@ from ii_agent.auth.users.models import User
 from ii_agent.agent.sandboxes.base import SandboxManager
 from ii_agent.agent.sandboxes.e2b import E2BSandboxManager
 from ii_agent.agent.application.beta.hooks.session_hooks import register_default_session_hooks
-from ii_agent.utils.workspace_manager import WorkspaceManager
+from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_tool.mcp.client import MCPClient
 
 from .events import MCPEventCollector

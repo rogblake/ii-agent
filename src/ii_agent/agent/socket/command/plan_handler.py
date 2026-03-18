@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Any
 
 from ii_agent.agent.events.models import EventType, RealtimeEvent
@@ -21,11 +20,11 @@ from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )
-from ii_agent.utils.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
 from ii_agent.agent.runtime.run.agent import RunCompletedEvent, RunOutput
 from ii_agent.agent.runtime.media import Image, File as UrlFile
 from ii_agent.agent.runtime.tools.plan import MilestoneTool, PlanModificationSuggestionsTool
+from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -151,10 +150,7 @@ class PlanHandler(CommandHandler):
                 )
             )
 
-            workspace_manager = WorkspaceManager(
-                root=Path(self.container.config.workspace_path).resolve(),
-                container_workspace=self.container.config.use_container_workspace,
-            )
+            workspace_manager = WorkspaceManager.from_settings(self.container.config)
 
             # Create MilestoneTool with event_stream for direct save/emit
             milestone_tool = MilestoneTool(
@@ -238,10 +234,7 @@ class PlanHandler(CommandHandler):
                 )
             )
 
-            workspace_manager = WorkspaceManager(
-                root=Path(self.container.config.workspace_path).resolve(),
-                container_workspace=self.container.config.use_container_workspace,
-            )
+            workspace_manager = WorkspaceManager.from_settings(self.container.config)
 
             # Get the suggestions prompt
             suggestions_prompt = get_plan_modification_suggestions_prompt(
@@ -331,10 +324,7 @@ class PlanHandler(CommandHandler):
                 )
             )
 
-            workspace_manager = WorkspaceManager(
-                root=Path(self.container.config.workspace_path).resolve(),
-                container_workspace=self.container.config.use_container_workspace,
-            )
+            workspace_manager = WorkspaceManager.from_settings(self.container.config)
 
             # Create modification prompt with current plan context
             modification_prompt = get_plan_modification_execute_prompt(

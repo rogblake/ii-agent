@@ -27,9 +27,6 @@ from ii_agent.agent.socket.command.workspace_info_handler import (
 from ii_agent.agent.socket.command.ping_handler import PingHandler
 from ii_agent.agent.socket.command.cancel_handler import CancelHandler
 from ii_agent.agent.socket.command.continue_run_handler import ContinueRunHandler
-from ii_agent.agent.socket.command.enhance_prompt_handler import (
-    EnhancePromptHandler,
-)
 from ii_agent.agent.socket.command.start_fork_handler import StartForkHandler
 from ii_agent.agent.socket.command.submit_testflight_handler import (
     SubmitTestflightHandler,
@@ -111,9 +108,6 @@ class CommandHandlerFactory:
                 event_stream=event_stream, container=self._container
             ),
             UserCommandType.CONTINUE_RUN: ContinueRunHandler(
-                event_stream=event_stream, container=self._container
-            ),
-            UserCommandType.ENHANCE_PROMPT: EnhancePromptHandler(
                 event_stream=event_stream, container=self._container
             ),
             UserCommandType.PUBLISH_PROJECT: PublishProjectHandler(

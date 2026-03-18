@@ -30,7 +30,6 @@ class UserCommandType(str, Enum):
     PING = "ping"
     CANCEL = "cancel"
     CONTINUE_RUN = "continue_run"
-    ENHANCE_PROMPT = "enhance_prompt"
     PUBLISH_PROJECT = "publish"
     PUBLISH_CLOUD_RUN = "publish_cloud_run"
     SAVE_ENV = "save_env"

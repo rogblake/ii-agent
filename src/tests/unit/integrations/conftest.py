@@ -80,7 +80,7 @@ _mod_stub(
 )
 
 _mod_stub(
-    "ii_agent.utils.workspace_manager",
+    "ii_agent.agent.runtime.workspace_manager",
     WorkspaceManager=type("WorkspaceManager", (), {}),
 )
 

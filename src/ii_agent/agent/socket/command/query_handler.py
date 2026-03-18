@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 import uuid
 
@@ -18,10 +17,10 @@ from ii_agent.agent.socket.command.command_handler import (
     CommandHandler,
     UserCommandType,
 )
-from ii_agent.utils.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.run.agent import RunCancelledEvent, RunCompletedEvent, RunOutput
 from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
 from ii_agent.agent.runtime.media import Image, File as UrlFile
+from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.core.logger import logger
 
@@ -79,10 +78,7 @@ class UserQueryHandler(CommandHandler):
 
         final_status = RunStatus.FAILED
         try:
-            workspace_manager = WorkspaceManager(
-                root=Path(self.container.config.workspace_path).resolve(),
-                container_workspace=self.container.config.use_container_workspace,
-            )
+            workspace_manager = WorkspaceManager.from_settings(self.container.config)
 
             init_content = InitAgentContent(
                 model_id=query_command.model_id,

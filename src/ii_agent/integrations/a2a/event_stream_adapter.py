@@ -54,7 +54,6 @@ class EventStreamAdapter:
         EventType.TOOL_CONFIRMATION,
         EventType.AGENT_RESPONSE,
         EventType.METRICS_UPDATE,
-        EventType.PROMPT_GENERATED,
         EventType.USER_MESSAGE,
         EventType.FILE_EDIT,
         EventType.UPLOAD_SUCCESS,

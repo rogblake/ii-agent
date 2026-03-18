@@ -7,7 +7,7 @@ from sqlalchemy import select
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.config.settings import get_settings
 from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
-from ii_agent.utils.workspace_manager import WorkspaceManager
+from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.tools.base import BaseAgentTool
 from ii_agent.agent.runtime.tools.connectors.base import BaseConnectorTool
 from ii_agent.agent.runtime.tools.connectors.composio_mcp import load_composio_tools_for_user

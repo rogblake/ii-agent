@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import uuid
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -95,9 +95,6 @@ class TestUserCommandType:
 
     def test_continue_run_value(self):
         assert UserCommandType.CONTINUE_RUN == "continue_run"
-
-    def test_enhance_prompt_value(self):
-        assert UserCommandType.ENHANCE_PROMPT == "enhance_prompt"
 
     def test_publish_project_value(self):
         assert UserCommandType.PUBLISH_PROJECT == "publish"

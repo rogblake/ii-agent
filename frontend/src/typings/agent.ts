@@ -98,7 +98,6 @@ export enum AgentEvent {
     UPLOAD_SUCCESS = 'upload_success',
     BROWSER_USE = 'browser_use',
     FILE_EDIT = 'file_edit',
-    PROMPT_GENERATED = 'prompt_generated',
     AGENT_RESPONSE_INTERRUPTED = 'agent_response_interrupted',
     AGENT_CONTINUE = 'agent_continue',
     STATUS_UPDATE = 'status_update',

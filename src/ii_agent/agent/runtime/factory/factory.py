@@ -7,7 +7,7 @@ from uuid import UUID
 
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
 from ii_agent.agent.prompts.agent_prompts import get_system_prompt_for_agent_type
-from ii_agent.utils.workspace_manager import WorkspaceManager
+from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.agents.agent import IIAgent
 from ii_agent.agent.types import AgentType, Provider
 from ii_agent.agent.runtime.skills.base import SkillCreator

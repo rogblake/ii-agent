@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
-    from ii_agent.utils.workspace_manager import WorkspaceManager
+    from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
     from ii_agent.agent.runtime.tools.base import BaseAgentTool
 
 

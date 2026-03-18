@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REAL_BIN="${SCRIPT_DIR}/ii-app-real"
+CARGO_BIN="${CARGO_BIN:-$(command -v cargo || true)}"
+
+if [[ -z "${CARGO_BIN}" && -x /opt/homebrew/bin/cargo ]]; then
+  CARGO_BIN="/opt/homebrew/bin/cargo"
+fi
+
+if [[ ! -x "${REAL_BIN}" ]]; then
+  if [[ -n "${CARGO_BIN}" ]]; then
+    "${SCRIPT_DIR}/../scripts/build.sh" >&2
+  else
+    echo "ii-app-real is not built yet and cargo is not available. Run '${SCRIPT_DIR}/../scripts/build.sh' once Rust is installed." >&2
+    exit 1
+  fi
+fi
+
+exec "${REAL_BIN}" "$@"

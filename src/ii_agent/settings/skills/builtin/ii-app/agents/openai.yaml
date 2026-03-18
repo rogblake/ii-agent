@@ -1,0 +1,7 @@
+interface:
+  display_name: "ii-app"
+  short_description: "Rust CLI skill for local web and mobile app lifecycle"
+  default_prompt: "Use $ii-app to initialize or restart a local web or mobile app project without MCP."
+
+policy:
+  allow_implicit_invocation: true

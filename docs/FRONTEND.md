@@ -8,7 +8,7 @@ II-Agent has two distinct client-facing runtime paths:
 
 Used for agent sessions (`app_kind="agent"`). The agent executes multi-step tasks with tool use, streaming events in real-time.
 
-**Connection:** Socket.IO via `app.py` with optional Redis session manager for multi-worker.
+**Connection:** Socket.IO via the `ii_agent.app` bootstrap package with optional Redis session manager for multi-worker.
 
 **Command Types:**
 

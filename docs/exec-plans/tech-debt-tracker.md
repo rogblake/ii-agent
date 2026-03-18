@@ -9,13 +9,13 @@ Last comprehensive review: 2026-03-17
 ## P0 — Critical (Security & Correctness)
 
 ### CORS wildcard with credentials
-- **What:** `app.py:179-185` sets `allow_origins=["*"]` with `allow_credentials=True`
+- **What:** `app/middleware.py` sets `allow_origins=["*"]` with `allow_credentials=True`
 - **Impact:** Violates CORS spec. Enables CSRF attacks — any malicious site can make authenticated requests on behalf of users
 - **Fix:** Replace with explicit origin list from config (e.g., `settings.cors_allowed_origins`). Remove wildcard when `allow_credentials=True`
 - **Effort:** 1 hour
 
 ### Session cookies transmitted over HTTP
-- **What:** `app.py:187-193` sets `https_only=False` on `SessionMiddleware`
+- **What:** `app/middleware.py` sets `https_only=False` on `SessionMiddleware`
 - **Impact:** OAuth state tokens and PKCE verifiers leak over unencrypted connections
 - **Fix:** Set `https_only=True` for production, gate with `settings.environment != "local"`
 - **Effort:** 1 hour

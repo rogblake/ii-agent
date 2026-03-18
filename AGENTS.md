@@ -72,5 +72,6 @@ make format           # Ruff format + fix
 make lint             # Ruff check + format validation
 uv run pytest         # Run tests
 uv run pytest -k "test_name"  # Run specific test
-./start.sh            # Start server (Xvfb + ws_server)
+./start.sh            # Start server (Xvfb + uv run python -m ii_agent.ws_server)
+uv run python -m ii_agent.ws_server  # Start server directly
 ```

@@ -1,10 +1,14 @@
+"""Socket.IO server entrypoint."""
+
 import argparse
 import logging
+
 import uvicorn
 
 from ii_agent.app import create_app
 
 logger = logging.getLogger(__name__)
+APP_IMPORT_PATH = "ii_agent.ws_server:app"
 
 
 def main():
@@ -28,15 +32,20 @@ def main():
     parser.add_argument("--workers", type=int, default=1, help="Number of worker processes")
     parser.add_argument(
         "--reload",
-        default=False,
-        type=bool,
+        action="store_true",
         help="Enable auto-reload for development (not recommended for production)",
     )
     args = parser.parse_args()
 
     # Start the FastAPI server
     logger.info(f"Starting WebSocket server on {args.host}:{args.port}")
-    uvicorn.run("ws_server:app", host=args.host, port=args.port, workers=args.workers, reload=args.reload)
+    uvicorn.run(
+        APP_IMPORT_PATH,
+        host=args.host,
+        port=args.port,
+        workers=args.workers,
+        reload=args.reload,
+    )
 
 
 # Create app instance for uvicorn workers

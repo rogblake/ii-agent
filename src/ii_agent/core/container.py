@@ -1,6 +1,6 @@
 """Centralized service container for non-router consumers.
 
-Created once in app.py lifespan after secrets are loaded.
+Created once in ii_agent.app lifespan after secrets are loaded.
 Passed to socket handlers, MCP SSE, subscribers, cron, etc.
 
 Router endpoints use FastAPI Depends() via per-domain dependencies.py files instead.
@@ -170,7 +170,7 @@ if TYPE_CHECKING:
 class ServiceContainer:
     """Centralized service container for non-router consumers.
 
-    A single ServiceContainer is created once in app.py lifespan (after
+    A single ServiceContainer is created once in ii_agent.app lifespan (after
     GCP secrets are loaded) and threaded through to all non-router consumers:
     socket handlers, MCP SSE, subscribers, and cron tasks.
 

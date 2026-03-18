@@ -6,7 +6,7 @@ II-Agent is organized into domain modules under `src/ii_agent/`. Each domain own
 
 ```
 src/ii_agent/
-├── app.py                  # FastAPI app factory, router registration, Socket.IO setup
+├── app/                    # FastAPI bootstrap package, middleware, lifespan, router wiring
 │
 ├── core/                   # Shared infrastructure (no business logic)
 │   ├── config/             # Pydantic settings (database, redis, storage, oauth, stripe)
@@ -148,7 +148,7 @@ HTTP Request
   -> HTTP Response
 
 WebSocket (Socket.IO)
-  -> Socket.IO server (app.py)
+  -> Socket.IO server (app/)
     -> Auth via handshake token
       -> Command handler (agent/socket/)
         -> Agent runtime (agent/runtime/)

@@ -9,5 +9,4 @@ export DISPLAY=:99
 
 echo "Xvfb started. Display is set to $DISPLAY. Starting application..."
 
-exec python ws_server.py
-
+exec uv run python -m ii_agent.ws_server

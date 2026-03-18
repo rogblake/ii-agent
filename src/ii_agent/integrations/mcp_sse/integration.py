@@ -130,7 +130,7 @@ def get_mcp_lifespan():
     This must be called within your FastAPI app's lifespan context to
     properly initialize the MCP server's task group.
 
-    Usage in app.py:
+    Usage in an application lifespan:
         from ii_agent.integrations.mcp_sse import get_mcp_lifespan
 
         @asynccontextmanager

@@ -10,7 +10,7 @@ II-Agent is an AI agent platform built with FastAPI and SQLAlchemy 2.0. The code
 
 ```
 src/ii_agent/
-├── app.py                      # FastAPI application factory & lifespan
+├── app/                        # FastAPI bootstrap package (factory, lifespan, middleware, routers)
 │
 ├── core/                       # Shared infrastructure & configuration
 │   ├── config/                 # Pydantic settings (database, redis, storage, oauth, stripe)
@@ -304,7 +304,7 @@ class Session(Base):
    - `router.py` - FastAPI endpoints
    - `schemas.py` - Pydantic request/response DTOs
    - `exceptions.py` - Domain-specific exceptions
-3. Register router in `app.py`
+3. Register router in `app/routers.py`
 
 ### Verification
 
@@ -622,7 +622,7 @@ Pre-execution validation (`agent/application/validation_service.py`) checks **ac
 
 | File | Purpose |
 |------|---------|
-| `app.py` | FastAPI app factory, router registration, lifespan |
+| `app/` | FastAPI bootstrap package: app factory, router registration, lifespan, middleware |
 | `core/config/settings.py` | Pydantic settings (get_settings singleton) |
 | `core/db/base.py` | SQLAlchemy Base, TimestampColumn |
 | `core/db/manager.py` | get_db_session_local, SessionLocal |

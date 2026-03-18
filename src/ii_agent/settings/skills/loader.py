@@ -6,9 +6,9 @@ from sqlalchemy import or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.content.skills.models import Skill, SkillSource
-from ii_agent.agent.runtime.skills.builtin import get_builtin_skill_dirs
-from ii_agent.agent.runtime.skills.skills_ref.parser import read_properties
+from ii_agent.settings.skills.models import Skill, SkillSource
+from ii_agent.settings.skills.builtin import get_builtin_skill_dirs
+from ii_agent.settings.skills.skills_ref.parser import read_properties
 from ii_agent.core.logger import logger
 
 # Sandbox path template

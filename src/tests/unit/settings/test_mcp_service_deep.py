@@ -5,8 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from typing import List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -17,7 +16,7 @@ import ii_agent.sessions.wishlist.models  # noqa: F401
 import ii_agent.integrations.connectors.models  # noqa: F401
 import ii_agent.billing.models  # noqa: F401
 import ii_agent.projects.models  # noqa: F401
-import ii_agent.content.skills.models  # noqa: F401
+import ii_agent.settings.skills.models  # noqa: F401
 import ii_agent.content.slides.models  # noqa: F401
 import ii_agent.content.storybook.models  # noqa: F401
 import ii_agent.projects.databases.models  # noqa: F401
@@ -184,7 +183,7 @@ async def test_create_mcp_settings_stores_metadata():
         store_path="~/.codex",
     )
 
-    result = await svc.create_mcp_settings(
+    await svc.create_mcp_settings(
         db=None,
         user_id="u1",
         mcp_setting_in=MCPSettingCreate(
@@ -535,7 +534,11 @@ async def test_configure_codex_updates_existing():
     """Existing codex setting is updated instead of creating a new one."""
     existing = _make_mcp_setting(
         user_id="u1",
-        mcp_metadata={"tool_type": "codex", "auth_json": {"OPENAI_API_KEY": "old"}, "store_path": ""},
+        mcp_metadata={
+            "tool_type": "codex",
+            "auth_json": {"OPENAI_API_KEY": "old"},
+            "store_path": "",
+        },
     )
     repo = FakeMCPRepo()
     repo.items[existing.id] = existing
@@ -646,7 +649,11 @@ def test_to_mcp_setting_info_with_codex_metadata():
     """Converts MCPSetting with codex metadata to MCPSettingInfo."""
     setting = _make_mcp_setting(
         user_id="u1",
-        mcp_metadata={"tool_type": "codex", "auth_json": {"OPENAI_API_KEY": "key"}, "store_path": ""},
+        mcp_metadata={
+            "tool_type": "codex",
+            "auth_json": {"OPENAI_API_KEY": "key"},
+            "store_path": "",
+        },
     )
 
     result = _to_mcp_setting_info(setting)

@@ -362,7 +362,8 @@ def create_grid(
         # Add thumbnail below label with proportional spacing
         y_thumbnail = y_base + label_padding + font_size + label_padding
 
-        with Image.open(img_path) as img:
+        with Image.open(img_path) as image:
+            img = image
             # Get original dimensions before thumbnail
             orig_w, orig_h = img.size
 

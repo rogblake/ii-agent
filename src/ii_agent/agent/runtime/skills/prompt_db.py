@@ -4,7 +4,7 @@ import html
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ii_agent.content.skills.models import Skill
+    from ii_agent.settings.skills.models import Skill
 
 
 def to_prompt_from_db(skills: list["Skill"]) -> str:

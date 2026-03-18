@@ -26,7 +26,7 @@ import ii_agent.billing.usage.models  # noqa: F401
 import ii_agent.chat.messages.models  # noqa: F401
 import ii_agent.chat.providers.models  # noqa: F401
 import ii_agent.content.media.models  # noqa: F401
-import ii_agent.content.skills.models  # noqa: F401
+import ii_agent.settings.skills.models  # noqa: F401
 import ii_agent.content.slides.models  # noqa: F401
 import ii_agent.content.storybook.models  # noqa: F401
 import ii_agent.agent.runs.models  # noqa: F401
@@ -40,6 +40,7 @@ import ii_agent.projects.models  # noqa: F401
 import ii_agent.projects.subdomains.models  # noqa: F401
 import ii_agent.agent.events.models  # noqa: F401
 import ii_agent.sessions.models  # noqa: F401
+import ii_agent.sessions.pin.models  # noqa: F401
 import ii_agent.sessions.wishlist.models  # noqa: F401
 import ii_agent.settings.llm.models  # noqa: F401
 import ii_agent.settings.mcp.models  # noqa: F401

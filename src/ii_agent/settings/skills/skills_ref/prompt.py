@@ -35,8 +35,8 @@ def to_prompt(skill_dirs: list[Path]) -> str:
     lines = ["<available_skills>"]
 
     for skill_dir in skill_dirs:
-        skill_dir = Path(skill_dir).resolve()
-        props = read_properties(skill_dir)
+        resolved_skill_dir = Path(skill_dir).resolve()
+        props = read_properties(resolved_skill_dir)
 
         lines.append("<skill>")
         lines.append("<name>")
@@ -46,7 +46,7 @@ def to_prompt(skill_dirs: list[Path]) -> str:
         lines.append(html.escape(props.description))
         lines.append("</description>")
 
-        skill_md_path = find_skill_md(skill_dir)
+        skill_md_path = find_skill_md(resolved_skill_dir)
         lines.append("<location>")
         lines.append(str(skill_md_path))
         lines.append("</location>")

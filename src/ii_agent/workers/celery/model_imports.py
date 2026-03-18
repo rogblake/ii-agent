@@ -26,7 +26,7 @@ MODEL_MODULES: tuple[str, ...] = (
     "ii_agent.chat.providers.models",
     "ii_agent.chat.runs.models",
     "ii_agent.content.media.models",
-    "ii_agent.content.skills.models",
+    "ii_agent.settings.skills.models",
     "ii_agent.content.slides.models",
     "ii_agent.content.storybook.models",
     "ii_agent.agent.runs.models",

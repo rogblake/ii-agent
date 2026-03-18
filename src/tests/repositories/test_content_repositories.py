@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.content.media.models import MediaTemplate
 from ii_agent.content.media.repository import MediaTemplateRepository
-from ii_agent.content.skills.models import Skill, SkillSource
-from ii_agent.content.skills.repository import SkillRepository
+from ii_agent.settings.skills.models import Skill, SkillSource
+from ii_agent.settings.skills.repository import SkillRepository
 from ii_agent.content.slides.repository import SlideContentRepository
 from ii_agent.content.slides.templates.repository import SlideTemplateRepository
 from ii_agent.content.storybook.models import Storybook, StorybookPage

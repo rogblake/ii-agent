@@ -3,9 +3,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from ii_agent.content.skills.exceptions import BuiltinSkillDeleteError
-from ii_agent.content.skills.models import SkillSource
-from ii_agent.content.skills.service import SkillService
+from ii_agent.settings.skills.exceptions import BuiltinSkillDeleteError
+from ii_agent.settings.skills.models import SkillSource
+from ii_agent.settings.skills.service import SkillService
 
 
 class FakeSkillRepo:

@@ -6,21 +6,19 @@ Tests CLI commands using Click's CliRunner for isolated invocation.
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 from click.testing import CliRunner
 
-from ii_agent.agent.runtime.skills.skills_ref.cli import (
+from ii_agent.settings.skills.skills_ref.cli import (
     _is_skill_md_file,
     main,
     read_properties_cmd,
     to_prompt_cmd,
     validate_cmd,
 )
-from ii_agent.agent.runtime.skills.skills_ref.errors import SkillError
-from ii_agent.agent.runtime.skills.skills_ref.models import SkillProperties
+from ii_agent.settings.skills.skills_ref.errors import SkillError
+from ii_agent.settings.skills.skills_ref.models import SkillProperties
 
 
 # ---------------------------------------------------------------------------
@@ -62,9 +60,7 @@ class TestValidateCmd:
     def test_valid_skill_prints_valid_message(self, tmp_path):
         runner = CliRunner()
 
-        with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.validate", return_value=[]
-        ):
+        with patch("ii_agent.settings.skills.skills_ref.cli.validate", return_value=[]):
             result = runner.invoke(validate_cmd, [str(tmp_path)])
 
         assert result.exit_code == 0
@@ -74,7 +70,7 @@ class TestValidateCmd:
         runner = CliRunner()
 
         with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.validate",
+            "ii_agent.settings.skills.skills_ref.cli.validate",
             return_value=["Missing required field: name", "Name must be lowercase"],
         ):
             result = runner.invoke(validate_cmd, [str(tmp_path)])
@@ -94,7 +90,7 @@ class TestValidateCmd:
 
         runner = CliRunner()
         with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.validate",
+            "ii_agent.settings.skills.skills_ref.cli.validate",
             side_effect=capturing_validate,
         ):
             result = runner.invoke(validate_cmd, [str(skill_md)])
@@ -107,9 +103,7 @@ class TestValidateCmd:
         runner = CliRunner()
         errors = ["error1", "error2", "error3"]
 
-        with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.validate", return_value=errors
-        ):
+        with patch("ii_agent.settings.skills.skills_ref.cli.validate", return_value=errors):
             result = runner.invoke(validate_cmd, [str(tmp_path)])
 
         # All errors should be present in the combined output+stderr
@@ -129,7 +123,7 @@ class TestReadPropertiesCmd:
         mock_props = SkillProperties(name="my-skill", description="Does things")
 
         with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.read_properties",
+            "ii_agent.settings.skills.skills_ref.cli.read_properties",
             return_value=mock_props,
         ):
             result = runner.invoke(read_properties_cmd, [str(tmp_path)])
@@ -143,7 +137,7 @@ class TestReadPropertiesCmd:
         runner = CliRunner()
 
         with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.read_properties",
+            "ii_agent.settings.skills.skills_ref.cli.read_properties",
             side_effect=SkillError("SKILL.md not found"),
         ):
             result = runner.invoke(read_properties_cmd, [str(tmp_path)])
@@ -162,7 +156,7 @@ class TestReadPropertiesCmd:
 
         runner = CliRunner()
         with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.read_properties",
+            "ii_agent.settings.skills.skills_ref.cli.read_properties",
             side_effect=capturing_read,
         ):
             result = runner.invoke(read_properties_cmd, [str(skill_md)])
@@ -180,7 +174,7 @@ class TestReadPropertiesCmd:
         )
 
         with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.read_properties",
+            "ii_agent.settings.skills.skills_ref.cli.read_properties",
             return_value=mock_props,
         ):
             result = runner.invoke(read_properties_cmd, [str(tmp_path)])
@@ -201,7 +195,7 @@ class TestToPromptCmd:
         runner = CliRunner()
 
         with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.to_prompt",
+            "ii_agent.settings.skills.skills_ref.cli.to_prompt",
             return_value="<available_skills>\n</available_skills>",
         ):
             result = runner.invoke(to_prompt_cmd, [str(tmp_path)])
@@ -213,7 +207,7 @@ class TestToPromptCmd:
         runner = CliRunner()
 
         with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.to_prompt",
+            "ii_agent.settings.skills.skills_ref.cli.to_prompt",
             side_effect=SkillError("cannot read skill"),
         ):
             result = runner.invoke(to_prompt_cmd, [str(tmp_path)])
@@ -232,7 +226,7 @@ class TestToPromptCmd:
 
         runner = CliRunner()
         with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.to_prompt",
+            "ii_agent.settings.skills.skills_ref.cli.to_prompt",
             side_effect=capturing_prompt,
         ):
             result = runner.invoke(to_prompt_cmd, [str(skill_md)])
@@ -254,7 +248,7 @@ class TestToPromptCmd:
 
         runner = CliRunner()
         with patch(
-            "ii_agent.agent.runtime.skills.skills_ref.cli.to_prompt",
+            "ii_agent.settings.skills.skills_ref.cli.to_prompt",
             side_effect=capturing_prompt,
         ):
             result = runner.invoke(to_prompt_cmd, [str(skill_a), str(skill_b)])

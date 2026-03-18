@@ -5,8 +5,6 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from typing import Optional
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -17,7 +15,7 @@ import ii_agent.sessions.wishlist.models  # noqa: F401
 import ii_agent.integrations.connectors.models  # noqa: F401
 import ii_agent.billing.models  # noqa: F401
 import ii_agent.projects.models  # noqa: F401
-import ii_agent.content.skills.models  # noqa: F401
+import ii_agent.settings.skills.models  # noqa: F401
 import ii_agent.content.slides.models  # noqa: F401
 import ii_agent.content.storybook.models  # noqa: F401
 import ii_agent.projects.databases.models  # noqa: F401
@@ -378,9 +376,7 @@ async def test_get_model_settings_by_name_success(monkeypatch):
     repo = FakeLLMRepo(items={("my-model", "u1"): setting})
     svc = _make_service(repo=repo)
 
-    result = await svc.get_model_settings_by_name(
-        db=None, model_name="my-model", user_id="u1"
-    )
+    result = await svc.get_model_settings_by_name(db=None, model_name="my-model", user_id="u1")
 
     assert result is not None
     assert result.model == "my-model"
@@ -391,9 +387,7 @@ async def test_get_model_settings_by_name_not_found():
     """Returns None when no setting matches model name."""
     svc = _make_service()
 
-    result = await svc.get_model_settings_by_name(
-        db=None, model_name="non-existent", user_id="u1"
-    )
+    result = await svc.get_model_settings_by_name(db=None, model_name="non-existent", user_id="u1")
 
     assert result is None
 
@@ -472,7 +466,6 @@ async def test_delete_model_settings_not_found_returns_false():
 @pytest.mark.asyncio
 async def test_get_all_available_models_combines_system_and_user(settings_factory):
     """System configs and user settings are merged into one list."""
-    from ii_agent.core.config.llm_config import LLMConfig
     from pydantic import SecretStr
 
     sys_config = SimpleNamespace(
@@ -547,7 +540,6 @@ async def test_get_user_llm_config_not_found_raises():
 @pytest.mark.asyncio
 async def test_get_llm_settings_no_llm_setting_id_uses_system(settings_factory):
     """Session without llm_setting_id falls back to system config."""
-    from ii_agent.core.config.llm_config import LLMConfig
     from pydantic import SecretStr
 
     sys_config = SimpleNamespace(
@@ -565,9 +557,7 @@ async def test_get_llm_settings_no_llm_setting_id_uses_system(settings_factory):
     session_info = SimpleNamespace(id="sess-1", user_id="u1")
     svc = _make_service(session_repo=session_repo, config=config)
 
-    llm_config = await svc.get_llm_settings(
-        db=None, session=session_info, model_id="gpt-4o"
-    )
+    llm_config = await svc.get_llm_settings(db=None, session=session_info, model_id="gpt-4o")
 
     assert llm_config.model == "gpt-4o"
 

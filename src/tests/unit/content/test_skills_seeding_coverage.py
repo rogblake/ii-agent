@@ -1,11 +1,12 @@
 """Coverage tests for slide/storybook skill seeding helper."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
 import pytest
 
-from ii_agent.content.skills import seeding as skills_seeding
+from ii_agent.settings.skills import seeding as skills_seeding
 
 
 class _FakeDbSession:
@@ -22,7 +23,7 @@ async def test_ensure_builtin_skills_synced_runs_once_for_successful_sync(monkey
     sync_mock = AsyncMock(return_value=1)
 
     monkeypatch.setattr(
-        "ii_agent.agent.runtime.skills.loader.sync_builtin_to_db",
+        "ii_agent.settings.skills.loader.sync_builtin_to_db",
         sync_mock,
     )
     monkeypatch.setattr("ii_agent.core.db.manager.get_db_session_local", lambda: _FakeDbSession())
@@ -38,7 +39,7 @@ async def test_ensure_builtin_skills_synced_runs_once_for_successful_sync(monkey
 async def test_ensure_builtin_skills_sync_error_does_not_raise(monkeypatch):
     skills_seeding._skills_synced = False
     monkeypatch.setattr(
-        "ii_agent.agent.runtime.skills.loader.sync_builtin_to_db",
+        "ii_agent.settings.skills.loader.sync_builtin_to_db",
         AsyncMock(side_effect=RuntimeError("boom")),
     )
     monkeypatch.setattr("ii_agent.core.db.manager.get_db_session_local", lambda: _FakeDbSession())

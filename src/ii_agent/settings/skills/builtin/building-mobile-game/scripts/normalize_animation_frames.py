@@ -14,11 +14,17 @@ def parse_args() -> argparse.Namespace:
             "and an optional exact first-frame lock."
         )
     )
-    parser.add_argument("--input-dir", type=Path, required=True, help="Directory containing source PNG frames.")
-    parser.add_argument("--output-dir", type=Path, required=True, help="Directory for normalized PNG frames.")
+    parser.add_argument(
+        "--input-dir", type=Path, required=True, help="Directory containing source PNG frames."
+    )
+    parser.add_argument(
+        "--output-dir", type=Path, required=True, help="Directory for normalized PNG frames."
+    )
     parser.add_argument("--canvas-width", type=int, default=64, help="Output frame width.")
     parser.add_argument("--canvas-height", type=int, default=64, help="Output frame height.")
-    parser.add_argument("--padding", type=int, default=0, help="Minimum transparent padding inside the canvas.")
+    parser.add_argument(
+        "--padding", type=int, default=0, help="Minimum transparent padding inside the canvas."
+    )
     parser.add_argument("--glob", default="*.png", help="Glob used to collect source PNG frames.")
     parser.add_argument(
         "--anchor-image",
@@ -56,7 +62,9 @@ def load_rgba(Image, path: Path):
 def get_bbox(image):
     bbox = image.getchannel("A").getbbox()
     if bbox is None:
-        raise SystemExit("Encountered a fully transparent frame; remove empty frames before normalization.")
+        raise SystemExit(
+            "Encountered a fully transparent frame; remove empty frames before normalization."
+        )
     return bbox
 
 
@@ -124,12 +132,19 @@ def default_anchor(canvas_width: int, canvas_height: int, padding: int):
     return canvas_width / 2, canvas_height - padding
 
 
-def paste_with_anchor(Image, sprite, canvas_width: int, canvas_height: int, anchor_center_x: float, anchor_bottom: int):
+def paste_with_anchor(
+    Image, sprite, canvas_width: int, canvas_height: int, anchor_center_x: float, anchor_bottom: int
+):
     canvas = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
     left = round(anchor_center_x - sprite.width / 2)
     top = anchor_bottom - sprite.height
 
-    if left < 0 or top < 0 or left + sprite.width > canvas_width or top + sprite.height > canvas_height:
+    if (
+        left < 0
+        or top < 0
+        or left + sprite.width > canvas_width
+        or top + sprite.height > canvas_height
+    ):
         raise SystemExit(
             "A normalized frame does not fit inside the target canvas. "
             "Increase the canvas size or reduce padding."
@@ -161,7 +176,11 @@ def main() -> int:
     if anchor_bbox is not None:
         frame_sizes.append(frame_size_from_bbox(anchor_bbox))
 
-    if anchor_bbox is not None and anchor_image is not None and anchor_image.size == (args.canvas_width, args.canvas_height):
+    if (
+        anchor_bbox is not None
+        and anchor_image is not None
+        and anchor_image.size == (args.canvas_width, args.canvas_height)
+    ):
         anchor_center_x, anchor_bottom = anchor_from_exact_image(anchor_bbox)
     else:
         anchor_center_x, anchor_bottom = default_anchor(
@@ -171,7 +190,11 @@ def main() -> int:
         )
 
     exact_anchor_constraints = None
-    if anchor_bbox is not None and anchor_image is not None and anchor_image.size == (args.canvas_width, args.canvas_height):
+    if (
+        anchor_bbox is not None
+        and anchor_image is not None
+        and anchor_image.size == (args.canvas_width, args.canvas_height)
+    ):
         exact_anchor_constraints = (anchor_center_x, anchor_bottom)
 
     scale = compute_global_scale(
@@ -185,7 +208,9 @@ def main() -> int:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    for index, (path, image, bbox) in enumerate(zip(frame_paths, frame_images, frame_bboxes), start=1):
+    for index, (path, image, bbox) in enumerate(
+        zip(frame_paths, frame_images, frame_bboxes), start=1
+    ):
         output_path = args.output_dir / path.name
 
         if index == 1 and args.lock_first_frame and anchor_image is not None:

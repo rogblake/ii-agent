@@ -6,7 +6,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.db.repository import BaseRepository
-from ii_agent.content.skills.models import Skill, SkillSource
+from ii_agent.settings.skills.models import Skill, SkillSource
 
 
 class SkillRepository(BaseRepository[Skill]):
@@ -88,16 +88,12 @@ class SkillRepository(BaseRepository[Skill]):
 
     async def list_by_user(self, db: AsyncSession, user_id: str) -> List[Skill]:
         """List all skills owned by a user."""
-        result = await db.execute(
-            select(Skill).where(Skill.user_id == user_id)
-        )
+        result = await db.execute(select(Skill).where(Skill.user_id == user_id))
         return list(result.scalars().all())
 
     async def list_builtin(self, db: AsyncSession) -> List[Skill]:
         """List all builtin skills (user_id IS NULL)."""
-        result = await db.execute(
-            select(Skill).where(Skill.user_id.is_(None))
-        )
+        result = await db.execute(select(Skill).where(Skill.user_id.is_(None)))
         return list(result.scalars().all())
 
     async def delete(self, db: AsyncSession, skill: Skill) -> None:

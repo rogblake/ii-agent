@@ -9,7 +9,7 @@ LLMSetting and MCPSetting have been moved to their owning domains:
 """
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, BigInteger, Boolean, Float, ForeignKey, Index, TIMESTAMP
+from sqlalchemy import String, Boolean, Float, ForeignKey, Index, TIMESTAMP
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from ii_agent.billing.models import BillingTransaction
     from ii_agent.billing.customers.models import BillingCustomer
     from ii_agent.projects.models import Project
-    from ii_agent.content.skills.models import Skill
+    from ii_agent.settings.skills.models import Skill
 
 
 class User(Base):
@@ -37,11 +37,7 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     email: Mapped[str] = mapped_column(String, unique=True)
     password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     first_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -51,35 +47,23 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
         TimestampColumn,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )
-    last_login_at: Mapped[Optional[datetime]] = mapped_column(
-        TimestampColumn,
-        nullable=True
-    )
-    user_metadata: Mapped[Optional[dict]] = mapped_column(
-        "metadata",
-        JSONB,
-        nullable=True
-    )
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(TimestampColumn, nullable=True)
+    user_metadata: Mapped[Optional[dict]] = mapped_column("metadata", JSONB, nullable=True)
     login_provider: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     organization: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     subscription_plan: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     subscription_status: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    subscription_billing_cycle: Mapped[Optional[str]] = mapped_column(
-        String,
-        nullable=True
-    )
+    subscription_billing_cycle: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     subscription_current_period_end: Mapped[Optional[datetime]] = mapped_column(
-        TIMESTAMP(timezone=True),
-        nullable=True
+        TIMESTAMP(timezone=True), nullable=True
     )
     credits: Mapped[float] = mapped_column(Float, default=0.0)
     bonus_credits: Mapped[float] = mapped_column(Float, default=0.0)
@@ -87,69 +71,43 @@ class User(Base):
 
     # Relationships (using string references for forward declarations)
     sessions: Mapped[list["Session"]] = relationship(
-        "Session",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "Session", back_populates="user", cascade="all, delete-orphan"
     )
     llm_settings: Mapped[list["LLMSetting"]] = relationship(
-        "LLMSetting",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "LLMSetting", back_populates="user", cascade="all, delete-orphan"
     )
     mcp_settings: Mapped[list["MCPSetting"]] = relationship(
-        "MCPSetting",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "MCPSetting", back_populates="user", cascade="all, delete-orphan"
     )
     file_uploads: Mapped[list["FileUpload"]] = relationship(
-        "FileUpload",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "FileUpload", back_populates="user", cascade="all, delete-orphan"
     )
     session_wishlists: Mapped[list["SessionWishlist"]] = relationship(
-        "SessionWishlist",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "SessionWishlist", back_populates="user", cascade="all, delete-orphan"
     )
     session_pins: Mapped[list["SessionPin"]] = relationship(
-        "SessionPin",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "SessionPin", back_populates="user", cascade="all, delete-orphan"
     )
     api_keys: Mapped[list["APIKey"]] = relationship(
-        "APIKey",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "APIKey", back_populates="user", cascade="all, delete-orphan"
     )
     connectors: Mapped[list["Connector"]] = relationship(
-        "Connector",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "Connector", back_populates="user", cascade="all, delete-orphan"
     )
     composio_profiles: Mapped[list["ComposioProfile"]] = relationship(
-        "ComposioProfile",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "ComposioProfile", back_populates="user", cascade="all, delete-orphan"
     )
     billing_transactions: Mapped[list["BillingTransaction"]] = relationship(
-        "BillingTransaction",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "BillingTransaction", back_populates="user", cascade="all, delete-orphan"
     )
     billing_customers: Mapped[list["BillingCustomer"]] = relationship(
-        "BillingCustomer",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "BillingCustomer", back_populates="user", cascade="all, delete-orphan"
     )
     projects: Mapped[list["Project"]] = relationship(
-        "Project",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "Project", back_populates="user", cascade="all, delete-orphan"
     )
     skills: Mapped[list["Skill"]] = relationship(
-        "Skill",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "Skill", back_populates="user", cascade="all, delete-orphan"
     )
 
     # Add index for email lookup
@@ -161,25 +119,17 @@ class APIKey(Base):
 
     __tablename__ = "api_keys"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
-    user_id: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("users.id", ondelete="CASCADE")
-    )
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"))
     api_key: Mapped[str] = mapped_column(String, unique=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
         TimestampColumn,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )
 
     # Relationships

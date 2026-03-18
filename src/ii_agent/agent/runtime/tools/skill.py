@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from ii_agent.agent.runtime.tools.base import ToolResult
 from ii_agent.agent.runtime.tools.sandbox.base import BaseSandboxTool
-from ii_agent.agent.runtime.skills.storage import copy_skill_to_sandbox, skill_exists
+from ii_agent.settings.skills.storage import copy_skill_to_sandbox, skill_exists
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
-    from ii_agent.content.skills.models import Skill
+    from ii_agent.settings.skills.models import Skill
     from ii_agent.core.storage import BaseStorage
     from ii_agent.agent.runtime.agents.agent import IIAgent
     from ii_agent.agent.runtime.tools.function import FunctionCall
@@ -101,7 +101,9 @@ class SkillTool(BaseSandboxTool):
         # Check if skill exists in our registry
         if skill_name not in self._skills_registry:
             available = ", ".join(sorted(self._skills_registry.keys()))
-            logger.error(f"[SkillTool] Skill '{skill_name}' not in registry. Available: {available}")
+            logger.error(
+                f"[SkillTool] Skill '{skill_name}' not in registry. Available: {available}"
+            )
             return ToolResult(
                 llm_content=f"Error: Skill '{skill_name}' not found. Available skills: {available}",
                 user_display_content=f"Skill '{skill_name}' not found",
@@ -109,7 +111,9 @@ class SkillTool(BaseSandboxTool):
             )
 
         skill = self._skills_registry[skill_name]
-        logger.info(f"[SkillTool] Found skill in registry: {skill_name}, storage_uri={skill.storage_uri}, source={skill.source}")
+        logger.info(
+            f"[SkillTool] Found skill in registry: {skill_name}, storage_uri={skill.storage_uri}, source={skill.source}"
+        )
 
         try:
             # Get sandbox from agent (set by on_tool_start)
@@ -132,7 +136,9 @@ class SkillTool(BaseSandboxTool):
                 )
 
             # Check if skill exists (directory, zip, or in GCS)
-            logger.info(f"[SkillTool] Checking if skill exists at {skill.storage_uri}, storage={'available' if self._storage else 'None'}")
+            logger.info(
+                f"[SkillTool] Checking if skill exists at {skill.storage_uri}, storage={'available' if self._storage else 'None'}"
+            )
             if not await skill_exists(skill.storage_uri, storage=self._storage):
                 logger.error(f"[SkillTool] Skill not found at {skill.storage_uri}")
                 return ToolResult(
@@ -142,7 +148,9 @@ class SkillTool(BaseSandboxTool):
                 )
 
             # Copy skill to sandbox (handles builtin, GCS, and local paths)
-            logger.info(f"[SkillTool] Copying skill to sandbox: {skill_name} from {skill.storage_uri}")
+            logger.info(
+                f"[SkillTool] Copying skill to sandbox: {skill_name} from {skill.storage_uri}"
+            )
             sandbox_skill_dir = await copy_skill_to_sandbox(
                 storage_uri=skill.storage_uri,
                 skill_name=skill_name,

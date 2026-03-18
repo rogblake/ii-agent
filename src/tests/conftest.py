@@ -17,6 +17,7 @@ os.environ.setdefault("II_AGENT_SKIP_MIGRATIONS", "1")
 
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.storage.base import BaseStorage
+from ii_agent.workers.celery.model_imports import import_model_modules
 
 _REQUIRED_SUITE_MARKERS = {"unit", "integration", "smoke"}
 _ALL_SUITE_MARKERS = _REQUIRED_SUITE_MARKERS | {"external"}
@@ -91,9 +92,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int):
         os.getenv("II_AGENT_FAIL_ON_SKIP", "").lower() in {"1", "true", "yes"}
     )
 
-    unexpected_skips: list[tuple[str, str]] = getattr(
-        session.config, _UNEXPECTED_SKIPS_ATTR, []
-    )
+    unexpected_skips: list[tuple[str, str]] = getattr(session.config, _UNEXPECTED_SKIPS_ATTR, [])
 
     if not should_fail_on_skip or not unexpected_skips:
         return
@@ -119,6 +118,12 @@ def _reset_settings_cache():
     get_settings.cache_clear()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _bootstrap_orm_model_registry():
+    """Import the ORM model graph once so mapper resolution is stable in tests."""
+    import_model_modules()
+
+
 class InMemoryStorage(BaseStorage):
     """Simple in-memory storage used in tests."""
 
@@ -134,18 +139,14 @@ class InMemoryStorage(BaseStorage):
             payload = payload.encode("utf-8")
         self._objects[path] = payload
 
-    def write_from_url(
-        self, url: str, path: str, content_type: str | None = None
-    ) -> str:
+    def write_from_url(self, url: str, path: str, content_type: str | None = None) -> str:
         self._objects[path] = f"from:{url}".encode("utf-8")
         return path
 
     def read(self, path: str):
         return io.BytesIO(self._objects[path])
 
-    def get_download_signed_url(
-        self, path: str, expiration_seconds: int = 3600
-    ) -> str | None:
+    def get_download_signed_url(self, path: str, expiration_seconds: int = 3600) -> str | None:
         return f"https://signed.local/{path}"
 
     def get_download_signed_urls_batch(

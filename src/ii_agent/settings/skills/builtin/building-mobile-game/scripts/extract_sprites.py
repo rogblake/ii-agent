@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from collections import deque
 from pathlib import Path
 
@@ -83,8 +82,7 @@ def import_dependencies():
     except ModuleNotFoundError as exc:
         missing = exc.name or "required dependency"
         raise SystemExit(
-            "Missing dependency: "
-            f"{missing}. Install Pillow and numpy before using this script."
+            f"Missing dependency: {missing}. Install Pillow and numpy before using this script."
         ) from exc
 
     return Image, np
@@ -225,7 +223,9 @@ def remove_background(np, image_array, bg_threshold):
         distance = np.sqrt(np.sum((rgb - color) ** 2, axis=2))
         candidates.append(distance <= bg_threshold)
 
-    background_like = np.logical_or.reduce(candidates) if candidates else np.zeros_like(alpha, dtype=bool)
+    background_like = (
+        np.logical_or.reduce(candidates) if candidates else np.zeros_like(alpha, dtype=bool)
+    )
     background_like &= alpha > 0
     background = edge_connected_mask(np, background_like)
 
@@ -355,9 +355,7 @@ def run_extraction(args):
         raise SystemExit("No components found. Check the sprite sheet or adjust thresholds.")
 
     if names and len(names) != len(components):
-        raise SystemExit(
-            f"Expected {len(names)} names but found {len(components)} components."
-        )
+        raise SystemExit(f"Expected {len(names)} names but found {len(components)} components.")
 
     crops = [crop_component(np, cleaned, component, args.padding) for component in components]
     if args.normalize:

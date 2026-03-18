@@ -5,9 +5,9 @@ import logging
 from fastapi import APIRouter, Query
 
 from ii_agent.auth.dependencies import CurrentUser, DBSession
-from ii_agent.content.skills.dependencies import SkillServiceDep
-from ii_agent.content.skills.exceptions import SkillNotFoundError
-from ii_agent.content.skills.schemas import (
+from ii_agent.settings.skills.dependencies import SkillServiceDep
+from ii_agent.settings.skills.exceptions import SkillNotFoundError
+from ii_agent.settings.skills.schemas import (
     GitHubSkillRequest,
     SkillToggleRequest,
     SkillInfo,
@@ -16,8 +16,8 @@ from ii_agent.content.skills.schemas import (
 )
 from ii_agent.core.exceptions import ValidationError as CoreValidationError
 from ii_agent.core.storage.client import storage
-from ii_agent.agent.runtime.skills.github import GitHubSkillError
-from ii_agent.agent.runtime.skills.skills_ref.errors import ParseError, ValidationError
+from ii_agent.settings.skills.github import GitHubSkillError
+from ii_agent.settings.skills.skills_ref.errors import ParseError, ValidationError
 
 logger = logging.getLogger(__name__)
 

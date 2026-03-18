@@ -4,13 +4,14 @@ from typing import TYPE_CHECKING, Optional
 
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.agent.runtime.skills.base import SkillCreator
-from ii_agent.agent.runtime.skills.loader import get_user_skills
+from ii_agent.settings.skills.loader import get_user_skills
 from ii_agent.agent.runtime.skills.prompt_db import generate_skill_tool_description
 from ii_agent.agent.runtime.tools.skill import SkillTool
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
     from ii_agent.core.storage import BaseStorage
+
 
 class DbSkillCreator(SkillCreator):
     """Database-backed skill creator.

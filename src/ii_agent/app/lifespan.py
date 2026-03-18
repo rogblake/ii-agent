@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from ii_agent.content.skills.seeding import ensure_builtin_skills_synced
+from ii_agent.settings.skills.seeding import ensure_builtin_skills_synced
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.container import ServiceContainer
 from ii_agent.core.redis import close_redis
@@ -35,7 +35,7 @@ def create_lifespan():
         settings = get_settings()
         app.state.settings = settings
 
-        if not os.getenv("II_AGENT_SKIP_MIGRATIONS", "").lower() in ("1", "true", "yes"):
+        if os.getenv("II_AGENT_SKIP_MIGRATIONS", "").lower() not in ("1", "true", "yes"):
             from ii_agent.core.db.manager import run_migrations
 
             run_migrations()

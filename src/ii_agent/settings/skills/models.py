@@ -41,17 +41,11 @@ class Skill(Base):
 
     __tablename__ = "skills"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # NULL = builtin/shared, UUID = user-specific
     user_id: Mapped[Optional[str]] = mapped_column(
-        String,
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=True
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
 
     # Core identity (from SKILL.md frontmatter)
@@ -59,10 +53,7 @@ class Skill(Base):
     description: Mapped[str] = mapped_column(Text)
 
     # Source tracking
-    source: Mapped[str] = mapped_column(
-        String,
-        default=SkillSource.BUILTIN.value
-    )
+    source: Mapped[str] = mapped_column(String, default=SkillSource.BUILTIN.value)
     source_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Content & Path configuration (hybrid approach)
@@ -80,13 +71,12 @@ class Skill(Base):
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
         TimestampColumn,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )
 
     # Relationships

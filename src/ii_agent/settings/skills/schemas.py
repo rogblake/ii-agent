@@ -13,9 +13,7 @@ class GitHubSkillRequest(BaseModel):
         ...,
         description="GitHub URL to skill folder containing SKILL.md",
         json_schema_extra={
-            "examples": [
-                "https://github.com/anthropics/skills/tree/main/skills/brand-guidelines"
-            ]
+            "examples": ["https://github.com/anthropics/skills/tree/main/skills/brand-guidelines"]
         },
     )
 
@@ -32,12 +30,8 @@ class SkillInfo(BaseModel):
     id: str = Field(..., description="Unique skill ID")
     name: str = Field(..., description="Skill name (kebab-case)")
     description: str = Field(..., description="What the skill does")
-    source: str = Field(
-        ..., description="Skill source type: 'builtin', 'github', or 'custom'"
-    )
-    source_url: Optional[str] = Field(
-        None, description="GitHub URL for github-sourced skills"
-    )
+    source: str = Field(..., description="Skill source type: 'builtin', 'github', or 'custom'")
+    source_url: Optional[str] = Field(None, description="GitHub URL for github-sourced skills")
     is_enabled: bool = Field(..., description="Whether the skill is enabled")
     license: Optional[str] = Field(None, description="License information")
     compatibility: Optional[str] = Field(None, description="Compatibility information")

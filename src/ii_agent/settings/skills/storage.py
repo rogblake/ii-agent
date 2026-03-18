@@ -18,14 +18,14 @@ import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-from upath import UPath
 
-from ii_agent.agent.runtime.skills.builtin import BUILTIN_SKILLS_DIR
+from ii_agent.settings.skills.builtin import BUILTIN_SKILLS_DIR
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
     from ii_agent.core.storage import BaseStorage
-    from ii_agent.agent.runtime.skills.github import GitHubFile
+    from ii_agent.settings.skills.github import GitHubFile
+
 
 def resolve_storage_uri(storage_uri: str) -> Path:
     """Resolve a storage URI to a local path.
@@ -138,9 +138,7 @@ async def copy_skill_to_sandbox(
     elif storage_uri.startswith("skills/"):
         # Custom skill from GCS (async to avoid blocking)
         if storage is None:
-            raise ValueError(
-                f"Storage client required for GCS-based skill: {storage_uri}"
-            )
+            raise ValueError(f"Storage client required for GCS-based skill: {storage_uri}")
         zip_content = await download_skill_zip_from_gcs(storage, storage_uri)
     else:
         # Legacy: absolute local path
@@ -152,9 +150,7 @@ async def copy_skill_to_sandbox(
 
     # Create target directory and extract
     await sandbox.run_command(f"mkdir -p {sandbox_skill_dir}", user="root")
-    await sandbox.run_command(
-        f"unzip -o {zip_path_in_sandbox} -d {sandbox_skill_dir}", user="root"
-    )
+    await sandbox.run_command(f"unzip -o {zip_path_in_sandbox} -d {sandbox_skill_dir}", user="root")
 
     # Fix permissions so the sandbox user can read the files
     await sandbox.run_command(f"chown -R user:user {sandbox_skill_dir}", user="root")

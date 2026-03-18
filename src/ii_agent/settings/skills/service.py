@@ -10,21 +10,21 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from ii_agent.content.skills.exceptions import (
+from ii_agent.settings.skills.exceptions import (
     BuiltinSkillDeleteError,
     SkillAlreadyExistsError,
 )
-from ii_agent.content.skills.models import Skill, SkillSource
-from ii_agent.content.skills.repository import SkillRepository
-from ii_agent.content.skills.schemas import SkillInfo, SkillList
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.settings.skills.models import Skill, SkillSource
+from ii_agent.settings.skills.repository import SkillRepository
+from ii_agent.settings.skills.schemas import SkillInfo, SkillList
+from ii_agent.core.config.settings import Settings
 from ii_agent.core.storage import BaseStorage
-from ii_agent.agent.runtime.skills.github import (
+from ii_agent.settings.skills.github import (
     GitHubDownloadService,
     GitHubSkillError,
 )
-from ii_agent.agent.runtime.skills.skills_ref.errors import ParseError, ValidationError
-from ii_agent.agent.runtime.skills.storage import upload_skill_to_gcs
+from ii_agent.settings.skills.skills_ref.errors import ParseError, ValidationError
+from ii_agent.settings.skills.storage import upload_skill_to_gcs
 
 logger = logging.getLogger(__name__)
 
@@ -129,8 +129,7 @@ class SkillService:
         user_skills = await self._repo.list_by_user(db, user_id)
 
         builtin_overrides = {
-            s.name: s for s in user_skills
-            if s.source == SkillSource.BUILTIN.value
+            s.name: s for s in user_skills if s.source == SkillSource.BUILTIN.value
         }
 
         custom_skills = [s for s in user_skills if s.source != SkillSource.BUILTIN.value]

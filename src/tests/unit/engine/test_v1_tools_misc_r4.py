@@ -10,10 +10,10 @@ Covers:
 - process_slide_content (various tool_name scenarios)
 - GitHub skill: sanitize_skill_name, GitHubDownloadService.parse_url
 """
+
 from __future__ import annotations
 
 import pytest
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 pytestmark = pytest.mark.unit
@@ -22,6 +22,7 @@ pytestmark = pytest.mark.unit
 # ---------------------------------------------------------------------------
 # SkillTool
 # ---------------------------------------------------------------------------
+
 
 class TestSkillToolInit:
     """Test SkillTool.__init__."""
@@ -119,7 +120,9 @@ class TestSkillToolExecute:
         agent_mock.sandbox = MagicMock()
         tool._agent = agent_mock
 
-        with patch("ii_agent.agent.runtime.tools.skill.skill_exists", AsyncMock(return_value=False)):
+        with patch(
+            "ii_agent.agent.runtime.tools.skill.skill_exists", AsyncMock(return_value=False)
+        ):
             result = await tool.execute({"skill": "pdf"})
 
         assert result.is_error is True
@@ -197,6 +200,7 @@ class TestSkillToolExecute:
             return await tool.execute({"skill": "nonexistent"})
 
         import asyncio
+
         result = asyncio.get_event_loop().run_until_complete(run())
         assert "pdf" in result.llm_content or "xlsx" in result.llm_content
 
@@ -204,6 +208,7 @@ class TestSkillToolExecute:
 # ---------------------------------------------------------------------------
 # SendUserFile (message_user.py)
 # ---------------------------------------------------------------------------
+
 
 class TestSendUserFileExecute:
     """Test SendUserFile.execute."""
@@ -216,7 +221,9 @@ class TestSendUserFileExecute:
     @pytest.mark.asyncio
     async def test_basic_execute_with_message_and_attachments(self):
         tool = self._make_tool()
-        result = await tool.execute({"message": "Here are your files", "attachments": ["/tmp/file.pdf"]})
+        result = await tool.execute(
+            {"message": "Here are your files", "attachments": ["/tmp/file.pdf"]}
+        )
         assert result.is_error is not True
         assert result.llm_content is not None
 
@@ -253,6 +260,7 @@ class TestSendUserFileExecute:
     @pytest.mark.asyncio
     async def test_result_payload_structure(self):
         import json
+
         tool = self._make_tool()
         result = await tool.execute({"message": "Hello", "attachments": ["/tmp/a.pdf"]})
         # llm_content should be JSON with tool_name and action
@@ -265,6 +273,7 @@ class TestSendUserFileExecute:
 # ---------------------------------------------------------------------------
 # _determine_file_type, _is_remote_url, _guess_name_from_path
 # ---------------------------------------------------------------------------
+
 
 class TestMessageUserHelpers:
     """Test helper functions in message_user.py."""
@@ -362,6 +371,7 @@ class TestMessageUserHelpers:
 # ---------------------------------------------------------------------------
 # _process_attachment
 # ---------------------------------------------------------------------------
+
 
 class TestProcessAttachment:
     """Test _process_attachment helper."""
@@ -502,6 +512,7 @@ class TestProcessAttachment:
 # FullStackInitTool.execute (dev/init_tool.py)
 # ---------------------------------------------------------------------------
 
+
 class TestFullStackInitToolExecute:
     """Test FullStackInitTool.execute."""
 
@@ -526,7 +537,9 @@ class TestFullStackInitToolExecute:
         tool = self._make_tool()
         tool._execute = AsyncMock(return_value=MagicMock(is_error=False, llm_content="ok"))
 
-        result = await tool.execute({"project_name": "myapp", "framework": "nextjs-shadcn", "database": False})
+        await tool.execute(
+            {"project_name": "myapp", "framework": "nextjs-shadcn", "database": False}
+        )
         tool._execute.assert_called_once()
 
     @pytest.mark.asyncio
@@ -534,7 +547,7 @@ class TestFullStackInitToolExecute:
         tool = self._make_tool()
         tool._execute = AsyncMock(return_value=MagicMock(is_error=False, llm_content="ok"))
 
-        result = await tool.execute({"project_name": "myapp", "framework": "nextjs-shadcn"})
+        await tool.execute({"project_name": "myapp", "framework": "nextjs-shadcn"})
         tool._execute.assert_called_once()
 
     @pytest.mark.asyncio
@@ -542,7 +555,9 @@ class TestFullStackInitToolExecute:
         tool = self._make_tool()
         tool._session_id = None
 
-        result = await tool.execute({"project_name": "myapp", "framework": "nextjs-shadcn", "database": True})
+        result = await tool.execute(
+            {"project_name": "myapp", "framework": "nextjs-shadcn", "database": True}
+        )
         assert result.is_error is True
         assert "session_id" in result.llm_content.lower() or "session" in result.llm_content.lower()
 
@@ -562,7 +577,10 @@ class TestFullStackInitToolExecute:
         mock_repo.get_active_by_session_id = AsyncMock(return_value=existing_db)
 
         with (
-            patch("ii_agent.agent.runtime.tools.dev.init_tool.ProjectDatabaseRepository", return_value=mock_repo),
+            patch(
+                "ii_agent.agent.runtime.tools.dev.init_tool.ProjectDatabaseRepository",
+                return_value=mock_repo,
+            ),
             patch("ii_agent.agent.runtime.tools.dev.init_tool.get_db_session_local") as mock_db,
         ):
             mock_db_ctx = AsyncMock()
@@ -570,11 +588,13 @@ class TestFullStackInitToolExecute:
             mock_db_ctx.__aexit__ = AsyncMock(return_value=False)
             mock_db.return_value = mock_db_ctx
 
-            result = await tool.execute({
-                "project_name": "myapp",
-                "framework": "nextjs-shadcn",
-                "database": True,
-            })
+            await tool.execute(
+                {
+                    "project_name": "myapp",
+                    "framework": "nextjs-shadcn",
+                    "database": True,
+                }
+            )
 
         tool._execute.assert_called_once()
 
@@ -584,14 +604,14 @@ class TestFullStackInitToolExecute:
         tool._execute = AsyncMock(side_effect=RuntimeError("Unexpected error"))
         tool._session_id = None
 
-        result = await tool.execute({"project_name": "myapp", "framework": "nextjs-shadcn", "database": False})
+        result = await tool.execute(
+            {"project_name": "myapp", "framework": "nextjs-shadcn", "database": False}
+        )
         assert result.is_error is True
         assert "Unexpected error" in result.llm_content
 
     @pytest.mark.asyncio
     async def test_on_tool_start_sets_session_and_user_id(self):
-        from ii_agent.agent.runtime.tools.dev.init_tool import FullStackInitTool
-
         tool = self._make_tool()
         agent_mock = MagicMock()
         agent_mock.session_id = "sess-99"
@@ -610,7 +630,6 @@ class TestFullStackInitToolOnToolEnd:
 
     def _make_tool(self):
         from ii_agent.agent.runtime.tools.dev.init_tool import FullStackInitTool
-        from ii_agent.agent.runtime.tools.base import ToolResult
 
         tool = FullStackInitTool.__new__(FullStackInitTool)
         tool.name = "fullstack_project_init"
@@ -664,7 +683,9 @@ class TestFullStackInitToolOnToolEnd:
         tool = self._make_tool()
         fc = MagicMock()
         fc.error = None
-        fc.result = ToolResult(llm_content="ok", user_display_content="string content", is_error=False)
+        fc.result = ToolResult(
+            llm_content="ok", user_display_content="string content", is_error=False
+        )
 
         agent = MagicMock()
         agent.session_id = "sess-1"
@@ -715,12 +736,14 @@ class TestFullStackInitToolOnToolEnd:
         project_record.framework = "nextjs-shadcn"
         project_record.project_path = "/workspace/myapp"
 
-        tool._persist_project_metadata = AsyncMock(return_value={
-            "id": "proj-1",
-            "name": "myapp",
-            "framework": "nextjs-shadcn",
-            "project_path": "/workspace/myapp",
-        })
+        tool._persist_project_metadata = AsyncMock(
+            return_value={
+                "id": "proj-1",
+                "name": "myapp",
+                "framework": "nextjs-shadcn",
+                "project_path": "/workspace/myapp",
+            }
+        )
 
         agent = MagicMock()
         agent.session_id = "sess-1"
@@ -733,6 +756,7 @@ class TestFullStackInitToolOnToolEnd:
 # ---------------------------------------------------------------------------
 # slide_system/hook_utils.py - process_slide_content
 # ---------------------------------------------------------------------------
+
 
 class TestProcessSlideContent:
     """Test process_slide_content function."""
@@ -749,7 +773,10 @@ class TestProcessSlideContent:
         settings = MagicMock()
         settings.storage.custom_domain = None
 
-        with patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings):
+        with patch(
+            "ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings",
+            return_value=settings,
+        ):
             content = {"key": "value"}
             result = await process_slide_content(
                 agent=MagicMock(),
@@ -769,7 +796,10 @@ class TestProcessSlideContent:
         agent = MagicMock()
         agent.sandbox = None
 
-        with patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings):
+        with patch(
+            "ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings",
+            return_value=settings,
+        ):
             content = {"key": "value"}
             result = await process_slide_content(
                 agent=agent,
@@ -792,7 +822,10 @@ class TestProcessSlideContent:
 
         agent = self._make_agent_with_sandbox()
 
-        with patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings):
+        with patch(
+            "ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings",
+            return_value=settings,
+        ):
             content = {"key": "value"}
             result = await process_slide_content(
                 agent=agent,
@@ -824,9 +857,18 @@ class TestProcessSlideContent:
         ]
 
         with (
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings),
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings",
+                return_value=settings,
+            ),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils._build_storage",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils.SlideContentProcessor",
+                return_value=mock_processor,
+            ),
         ):
             result = await process_slide_content(
                 agent=agent,
@@ -856,9 +898,18 @@ class TestProcessSlideContent:
         content = {"content": "<html>original</html>", "filepath": "/slides/slide1.html"}
 
         with (
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings),
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings",
+                return_value=settings,
+            ),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils._build_storage",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils.SlideContentProcessor",
+                return_value=mock_processor,
+            ),
         ):
             result = await process_slide_content(
                 agent=agent,
@@ -891,9 +942,18 @@ class TestProcessSlideContent:
         ]
 
         with (
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings),
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings",
+                return_value=settings,
+            ),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils._build_storage",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils.SlideContentProcessor",
+                return_value=mock_processor,
+            ),
         ):
             result = await process_slide_content(
                 agent=agent,
@@ -920,9 +980,18 @@ class TestProcessSlideContent:
         mock_processor = AsyncMock()
 
         with (
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings", return_value=settings),
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils._build_storage", return_value=MagicMock()),
-            patch("ii_agent.agent.runtime.tools.slide_system.hook_utils.SlideContentProcessor", return_value=mock_processor),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils.get_settings",
+                return_value=settings,
+            ),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils._build_storage",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "ii_agent.agent.runtime.tools.slide_system.hook_utils.SlideContentProcessor",
+                return_value=mock_processor,
+            ),
         ):
             plain_string = "just a string"
             result = await process_slide_content(
@@ -938,82 +1007,83 @@ class TestProcessSlideContent:
 # GitHub skill: sanitize_skill_name and GitHubDownloadService.parse_url
 # ---------------------------------------------------------------------------
 
+
 class TestSanitizeSkillName:
     """Test sanitize_skill_name function."""
 
     def test_simple_name_passes_through(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("my-skill")
         assert result == "my-skill"
 
     def test_uppercase_converted_to_lowercase(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("MySkill")
         assert result == "myskill"
 
     def test_spaces_converted_to_hyphens(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("my skill name")
         assert result == "my-skill-name"
 
     def test_underscores_converted_to_hyphens(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("my_skill_name")
         assert result == "my-skill-name"
 
     def test_special_chars_removed(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("my-skill!@#$")
         assert result == "my-skill"
 
     def test_empty_string_raises_validation_error(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
-        from ii_agent.agent.runtime.skills.skills_ref.errors import ValidationError
+        from ii_agent.settings.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.skills_ref.errors import ValidationError
 
         with pytest.raises(ValidationError):
             sanitize_skill_name("")
 
     def test_none_raises_validation_error(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
-        from ii_agent.agent.runtime.skills.skills_ref.errors import ValidationError
+        from ii_agent.settings.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.skills_ref.errors import ValidationError
 
         with pytest.raises(ValidationError):
             sanitize_skill_name(None)
 
     def test_only_special_chars_raises_validation_error(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
-        from ii_agent.agent.runtime.skills.skills_ref.errors import ValidationError
+        from ii_agent.settings.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.skills_ref.errors import ValidationError
 
         with pytest.raises(ValidationError):
             sanitize_skill_name("!@#$%")
 
     def test_long_name_truncated(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name, MAX_SKILL_NAME_LENGTH
+        from ii_agent.settings.skills.github import sanitize_skill_name, MAX_SKILL_NAME_LENGTH
 
         long_name = "a" * 100
         result = sanitize_skill_name(long_name)
         assert len(result) <= MAX_SKILL_NAME_LENGTH
 
     def test_unicode_name_handled(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("café skill")
         assert isinstance(result, str)
         assert len(result) > 0
 
     def test_multiple_hyphens_collapsed(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("my---skill")
         assert "--" not in result
 
     def test_leading_trailing_hyphens_stripped(self):
-        from ii_agent.agent.runtime.skills.github import sanitize_skill_name
+        from ii_agent.settings.skills.github import sanitize_skill_name
 
         result = sanitize_skill_name("-my-skill-")
         assert not result.startswith("-")
@@ -1024,7 +1094,7 @@ class TestGitHubDownloadServiceParseURL:
     """Test GitHubDownloadService.parse_url."""
 
     def _make_service(self):
-        from ii_agent.agent.runtime.skills.github import GitHubDownloadService
+        from ii_agent.settings.skills.github import GitHubDownloadService
 
         return GitHubDownloadService()
 
@@ -1037,7 +1107,7 @@ class TestGitHubDownloadServiceParseURL:
         assert result.path == "skills/brand"
 
     def test_invalid_url_raises_parse_error(self):
-        from ii_agent.agent.runtime.skills.github import GitHubURLParseError
+        from ii_agent.settings.skills.github import GitHubURLParseError
 
         service = self._make_service()
         with pytest.raises(GitHubURLParseError):
@@ -1055,5 +1125,7 @@ class TestGitHubDownloadServiceParseURL:
 
     def test_url_with_feature_branch(self):
         service = self._make_service()
-        result = service.parse_url("https://github.com/owner/repo/tree/feature/my-branch/skills/test")
+        result = service.parse_url(
+            "https://github.com/owner/repo/tree/feature/my-branch/skills/test"
+        )
         assert result.owner == "owner"

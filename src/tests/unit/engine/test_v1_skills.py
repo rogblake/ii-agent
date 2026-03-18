@@ -1,13 +1,12 @@
 """Unit tests for engine/runtime/skills/ - SkillCreator base, Skill model, SkillProperties, validator."""
 
 from pathlib import Path
-from typing import Optional
 
 import pytest
 
 from ii_agent.agent.runtime.skills.base import SkillCreator
-from ii_agent.agent.runtime.skills.skills_ref.models import Skill, SkillProperties, SkillSource
-from ii_agent.agent.runtime.skills.skills_ref.validator import (
+from ii_agent.settings.skills.skills_ref.models import Skill, SkillProperties, SkillSource
+from ii_agent.settings.skills.skills_ref.validator import (
     MAX_COMPATIBILITY_LENGTH,
     MAX_DESCRIPTION_LENGTH,
     MAX_SKILL_NAME_LENGTH,
@@ -110,16 +109,12 @@ class TestSkillProperties:
         assert d["license"] == "Apache-2.0"
 
     def test_to_dict_includes_metadata_when_set(self):
-        props = SkillProperties(
-            name="skill", description="desc", metadata={"author": "Alice"}
-        )
+        props = SkillProperties(name="skill", description="desc", metadata={"author": "Alice"})
         d = props.to_dict()
         assert d["metadata"] == {"author": "Alice"}
 
     def test_to_dict_uses_kebab_case_for_allowed_tools(self):
-        props = SkillProperties(
-            name="skill", description="desc", allowed_tools="bash"
-        )
+        props = SkillProperties(name="skill", description="desc", allowed_tools="bash")
         d = props.to_dict()
         assert "allowed-tools" in d
 

@@ -51,7 +51,7 @@ from ii_agent.content.media.dependencies import (
     get_media_template_repository,
     get_media_template_service,
 )
-from ii_agent.content.skills.dependencies import (
+from ii_agent.settings.skills.dependencies import (
     get_skill_repository,
     get_skill_service,
 )
@@ -159,7 +159,7 @@ if TYPE_CHECKING:
     from ii_agent.sessions.service import SessionService
     from ii_agent.sessions.fork_service import SessionForkService
     from ii_agent.agent.application.validation_service import SessionValidationService
-    from ii_agent.content.skills.service import SkillService
+    from ii_agent.settings.skills.service import SkillService
     from ii_agent.content.slides.design.service import SlideDesignService
     from ii_agent.content.storybook.service import StorybookService
     from ii_agent.projects.design.service import ProjectDesignService
@@ -282,9 +282,7 @@ class ServiceContainer:
 
         # ── Services with cross-service deps ─────────────────────────────────
         user_svc = get_user_service(user_repo, api_key_repo, waitlist_repo, credit_svc)
-        session_svc = get_session_service(
-            session_repo, event_repo, sandbox_repo, agent_run_svc
-        )
+        session_svc = get_session_service(session_repo, event_repo, sandbox_repo, agent_run_svc)
         session_fork_svc = get_session_fork_service(session_repo, sandbox_repo)
         file_svc = get_file_service(file_repo, session_repo)
         llm_setting_svc = get_llm_setting_service(llm_setting_repo, session_repo)
@@ -324,11 +322,15 @@ class ServiceContainer:
         )
 
         project_design_svc = get_project_design_service(
-            project_design_repo, sandbox_svc,
-            llm_setting_svc, llm_billing_svc, llm_execution_svc,
+            project_design_repo,
+            sandbox_svc,
+            llm_setting_svc,
+            llm_billing_svc,
+            llm_execution_svc,
         )
         slide_design_svc = get_slide_design_service(
-            slide_design_repo, sandbox_svc,
+            slide_design_repo,
+            sandbox_svc,
         )
 
         return cls(

@@ -11,17 +11,18 @@ def convert(pdf_path, output_dir, max_dim=1000):
     images = convert_from_path(pdf_path, dpi=200)
 
     for i, image in enumerate(images):
+        output_image = image
         # Scale image if needed to keep width/height under `max_dim`
-        width, height = image.size
+        width, height = output_image.size
         if width > max_dim or height > max_dim:
             scale_factor = min(max_dim / width, max_dim / height)
             new_width = int(width * scale_factor)
             new_height = int(height * scale_factor)
-            image = image.resize((new_width, new_height))
+            output_image = output_image.resize((new_width, new_height))
 
         image_path = os.path.join(output_dir, f"page_{i + 1}.png")
-        image.save(image_path)
-        print(f"Saved page {i + 1} as {image_path} (size: {image.size})")
+        output_image.save(image_path)
+        print(f"Saved page {i + 1} as {image_path} (size: {output_image.size})")
 
     print(f"Converted {len(images)} pages to PNG images")
 

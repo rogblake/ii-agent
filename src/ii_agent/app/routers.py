@@ -17,7 +17,7 @@ def include_routers(app: FastAPI) -> None:
     from ii_agent.content.media import router as media_router
     from ii_agent.content.media.router import templates_router as media_templates_router
     from ii_agent.content.media.router import tools_router as media_tools_router
-    from ii_agent.content.skills import router as skills_settings_router
+    from ii_agent.settings.skills import router as skills_settings_router
     from ii_agent.content.slides import router as slides_router
     from ii_agent.content.slides import template_router as slide_templates_router
     from ii_agent.content.slides.design.router import router as slide_design_router

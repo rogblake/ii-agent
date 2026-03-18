@@ -5,8 +5,8 @@ from typing import Annotated
 from fastapi import Depends
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.content.skills.repository import SkillRepository
-from ii_agent.content.skills.service import SkillService
+from ii_agent.settings.skills.repository import SkillRepository
+from ii_agent.settings.skills.service import SkillService
 
 
 # ==================== Repository Dependencies ====================

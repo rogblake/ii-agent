@@ -1,11 +1,9 @@
 """Abstract base class for connector-based tool creation."""
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
-if TYPE_CHECKING:
-    from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
-    from ii_agent.agent.runtime.tools.base import BaseAgentTool
+from ii_agent.agent.runtime.tools.base import BaseAgentTool
 
 
 class BaseConnectorTool(ABC):
@@ -13,12 +11,12 @@ class BaseConnectorTool(ABC):
 
     @abstractmethod
     async def create_connector_tools(
-        self, workspace_manager: Optional["WorkspaceManager"] = None
-    ) -> List["BaseAgentTool"]:
+        self, workspace_path: Optional[str] = None
+    ) -> List[BaseAgentTool]:
         """Create connector tools for the current user/context.
 
         Args:
-            workspace_manager: Workspace manager for file operations where needed.
+            workspace_path: Workspace path in sandbox (e.g. "/workspace").
 
         Returns:
             List of connector tools (empty if none available or loading fails).

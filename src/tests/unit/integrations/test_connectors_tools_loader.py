@@ -58,14 +58,11 @@ class TestLoadConnectorToolsEmpty:
     async def test_returns_empty_list_when_no_connectors(self):
         db = _make_db_session([])
 
-        workspace = MagicMock()
-        sandbox = MagicMock()
-
         result = await load_connector_tools(
             db_session=db,
             user_id="user-1",
-            workspace_manager=workspace,
-            sandbox=sandbox,
+            workspace_path="/workspace",
+            sandbox=MagicMock(),
         )
 
         assert result == []
@@ -76,7 +73,7 @@ class TestLoadConnectorToolsEmpty:
         await load_connector_tools(
             db_session=db,
             user_id="user-42",
-            workspace_manager=MagicMock(),
+            workspace_path="/workspace",
             sandbox=MagicMock(),
         )
 
@@ -103,7 +100,7 @@ class TestLoadConnectorToolsGitHub:
             result = await load_connector_tools(
                 db_session=db,
                 user_id="user-1",
-                workspace_manager=MagicMock(),
+                workspace_path="/workspace",
                 sandbox=MagicMock(),
             )
 
@@ -113,8 +110,6 @@ class TestLoadConnectorToolsGitHub:
     async def test_github_tool_instantiated_with_correct_args(self):
         connector = _make_github_connector()
         db = _make_db_session([connector])
-        workspace = MagicMock()
-        sandbox = MagicMock()
         default_repo = {"owner": "acme", "name": "repo", "full_name": "acme/repo"}
 
         mock_github_tool = MagicMock()
@@ -127,14 +122,14 @@ class TestLoadConnectorToolsGitHub:
             await load_connector_tools(
                 db_session=db,
                 user_id="user-1",
-                workspace_manager=workspace,
-                sandbox=sandbox,
+                workspace_path="/workspace",
+                sandbox=MagicMock(),
                 default_repository=default_repo,
             )
 
         MockGitHub.assert_called_once_with(
             github_token="ghp_test_token",
-            workspace_manager=workspace,
+            workspace_path="/workspace",
             github_metadata={"default_org": "acme"},
             default_repository=default_repo,
         )
@@ -153,7 +148,7 @@ class TestLoadConnectorToolsGitHub:
             result = await load_connector_tools(
                 db_session=db,
                 user_id="user-1",
-                workspace_manager=MagicMock(),
+                workspace_path="/workspace",
                 sandbox=MagicMock(),
                 default_repository=None,
             )
@@ -176,7 +171,7 @@ class TestLoadConnectorToolsUnknownType:
         result = await load_connector_tools(
             db_session=db,
             user_id="user-1",
-            workspace_manager=MagicMock(),
+            workspace_path="/workspace",
             sandbox=MagicMock(),
         )
 
@@ -190,7 +185,7 @@ class TestLoadConnectorToolsUnknownType:
         result = await load_connector_tools(
             db_session=db,
             user_id="user-1",
-            workspace_manager=MagicMock(),
+            workspace_path="/workspace",
             sandbox=MagicMock(),
         )
         assert isinstance(result, list)
@@ -228,7 +223,7 @@ class TestLoadConnectorToolsErrorHandling:
             result = await load_connector_tools(
                 db_session=db,
                 user_id="user-1",
-                workspace_manager=MagicMock(),
+                workspace_path="/workspace",
                 sandbox=MagicMock(),
             )
 
@@ -254,7 +249,7 @@ class TestLoadConnectorToolsErrorHandling:
             result = await load_connector_tools(
                 db_session=db,
                 user_id="user-1",
-                workspace_manager=MagicMock(),
+                workspace_path="/workspace",
                 sandbox=MagicMock(),
             )
 

@@ -15,7 +15,7 @@ class GitHubAgentTool(BaseSandboxTool):
     def __init__(
         self,
         github_token: str,
-        workspace_manager: Any,
+        workspace_path: str = "/workspace",
         github_metadata: Optional[Dict[str, Any]] = None,
         default_repository: Optional[Dict[str, str]] = None,
     ):
@@ -23,13 +23,12 @@ class GitHubAgentTool(BaseSandboxTool):
 
         Args:
             github_token: GitHub OAuth access token
-            workspace_manager: Workspace manager for file operations (expects .container_workspace attribute)
-            sandbox: Sandbox instance for running commands (expects .run_command method)
+            workspace_path: Workspace path in sandbox (e.g. "/workspace")
             github_metadata: User metadata from GitHub (login, email, etc.)
             default_repository: Default repo context (owner, name, full_name, default_branch)
         """
         self.github_token = github_token
-        self.workspace_manager = workspace_manager
+        self.workspace_path = workspace_path
         self.github_metadata = github_metadata or {}
         self.default_repository = default_repository
         self._base_url = "https://api.github.com"
@@ -727,14 +726,7 @@ class GitHubAgentTool(BaseSandboxTool):
         owner, repo = self._get_repo_context(params)
         branch = params.get("branch")
 
-        # Use container_workspace for the sandbox path
-        container_workspace = self.workspace_manager.container_workspace
-        if container_workspace:
-            workspace_path = str(container_workspace)
-        else:
-            workspace_path = str(self.workspace_manager.root)
-
-        target_path = params.get("path", f"{workspace_path}/{repo}")
+        target_path = params.get("path", f"{self.workspace_path}/{repo}")
         current_step = "initialization"
 
         try:

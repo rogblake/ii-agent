@@ -79,10 +79,6 @@ _mod_stub(
     register_default_session_hooks=lambda *a, **kw: None,
 )
 
-_mod_stub(
-    "ii_agent.agent.runtime.workspace_manager",
-    WorkspaceManager=type("WorkspaceManager", (), {}),
-)
 
 # ---------------------------------------------------------------------------
 # Stub optional external dependencies

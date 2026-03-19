@@ -104,12 +104,6 @@ NOTE:
         duration_seconds = int(tool_input.get("duration_seconds", 5))
         input_image_path = tool_input.get("input_image_path", None)
 
-        # Validate output path is absolute and within workspace
-        # try:
-        #     self.workspace_manager.validate_path(output_path)
-        # except FileSystemValidationError as e:
-        #     return ToolResult(llm_content=f"Error: {e}", is_error=True)
-
         if not output_path.lower().endswith(".mp4"):
             return ToolResult(
                 llm_content=f"Error: output_path: `{output_path}` must end with .mp4",
@@ -128,12 +122,6 @@ NOTE:
         image_base64 = None
         image_mime_type = None
         if input_image_path:
-            # Validate input image path is absolute and within workspace
-            # try:
-            #     self.workspace_manager.validate_path(input_image_path)
-            # except FileSystemValidationError as e:
-            #     return ToolResult(llm_content=f"Error: {e}", is_error=True)
-
             # if not self.sandbox.files.exists(input_image_path):
             #     return ToolResult(
             #         llm_content=f"Error: input_image_path: `{input_image_path}` does not exist",

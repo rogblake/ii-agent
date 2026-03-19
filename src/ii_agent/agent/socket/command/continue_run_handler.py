@@ -17,7 +17,6 @@ from ii_agent.agent.socket.command.command_handler import (
 from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
 from ii_agent.agent.runtime.run.agent import RunCompletedEvent, RunOutput
 from ii_agent.agent.runtime.factory.factory import AgentFactory
-from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.agent.types import AgentType
 from ii_agent.agent.runtime.factory.tools import echo_message, generate_random_number
 from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
@@ -175,9 +174,6 @@ class ContinueRunHandler(CommandHandler):
                     model_id=current_session.llm_setting_id,
                 )
 
-            # Setup workspace
-            workspace_manager = WorkspaceManager.from_settings(self.container.config)
-
             connector_tool = ConnectorTool(user_id=str(session_info.user_id))
 
             # Create agent with same configuration
@@ -188,7 +184,7 @@ class ContinueRunHandler(CommandHandler):
                 llm_config=llm_config,
                 agent_type=AgentType(session_info.agent_type) or AgentType.GENERAL,
                 tool_args={},  # TODO: retrieve this information from session metadata
-                workspace_manager=workspace_manager,
+                workspace_path=self.container.config.workspace_path,
                 connector_tool=connector_tool,
             )
 

@@ -24,7 +24,6 @@ from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_real
 from ii_agent.agent.runtime.run.agent import RunCompletedEvent, RunOutput
 from ii_agent.agent.runtime.media import Image, File as UrlFile
 from ii_agent.agent.runtime.tools.plan import MilestoneTool, PlanModificationSuggestionsTool
-from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -150,8 +149,6 @@ class PlanHandler(CommandHandler):
                 )
             )
 
-            workspace_manager = WorkspaceManager.from_settings(self.container.config)
-
             # Create MilestoneTool with event_stream for direct save/emit
             milestone_tool = MilestoneTool(
                 session_id=session_info.id,
@@ -165,7 +162,6 @@ class PlanHandler(CommandHandler):
             agent = await self.container.agent_service.create_plan_agent_v1(
                 session_info=session_info,
                 llm_config=llm_config,
-                workspace_manager=workspace_manager,
                 plan_tools=[milestone_tool],
                 tool_args=query_command.tool_args,
                 metadata=query_command.metadata,
@@ -234,8 +230,6 @@ class PlanHandler(CommandHandler):
                 )
             )
 
-            workspace_manager = WorkspaceManager.from_settings(self.container.config)
-
             # Get the suggestions prompt
             suggestions_prompt = get_plan_modification_suggestions_prompt(
                 plan_summary=plan_data.get("summary", ""),
@@ -254,7 +248,6 @@ class PlanHandler(CommandHandler):
             agent = await self.container.agent_service.create_plan_suggestions_agent_v1(
                 session_info=session_info,
                 llm_config=llm_config,
-                workspace_manager=workspace_manager,
                 system_prompt=suggestions_prompt,
                 plan_tools=[suggestions_tool],
                 tool_args=query_command.tool_args,
@@ -324,8 +317,6 @@ class PlanHandler(CommandHandler):
                 )
             )
 
-            workspace_manager = WorkspaceManager.from_settings(self.container.config)
-
             # Create modification prompt with current plan context
             modification_prompt = get_plan_modification_execute_prompt(
                 plan_summary=plan_data.get("summary", ""),
@@ -346,7 +337,6 @@ class PlanHandler(CommandHandler):
             agent = await self.container.agent_service.create_plan_agent_v1(
                 session_info=session_info,
                 llm_config=llm_config,
-                workspace_manager=workspace_manager,
                 system_prompt=modification_prompt,
                 plan_tools=[milestone_tool],
                 tool_args=query_command.tool_args,

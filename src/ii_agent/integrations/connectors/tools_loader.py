@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 async def load_connector_tools(
     db_session: AsyncSession,
     user_id: str,
-    workspace_manager: Any,
+    workspace_path: str,
     sandbox: Any,
     default_repository: Optional[dict] = None,
 ) -> List[BaseAgentTool]:
@@ -29,7 +29,7 @@ async def load_connector_tools(
     Args:
         db_session: Database session
         user_id: User ID to load connectors for
-        workspace_manager: Workspace manager for file operations
+        workspace_path: Workspace path in sandbox (e.g. "/workspace")
         sandbox: Sandbox instance for running commands
         default_repository: Optional default GitHub repository context
             Format: {"owner": "...", "name": "...", "full_name": "...", "default_branch": "..."}
@@ -38,7 +38,7 @@ async def load_connector_tools(
         List[BaseAgentTool]: List of connector tool instances
 
     Example:
-        tools = await load_connector_tools(db, user_id, workspace_manager, sandbox, {"owner": "acme", "name": "repo"})
+        tools = await load_connector_tools(db, user_id, workspace_path, sandbox, {"owner": "acme", "name": "repo"})
         # Returns [GitHubAgentTool(...)] if user has GitHub connected
     """
     connector_tools: List[BaseAgentTool] = []
@@ -60,7 +60,7 @@ async def load_connector_tools(
                 # Instantiate GitHub tool
                 github_tool = GitHubAgentTool(
                     github_token=github_token,
-                    workspace_manager=workspace_manager,
+                    workspace_path=workspace_path,
                     github_metadata=github_metadata,
                     default_repository=default_repository,
                 )

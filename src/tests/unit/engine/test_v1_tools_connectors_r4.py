@@ -25,12 +25,9 @@ pytestmark = pytest.mark.unit
 def _make_github_tool(token="test-token", default_repo=None, github_metadata=None):
     from ii_agent.agent.runtime.tools.connectors.github import GitHubAgentTool
 
-    workspace = MagicMock()
-    workspace.container_workspace = "/workspace"
-
     return GitHubAgentTool(
         github_token=token,
-        workspace_manager=workspace,
+        workspace_path="/workspace",
         github_metadata=github_metadata or {},
         default_repository=default_repo,
     )

@@ -7,7 +7,6 @@ from sqlalchemy import select
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.config.settings import get_settings
 from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
-from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.tools.base import BaseAgentTool
 from ii_agent.agent.runtime.tools.connectors.base import BaseConnectorTool
 from ii_agent.agent.runtime.tools.connectors.composio_mcp import load_composio_tools_for_user
@@ -46,7 +45,7 @@ class ConnectorTool(BaseConnectorTool):
 
     async def _load_db_connectors(
         self,
-        workspace_manager: WorkspaceManager,
+        workspace_path: str,
     ) -> List[BaseAgentTool]:
         """Load connector tools from database records."""
         tools: List[BaseAgentTool] = []
@@ -72,7 +71,7 @@ class ConnectorTool(BaseConnectorTool):
                 if connector.connector_type == ConnectorTypeEnum.GITHUB.value:
                     github_tool = GitHubAgentTool(
                         github_token=connector.access_token,
-                        workspace_manager=workspace_manager,
+                        workspace_path=workspace_path,
                         github_metadata=connector.connector_metadata or {},
                         default_repository=self._default_repository,
                     )
@@ -143,7 +142,7 @@ class ConnectorTool(BaseConnectorTool):
         return tools
 
     async def create_connector_tools(
-        self, workspace_manager: Optional[WorkspaceManager] = None
+        self, workspace_path: Optional[str] = None
     ) -> List[BaseAgentTool]:
         """Load connector tools for the configured user.
 
@@ -153,20 +152,17 @@ class ConnectorTool(BaseConnectorTool):
         3. MCP server-based tools
 
         Args:
-            workspace_manager: Workspace manager for file operations.
+            workspace_path: Workspace path in sandbox (e.g. "/workspace").
 
         Returns:
             List of loaded connector tools.
         """
-        if workspace_manager is None:
-            logger.warning("Workspace manager is required to create connector tools; skipping")
-            return []
 
         tools: List[BaseAgentTool] = []
         existing_names: Set[str] = set()
 
         # # Load database connectors
-        # db_tools = await self._load_db_connectors(workspace_manager)
+        # db_tools = await self._load_db_connectors(workspace_path)
         # _add_tools_without_duplicates(tools, db_tools, existing_names)
 
         # Load Composio tools

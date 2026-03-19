@@ -20,7 +20,6 @@ from ii_agent.agent.socket.command.command_handler import (
 from ii_agent.agent.runtime.run.agent import RunCancelledEvent, RunCompletedEvent, RunOutput
 from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
 from ii_agent.agent.runtime.media import Image, File as UrlFile
-from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.core.logger import logger
 
@@ -78,8 +77,6 @@ class UserQueryHandler(CommandHandler):
 
         final_status = RunStatus.FAILED
         try:
-            workspace_manager = WorkspaceManager.from_settings(self.container.config)
-
             init_content = InitAgentContent(
                 model_id=query_command.model_id,
                 tool_args=query_command.tool_args,
@@ -100,7 +97,6 @@ class UserQueryHandler(CommandHandler):
             agent = await self.container.agent_service.create_agent_v1(
                 session_info=session_info,
                 llm_config=llm_config,
-                workspace_manager=workspace_manager,
                 agent_type=AgentType(session_info.agent_type) or AgentType.GENERAL,
                 tool_args=init_content.tool_args,
                 metadata=init_content.metadata,

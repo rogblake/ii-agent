@@ -19,13 +19,9 @@ def make_tool(
     github_metadata=None,
     default_repository=None,
 ) -> GitHubAgentTool:
-    workspace_manager = MagicMock()
-    workspace_manager.container_workspace = "/workspace"
-    workspace_manager.root = MagicMock()
-    workspace_manager.root.__str__ = lambda self: "/workspace"
     return GitHubAgentTool(
         github_token=github_token,
-        workspace_manager=workspace_manager,
+        workspace_path="/workspace",
         github_metadata=github_metadata or {},
         default_repository=default_repository,
     )

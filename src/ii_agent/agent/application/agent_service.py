@@ -8,7 +8,6 @@ from ii_agent.core.logger import logger
 from ii_agent.agent.prompts.plan_mode_prompt import get_plan_mode_prompt
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.core.storage.base import BaseStorage
-from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.agents.agent import IIAgent
 from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
 from ii_agent.agent.runtime.factory.factory import AgentFactory
@@ -29,7 +28,6 @@ class AgentService:
         self,
         session_info: SessionInfo,
         llm_config: LLMConfig,
-        workspace_manager: WorkspaceManager,
         agent_type: AgentType = AgentType.GENERAL,
         tool_args: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -45,7 +43,7 @@ class AgentService:
             user_id=session_info.user_id,
             session_id=str(session_info.id),
             llm_config=llm_config,
-            workspace_manager=workspace_manager,
+            workspace_path=self.config.workspace_path,
             tool_args=tool_args,
             metadata=metadata,
             agent_type=agent_type,
@@ -58,7 +56,6 @@ class AgentService:
         self,
         session_info: SessionInfo,
         llm_config: LLMConfig,
-        workspace_manager: WorkspaceManager,
         system_prompt: Optional[str] = None,
         plan_tools: Optional[List] = None,
         tool_args: Optional[Dict[str, Any]] = None,
@@ -69,7 +66,6 @@ class AgentService:
         Args:
             session_info: Session information
             llm_config: LLM configuration
-            workspace_manager: Workspace manager instance
             system_prompt: Optional custom prompt (defaults to plan mode prompt)
             plan_tools: List of plan-specific tools (MilestoneToolV1, etc.)
             tool_args: Tool configuration arguments
@@ -96,7 +92,7 @@ class AgentService:
             user_id=session_info.user_id,
             session_id=str(session_info.id),
             llm_config=llm_config,
-            workspace_manager=workspace_manager,
+            workspace_path=self.config.workspace_path,
             tool_args=tool_args,
             metadata=metadata,
             agent_type=AgentType.GENERAL,
@@ -118,7 +114,6 @@ class AgentService:
         self,
         session_info: SessionInfo,
         llm_config: LLMConfig,
-        workspace_manager: WorkspaceManager,
         system_prompt: str,
         plan_tools: Optional[List] = None,
         tool_args: Optional[Dict[str, Any]] = None,
@@ -129,7 +124,6 @@ class AgentService:
         Args:
             session_info: Session information
             llm_config: LLM configuration
-            workspace_manager: Workspace manager instance
             system_prompt: Custom prompt for generating suggestions (required)
             plan_tools: List of plan-specific tools (PlanModificationSuggestionsToolV1, etc.)
             tool_args: Tool configuration arguments
@@ -152,7 +146,7 @@ class AgentService:
             user_id=session_info.user_id,
             session_id=str(session_info.id),
             llm_config=llm_config,
-            workspace_manager=workspace_manager,
+            workspace_path=self.config.workspace_path,
             tool_args=tool_args,
             metadata=metadata,
             agent_type=AgentType.GENERAL,

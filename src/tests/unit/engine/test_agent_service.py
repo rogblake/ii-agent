@@ -22,13 +22,10 @@ async def test_create_plan_agent_adds_plan_tools(settings_factory, in_memory_sto
 
     session_info = SimpleNamespace(id=str(uuid4()), user_id="u1")
     llm_config = LLMConfig(model="gpt-4o", api_type=APITypes.OPENAI)
-    workspace_manager = SimpleNamespace(root=SimpleNamespace(absolute=lambda: SimpleNamespace(as_posix=lambda: "/workspace")))
-
     tool = object()
     agent = await service.create_plan_agent_v1(
         session_info=session_info,
         llm_config=llm_config,
-        workspace_manager=workspace_manager,
         plan_tools=[tool],
     )
 

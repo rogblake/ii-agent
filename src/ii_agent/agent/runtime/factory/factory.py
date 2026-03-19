@@ -7,7 +7,6 @@ from uuid import UUID
 
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
 from ii_agent.agent.prompts.agent_prompts import get_system_prompt_for_agent_type
-from ii_agent.agent.runtime.workspace_manager import WorkspaceManager
 from ii_agent.agent.runtime.agents.agent import IIAgent
 from ii_agent.agent.types import AgentType, Provider
 from ii_agent.agent.runtime.skills.base import SkillCreator
@@ -48,7 +47,7 @@ class AgentFactory:
         session_id: str,
         llm_config: LLMConfig,
         agent_type: AgentType = AgentType.GENERAL,
-        workspace_manager: Optional[WorkspaceManager] = None,
+        workspace_path: Optional[str] = None,
         session_store: Optional[SessionStore] = None,
         tool_args: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -76,7 +75,7 @@ class AgentFactory:
             session_id: Session ID
             llm_config: LLM configuration
             agent_type: Type of agent to create
-            workspace_manager: Workspace manager instance
+            workspace_path: Workspace path in sandbox (e.g. "/workspace")
             session_store: Session store for persistence
             tool_args: Tool configuration arguments (media_generation, etc.)
             metadata: Additional metadata
@@ -125,7 +124,7 @@ class AgentFactory:
         if connector_tool is not None:
             try:
                 connector_tools = await connector_tool.create_connector_tools(
-                    workspace_manager=workspace_manager,
+                    workspace_path=workspace_path,
                 )
                 if connector_tools:
                     logger.info(
@@ -146,9 +145,7 @@ class AgentFactory:
 
         # Generate system prompt if not provided
         if system_prompt is None:
-            workspace_path = (
-                workspace_manager.root.absolute().as_posix() if workspace_manager else "/workspace"
-            )
+            workspace_path = workspace_path or "/workspace"
 
             # Check if A2A agents are available (from metadata or config)
             has_a2a = False  # This would be determined by A2AManager in production

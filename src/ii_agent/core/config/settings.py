@@ -215,11 +215,6 @@ class Settings(BaseSettings):
         description="Upload subdirectory within workspace",
     )
 
-    use_container_workspace: bool = Field(
-        default=False,
-        description="Use container-based workspace",
-    )
-
     docker_container_id: Optional[str] = Field(
         default=None,
         description="Docker container ID for workspace",
@@ -421,32 +416,16 @@ class Settings(BaseSettings):
     @property
     def workspace_root(self) -> str:
         """Resolve the absolute filesystem path used for local workspace operations."""
-        candidates: list[Path] = []
-        if not self.use_container_workspace:
-            candidates.append(Path(os.path.expanduser(self.workspace_path)))
-        fallback_workspace = (
+        workspace = (
             Path(os.path.expanduser(self.storage.file_store_path)) / "workspace"
         )
-        if fallback_workspace not in candidates:
-            candidates.append(fallback_workspace)
-        for candidate in candidates:
-            try:
-                candidate.mkdir(parents=True, exist_ok=True)
-                return str(candidate.resolve())
-            except PermissionError:
-                logger.warning(
-                    "Unable to create workspace directory at %s due to permission error, trying next fallback.",
-                    candidate,
-                )
-            except OSError as exc:
-                logger.warning(
-                    "Failed to initialize workspace directory at %s: %s. Trying next fallback.",
-                    candidate,
-                    exc,
-                )
-        raise PermissionError(
-            "Unable to initialize a writable workspace directory from configuration."
-        )
+        try:
+            workspace.mkdir(parents=True, exist_ok=True)
+            return str(workspace.resolve())
+        except (PermissionError, OSError) as exc:
+            raise PermissionError(
+                f"Unable to initialize workspace directory at {workspace}: {exc}"
+            ) from exc
 
     @property
     def ii_auth_url(self) -> str:

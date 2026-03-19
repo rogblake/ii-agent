@@ -110,7 +110,7 @@ services:
       SERVER_PORT: ${SANDBOX_SERVER_PORT:-8100}
       REDIS_URL: redis://redis:6379/0
       MCP_PORT: ${MCP_PORT:-6060}
-    entrypoint: ["/bin/bash", "/app/start_sandbox_server.sh"]
+    entrypoint: ["/bin/bash", "/app/scripts/start_sandbox_server.sh"]
     ports:
       - "${SANDBOX_SERVER_PORT:-8100}:8100"
     healthcheck:

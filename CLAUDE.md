@@ -313,7 +313,7 @@ class Session(Base):
 python -c "from ii_agent.sessions import Session, session_service; print('OK')"
 
 # Start server
-./start.sh
+./scripts/start.sh
 
 # Health check
 curl http://localhost:8000/health

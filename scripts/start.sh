@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+
+cd "$REPO_ROOT"
+
 echo "Starting Xvfb virtual framebuffer..."
 
 Xvfb :99 -screen 0 1280x720x16 &

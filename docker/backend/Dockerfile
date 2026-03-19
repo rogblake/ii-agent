@@ -66,6 +66,7 @@ FROM dependencies AS production
 COPY pyproject.toml uv.lock README.md alembic.ini ./
 COPY src/ src/
 COPY migrations/ migrations/
+COPY scripts/start.sh scripts/start_a2a_server.sh scripts/start_sandbox_server.sh scripts/
 COPY docker/backend/entrypoint.sh /entrypoint.sh
 
 # Install the project itself (source code only — deps are already cached)
@@ -78,7 +79,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 RUN apt-get purge -y --auto-remove openssh-client git \
  && rm -rf /var/lib/apt/lists/* /root/.ssh
 
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh /app/scripts/start.sh /app/scripts/start_a2a_server.sh /app/scripts/start_sandbox_server.sh
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"

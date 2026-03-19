@@ -8,7 +8,7 @@ This file is the entry point for agents working in this repository. It provides 
 
 ```bash
 uv sync --frozen          # Install dependencies
-./start.sh                # Start the server
+./scripts/start.sh        # Start the server
 curl localhost:8000/health # Verify
 ```
 
@@ -72,6 +72,6 @@ make format           # Ruff format + fix
 make lint             # Ruff check + format validation
 uv run pytest         # Run tests
 uv run pytest -k "test_name"  # Run specific test
-./start.sh            # Start server (Xvfb + uv run python -m ii_agent.ws_server)
+./scripts/start.sh    # Start server (Xvfb + uv run python -m ii_agent.ws_server)
 uv run python -m ii_agent.ws_server  # Start server directly
 ```

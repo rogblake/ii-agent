@@ -1,9 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # II A2A Server Startup Script
 # This script starts the A2A server for II Agent platform
 
-set -e
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+
+cd "$REPO_ROOT"
 
 # Parse command-line arguments
 SHOW_HELP="false"
@@ -117,37 +122,37 @@ echo "Log Level: $A2A_LOG_LEVEL"
 echo "Max Workers: $A2A_MAX_WORKERS"
 echo "Timeout: $A2A_TIMEOUT"
 
-# Resolve Python interpreter (prefer python3)
-PYTHON_BIN="${PYTHON:-$(command -v python3 || command -v python)}"
-if [ -z "$PYTHON_BIN" ]; then
-  echo "Error: python3 or python is not installed or not in PATH"
+# Resolve uv command for the project's managed Python environment
+UV_BIN="${UV_BIN:-uv}"
+if ! command -v "$UV_BIN" >/dev/null 2>&1; then
+  echo "Error: uv is not installed or not in PATH"
   exit 1
 fi
-echo "Using Python interpreter: $PYTHON_BIN"
+echo "Using uv command: $UV_BIN"
 
 # Check if the A2A module can be imported
 echo "Checking A2A module availability..."
-if ! "$PYTHON_BIN" -c "from ii_agent.a2a.config import A2AConfig" >/dev/null 2>&1; then
+if ! "$UV_BIN" run python -c "from ii_agent.a2a.config import A2AConfig" >/dev/null 2>&1; then
   echo "Error: Cannot import A2A module. Make sure you're in the correct directory."
   exit 1
 fi
 
 # Check if required dependencies are available
 echo "Checking dependencies..."
-if ! "$PYTHON_BIN" -c "import uvicorn" >/dev/null 2>&1; then
-  echo "Error: uvicorn is not installed. Please install it with: pip install uvicorn"
+if ! "$UV_BIN" run python -c "import uvicorn" >/dev/null 2>&1; then
+  echo "Error: uvicorn is not installed in the uv environment."
   exit 1
 fi
 
 # Check if a2a-sdk is available
-if ! "$PYTHON_BIN" -c "import a2a" >/dev/null 2>&1; then
-  echo "Error: a2a-sdk is not installed. Please install it with: pip install a2a-sdk"
+if ! "$UV_BIN" run python -c "import a2a" >/dev/null 2>&1; then
+  echo "Error: a2a-sdk is not installed in the uv environment."
   exit 1
 fi
 
 # Resolve the public Agent Card URL using the Python helper (falls back on failure)
 CARD_BASE_URL=""
-if CARD_BASE_URL=$("$PYTHON_BIN" - <<'PY'
+if CARD_BASE_URL=$("$UV_BIN" run python - <<'PY'
 from ii_agent.a2a.config import A2AConfig
 from ii_agent.a2a.__main__ import resolve_agent_card_base_url
 
@@ -175,4 +180,4 @@ export A2A_TIMEOUT
 export A2A_THIRD_PARTY_AGENTS
 export A2A_ALLOWED_API_KEYS
 
-exec "$PYTHON_BIN" -m ii_agent.a2a
+exec "$UV_BIN" run python -m ii_agent.a2a

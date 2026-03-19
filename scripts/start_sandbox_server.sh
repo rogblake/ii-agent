@@ -1,14 +1,20 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # II Sandbox Server Startup Script
 # This script starts the standalone sandbox server
 
-set -e
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+
+cd "$REPO_ROOT"
 
 # Default configuration
 DEFAULT_HOST="0.0.0.0"
 DEFAULT_PORT="8100"
 DEFAULT_PROVIDER="e2b"
+DEFAULT_REDIS_URL="redis://localhost:6379/0"
 
 # Allow overriding via environment variables
 export SERVER_HOST="${SERVER_HOST:-$DEFAULT_HOST}"
@@ -30,7 +36,7 @@ echo "Provider: $PROVIDER"
 echo "Redis URL: $REDIS_URL"
 
 # Check if E2B API key is set when using E2B provider
-if [ "$PROVIDER" = "e2b" ] && [ -z "$E2B_API_KEY" ]; then
+if [ "$PROVIDER" = "e2b" ] && [ -z "${E2B_API_KEY:-}" ]; then
   echo "Error: E2B_API_KEY environment variable is required when using E2B provider"
   exit 1
 fi
@@ -50,7 +56,7 @@ fi
 
 # Start the server using uvicorn
 echo "Starting server..."
-exec uvicorn ii_sandbox_server.main:app \
+exec uv run uvicorn ii_sandbox_server.main:app \
   --host "$SERVER_HOST" \
   --port "$SERVER_PORT" \
   --reload \

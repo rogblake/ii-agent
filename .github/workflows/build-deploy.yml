@@ -10,7 +10,7 @@ on:
         options:
           - dev
           - dev1
-
+          - dev2
 concurrency:
   group: build-deploy-${{ inputs.environment }}
   cancel-in-progress: true
@@ -54,7 +54,7 @@ jobs:
 
           # Shallow clone, single branch
           git clone --depth 1 --single-branch -b main \
-            git@github.com:Intelligent-Internet/ii-agent-mono.git infra-repo
+            git@github.com:Intelligent-Internet/ii-infras-mono.git infra-repo
           cd infra-repo
 
           # Update backend + frontend image tags

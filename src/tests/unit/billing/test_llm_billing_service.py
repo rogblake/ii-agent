@@ -83,10 +83,10 @@ class TestCalculate:
         credits = LLMBillingService._calculate(record, pricing)
 
         expected_usd = (
-            (500_000 / 1_000_000) * 3.0       # input
-            + (200_000 / 1_000_000) * 15.0     # output
-            + (100_000 / 1_000_000) * 3.75     # cache write
-            + (300_000 / 1_000_000) * 0.3      # cache read
+            (500_000 / 1_000_000) * 3.0  # input
+            + (200_000 / 1_000_000) * 15.0  # output
+            + (100_000 / 1_000_000) * 3.75  # cache write
+            + (300_000 / 1_000_000) * 0.3  # cache read
         )
         assert abs(credits - usd_to_credits(expected_usd)) < 0.001
 
@@ -250,6 +250,46 @@ class TestQuoteLLMCall:
         assert output_cap == 1000
         assert float(quote.reserve_usd) == pytest.approx(expected_reserve_usd)
         assert quote.metadata["cache_write_tokens_estimate"] == cache_write_est
+
+    @pytest.mark.asyncio
+    async def test_quote_caps_reservation_hold_at_fifteen_credits(self):
+        """Large output caps should not reserve more than 15 credits upfront."""
+        from ii_agent.billing.credits.schemas import CreditBalance
+        from datetime import datetime, timezone
+
+        credit_svc = MagicMock()
+        credit_svc.get_balance = AsyncMock(
+            return_value=CreditBalance(
+                user_id=_USER_ID,
+                credits=10_000.0,
+                bonus_credits=0.0,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
+        billing_svc, _ = _make_billing_service(credit_service=credit_svc)
+        pricing = ModelPricing.get_default_pricing("claude-sonnet-4-5")
+
+        quote, output_cap = await billing_svc._quote_llm_call(
+            AsyncMock(),
+            user_id=_USER_ID,
+            model_id="claude-sonnet-4-5",
+            pricing=pricing,
+            input_tokens=1_000,
+            model_cap=20_000,
+        )
+
+        cache_write_est = int(1_000 * 0.25)
+        expected_uncapped_usd = (
+            (1_000 / 1_000_000) * pricing.input_price_per_million
+            + (20_000 / 1_000_000) * pricing.output_price_per_million
+            + (cache_write_est / 1_000_000) * pricing.cache_write_price_per_million
+            + 0.001
+        )
+
+        assert output_cap == 20_000
+        assert float(quote.reserve_usd) == pytest.approx(float(15 / usd_to_credits(1)))
+        assert float(quote.max_usd) == pytest.approx(expected_uncapped_usd)
+        assert quote.max_usd > quote.reserve_usd
 
 
 class TestReserveToolCall:

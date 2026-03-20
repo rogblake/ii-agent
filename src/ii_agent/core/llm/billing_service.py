@@ -310,7 +310,9 @@ class LLMBillingService:
     ) -> None:
         """Mark a reservation as settlement_failed after a settle exception."""
         await self._reservation_service.mark_settlement_failed(
-            db, reservation_id=reservation_id, error=error,
+            db,
+            reservation_id=reservation_id,
+            error=error,
         )
 
     async def reserve_tool_call(
@@ -331,9 +333,7 @@ class LLMBillingService:
         if quote is None:
             return None
         if quote.strategy == QuoteStrategy.POST_FACTO:
-            raise ValueError(
-                f"Tool {tool_name} must provide an exact or bounded upfront quote"
-            )
+            raise ValueError(f"Tool {tool_name} must provide an exact or bounded upfront quote")
 
         hold = await self._reservation_service.reserve(
             db,
@@ -578,6 +578,9 @@ class LLMBillingService:
     # reservation that 100 % caused for users near their credit limit.
     # Tune up if shortfalls from cache writes become common.
     _CACHE_WRITE_RESERVE_FRACTION = Decimal("0.25")
+    # Keep individual LLM holds readable in the UI and avoid pinning an
+    # outsized share of the user's balance before settlement.
+    _MAX_LLM_RESERVE_CREDITS = Decimal("15")
 
     async def _quote_llm_call(
         self,
@@ -590,24 +593,17 @@ class LLMBillingService:
         model_cap: int,
     ) -> tuple[BillingQuote, int]:
         """Estimate a bounded LLM reservation and affordable output cap."""
-        input_cost_usd = Decimal(
-            str((input_tokens / 1_000_000) * pricing.input_price_per_million)
-        )
+        input_cost_usd = Decimal(str((input_tokens / 1_000_000) * pricing.input_price_per_million))
         cache_write_tokens_est = (
             int(input_tokens * float(self._CACHE_WRITE_RESERVE_FRACTION))
             if pricing.cache_write_price_per_million > 0
             else 0
         )
         cache_write_cost_usd = Decimal(
-            str(
-                (cache_write_tokens_est / 1_000_000)
-                * pricing.cache_write_price_per_million
-            )
+            str((cache_write_tokens_est / 1_000_000) * pricing.cache_write_price_per_million)
         )
         balance = await self._credit_service.get_balance(db, user_id)
-        available_credits = (
-            balance.credits + balance.bonus_credits if balance is not None else 0.0
-        )
+        available_credits = balance.credits + balance.bonus_credits if balance is not None else 0.0
         available_usd = credits_to_usd(available_credits)
         safety_margin_usd = Decimal("0.001")
         if pricing.output_price_per_million <= 0:
@@ -615,14 +611,10 @@ class LLMBillingService:
         else:
             available_for_output = max(
                 Decimal("0"),
-                available_usd
-                - input_cost_usd
-                - cache_write_cost_usd
-                - safety_margin_usd,
+                available_usd - input_cost_usd - cache_write_cost_usd - safety_margin_usd,
             )
             affordable_cap = math.floor(
-                float(available_for_output)
-                / (pricing.output_price_per_million / 1_000_000)
+                float(available_for_output) / (pricing.output_price_per_million / 1_000_000)
             )
         output_cap = max(0, min(model_cap, affordable_cap))
         if output_cap < _MIN_USEFUL_OUTPUT_TOKENS:
@@ -634,26 +626,24 @@ class LLMBillingService:
                     usd_to_credits(
                         float(input_cost_usd)
                         + float(cache_write_cost_usd)
-                        + (_MIN_USEFUL_OUTPUT_TOKENS / 1_000_000)
-                        * pricing.output_price_per_million
+                        + (_MIN_USEFUL_OUTPUT_TOKENS / 1_000_000) * pricing.output_price_per_million
                     )
                 ),
             )
 
-        output_cost_usd = Decimal(
-            str((output_cap / 1_000_000) * pricing.output_price_per_million)
+        output_cost_usd = Decimal(str((output_cap / 1_000_000) * pricing.output_price_per_million))
+        uncapped_reserve_usd = (
+            input_cost_usd + cache_write_cost_usd + output_cost_usd + safety_margin_usd
         )
-        reserve_usd = (
-            input_cost_usd
-            + cache_write_cost_usd
-            + output_cost_usd
-            + safety_margin_usd
+        reserve_usd = min(
+            uncapped_reserve_usd,
+            credits_to_usd(self._MAX_LLM_RESERVE_CREDITS),
         )
         return (
             BillingQuote(
                 strategy="bounded",
                 reserve_usd=reserve_usd,
-                max_usd=reserve_usd,
+                max_usd=uncapped_reserve_usd,
                 metadata={
                     "input_tokens_estimate": input_tokens,
                     "cache_write_tokens_estimate": cache_write_tokens_est,
@@ -756,10 +746,22 @@ class LLMBillingService:
         boundary via ``Decimal(str(...))``.
         """
         _M = Decimal("1000000")
-        input_cost = Decimal(record.input_tokens) * Decimal(str(pricing.input_price_per_million)) / _M
-        output_cost = Decimal(record.output_tokens) * Decimal(str(pricing.output_price_per_million)) / _M
-        cache_write_cost = Decimal(record.cache_write_tokens) * Decimal(str(pricing.cache_write_price_per_million)) / _M
-        cache_read_cost = Decimal(record.cache_read_tokens) * Decimal(str(pricing.cache_read_price_per_million)) / _M
+        input_cost = (
+            Decimal(record.input_tokens) * Decimal(str(pricing.input_price_per_million)) / _M
+        )
+        output_cost = (
+            Decimal(record.output_tokens) * Decimal(str(pricing.output_price_per_million)) / _M
+        )
+        cache_write_cost = (
+            Decimal(record.cache_write_tokens)
+            * Decimal(str(pricing.cache_write_price_per_million))
+            / _M
+        )
+        cache_read_cost = (
+            Decimal(record.cache_read_tokens)
+            * Decimal(str(pricing.cache_read_price_per_million))
+            / _M
+        )
 
         return (
             input_cost

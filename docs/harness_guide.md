@@ -170,7 +170,7 @@ The following are capabilities described in the harness article or implemented i
 
 **Article describes:** `$code-change-verification` skill MUST run before marking work complete. Enforced via AGENTS.md policies.
 
-**We have:** `make format` + `make lint` as manual rules. No enforced skill that runs the full stack.
+**We have:** manual Ruff rules on changed Python files. No enforced skill that runs the full stack.
 
 **What's needed:**
 1. `.agents/skills/code-change-verification/` with `run.sh` that executes: format → lint → typecheck → tests

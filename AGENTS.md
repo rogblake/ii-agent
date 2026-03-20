@@ -34,7 +34,7 @@ curl localhost:8000/health # Verify
 ## Mandatory Rules
 
 1. **Use `uv run`** for all Python commands (`uv run pytest`, `uv run python ...`).
-2. **Run `make format` + `make lint`** before marking work complete.
+2. **Run Ruff only on the Python files you changed** before marking work complete (`uv run ruff check --fix-only <changed_python_files>`, `uv run ruff format <changed_python_files>`, `uv run ruff check <changed_python_files>`, `uv run ruff format --check <changed_python_files>`). If you changed no Python files, skip Ruff.
 3. **Never call `CreditService.deduct()` directly** for LLM/tool billing — use the reservation system (see `CLAUDE.md` Billing section).
 4. **Use Dep aliases everywhere** — never bare `= Depends(get_x)` in function signatures (see `CLAUDE.md` Dependency Injection Pattern).
 5. **Use `LLMExecutionService`** for any new code that calls an LLM outside the agent runtime loop.
@@ -60,7 +60,7 @@ curl localhost:8000/health # Verify
 
 1. Create a feature branch from `develop`.
 2. Implement changes following patterns in `CLAUDE.md`.
-3. Run `make format` and `make lint`.
+3. Run Ruff on the Python files you changed.
 4. Run tests: `uv run pytest`.
 5. For complex work, create an ExecPlan (see [`docs/PLANS.md`](docs/PLANS.md)).
 
@@ -68,8 +68,10 @@ curl localhost:8000/health # Verify
 
 ```bash
 make install          # Install deps + pre-commit hooks
-make format           # Ruff format + fix
-make lint             # Ruff check + format validation
+uv run ruff check --fix-only <changed_python_files>
+uv run ruff format <changed_python_files>
+uv run ruff check <changed_python_files>
+uv run ruff format --check <changed_python_files>
 uv run pytest         # Run tests
 uv run pytest -k "test_name"  # Run specific test
 ./scripts/start.sh    # Start server (Xvfb + uv run python -m ii_agent.ws_server)

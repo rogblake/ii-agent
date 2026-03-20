@@ -423,16 +423,18 @@ class LLMBillingService:
 1. Estimate input tokens (tiktoken or len/4 fallback)
 2. Look up ModelPricing for the model
 3. Compute:
-   - input_cost     = input_tokens × input_price_per_million
-   - cache_reserve  = 25% of input_tokens × cache_write_price (conservative)
-   - output_cost    = output_cap × output_price_per_million
-   - safety_margin  = $0.001
-4. Compute affordable output cap from user's remaining balance
-5. If output_cap < 128 tokens → raise InsufficientCreditsError
-6. Return BillingQuote(reserve_usd, max_usd) + output_token_cap
+   - input_cost       = input_tokens × input_price_per_million
+   - cache_reserve    = 75% of input_tokens × cache_write_price
+   - affordable_cap   = remaining balance after input/cache reserve
+   - output_estimate  = min(output_cap, ceil(input_tokens / 10))
+   - reserve_estimate = input + cache + estimated output + $0.001
+   - max_usd          = min(input + cache + full output_cap + $0.001, $10)
+   - reserve_usd      = min(reserve_estimate, max_usd)
+4. If output_cap < 128 tokens → raise InsufficientCreditsError
+5. Return BillingQuote(reserve_usd=estimated hold, max_usd=bounded max) + output_token_cap
 ```
 
-The output cap is enforced on the provider via `_apply_reserved_output_cap()` (agent) or `provider_options` (chat), so the provider physically cannot exceed what was reserved.
+The output cap is enforced on the provider via `_apply_reserved_output_cap()` (agent) or `provider_options` (chat). The initial hold is only an estimate; settlement may charge a shortfall if actual usage exceeds that hold.
 
 ### Two Runtime Paths
 

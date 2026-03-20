@@ -25,7 +25,7 @@ The disclosure layers:
 Constraints are multipliers for agents. Rules that exist only in documentation drift. Rules encoded in tooling apply everywhere at once.
 
 Current enforcement:
-- **Ruff** — Formatting and linting (`make format`, `make lint`)
+- **Ruff** — Formatting and linting on changed Python files (`uv run ruff check --fix-only <changed_python_files>`, `uv run ruff format <changed_python_files>`, `uv run ruff check <changed_python_files>`, `uv run ruff format --check <changed_python_files>`)
 - **Type checking** — Mypy for static analysis
 - **Pre-commit hooks** — Automated checks before commits
 - **Coverage threshold** — 85% minimum enforced in CI

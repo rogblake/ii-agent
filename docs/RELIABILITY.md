@@ -11,7 +11,9 @@ LLMBillingService.reserve_*_llm_call()
   → estimate_tokens(messages) — tiktoken or len/4 fallback
   → ModelPricing lookup (billing/credits/pricing.py)
   → _quote_llm_call():
-      input_cost + cache_reserve(25%) + output_cost + safety_margin($0.001)
+      input_cost + cache_reserve(75%) + estimated_output_cost(input / 10) + safety_margin($0.001)
+      → max_usd capped at $10
+      → reserve_usd clamped to max_usd when needed
       → affordable output cap from remaining balance
       → if output_cap < 128 tokens → InsufficientCreditsError
   → CreditReservationService.reserve():
@@ -21,7 +23,7 @@ LLMBillingService.reserve_*_llm_call()
   → Returns ReservationHold with output_token_cap
 ```
 
-The output cap is enforced at the LLM provider level — the provider physically cannot generate more tokens than reserved.
+The output cap is enforced at the LLM provider level. The initial hold is an estimate, so settlement can still detect and charge a shortfall up to the capped response.
 
 ### Phase 2: Settle (After Work Completes)
 

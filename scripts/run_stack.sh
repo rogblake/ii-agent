@@ -176,6 +176,7 @@ fi
 
 # Start the backend after the PUBLIC_TOOL_SERVER_URL is finalized.
 compose_up backend
+compose_up celery
 compose_up frontend
 
 frontend_port=$(get_env_value FRONTEND_PORT 1420)
@@ -188,6 +189,7 @@ cat <<SUMMARY
 Stack is running (project name: $PROJECT_NAME)
   Frontend:             http://localhost:${frontend_port}
   Backend:              http://localhost:${backend_port}
+  Celery worker:        docker compose logs -f celery
   Sandbox server:       http://localhost:${sandbox_port}
   Tool server (local):  http://localhost:${tool_port}
   Tool server (public): ${current_public_url}

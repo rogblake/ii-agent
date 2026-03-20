@@ -8,8 +8,8 @@ from typing import AsyncIterator, Dict, Optional, TYPE_CHECKING
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.exc import StaleDataError
 
-from ii_agent.core.config.settings import Settings
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.chat.types import (
     BinaryContent,
@@ -44,7 +44,6 @@ from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.title_service import SessionTitleService
 
 if TYPE_CHECKING:
-    from ii_agent.chat.messages.repository import ChatMessageRepository
     from ii_agent.core.container import ServiceContainer
 
 logger = logging.getLogger(__name__)
@@ -157,9 +156,7 @@ class ChatService:
         if not session or session.user_id != user_id:
             raise SessionNotFoundError("Session not found or access denied")
 
-    async def validate_public_session_access(
-        self, db: AsyncSession, *, session_id: str
-    ) -> None:
+    async def validate_public_session_access(self, db: AsyncSession, *, session_id: str) -> None:
         session = await self._session_repo.get_public_by_id(db, session_id)
         if not session:
             raise SessionNotFoundError("Session not found or not public")
@@ -175,9 +172,7 @@ class ChatService:
         if not model_info:
             raise ModelNotFoundError(f"Model not found: {model_id}")
 
-    async def get_llm_config(
-        self, db: AsyncSession, *, model_id: str, user_id: str
-    ) -> LLMConfig:
+    async def get_llm_config(self, db: AsyncSession, *, model_id: str, user_id: str) -> LLMConfig:
         try:
             return await self._llm_setting_service.get_user_llm_config(
                 db,
@@ -197,7 +192,10 @@ class ChatService:
     ):
         """Delegate to message history service."""
         return await self._message_history.build_message_history_response(
-            db, session_id=session_id, limit=limit, before=before,
+            db,
+            session_id=session_id,
+            limit=limit,
+            before=before,
         )
 
     async def stream_chat_response(
@@ -228,25 +226,19 @@ class ChatService:
                 container=self._container,
             )
             tools[media_context.tool_name] = True
-            logger.info(
-                f"[MEDIA] Prepared media context: tool={media_context.tool_name}"
-            )
+            logger.info(f"[MEDIA] Prepared media context: tool={media_context.tool_name}")
 
         model_id = chat_request.model_id
 
         if media_context and media_context.should_clear_context:
             messages = []
-            logger.info(
-                f"Media generation (clear context) for session {session_id}"
-            )
+            logger.info(f"Media generation (clear context) for session {session_id}")
         else:
             messages = await ContextWindowManager.load_context_for_llm(
                 db_session=db,
                 session_id=session_id,
             )
-            logger.info(
-                f"Loaded full context for session {session_id} ({len(messages)} messages)"
-            )
+            logger.info(f"Loaded full context for session {session_id} ({len(messages)} messages)")
 
         # Build user message content
         display_content = chat_request.content
@@ -264,9 +256,7 @@ class ChatService:
         message_metadata = None
         if media_context:
             message_metadata = {
-                "media": chat_request.media_preferences.model_dump(
-                    exclude_none=True
-                )
+                "media": chat_request.media_preferences.model_dump(exclude_none=True)
             }
             llm_content += media_context.tool_hint
 
@@ -335,9 +325,7 @@ class ChatService:
         messages.append(llm_user_message)
 
         # Phase 2: Build tool registry
-        llm_config = await self.get_llm_config(
-            db, model_id=model_id, user_id=user_id
-        )
+        llm_config = await self.get_llm_config(db, model_id=model_id, user_id=user_id)
         resolved_model_id = (
             llm_config.setting_id
             or llm_config.application_model_name
@@ -414,9 +402,7 @@ class ChatService:
             await self._chat_run_service.fail_run(
                 db,
                 chat_run=chat_run,
-                status=(
-                    ChatRunStatus.ABORTED if is_cancelled else ChatRunStatus.FAILED
-                ),
+                status=(ChatRunStatus.ABORTED if is_cancelled else ChatRunStatus.FAILED),
                 error_message=None if is_cancelled else str(e),
                 error_code=self._chat_run_error_code(e, is_cancelled=is_cancelled),
             )
@@ -548,15 +534,11 @@ class ChatService:
 
         llm_configs = {}
         model_names = {}
-        all_models = await self._llm_setting_service.get_all_available_models(
-            db, user_id=user_id
-        )
+        all_models = await self._llm_setting_service.get_all_available_models(db, user_id=user_id)
         failed_models = []
         for mid in all_model_ids:
             try:
-                llm_configs[mid] = await self.get_llm_config(
-                    db, model_id=mid, user_id=user_id
-                )
+                llm_configs[mid] = await self.get_llm_config(db, model_id=mid, user_id=user_id)
                 model_info = next((m for m in all_models.models if m.id == mid), None)
                 model_names[mid] = model_info.model if model_info else mid
             except Exception as e:
@@ -657,7 +639,9 @@ class ChatService:
 
             # Update task status
             await db.refresh(agent_task)
-            agent_task.status = ChatRunStatus.FAILED if council_had_error else ChatRunStatus.COMPLETED
+            agent_task.status = (
+                ChatRunStatus.FAILED if council_had_error else ChatRunStatus.COMPLETED
+            )
             await db.commit()
 
             await cancel.cleanup_run(run_id)
@@ -713,9 +697,7 @@ class ChatService:
     async def clear_messages(self, db: AsyncSession, *, session_id: str) -> int:
         return await self._message_history._repo.delete_by_session(db, session_id)
 
-    async def stop_conversation(
-        self, db: AsyncSession, *, session_id: str
-    ) -> Optional[str]:
+    async def stop_conversation(self, db: AsyncSession, *, session_id: str) -> Optional[str]:
         session = await self._session_repo.get_by_id(db, session_id)
         if not session:
             raise SessionNotFoundError("Session not found")
@@ -729,15 +711,23 @@ class ChatService:
             run_id = str(running_run.id)
             cancelled = await cancel.cancel_run(run_id)
             if cancelled:
-                await db.refresh(running_run)
-                if running_run.status == ChatRunStatus.RUNNING:
-                    running_run.status = ChatRunStatus.ABORTED
+                try:
+                    await db.refresh(running_run)
+                    if running_run.status == ChatRunStatus.RUNNING:
+                        running_run.status = ChatRunStatus.ABORTED
+                        await db.flush()
+                        logger.info(f"Cancelled running chat run {run_id} for session {session_id}")
+                    else:
+                        logger.info(
+                            f"Chat run {run_id} already finished with status {running_run.status}, skipping abort"
+                        )
+                except StaleDataError:
+                    await db.rollback()
                     logger.info(
-                        f"Cancelled running chat run {run_id} for session {session_id}"
-                    )
-                else:
-                    logger.info(
-                        f"Chat run {run_id} already finished with status {running_run.status}, skipping abort"
+                        "Chat run %s changed while stopping session %s; "
+                        "treating cancellation as best-effort",
+                        run_id,
+                        session_id,
                     )
 
         last_message = await self._message_history._repo.get_last_by_session(db, session_id)

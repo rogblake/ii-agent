@@ -1,4 +1,5 @@
 """Unit tests for chat service, file processor, file_processing_service."""
+
 from __future__ import annotations
 
 import io
@@ -512,7 +513,9 @@ class TestChatFileProcessor:
         from ii_agent.chat.application.file_processor import ProcessedFiles
 
         processed = ProcessedFiles(
-            binary_parts=[BinaryContent(path="uploads/img.png", mime_type="image/png", data=b"png")],
+            binary_parts=[
+                BinaryContent(path="uploads/img.png", mime_type="image/png", data=b"png")
+            ],
             text_parts=[],
             large_file_ids=set(),
             large_file_info=[],
@@ -551,7 +554,11 @@ class TestChatFileProcessor:
 
         processed = ProcessedFiles(
             binary_parts=[],
-            text_parts=[TextContent(text="\n\n--- File: test.txt ---\nfile content\n--- End of test.txt ---\n")],
+            text_parts=[
+                TextContent(
+                    text="\n\n--- File: test.txt ---\nfile content\n--- End of test.txt ---\n"
+                )
+            ],
             large_file_ids=set(),
             large_file_info=[],
             skipped_files=[],
@@ -600,14 +607,17 @@ class TestChatFileProcessor:
         mock_vs.retrieve = AsyncMock(return_value=SimpleNamespace(id="vs-1"))
         mock_vs.add_files_batch = AsyncMock(return_value=[SimpleNamespace(id="vsf-1")])
 
-        with patch(
-            "ii_agent.chat.application.file_processing_service.process_files_for_message",
-            new=AsyncMock(return_value=processed),
-        ), patch(
-            "ii_agent.chat.application.file_processing_service.openai_vector_store",
-            mock_vs,
+        with (
+            patch(
+                "ii_agent.chat.application.file_processing_service.process_files_for_message",
+                new=AsyncMock(return_value=processed),
+            ),
+            patch(
+                "ii_agent.chat.application.file_processing_service.get_openai_vector_store",
+                return_value=mock_vs,
+            ),
         ):
-            vector_store = await processor.process_uploads(
+            await processor.process_uploads(
                 AsyncMock(),
                 user_id="user-1",
                 session_id="sess-1",
@@ -688,9 +698,7 @@ class TestChatServiceValidateSessionAccess:
 
         service = self._make_service(session=None)
         with pytest.raises(SessionNotFoundError):
-            await service.validate_session_access(
-                AsyncMock(), session_id="s1", user_id="u1"
-            )
+            await service.validate_session_access(AsyncMock(), session_id="s1", user_id="u1")
 
     @pytest.mark.asyncio
     async def test_raises_for_wrong_user(self):
@@ -699,18 +707,14 @@ class TestChatServiceValidateSessionAccess:
         session = SimpleNamespace(user_id="other-user")
         service = self._make_service(session=session)
         with pytest.raises(SessionNotFoundError):
-            await service.validate_session_access(
-                AsyncMock(), session_id="s1", user_id="u1"
-            )
+            await service.validate_session_access(AsyncMock(), session_id="s1", user_id="u1")
 
     @pytest.mark.asyncio
     async def test_passes_for_correct_user(self):
         session = SimpleNamespace(user_id="u1")
         service = self._make_service(session=session)
         # Should not raise
-        await service.validate_session_access(
-            AsyncMock(), session_id="s1", user_id="u1"
-        )
+        await service.validate_session_access(AsyncMock(), session_id="s1", user_id="u1")
 
 
 # ============================================================================
@@ -755,9 +759,7 @@ class TestChatServiceValidateModelForChat:
         model = SimpleNamespace(id="claude-3-sonnet")
         service = self._make_service(models=[model])
         # Should not raise
-        await service.validate_model_for_chat(
-            AsyncMock(), model_id="claude-3-sonnet", user_id="u1"
-        )
+        await service.validate_model_for_chat(AsyncMock(), model_id="claude-3-sonnet", user_id="u1")
 
 
 # ============================================================================
@@ -820,7 +822,7 @@ class TestChatServiceUpdateSessionNameIfUntitled:
 
 
 class TestChatServiceStopConversation:
-    def _make_service(self, session=None, running_task=None):
+    def _make_service(self, session=None, running_task=None, last_message=None):
         from ii_agent.chat.application.chat_service import ChatService
 
         class FakeRepo:
@@ -833,11 +835,9 @@ class TestChatServiceStopConversation:
 
         class FakeMsgHistoryRepo:
             async def get_last_by_session(self, db, session_id):
-                return None
+                return last_message
 
-        msg_history = SimpleNamespace(
-            _repo=FakeMsgHistoryRepo()
-        )
+        msg_history = SimpleNamespace(_repo=FakeMsgHistoryRepo())
 
         return ChatService(
             file_processor=SimpleNamespace(_config=_make_settings()),
@@ -871,3 +871,32 @@ class TestChatServiceStopConversation:
         real_session_id = str(uuid.uuid4())
         result = await service.stop_conversation(AsyncMock(), session_id=real_session_id)
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_rolls_back_and_returns_last_message_on_stale_abort_race(self):
+        import uuid
+
+        from sqlalchemy.orm.exc import StaleDataError
+
+        session = SimpleNamespace(user_id="u1")
+        running_task = SimpleNamespace(id=uuid.uuid4(), status="running")
+        last_message = SimpleNamespace(id=uuid.uuid4())
+        service = self._make_service(
+            session=session,
+            running_task=running_task,
+            last_message=last_message,
+        )
+
+        db = AsyncMock()
+        db.flush.side_effect = StaleDataError(
+            "UPDATE statement on table 'chat_runs' expected to update 1 row(s); 0 were matched."
+        )
+
+        with patch(
+            "ii_agent.chat.application.chat_service.cancel.cancel_run",
+            new=AsyncMock(return_value=True),
+        ):
+            result = await service.stop_conversation(db, session_id=str(uuid.uuid4()))
+
+        db.rollback.assert_awaited_once()
+        assert result == str(last_message.id)

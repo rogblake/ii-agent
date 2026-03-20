@@ -12,13 +12,12 @@ Everything an agent needs to work effectively must be discoverable in the reposi
 
 ## 2. Progressive Disclosure Over Monolithic Instructions
 
-`AGENTS.md` is a map, not a manual. It points agents to deeper documentation. This prevents context overload — when everything is "important," nothing is.
+`AGENTS.md` is the entrypoint, not the full manual. It gives agents the repo map and architecture summary, then points them to deeper documentation. This prevents context overload — when everything is "important," nothing is.
 
 The disclosure layers:
-1. `AGENTS.md` — Table of contents (~120 lines)
-2. `ARCHITECTURE.md` — Domain map and structural rules
-3. `CLAUDE.md` — Full development reference with code examples
-4. `docs/` — Deep dives into specific concerns
+1. `AGENTS.md` — Repo map and architecture summary
+2. `CLAUDE.md` — Full development reference with code examples
+3. `docs/` — Deep dives into specific concerns
 
 ## 3. Enforce Architecture Mechanically
 

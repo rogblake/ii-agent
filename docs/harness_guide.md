@@ -12,10 +12,10 @@ We used `openai-agents-python` as a reference for how harness engineering is imp
 
 | Harness Principle | II-Agent Implementation |
 |-------------------|------------------------|
-| **AGENTS.md as table of contents** | `AGENTS.md` (~100 lines) points to `ARCHITECTURE.md`, `CLAUDE.md`, and `docs/` |
-| **Progressive disclosure** | Three layers: AGENTS.md → ARCHITECTURE.md → CLAUDE.md + docs/ |
+| **AGENTS.md as repository entrypoint** | `AGENTS.md` combines the repo map and architecture overview, then points to `CLAUDE.md` and `docs/` |
+| **Progressive disclosure** | Three layers: AGENTS.md → CLAUDE.md → docs/ |
 | **Repository knowledge as system of record** | `CLAUDE.md` (633 lines) + `docs/` with design docs, product specs, references |
-| **Architecture documentation** | `ARCHITECTURE.md` with domain map, layer rules, API surface |
+| **Architecture documentation** | `AGENTS.md` with domain map, layer rules, request flow, and API surface |
 | **Design patterns documentation** | `docs/DESIGN.md` with service pattern, DI, model conventions |
 | **Execution plan framework** | `docs/PLANS.md` with ExecPlan template and living section requirements |
 | **Design docs index** | `docs/design-docs/index.md` cataloguing existing design decisions |

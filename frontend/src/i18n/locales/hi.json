@@ -1639,13 +1639,15 @@
             "editTitle": "उन्नत मोड संपादित करें",
             "toggleLabel": "उन्नत मोड",
             "success": {
-                "saved": "उन्नत मोड सहेजा गया"
+                "saved": "उन्नत मोड सहेजा गया",
+                "referenceGenerated": "रेफरेंस इमेज जनरेट हो गई"
             },
             "errors": {
                 "sessionRequired": "कृपया पहले एक बातचीत चुनें या बनाएं।",
                 "enableFailed": "उन्नत मोड सक्षम नहीं किया जा सका।",
                 "disableFailed": "उन्नत मोड अक्षम नहीं किया जा सका।",
-                "saveFailed": "उन्नत मोड सहेजने में विफल।"
+                "saveFailed": "उन्नत मोड सहेजने में विफल।",
+                "referenceGenerateFailed": "रेफरेंस इमेज जनरेट करने में विफल।"
             },
             "categories": {
                 "subject": {

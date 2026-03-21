@@ -348,6 +348,7 @@ export const AdvancedModeModal = ({
                         [category]: { ...prev[category], images }
                     }
                 })
+                toast.success(t('media.advancedMode.success.referenceGenerated'))
             } else {
                 // Remove generating placeholder on error
                 setData((prev) => ({
@@ -363,6 +364,10 @@ export const AdvancedModeModal = ({
                     'Failed to generate reference image:',
                     result.error
                 )
+                toast.error(
+                    result.error ||
+                        t('media.advancedMode.errors.referenceGenerateFailed')
+                )
             }
         } catch (error) {
             // Remove generating placeholder on error
@@ -376,6 +381,7 @@ export const AdvancedModeModal = ({
                 }
             }))
             console.error('Failed to generate reference image:', error)
+            toast.error(t('media.advancedMode.errors.referenceGenerateFailed'))
         }
     }
 
@@ -577,7 +583,7 @@ export const AdvancedModeModal = ({
             </div>
 
             {promptModal.open && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center">
+                <div className="fixed inset-0 z-[260] flex items-center justify-center">
                     <div
                         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
                         onClick={() =>
@@ -588,7 +594,7 @@ export const AdvancedModeModal = ({
                             })
                         }
                     />
-                    <div className="relative bg-white dark:bg-[#1a2a30] rounded-2xl shadow-2xl w-full max-w-md border border-[#d7dde2] dark:border-[#2a3a40] m-4">
+                    <div className="relative z-[261] bg-white dark:bg-[#1a2a30] rounded-2xl shadow-2xl w-full max-w-md border border-[#d7dde2] dark:border-[#2a3a40] m-4">
                         <div className="flex items-center justify-between p-4 border-b border-[#d7dde2] dark:border-[#2a3a40]">
                             <h3 className="text-base font-semibold text-[#0b1218] dark:text-white">
                                 {t(

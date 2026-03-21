@@ -1639,13 +1639,15 @@
             "editTitle": "高度モードを編集",
             "toggleLabel": "高度モード",
             "success": {
-                "saved": "高度モードを保存しました"
+                "saved": "高度モードを保存しました",
+                "referenceGenerated": "参照画像を生成しました"
             },
             "errors": {
                 "sessionRequired": "最初に会話を選択または作成してください。",
                 "enableFailed": "高度モードを有効にできません。",
                 "disableFailed": "高度モードを無効にできません。",
-                "saveFailed": "高度モードの保存に失敗しました。"
+                "saveFailed": "高度モードの保存に失敗しました。",
+                "referenceGenerateFailed": "参照画像の生成に失敗しました。"
             },
             "categories": {
                 "subject": {

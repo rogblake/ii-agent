@@ -1655,13 +1655,15 @@
             "editTitle": "Chỉnh sửa chế độ nâng cao",
             "toggleLabel": "Chế độ nâng cao",
             "success": {
-                "saved": "Đã lưu chế độ nâng cao"
+                "saved": "Đã lưu chế độ nâng cao",
+                "referenceGenerated": "Đã tạo ảnh tham chiếu"
             },
             "errors": {
                 "sessionRequired": "Vui lòng chọn hoặc tạo cuộc trò chuyện trước.",
                 "enableFailed": "Không thể bật chế độ nâng cao.",
                 "disableFailed": "Không thể tắt chế độ nâng cao.",
-                "saveFailed": "Lưu chế độ nâng cao thất bại."
+                "saveFailed": "Lưu chế độ nâng cao thất bại.",
+                "referenceGenerateFailed": "Không thể tạo ảnh tham chiếu."
             },
             "categories": {
                 "subject": {

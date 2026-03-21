@@ -1658,13 +1658,15 @@
             "editTitle": "Edit Advanced Mode",
             "toggleLabel": "Advanced Mode",
             "success": {
-                "saved": "Advanced mode saved"
+                "saved": "Advanced mode saved",
+                "referenceGenerated": "Reference image generated"
             },
             "errors": {
                 "sessionRequired": "Please select or create a conversation first.",
                 "enableFailed": "Unable to enable advanced mode.",
                 "disableFailed": "Unable to disable advanced mode.",
-                "saveFailed": "Failed to save advanced mode."
+                "saveFailed": "Failed to save advanced mode.",
+                "referenceGenerateFailed": "Failed to generate reference image."
             },
             "categories": {
                 "subject": {

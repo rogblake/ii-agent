@@ -1,15 +1,15 @@
-"""Usage tracking service — owns session-level credit accumulation and history."""
+"""Usage tracking service — owns subject-linked usage tracking and history."""
 
 import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from sqlalchemy import func, join, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.billing.credits.service import CreditDeductionResult, CreditService
-from ii_agent.billing.reservations.types import BillingKind
+from ii_agent.billing.credits.service import CreditService
+from ii_agent.billing.types import BillingContextValue, SubjectKind
 from ii_agent.billing.usage.models import SessionMetrics
 from ii_agent.billing.usage.repository import MetricsRepository
 from ii_agent.billing.usage.usage_record_repository import UsageRecordRepository
@@ -18,10 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 class UsageService:
-    """Orchestrates credit deductions with session-level usage tracking.
+    """Orchestrates credit deductions with subject-linked usage tracking.
 
-    This service owns the cross-domain join between ``SessionMetrics``
-    and ``Session`` — keeping that concern out of ``CreditService``.
+    This service owns the cross-domain reads needed to resolve subject-linked
+    usage into UI-facing history, while keeping the balance mutation logic out
+    of ``CreditService``.
     """
 
     def __init__(
@@ -39,87 +40,14 @@ class UsageService:
         """Raise if the account is blocked by billing reconciliation."""
         await self._credit_service.require_billing_ok(db, user_id)
 
-    # ------------------------------------------------------------------
-    # Deduct + track
-    # ------------------------------------------------------------------
-
-    async def deduct_and_track_session_usage(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        session_id: str,
-        amount: float,
-        model_id: Optional[str] = None,
-        source_domain: str = BillingKind.LLM_USAGE,
-        idempotency_key: Optional[str] = None,
-        entry_metadata: Optional[dict[str, Any]] = None,
-    ) -> bool:
-        """Deduct credits and record usage against a session.
-
-        Returns ``True`` if deduction/tracking completed or amount <= 0.
-        Returns ``False`` when deduction fails (insufficient balance, missing user).
-        """
-        if amount <= 0:
-            return True
-
-        metadata: dict[str, Any] = {"session_id": session_id}
-        if entry_metadata:
-            metadata.update(entry_metadata)
-        if model_id:
-            metadata["model_id"] = model_id
-
-        result = await self._credit_service.deduct(
-            db,
-            user_id,
-            amount,
-            source_domain=source_domain,
-            source_id=session_id,
-            entry_metadata=metadata,
-            idempotency_key=idempotency_key,
-        )
-        if result is False:
-            return False
-
-        # result is None → duplicate idempotency key, already charged.
-        # Skip session metrics accumulation to avoid double-counting.
-        if result is None:
-            return True
-
-        if isinstance(result, CreditDeductionResult) and self._usage_record_repo is not None:
-            billing_kind = metadata.get("billing_kind") or source_domain
-            await self._usage_record_repo.create(
-                db,
-                user_id=user_id,
-                session_id=session_id,
-                run_id=metadata.get("run_id"),
-                source_domain=source_domain,
-                billing_kind=billing_kind,
-                app_kind=metadata.get("app_kind"),
-                tool_name=metadata.get("tool_name"),
-                model_id=model_id,
-                provider=metadata.get("pricing_provider") or metadata.get("provider"),
-                input_tokens=metadata.get("input_tokens", 0),
-                output_tokens=metadata.get("output_tokens", 0),
-                cache_read_tokens=metadata.get("cache_read_tokens", 0),
-                cache_write_tokens=metadata.get("cache_write_tokens", 0),
-                reasoning_tokens=metadata.get("reasoning_tokens", 0),
-                latency_ms=metadata.get("latency_ms"),
-                cost_usd=metadata.get("direct_cost_usd") or metadata.get("cost_usd"),
-                credits_charged=result.total_charged,
-                ledger_entry_id=result.ledger_entry_id,
-                usage_metadata=metadata,
-            )
-
-        await self.accumulate_session_usage(db, session_id, -amount)
-        return True
-
     async def record_settled_usage(
         self,
         db: AsyncSession,
         *,
         user_id: str,
-        session_id: str | None,
+        billing_context: str | None,
+        subject_kind: str,
+        subject_id: str | None,
         run_id,
         amount: float,
         source_domain: str,
@@ -138,13 +66,21 @@ class UsageService:
         usage_metadata: dict[str, Any] | None = None,
         app_kind: str | None = None,
     ) -> int | None:
-        """Record already-settled usage and update session metrics."""
+        """Record already-settled usage and update subject-linked metrics."""
+        resolved_billing_context = (
+            billing_context
+            or (usage_metadata or {}).get("billing_context")
+            or (BillingContextValue.default_for_app_kind(app_kind) if app_kind else None)
+            or BillingContextValue.UNKNOWN
+        )
         usage_record_id: int | None = None
         if self._usage_record_repo is not None:
             usage_record = await self._usage_record_repo.create(
                 db,
                 user_id=user_id,
-                session_id=session_id,
+                billing_context=resolved_billing_context,
+                subject_kind=subject_kind,
+                subject_id=subject_id,
                 run_id=run_id,
                 source_domain=source_domain,
                 billing_kind=billing_kind,
@@ -165,8 +101,12 @@ class UsageService:
             )
             usage_record_id = usage_record.id
 
-        if session_id:
-            await self.accumulate_session_usage(db, session_id, -amount)
+        await self._accumulate_subject_usage(
+            db,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+            credits=-amount,
+        )
 
         return usage_record_id
 
@@ -206,9 +146,7 @@ class UsageService:
             await db.flush()
             logger.debug("Accumulated %.4f credits for session %s", credits, session_id)
         except Exception:
-            logger.error(
-                "Error accumulating session usage for %s", session_id, exc_info=True
-            )
+            logger.error("Error accumulating session usage for %s", session_id, exc_info=True)
             raise
 
     async def get_session_usage(
@@ -226,9 +164,7 @@ class UsageService:
                 }
             return None
         except Exception:
-            logger.error(
-                "Error getting session usage for %s", session_id, exc_info=True
-            )
+            logger.error("Error getting session usage for %s", session_id, exc_info=True)
             raise
 
     # ------------------------------------------------------------------
@@ -248,46 +184,65 @@ class UsageService:
 
         Returns (items, total_count, session_title, total_credits).
         """
+        items, total, subject_title, total_credits = await self.get_subject_usage_detail(
+            db,
+            user_id=user_id,
+            subject_kind=SubjectKind.SESSION.value,
+            subject_id=session_id,
+            page=page,
+            per_page=per_page,
+        )
+        return items, total, subject_title or "", total_credits
+
+    async def get_subject_usage_detail(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        subject_kind: str,
+        subject_id: str,
+        *,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> tuple[list[dict], int, str | None, float]:
+        """Get detailed usage breakdown for a specific billing subject."""
         from ii_agent.sessions.models import Session
         from ii_agent.billing.usage.models import UsageRecord
 
-        # Verify session belongs to user and get title
-        session_result = await db.execute(
-            select(Session.id, Session.name).where(
-                Session.id == session_id,
-                Session.user_id == user_id,
+        subject_title = await self._resolve_subject_title(
+            db,
+            user_id=user_id,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+            session_model=Session,
+            usage_record_model=UsageRecord,
+        )
+        if subject_title is None:
+            return [], 0, None, 0.0
+
+        total_credits_result = await db.execute(
+            select(func.coalesce(func.sum(UsageRecord.credits_charged), 0)).where(
+                UsageRecord.subject_kind == subject_kind,
+                UsageRecord.subject_id == subject_id,
+                UsageRecord.user_id == user_id,
             )
         )
-        session_row = session_result.one_or_none()
-        if session_row is None:
-            return [], 0, "", 0.0
+        total_credits = float(total_credits_result.scalar_one())
 
-        session_title = session_row.name or "Untitled Session"
-
-        # Get total credits from SessionMetrics (authoritative)
-        metrics_result = await db.execute(
-            select(SessionMetrics.credits).where(
-                SessionMetrics.session_id == session_id,
-            )
-        )
-        total_credits_row = metrics_result.scalar_one_or_none()
-        total_credits = float(total_credits_row) if total_credits_row is not None else 0.0
-
-        # Count total records
         count_result = await db.execute(
             select(func.count()).where(
-                UsageRecord.session_id == session_id,
+                UsageRecord.subject_kind == subject_kind,
+                UsageRecord.subject_id == subject_id,
                 UsageRecord.user_id == user_id,
             )
         )
         total = count_result.scalar() or 0
 
-        # Fetch paginated usage records
         offset = (page - 1) * per_page
         result = await db.execute(
             select(UsageRecord)
             .where(
-                UsageRecord.session_id == session_id,
+                UsageRecord.subject_kind == subject_kind,
+                UsageRecord.subject_id == subject_id,
                 UsageRecord.user_id == user_id,
             )
             .order_by(UsageRecord.created_at.asc())
@@ -299,6 +254,7 @@ class UsageService:
         items = [
             {
                 "id": r.id,
+                "billing_context": r.billing_context,
                 "billing_kind": r.billing_kind,
                 "source_domain": r.source_domain,
                 "model_id": r.model_id,
@@ -316,54 +272,184 @@ class UsageService:
             for r in records
         ]
 
-        return items, total, session_title, total_credits
+        return items, total, subject_title, total_credits
 
-    async def get_history(
-        self, db: AsyncSession, user_id: str, *, page: int = 1, per_page: int = 20
+    async def get_subject_history(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        *,
+        subject_kind: str | None = None,
+        page: int = 1,
+        per_page: int = 20,
     ) -> tuple[list[dict], int]:
-        """Get paginated credit usage history for a user.
-
-        Joins ``SessionMetrics`` with ``Session`` — this cross-domain
-        read is owned here rather than in ``CreditService``.
-        """
+        """Get paginated credit usage history grouped by billing subject."""
         from ii_agent.sessions.models import Session
+        from ii_agent.billing.usage.models import UsageRecord
 
-        base_query = (
+        where_clauses = [
+            UsageRecord.user_id == user_id,
+            UsageRecord.subject_id.isnot(None),
+        ]
+        if subject_kind is not None:
+            where_clauses.append(UsageRecord.subject_kind == subject_kind)
+
+        grouped = (
             select(
-                Session.id.label("session_id"),
-                Session.name.label("session_title"),
-                SessionMetrics.credits,
-                SessionMetrics.updated_at,
+                UsageRecord.subject_kind.label("subject_kind"),
+                UsageRecord.subject_id.label("subject_id"),
+                func.coalesce(func.sum(UsageRecord.credits_charged), 0).label("credits"),
+                func.max(UsageRecord.created_at).label("updated_at"),
             )
-            .select_from(
-                join(SessionMetrics, Session, SessionMetrics.session_id == Session.id)
-            )
-            .where(Session.user_id == user_id)
+            .where(*where_clauses)
+            .group_by(UsageRecord.subject_kind, UsageRecord.subject_id)
+            .subquery()
         )
 
-        count_result = await db.execute(
-            select(func.count())
-            .select_from(
-                join(SessionMetrics, Session, SessionMetrics.session_id == Session.id)
-            )
-            .where(Session.user_id == user_id)
-        )
+        count_result = await db.execute(select(func.count()).select_from(grouped))
         total = count_result.scalar() or 0
 
         offset = (page - 1) * per_page
         result = await db.execute(
-            base_query.order_by(SessionMetrics.updated_at.desc())
+            select(
+                grouped.c.subject_kind,
+                grouped.c.subject_id,
+                grouped.c.credits,
+                grouped.c.updated_at,
+            )
+            .order_by(grouped.c.updated_at.desc())
             .limit(per_page)
             .offset(offset)
+        )
+        rows = list(result.all())
+
+        subject_titles = await self._resolve_history_subject_titles(
+            db,
+            user_id=user_id,
+            rows=rows,
+            session_model=Session,
         )
 
         history = [
             {
-                "session_id": row.session_id,
-                "session_title": row.session_title or "Untitled Session",
+                "subject_kind": row.subject_kind,
+                "subject_id": row.subject_id,
+                "subject_title": subject_titles.get(
+                    (row.subject_kind, row.subject_id), row.subject_id
+                ),
                 "credits": float(row.credits),
                 "updated_at": row.updated_at,
             }
-            for row in result
+            for row in rows
         ]
         return history, total
+
+    async def get_history(
+        self, db: AsyncSession, user_id: str, *, page: int = 1, per_page: int = 20
+    ) -> tuple[list[dict], int]:
+        """Legacy session-focused history wrapper over generic subject history."""
+        subject_history, total = await self.get_subject_history(
+            db,
+            user_id,
+            subject_kind=SubjectKind.SESSION.value,
+            page=page,
+            per_page=per_page,
+        )
+        history = [
+            {
+                "session_id": item["subject_id"],
+                "session_title": item["subject_title"] or "Untitled Session",
+                "credits": item["credits"],
+                "updated_at": item["updated_at"],
+            }
+            for item in subject_history
+        ]
+        return history, total
+
+    @staticmethod
+    def _is_session_subject(subject_kind: str) -> bool:
+        return subject_kind == SubjectKind.SESSION.value
+
+    @classmethod
+    def _subject_metadata(cls, *, subject_kind: str, subject_id: str) -> dict[str, Any]:
+        if cls._is_session_subject(subject_kind):
+            return {"session_id": subject_id}
+        return {}
+
+    async def _accumulate_subject_usage(
+        self,
+        db: AsyncSession,
+        *,
+        subject_kind: str,
+        subject_id: str | None,
+        credits: float,
+    ) -> None:
+        if not self._is_session_subject(subject_kind) or not subject_id:
+            return
+        await self.accumulate_session_usage(db, subject_id, credits)
+
+    async def _resolve_subject_title(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        subject_kind: str,
+        subject_id: str,
+        session_model,
+        usage_record_model,
+    ) -> str | None:
+        if self._is_session_subject(subject_kind):
+            session_result = await db.execute(
+                select(session_model.id, session_model.name).where(
+                    session_model.id == subject_id,
+                    session_model.user_id == user_id,
+                )
+            )
+            session_row = session_result.one_or_none()
+            if session_row is None:
+                return None
+            return session_row.name or "Untitled Session"
+
+        exists_result = await db.execute(
+            select(usage_record_model.id)
+            .where(
+                usage_record_model.subject_kind == subject_kind,
+                usage_record_model.subject_id == subject_id,
+                usage_record_model.user_id == user_id,
+            )
+            .limit(1)
+        )
+        if exists_result.scalar_one_or_none() is None:
+            return None
+        return subject_id
+
+    async def _resolve_history_subject_titles(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        rows: list,
+        session_model,
+    ) -> dict[tuple[str, str | None], str]:
+        titles = {
+            (row.subject_kind, row.subject_id): (row.subject_id or "")
+            for row in rows
+            if row.subject_id is not None
+        }
+        session_ids = [
+            row.subject_id
+            for row in rows
+            if self._is_session_subject(row.subject_kind) and row.subject_id
+        ]
+        if not session_ids:
+            return titles
+
+        session_rows = await db.execute(
+            select(session_model.id, session_model.name).where(
+                session_model.user_id == user_id,
+                session_model.id.in_(session_ids),
+            )
+        )
+        for row in session_rows:
+            titles[(SubjectKind.SESSION.value, row.id)] = row.name or "Untitled Session"
+        return titles

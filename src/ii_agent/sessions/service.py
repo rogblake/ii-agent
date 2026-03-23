@@ -21,6 +21,7 @@ from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.sessions.title_service import SessionTitleService
 from ii_agent.core.config.settings import Settings
+from ii_agent.core.storage.base import BaseStorage
 from ii_agent.core.storage.locations import get_conversation_agent_state_path
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,8 @@ class SessionService:
         session_repo: SessionRepository,
         event_repo: EventRepository,
         agent_run_service: AgentRunService,
-        file_store,
+        file_store: BaseStorage,
+        media_store: BaseStorage | None = None,
         sandbox_repo,
         config: Settings,
     ) -> None:
@@ -44,6 +46,7 @@ class SessionService:
         self._event_repo = event_repo
         self._agent_run_service = agent_run_service
         self._file_store = file_store
+        self._media_store = media_store
         self._sandbox_repo = sandbox_repo
 
     # ==================== Session CRUD ====================
@@ -68,9 +71,7 @@ class SessionService:
         )
         return await self._session_repo.create(db, session)
 
-    async def get_session_by_id(
-        self, db: AsyncSession, session_id: uuid.UUID
-    ) -> Optional[Session]:
+    async def get_session_by_id(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[Session]:
         """Get a session by its UUID with project loaded."""
         return await self._session_repo.get_by_id_with_project(db, session_id)
 
@@ -83,9 +84,7 @@ class SessionService:
             return None
         return self._session_to_dict(session)
 
-    async def get_public_session_details(
-        self, db: AsyncSession, session_id: str
-    ) -> Optional[dict]:
+    async def get_public_session_details(self, db: AsyncSession, session_id: str) -> Optional[dict]:
         """Get detailed information for a public session."""
         session = await self._session_repo.get_public_by_id(db, session_id)
         if not session:
@@ -107,9 +106,7 @@ class SessionService:
     ) -> None:
         await self._update_session_field(db, session_uuid, sandbox_id=sandbox_id)
 
-    async def update_session_name(
-        self, db: AsyncSession, session_id: uuid.UUID, name: str
-    ) -> None:
+    async def update_session_name(self, db: AsyncSession, session_id: uuid.UUID, name: str) -> None:
         session = await self._session_repo.get_by_id(db, session_id)
         if not session:
             return
@@ -166,9 +163,7 @@ class SessionService:
         sandbox_id = await self._session_repo.get_sandbox_id(db, session_id)
         return sandbox_id is not None
 
-    async def get_session_user_id(
-        self, db: AsyncSession, session_id: uuid.UUID
-    ) -> Optional[str]:
+    async def get_session_user_id(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[str]:
         """Get the user ID for a session."""
         return await self._session_repo.get_user_id(db, session_id)
 
@@ -202,15 +197,11 @@ class SessionService:
 
     # ==================== Session State ====================
 
-    async def soft_delete_session(
-        self, db: AsyncSession, session_id: str, user_id: str
-    ) -> None:
+    async def soft_delete_session(self, db: AsyncSession, session_id: str, user_id: str) -> None:
         """Soft delete a session by setting its deleted_at timestamp."""
         session = await self._session_repo.get_by_id_and_user(db, session_id, user_id)
         if not session:
-            raise SessionNotFoundError(
-                f"Session {session_id} not found or already deleted"
-            )
+            raise SessionNotFoundError(f"Session {session_id} not found or already deleted")
         session.deleted_at = datetime.now(timezone.utc)
         await self._session_repo.update(db, session)
 
@@ -293,21 +284,48 @@ class SessionService:
             # Generate signed URL for file_url type tool results
             if event_data["type"] == EventType.TOOL_RESULT:
                 tool_result = event_data["content"].get("result", {})
-                if (
-                    isinstance(tool_result, dict)
-                    and tool_result.get("type") == "file_url"
-                ):
+                if isinstance(tool_result, dict) and tool_result.get("type") == "file_url":
                     updated_content = deepcopy(event_data["content"])
                     tool_result = updated_content["result"]
-                    tool_result["url"] = self._file_store.get_download_signed_url(
-                        path=tool_result["file_storage_path"]
+                    signed_url = self._get_signed_tool_result_url(
+                        session_id=session_id,
+                        tool_result=tool_result,
                     )
+                    if signed_url:
+                        tool_result["url"] = signed_url
                     updated_content["result"] = tool_result
                     event_data["content"] = updated_content
 
             event_list.append(event_data)
 
         return event_list
+
+    def _get_storage_for_path(self, storage_path: str) -> BaseStorage:
+        """Route session artifact paths to the media bucket when configured."""
+        if self._media_store and storage_path.startswith("sessions/"):
+            return self._media_store
+        return self._file_store
+
+    def _get_signed_tool_result_url(
+        self,
+        *,
+        session_id: str,
+        tool_result: dict,
+    ) -> str | None:
+        storage_path = tool_result.get("file_storage_path")
+        if not storage_path:
+            return tool_result.get("url")
+
+        try:
+            storage_client = self._get_storage_for_path(storage_path)
+            return storage_client.get_download_signed_url(path=storage_path)
+        except FileNotFoundError:
+            logger.warning(
+                "Session %s tool result file missing at %s; falling back to stored URL",
+                session_id,
+                storage_path,
+            )
+            return tool_result.get("url")
 
     # ==================== Plan ====================
 
@@ -326,9 +344,7 @@ class SessionService:
         """
         session = await self._session_repo.get_by_id_and_user(db, session_id, user_id)
         if not session:
-            raise SessionNotFoundError(
-                f"Session {session_id} not found or access denied"
-            )
+            raise SessionNotFoundError(f"Session {session_id} not found or access denied")
 
         plan_data = {"summary": summary, "milestones": milestones}
         for milestone in plan_data["milestones"]:
@@ -423,6 +439,7 @@ class SessionService:
         else:
             if not user_id:
                 from ii_agent.core.exceptions import ValidationError
+
                 raise ValidationError("Cannot create session without authenticated user_id")
 
             await self.create_session(
@@ -450,9 +467,7 @@ class SessionService:
         if resolved_project_id is None:
             # Only access relationship if already loaded to avoid lazy load in async
             if "project" not in sa_inspect(session).unloaded:
-                resolved_project_id = (
-                    session.project.id if session.project else None
-                )
+                resolved_project_id = session.project.id if session.project else None
         return SessionInfo(
             id=str(session.id),
             user_id=session.user_id,
@@ -489,16 +504,10 @@ class SessionService:
             "settings": None,
             "agent_type": session.agent_type,
             "app_kind": session.app_kind,
-            "created_at": (
-                session.created_at.isoformat() if session.created_at else None
-            ),
-            "updated_at": (
-                session.updated_at.isoformat() if session.updated_at else None
-            ),
+            "created_at": (session.created_at.isoformat() if session.created_at else None),
+            "updated_at": (session.updated_at.isoformat() if session.updated_at else None),
             "last_message_at": (
-                session.last_message_at.isoformat()
-                if session.last_message_at
-                else None
+                session.last_message_at.isoformat() if session.last_message_at else None
             ),
             "title_pending": SessionTitleService.is_title_pending(
                 session.session_metadata,

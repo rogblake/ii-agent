@@ -116,7 +116,12 @@ class ChatService:
         logger.info(f"Created chat session {session_id} for user {user_id}")
 
         if title_pending:
-            self._title_service.schedule_title_update(session_id, user_message)
+            self._title_service.schedule_title_update(
+                session_id,
+                user_message,
+                user_id=user_id,
+                app_kind="chat",
+            )
 
         return SessionMetadata(
             session_id=session_id,
@@ -146,7 +151,12 @@ class ChatService:
             )
             await db.flush()
             if title_pending:
-                self._title_service.schedule_title_update(session_id, query)
+                self._title_service.schedule_title_update(
+                    session_id,
+                    query,
+                    user_id=str(session.user_id),
+                    app_kind=str(getattr(session, "app_kind", "chat") or "chat"),
+                )
                 logger.info(f"Scheduled background title update for session {session_id}")
 
     async def validate_session_access(

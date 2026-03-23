@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,10 +17,13 @@ class ToolInvocationRepository:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
         user_id: str,
         tool_name: str,
         status: str,
+        billing_context: str = "unknown",
+        subject_kind: str = "session",
+        subject_id: str | None = None,
+        session_id: str | None = None,
         run_id: UUID | str | None = None,
         message_id: UUID | str | None = None,
         provider_tool_call_id: str | None = None,
@@ -37,10 +39,16 @@ class ToolInvocationRepository:
         credits_charged: float | None = None,
     ) -> ToolInvocation:
         """Insert one tool execution telemetry row."""
+        resolved_subject_id = subject_id or session_id
+        if resolved_subject_id is None:
+            raise ValueError("subject_id or session_id is required for tool invocation telemetry")
+
         invocation = ToolInvocation(
             run_id=_coerce_uuid(run_id),
-            session_id=session_id,
             user_id=user_id,
+            billing_context=billing_context,
+            subject_kind=subject_kind,
+            subject_id=resolved_subject_id,
             message_id=_coerce_uuid(message_id),
             provider_tool_call_id=provider_tool_call_id,
             tool_name=tool_name,
@@ -64,4 +72,7 @@ class ToolInvocationRepository:
 def _coerce_uuid(value: UUID | str | None) -> UUID | None:
     if value is None or isinstance(value, UUID):
         return value
-    return UUID(str(value))
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError):
+        return None

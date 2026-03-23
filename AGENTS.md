@@ -19,7 +19,7 @@ curl localhost:8000/health # Verify
 | [`CLAUDE.md`](CLAUDE.md) | Full development guide: patterns, billing, dependency injection, code examples |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Design patterns: service pattern, Dep aliases, domain module structure |
 | [`docs/PLANS.md`](docs/PLANS.md) | How to write and maintain execution plans |
-| [`docs/RELIABILITY.md`](docs/RELIABILITY.md) | Billing reliability, outbox pattern, cron recovery, Redis fallbacks |
+| [`docs/RELIABILITY.md`](docs/RELIABILITY.md) | Billing reliability, cron recovery, Redis fallbacks |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Auth flow (OAuth, JWT, API keys), secrets management |
 | [`docs/FRONTEND.md`](docs/FRONTEND.md) | Socket.IO events, REST API surface, real-time event flow |
 | [`docs/PRODUCT_SENSE.md`](docs/PRODUCT_SENSE.md) | Product principles, user personas, key journeys |
@@ -67,7 +67,6 @@ src/ii_agent/
 ├── billing/                # Credit ledger & billing
 │   ├── credits/            # Balance, ledger, pricing, service
 │   ├── reservations/       # Reserve -> settle -> release state machine
-│   ├── outbox/             # Durable billing usage facts
 │   ├── usage/              # Usage records, LLM/tool invocation telemetry
 │   ├── customers/          # Stripe customer management
 │   └── webhook_handler.py  # Stripe webhook processing
@@ -110,7 +109,6 @@ src/ii_agent/
 │   ├── a2a/                # Agent-to-Agent protocol
 │   ├── connectors/         # External connectors (GitHub, Google Drive via Composio)
 │   ├── enhance_prompt/     # Prompt enhancement
-│   ├── mcp_sse/            # MCP SSE server for ChatGPT integration
 │   └── mobile/             # Mobile platform integrations (Apple, future Android)
 │
 ├── projects/               # Project & deployment management

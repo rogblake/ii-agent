@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
+from ii_agent.billing.reservations.dependencies import CreditReservationServiceDep
 from ii_agent.core.config.settings import get_settings
 from ii_agent.billing.usage.dependencies import UsageServiceDep
 from ii_agent.content.storybook.repository import StorybookRepository
@@ -66,6 +67,7 @@ def get_storybook_voice_service(
     repo: StorybookRepositoryDep,
     storybook_service: StorybookServiceDep,
     usage_service: UsageServiceDep,
+    reservation_service: CreditReservationServiceDep,
 ) -> StorybookVoiceService:
     """Provide StorybookVoiceService instance."""
     return StorybookVoiceService(
@@ -73,17 +75,20 @@ def get_storybook_voice_service(
         storybook_service=storybook_service,
         config=get_settings(),
         usage_service=usage_service,
+        reservation_service=reservation_service,
     )
 
 
 def get_storybook_edit_service(
     repo: StorybookRepositoryDep,
     version_service: StorybookVersionServiceDep,
+    reservation_service: CreditReservationServiceDep,
 ) -> StorybookEditService:
     """Provide StorybookEditService instance."""
     return StorybookEditService(
         repo=repo,
         version_service=version_service,
+        reservation_service=reservation_service,
     )
 
 
@@ -93,6 +98,7 @@ def get_storybook_ai_edit_service(
     usage_service: UsageServiceDep,
     llm_setting_service: LLMSettingServiceDep,
     llm_execution: LLMExecutionServiceDep,
+    reservation_service: CreditReservationServiceDep,
 ) -> StorybookAIEditService:
     """Provide StorybookAIEditService instance."""
     return StorybookAIEditService(
@@ -101,12 +107,17 @@ def get_storybook_ai_edit_service(
         usage_service=usage_service,
         llm_setting_service=llm_setting_service,
         llm_execution=llm_execution,
+        reservation_service=reservation_service,
         config=get_settings(),
     )
 
 
 StorybookExportServiceDep = Annotated[StorybookExportService, Depends(get_storybook_export_service)]
-StorybookVersionServiceDep = Annotated[StorybookVersionService, Depends(get_storybook_version_service)]
+StorybookVersionServiceDep = Annotated[
+    StorybookVersionService, Depends(get_storybook_version_service)
+]
 StorybookVoiceServiceDep = Annotated[StorybookVoiceService, Depends(get_storybook_voice_service)]
 StorybookEditServiceDep = Annotated[StorybookEditService, Depends(get_storybook_edit_service)]
-StorybookAIEditServiceDep = Annotated[StorybookAIEditService, Depends(get_storybook_ai_edit_service)]
+StorybookAIEditServiceDep = Annotated[
+    StorybookAIEditService, Depends(get_storybook_ai_edit_service)
+]

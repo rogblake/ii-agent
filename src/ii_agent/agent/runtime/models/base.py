@@ -41,6 +41,8 @@ from ii_agent.agent.runtime.tools.function import (
     FunctionExecutionResult,
     UserInputField,
 )
+from ii_agent.billing.types import BillingContextValue, BillingScope
+from ii_agent.billing.exceptions import BillingSettlementFinalError
 from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
 from ii_agent.core.llm.token_record import TokenTracker
 from ii_agent.agent.runtime.utils.timer import Timer
@@ -1003,13 +1005,16 @@ class Model(ABC):
         async with get_db_session_local() as db:
             reservation = await self.llm_billing_service.reserve_agent_llm_call(
                 db,
-                user_id=run_response.user_id,
-                session_id=run_response.session_id,
-                run_id=run_response.run_id,
+                scope=BillingScope.for_session(
+                    user_id=run_response.user_id,
+                    app_kind="agent",
+                    session_id=run_response.session_id,
+                    billing_context=BillingContextValue.AGENT_LOOP,
+                    run_id=run_response.run_id,
+                ),
                 model=self,
                 messages=messages,
                 source_id=assistant_message.id,
-                idempotency_key=f"agent-llm:{run_response.run_id}:{assistant_message.id}",
             )
             await db.commit()
             return reservation
@@ -1025,12 +1030,23 @@ class Model(ABC):
 
         Returns the BillingSettlementResult on success, or None.
         """
-        if (
-            reservation is None
-            or self.llm_billing_service is None
-            or run_response is None
-            or metrics is None
-        ):
+        if reservation is None or self.llm_billing_service is None or run_response is None:
+            return None
+
+        if metrics is None:
+            reservation_id = getattr(
+                getattr(reservation, "hold", None),
+                "reservation_id",
+                None,
+            )
+            logger.error(
+                "Missing agent LLM metrics; marking settlement_failed",
+                extra={"reservation_id": reservation_id},
+            )
+            await self._mark_llm_settlement_failed(
+                reservation_id=reservation_id,
+                error="agent_llm_missing_metrics",
+            )
             return None
 
         try:
@@ -1038,10 +1054,16 @@ class Model(ABC):
 
             record = TokenTracker.from_agent_metrics(metrics, self.id)
             async with get_db_session_local() as db:
-                result = await self.llm_billing_service.settle_agent_llm_call(
+                result = await self.llm_billing_service.settle_llm_call(
                     db,
+                    scope=BillingScope.for_session(
+                        user_id=run_response.user_id,
+                        app_kind="agent",
+                        session_id=run_response.session_id,
+                        billing_context=BillingContextValue.AGENT_LOOP,
+                        run_id=run_response.run_id,
+                    ),
                     reservation=reservation,
-                    run_id=run_response.run_id or "",
                     token_record=record,
                     provider=str(self.provider) if self.provider is not None else None,
                     latency_ms=(
@@ -1087,6 +1109,10 @@ class Model(ABC):
         except Exception:
             logger.opt(exception=True).warning(
                 "Failed to mark reservation {} as settlement_failed", reservation_id
+            )
+            raise BillingSettlementFinalError(
+                f"Failed to persist settlement_failed for reservation {reservation_id}",
+                reservation_id=reservation_id,
             )
 
     async def _release_llm_billing(self, *, reservation, reason: str) -> None:

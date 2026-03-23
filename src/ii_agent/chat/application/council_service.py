@@ -9,6 +9,7 @@ from typing import Any, AsyncIterator, Dict, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.billing.types import BillingContextValue, BillingScope
 from ii_agent.chat.types import (
     Message,
     TextContent,
@@ -118,11 +119,13 @@ class CouncilService:
             display_name = model_names.get(model_id, model_id)
 
             try:
-                await queue.put({
-                    "type": "council_member_start",
-                    "model_id": model_id,
-                    "model_name": display_name,
-                })
+                await queue.put(
+                    {
+                        "type": "council_member_start",
+                        "model_id": model_id,
+                        "model_name": display_name,
+                    }
+                )
 
                 try:
                     _run_uuid = _uuid_mod.UUID(run_id) if run_id else None
@@ -130,12 +133,15 @@ class CouncilService:
                     _run_uuid = None
 
                 billing_context = LLMBillingContext(
-                    db=db,
-                    user_id=user_id,
-                    session_id=session_id,
+                    scope=BillingScope.for_session(
+                        user_id=user_id,
+                        app_kind="chat",
+                        session_id=session_id,
+                        billing_context=BillingContextValue.COUNCIL,
+                        run_id=_run_uuid,
+                    ),
                     llm_config=config,
                     model_id=model_id,
-                    run_id=_run_uuid,
                 )
 
                 client = get_client(config)
@@ -158,31 +164,37 @@ class CouncilService:
 
                 member_outputs[model_id] = content
 
-                await queue.put({
-                    "type": "council_member_complete",
-                    "model_id": model_id,
-                    "model_name": display_name,
-                    "content": content,
-                })
+                await queue.put(
+                    {
+                        "type": "council_member_complete",
+                        "model_id": model_id,
+                        "model_name": display_name,
+                        "content": content,
+                    }
+                )
 
             except asyncio.TimeoutError:
                 council_had_error = True
                 logger.warning(f"Council model {model_id} timed out after {COUNCIL_MODEL_TIMEOUT}s")
-                await queue.put({
-                    "type": "council_member_error",
-                    "model_id": model_id,
-                    "model_name": display_name,
-                    "error": f"Model timed out after {COUNCIL_MODEL_TIMEOUT}s",
-                })
+                await queue.put(
+                    {
+                        "type": "council_member_error",
+                        "model_id": model_id,
+                        "model_name": display_name,
+                        "error": f"Model timed out after {COUNCIL_MODEL_TIMEOUT}s",
+                    }
+                )
             except Exception as e:
                 council_had_error = True
                 logger.error(f"Council model {model_id} failed: {e}", exc_info=True)
-                await queue.put({
-                    "type": "council_member_error",
-                    "model_id": model_id,
-                    "model_name": display_name,
-                    "error": str(e),
-                })
+                await queue.put(
+                    {
+                        "type": "council_member_error",
+                        "model_id": model_id,
+                        "model_name": display_name,
+                        "error": str(e),
+                    }
+                )
 
         try:
             # Phase 1: Launch all council models in parallel
@@ -242,7 +254,7 @@ class CouncilService:
             for idx, (mid, content) in enumerate(member_outputs.items(), 1):
                 name = model_names.get(mid, mid)
                 model_output_sections.append(
-                    f"<model_response_{idx} model=\"{name}\">\n{content}\n</model_response_{idx}>"
+                    f'<model_response_{idx} model="{name}">\n{content}\n</model_response_{idx}>'
                 )
 
             synthesis_prompt = SYNTHESIS_PROMPT_TEMPLATE.format(
@@ -267,12 +279,15 @@ class CouncilService:
                 _synth_run_uuid = None
 
             synthesis_billing_context = LLMBillingContext(
-                db=db,
-                user_id=user_id,
-                session_id=session_id,
+                scope=BillingScope.for_session(
+                    user_id=user_id,
+                    app_kind="chat",
+                    session_id=session_id,
+                    billing_context=BillingContextValue.COUNCIL,
+                    run_id=_synth_run_uuid,
+                ),
                 llm_config=synthesis_config,
                 model_id=synthesis_model_id,
-                run_id=_synth_run_uuid,
             )
 
             synthesis_client = get_client(synthesis_config)
@@ -284,14 +299,8 @@ class CouncilService:
             )
 
             synthesis_content = llm_execution_service.extract_text_content(
-                synthesis_response.content
-                if isinstance(synthesis_response.content, list)
-                else []
-            ) or (
-                synthesis_response.content
-                if isinstance(synthesis_response.content, str)
-                else ""
-            )
+                synthesis_response.content if isinstance(synthesis_response.content, list) else []
+            ) or (synthesis_response.content if isinstance(synthesis_response.content, str) else "")
 
             yield {
                 "type": "council_synthesis_complete",

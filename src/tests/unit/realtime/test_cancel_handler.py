@@ -71,7 +71,7 @@ async def test_cancel_handler_does_not_bill_paused_runs_directly():
 
     # Per-call billing settled in runtime — handler must not bill directly
     container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-    container.llm_billing_service.settle_chat_llm_call.assert_not_called()
+    container.llm_billing_service.settle_llm_call.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -103,4 +103,4 @@ async def test_cancel_handler_does_not_bill_when_cancel_signal_fails():
         await handler.handle({}, session_info)
 
     container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-    container.llm_billing_service.settle_chat_llm_call.assert_not_called()
+    container.llm_billing_service.settle_llm_call.assert_not_called()

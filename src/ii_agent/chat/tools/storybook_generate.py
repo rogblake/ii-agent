@@ -20,7 +20,6 @@ from ii_agent.chat.types import (
     ErrorTextContent,
     MediaPreferences,
     StorybookProgressContent,
-    StorybookResultContent,
     StorybookPageResult,
 )
 from ii_agent.core.storage.client import media_storage
@@ -101,7 +100,7 @@ SUPPORTED_ASPECT_RATIOS_BY_PROVIDER = {
         "4:3": AR_4_3,
         "3:4": AR_3_4,
         "21:9": AR_21_9,
-    }
+    },
 }
 # Default to wide support if provider unknown
 DEFAULT_SUPPORTED_RATIOS = SUPPORTED_ASPECT_RATIOS_BY_PROVIDER["gemini"]
@@ -185,7 +184,14 @@ class StorybookGenerationTool(BaseTool):
                                 },
                                 "text_position": {
                                     "type": "string",
-                                    "enum": ["left", "right", "top", "bottom", "none", "separate_page"],
+                                    "enum": [
+                                        "left",
+                                        "right",
+                                        "top",
+                                        "bottom",
+                                        "none",
+                                        "separate_page",
+                                    ],
                                     "description": "Position of text relative to image; use 'none' to omit text",
                                 },
                                 "text_percentage": {
@@ -195,7 +201,12 @@ class StorybookGenerationTool(BaseTool):
                                     "maximum": 30,
                                 },
                             },
-                            "required": ["image_prompt", "text_content", "text_position", "text_percentage"],
+                            "required": [
+                                "image_prompt",
+                                "text_content",
+                                "text_position",
+                                "text_percentage",
+                            ],
                         },
                     },
                     "style": {
@@ -235,9 +246,7 @@ class StorybookGenerationTool(BaseTool):
 
         return max(0, min(requested_content, MAX_CONTENT_SCENES))
 
-    def _apply_scene_cap(
-        self, scenes: list[dict]
-    ) -> tuple[list[dict], bool, int]:
+    def _apply_scene_cap(self, scenes: list[dict]) -> tuple[list[dict], bool, int]:
         """Cap scenes to the allowed max. Returns (scenes, capped, max_content_scenes)."""
         max_content_scenes = self._get_content_scene_cap()
         max_total_scenes = max_content_scenes + 1  # +1 cover page
@@ -279,9 +288,7 @@ class StorybookGenerationTool(BaseTool):
 
         try:
             tool_settings = ToolClientSettings()
-            self._voice_service = VoiceGenerationService(
-                tool_settings.voice_generate_config
-            )
+            self._voice_service = VoiceGenerationService(tool_settings.voice_generate_config)
         except Exception as exc:
             logger.warning("[STORYBOOK] Failed to initialize voice generation: %s", exc)
             self._voice_service = None
@@ -335,7 +342,7 @@ class StorybookGenerationTool(BaseTool):
         followed by a text-only page.
         """
         base_page_num = page_number if page_number is not None else scene_index + 1
-        is_cover_page = (scene_index == 0)
+        is_cover_page = scene_index == 0
 
         image_prompt = scene.get("image_prompt", "")
         text_content = scene.get("text_content", "")
@@ -352,9 +359,7 @@ class StorybookGenerationTool(BaseTool):
         )
         text_position_literal = cast(TextPositionLiteral, text_position)
 
-        is_separate_page_mode = (
-            text_position_literal == "separate_page" and not is_cover_page
-        )
+        is_separate_page_mode = text_position_literal == "separate_page" and not is_cover_page
 
         if is_separate_page_mode:
             image_text_position: TextPositionLiteral = "none"
@@ -370,16 +375,12 @@ class StorybookGenerationTool(BaseTool):
             effective_text_content = text_content.strip()
             has_text = text_position_literal != "none" and bool(effective_text_content)
             image_text_percentage = (
-                scene.get("text_percentage", DEFAULT_TEXT_PERCENTAGE)
-                if has_text
-                else 0
+                scene.get("text_percentage", DEFAULT_TEXT_PERCENTAGE) if has_text else 0
             )
             image_text_content = effective_text_content if has_text else ""
 
             if text_position_literal != "none" and not effective_text_content:
-                raise ValueError(
-                    f"Scene {scene_index + 1} missing text_content for text layout"
-                )
+                raise ValueError(f"Scene {scene_index + 1} missing text_content for text layout")
 
         reference_image_urls = None
         reference_type = None
@@ -387,9 +388,7 @@ class StorybookGenerationTool(BaseTool):
         if not is_cover_page and cover_image_url:
             reference_image_urls = [cover_image_url]
             reference_type = "style_only"
-            logger.info(
-                f"[STORYBOOK] Scene {scene_index + 1}: Using cover as style reference"
-            )
+            logger.info(f"[STORYBOOK] Scene {scene_index + 1}: Using cover as style reference")
         elif not is_cover_page and not cover_image_url:
             logger.warning(
                 f"[STORYBOOK] Scene {scene_index + 1}: Cover failed, generating without reference"
@@ -397,9 +396,7 @@ class StorybookGenerationTool(BaseTool):
 
         # Explicitly control text inclusion for non-cover pages in the base prompt
         if not is_cover_page:
-            image_prompt = self._augment_non_cover_prompt(
-                image_prompt, effective_text_content
-            )
+            image_prompt = self._augment_non_cover_prompt(image_prompt, effective_text_content)
 
         if is_separate_page_mode:
             gen_aspect_ratio = self.aspect_ratio
@@ -505,9 +502,7 @@ class StorybookGenerationTool(BaseTool):
         )
         page_results.append(image_page_result)
 
-        logger.info(
-            f"[STORYBOOK] Scene {scene_index + 1} image page completed: {image_url}"
-        )
+        logger.info(f"[STORYBOOK] Scene {scene_index + 1} image page completed: {image_url}")
 
         if is_separate_page_mode:
             text_page_num = base_page_num + 1
@@ -651,9 +646,7 @@ class StorybookGenerationTool(BaseTool):
                     page_count=len(scenes),
                 )
             storybook_id = storybook.id
-            logger.info(
-                f"[STORYBOOK] Created storybook record for Celery: {storybook_id}"
-            )
+            logger.info(f"[STORYBOOK] Created storybook record for Celery: {storybook_id}")
 
             total_pages = len(scenes)
             async with get_db_session_local() as db:
@@ -674,6 +667,7 @@ class StorybookGenerationTool(BaseTool):
                         "parent_message_id": str(parent_message_id) if parent_message_id else None,
                         "model_id": model_id,
                         "run_id": run_id,
+                        "user_id": session.user_id,
                         "reservation_id": reservation_id,
                         "tool_name": self.name,
                     },
@@ -716,9 +710,7 @@ class StorybookGenerationTool(BaseTool):
             return ToolResponse(output=progress)
 
         except Exception as e:
-            logger.error(
-                f"[STORYBOOK] Failed to queue Celery generation: {e}", exc_info=True
-            )
+            logger.error(f"[STORYBOOK] Failed to queue Celery generation: {e}", exc_info=True)
             if storybook_id:
                 async with get_db_session_local() as db:
                     await self._container.storybook_service.update_generation_status(
@@ -729,14 +721,10 @@ class StorybookGenerationTool(BaseTool):
                         error_message=str(e),
                     )
             return ToolResponse(
-                output=ErrorTextContent(
-                    value=f"Storybook generation failed to start: {str(e)}"
-                )
+                output=ErrorTextContent(value=f"Storybook generation failed to start: {str(e)}")
             )
 
-    def _augment_non_cover_prompt(
-        self, image_prompt: str, text_content: str
-    ) -> str:
+    def _augment_non_cover_prompt(self, image_prompt: str, text_content: str) -> str:
         """Augment the image prompt for non-cover pages.
 
         Subclasses (e.g. MangaGenerationTool) override this to inject
@@ -856,8 +844,9 @@ class StorybookGenerationTool(BaseTool):
             return f"{image_prompt}. {borderless_note}{negative_prompt}{reference_note}"
 
         # Append style context to prompt and enforce borderless output
-        return f"{image_prompt}. {style_context}. {borderless_note}{negative_prompt}{reference_note}"
-
+        return (
+            f"{image_prompt}. {style_context}. {borderless_note}{negative_prompt}{reference_note}"
+        )
 
     async def _generate_scene_image(
         self,
@@ -881,14 +870,16 @@ class StorybookGenerationTool(BaseTool):
             str: URL of generated image
         """
         target_aspect_ratio = aspect_ratio or self.aspect_ratio
-        
+
         if reference_image_urls:
             logger.info(
                 f"[STORYBOOK] Generating AI image for scene {scene_number} "
                 f"with {len(reference_image_urls)} reference image(s) (AR: {target_aspect_ratio})"
             )
         else:
-            logger.info(f"[STORYBOOK] Generating AI image for scene {scene_number} (AR: {target_aspect_ratio})")
+            logger.info(
+                f"[STORYBOOK] Generating AI image for scene {scene_number} (AR: {target_aspect_ratio})"
+            )
 
         # Generate image using tool server
         response = await _generate_image(
@@ -905,7 +896,9 @@ class StorybookGenerationTool(BaseTool):
 
         image_url = response.get("url")
         if not image_url:
-            raise RuntimeError(f"Image generation for scene {scene_number} did not return an image URL")
+            raise RuntimeError(
+                f"Image generation for scene {scene_number} did not return an image URL"
+            )
 
         logger.info(f"[STORYBOOK] Scene {scene_number} AI image generated: {image_url}")
         return image_url
@@ -962,7 +955,7 @@ class StorybookGenerationTool(BaseTool):
         try:
             bw, bh = map(int, base_aspect_ratio.split(":"))
             base_ratio = bw / bh
-            
+
             gw, gh = map(int, gen_aspect_ratio.split(":"))
             gen_ratio = gw / gh
         except ValueError:
@@ -979,7 +972,7 @@ class StorybookGenerationTool(BaseTool):
         # Calculate overlap
         # If gen > container (wider): horizontal crop. visible = container / gen
         # If gen < container (taller): vertical crop. visible = gen / container
-        
+
         if gen_ratio > container_ratio:
             # Generated image is wider than container -> Sides cropped
             visible_width = int((container_ratio / gen_ratio) * 100)
@@ -1001,7 +994,9 @@ class StorybookGenerationTool(BaseTool):
                     response = await client.get(image_url)
                     response.raise_for_status()
                     image_bytes = response.content
-                    logger.info(f"[STORYBOOK] Successfully downloaded image ({len(image_bytes)} bytes)")
+                    logger.info(
+                        f"[STORYBOOK] Successfully downloaded image ({len(image_bytes)} bytes)"
+                    )
                     return image_bytes
 
             except Exception as e:

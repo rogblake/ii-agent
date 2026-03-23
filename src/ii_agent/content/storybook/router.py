@@ -10,6 +10,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, Query, Response, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
 
+from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.core.exceptions import PaymentRequiredError, ValidationError
 from ii_agent.sessions.dependencies import SessionServiceDep
 from ii_agent.sessions.exceptions import SessionNotFoundError
@@ -51,10 +52,7 @@ from ii_agent.content.storybook.schemas import (
     AIRegenerateImageResponse,
 )
 from ii_agent.auth.users.dependencies import UserServiceDep
-from ii_agent.billing.credits.utils import usd_to_credits
-from ii_agent.billing.reservations.types import SourceDomain
 from ii_agent.content.media.service import _generate_image
-from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.core.storage.dependencies import MediaTemplateStorageDep
 
 logger = logging.getLogger(__name__)
@@ -72,9 +70,7 @@ async def get_session_storybooks(
     include_pages: bool = Query(False, description="Include page data"),
 ) -> StorybookListResponse:
     """Get all storybooks for a session."""
-    session_data = await session_service.get_session_details(db,
-        session_id, str(current_user.id)
-    )
+    session_data = await session_service.get_session_details(db, session_id, str(current_user.id))
     if not session_data:
         raise SessionNotFoundError(f"Session {session_id} not found or access denied")
 
@@ -102,8 +98,8 @@ async def get_storybook(
     if not storybook:
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
-    session_data = await session_service.get_session_details(db,
-        storybook.session_id, str(current_user.id)
+    session_data = await session_service.get_session_details(
+        db, storybook.session_id, str(current_user.id)
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -126,12 +122,8 @@ async def generate_storybook_voiceover(
     voice_service: StorybookVoiceServiceDep,
     session_service: SessionServiceDep,
     db: DBSession,
-    language: Optional[str] = Query(
-        None, description="Optional language code for voice narration"
-    ),
-    force: bool = Query(
-        False, description="Regenerate voice-over even if audio already exists"
-    ),
+    language: Optional[str] = Query(None, description="Optional language code for voice narration"),
+    force: bool = Query(False, description="Regenerate voice-over even if audio already exists"),
 ) -> StorybookVoiceOverResponse:
     """Generate voice-over audio for a storybook."""
     storybook = await service.get_storybook_detail(
@@ -153,9 +145,6 @@ async def generate_storybook_voiceover(
         session_id=storybook.session_id,
         language_code=language,
         force=force,
-        idempotency_key=(
-            f"storybook:voice:{storybook_id}:{get_or_generate_request_id()}"
-        ),
     )
 
 
@@ -240,8 +229,8 @@ async def update_page_text(
     if not storybook:
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
-    session_data = await session_service.get_session_details(db,
-        storybook.session_id, str(current_user.id)
+    session_data = await session_service.get_session_details(
+        db, storybook.session_id, str(current_user.id)
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -282,8 +271,8 @@ async def regenerate_page_image(
     if not storybook:
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
-    session_data = await session_service.get_session_details(db,
-        storybook.session_id, str(current_user.id)
+    session_data = await session_service.get_session_details(
+        db, storybook.session_id, str(current_user.id)
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -299,7 +288,7 @@ async def regenerate_page_image(
         aspect_ratio: str,
         resolution: str,
     ) -> str:
-        output =  await _generate_image(
+        output = await _generate_image(
             prompt=prompt,
             session_id=session_id,
             user_api_key=user_api_key,
@@ -354,9 +343,7 @@ async def proxy_storybook_edit_page(
         page_number=page_number,
     )
     if not html_content:
-        raise StorybookPageNotFoundError(
-            f"Page {page_number} not found or has no HTML content"
-        )
+        raise StorybookPageNotFoundError(f"Page {page_number} not found or has no HTML content")
 
     return HTMLResponse(
         content=html_content,
@@ -420,41 +407,21 @@ async def save_storybook_edits(
     await usage_service.require_billing_ok(db, str(current_user.id))
 
     try:
-        new_storybook, total_voice_cost_usd = await edit_service.save_all_page_edits(
+        new_storybook = await edit_service.save_all_page_edits_with_billing(
             db,
             storybook_id=storybook_id,
+            user_id=str(current_user.id),
             page_changes=page_changes,
             image_urls=image_urls,
         )
+    except InsufficientCreditsError as exc:
+        raise PaymentRequiredError(exc.message) from exc
     except Exception as exc:
         logger.error("Error saving storybook edits: %s", exc, exc_info=True)
         return SaveEditsResponse(success=False, error=f"Error saving changes: {exc}")
 
     if not new_storybook:
         return SaveEditsResponse(success=False, error="Failed to save changes")
-
-    if total_voice_cost_usd > 0:
-        credits_to_deduct = float(usd_to_credits(total_voice_cost_usd))
-        deduct_success = await usage_service.deduct_and_track_session_usage(
-            db,
-            user_id=str(current_user.id),
-            session_id=storybook.session_id,
-            amount=credits_to_deduct,
-            source_domain=SourceDomain.VOICE_GENERATION,
-            idempotency_key=(
-                f"storybook:edit-voice:{storybook_id}:{get_or_generate_request_id()}"
-            ),
-        )
-        if deduct_success:
-            logger.info(
-                "[Storybook Edit] Deducted %.4f credits (voice cost: $%.4f) for storybook %s",
-                credits_to_deduct,
-                total_voice_cost_usd,
-                storybook_id,
-            )
-        else:
-            await db.rollback()
-            raise PaymentRequiredError("Insufficient credits")
 
     return SaveEditsResponse(success=True, storybook=new_storybook)
 
@@ -539,8 +506,7 @@ async def upload_storybook_background(
         suffix = ext_map.get(content_type, ".png")
 
     storage_path = (
-        f"sessions/{storybook.session_id}/storybook/backgrounds/"
-        f"{uuid.uuid4().hex}{suffix}"
+        f"sessions/{storybook.session_id}/storybook/backgrounds/{uuid.uuid4().hex}{suffix}"
     )
     public_url = media_storage.upload_and_get_permanent_url(
         file.file,
@@ -659,6 +625,8 @@ async def ai_generate_storybook_background(
             text_position=request.text_position,
         )
         return AIGenerateBackgroundResponse(success=True, image_url=image_url)
+    except InsufficientCreditsError as exc:
+        return AIGenerateBackgroundResponse(success=False, error=exc.message)
     except ValidationError as exc:
         return AIGenerateBackgroundResponse(success=False, error=exc.message)
     except Exception as exc:
@@ -721,6 +689,8 @@ async def ai_regenerate_storybook_image(
             text_percentage=request.text_percentage,
         )
         return AIRegenerateImageResponse(success=True, image_url=image_url)
+    except InsufficientCreditsError as exc:
+        return AIRegenerateImageResponse(success=False, error=exc.message)
     except ValidationError as exc:
         return AIRegenerateImageResponse(success=False, error=exc.message)
     except Exception as exc:
@@ -749,8 +719,8 @@ async def download_storybook(
     if not storybook:
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
-    session_data = await session_service.get_session_details(db,
-        storybook.session_id, str(current_user.id)
+    session_data = await session_service.get_session_details(
+        db, storybook.session_id, str(current_user.id)
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -788,8 +758,8 @@ async def download_storybook_with_progress(
     if not storybook:
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
-    session_data = await session_service.get_session_details(db,
-        storybook.session_id, str(current_user.id)
+    session_data = await session_service.get_session_details(
+        db, storybook.session_id, str(current_user.id)
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -829,15 +799,13 @@ async def download_storybook_page_pdf(
     if not storybook:
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
-    session_data = await session_service.get_session_details(db,
-        storybook.session_id, str(current_user.id)
+    session_data = await session_service.get_session_details(
+        db, storybook.session_id, str(current_user.id)
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
 
-    pdf_bytes = await export_service.download_storybook_page_as_pdf(
-        db, storybook_id, page_number
-    )
+    pdf_bytes = await export_service.download_storybook_page_as_pdf(db, storybook_id, page_number)
     if not pdf_bytes:
         raise StorybookPageNotFoundError(f"Page {page_number} not found or has no content")
 
@@ -871,15 +839,13 @@ async def download_storybook_page_png(
     if not storybook:
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
-    session_data = await session_service.get_session_details(db,
-        storybook.session_id, str(current_user.id)
+    session_data = await session_service.get_session_details(
+        db, storybook.session_id, str(current_user.id)
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
 
-    png_bytes = await export_service.download_storybook_page_as_png(
-        db, storybook_id, page_number
-    )
+    png_bytes = await export_service.download_storybook_page_as_png(db, storybook_id, page_number)
     if not png_bytes:
         raise StorybookPageNotFoundError(f"Page {page_number} not found or has no content")
 
@@ -912,8 +878,8 @@ async def download_storybook_png_zip(
     if not storybook:
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
-    session_data = await session_service.get_session_details(db,
-        storybook.session_id, str(current_user.id)
+    session_data = await session_service.get_session_details(
+        db, storybook.session_id, str(current_user.id)
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -951,8 +917,8 @@ async def download_storybook_png_with_progress(
     if not storybook:
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
-    session_data = await session_service.get_session_details(db,
-        storybook.session_id, str(current_user.id)
+    session_data = await session_service.get_session_details(
+        db, storybook.session_id, str(current_user.id)
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -990,7 +956,7 @@ async def get_public_storybook(
     if not storybook:
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
-    session_data = await session_service.get_public_session_details(db,storybook.session_id)
+    session_data = await session_service.get_public_session_details(db, storybook.session_id)
     if not session_data:
         raise StorybookNotFoundError("Storybook not found or not public")
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,9 +17,12 @@ class LLMInvocationRepository:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
         user_id: str,
         request_kind: str,
+        billing_context: str = "unknown",
+        subject_kind: str = "session",
+        subject_id: str | None = None,
+        session_id: str | None = None,
         run_id: UUID | str | None = None,
         message_id: UUID | str | None = None,
         provider: str | None = None,
@@ -38,10 +40,16 @@ class LLMInvocationRepository:
         finish_reason: str | None = None,
     ) -> LLMInvocation:
         """Insert one invocation telemetry row."""
+        resolved_subject_id = subject_id or session_id
+        if resolved_subject_id is None:
+            raise ValueError("subject_id or session_id is required for llm invocation telemetry")
+
         invocation = LLMInvocation(
             run_id=_coerce_uuid(run_id),
-            session_id=session_id,
             user_id=user_id,
+            billing_context=billing_context,
+            subject_kind=subject_kind,
+            subject_id=resolved_subject_id,
             message_id=_coerce_uuid(message_id),
             provider=provider,
             model=model,
@@ -54,9 +62,7 @@ class LLMInvocationRepository:
             latency_ms=latency_ms,
             cost_usd=Decimal(str(cost_usd)) if cost_usd is not None else None,
             credits_charged=(
-                Decimal(str(credits_charged))
-                if credits_charged is not None
-                else None
+                Decimal(str(credits_charged)) if credits_charged is not None else None
             ),
             success=success,
             error_code=error_code,
@@ -70,4 +76,7 @@ class LLMInvocationRepository:
 def _coerce_uuid(value: UUID | str | None) -> UUID | None:
     if value is None or isinstance(value, UUID):
         return value
-    return UUID(str(value))
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError):
+        return None

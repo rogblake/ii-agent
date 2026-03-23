@@ -88,6 +88,23 @@ class FakeCreditBalanceRepo:
         bal.credits -= regular_used
         return bal.credits, bal.bonus_credits
 
+    async def apply_delta_locked(
+        self,
+        db,
+        user_id,
+        *,
+        delta_credits,
+        delta_bonus_credits,
+        billing_status=None,
+        billing_status_reason=None,
+    ):
+        bal = self.balances.get(user_id)
+        if not bal:
+            return None
+        bal.credits += Decimal(str(delta_credits))
+        bal.bonus_credits += Decimal(str(delta_bonus_credits))
+        return bal.credits, bal.bonus_credits, billing_status
+
     async def add_credits(self, db, user_id, amount, is_bonus=False):
         bal = self.balances.get(user_id)
         if not bal:
@@ -101,6 +118,17 @@ class FakeCreditBalanceRepo:
             bal.credits += amount
         return old_credits, old_bonus, bal.credits, bal.bonus_credits
 
+    async def _apply_add_locked(self, db, user_id, amount, *, is_bonus=False):
+        bal = self.balances.get(user_id)
+        if not bal:
+            return None
+        amount = Decimal(str(amount))
+        if is_bonus:
+            bal.bonus_credits += amount
+        else:
+            bal.credits += amount
+        return bal.credits, bal.bonus_credits
+
     async def set_credits(self, db, user_id, amount, bonus_amount=None):
         bal = self.balances.get(user_id)
         if not bal:
@@ -111,6 +139,15 @@ class FakeCreditBalanceRepo:
         if bonus_amount is not None:
             bal.bonus_credits = Decimal(str(bonus_amount))
         return old_credits, old_bonus, bal.credits, bal.bonus_credits
+
+    async def _set_credits_locked(self, db, user_id, amount, *, bonus_amount=None):
+        bal = self.balances.get(user_id)
+        if not bal:
+            return None
+        bal.credits = Decimal(str(amount))
+        if bonus_amount is not None:
+            bal.bonus_credits = Decimal(str(bonus_amount))
+        return bal.credits, bal.bonus_credits
 
 
 class FakeLedgerRepo:
@@ -266,7 +303,9 @@ async def test_set_balance_custom_entry_type():
     svc, ledger = _make_service()
 
     await svc.set_balance(
-        db, _USER_ID, 100.0,
+        db,
+        _USER_ID,
+        100.0,
         entry_type="refresh",
         source_domain="cron",
     )
@@ -314,7 +353,8 @@ async def test_ensure_balance_exists_no_ledger_when_race_lost():
     # Simulate race: get_or_create returns created=False (another request won)
     async def _race_get_or_create(db, user_id, **kwargs):
         balance_repo.balances[user_id] = SimpleNamespace(
-            credits=Decimal("100"), bonus_credits=Decimal("0"),
+            credits=Decimal("100"),
+            bonus_credits=Decimal("0"),
             updated_at=datetime.now(timezone.utc),
         )
         return (Decimal("100"), Decimal("0"), False)
@@ -565,9 +605,7 @@ async def test_set_balance_decrease_records_negative_delta():
 async def test_set_balance_same_values_records_zero_delta():
     """set_balance to same values records zero deltas."""
     db = _make_fake_db()
-    svc, ledger = _make_service(
-        balance_repo=FakeCreditBalanceRepo(credits=10.0, bonus_credits=5.0)
-    )
+    svc, ledger = _make_service(balance_repo=FakeCreditBalanceRepo(credits=10.0, bonus_credits=5.0))
 
     await svc.set_balance(db, _USER_ID, 10.0, bonus_amount=5.0)
 

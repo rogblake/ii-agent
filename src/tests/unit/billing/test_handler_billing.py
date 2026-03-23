@@ -13,11 +13,8 @@ from ii_agent.agent.runtime.models.metrics import Metrics
 from ii_agent.agent.runtime.run.agent import (
     RunCancelledEvent,
     RunCompletedEvent,
-    RunEvent,
-    RunOutput,
 )
 from ii_agent.agent.runtime.run.base import RunStatus
-from ii_agent.agent.runtime.run.events import create_run_cancelled_event
 from ii_agent.sessions.schemas import SessionInfo
 
 pytestmark = pytest.mark.unit
@@ -166,7 +163,9 @@ class TestQueryHandlerRuntimeBillingCutover:
         with (
             patch.object(h.container, "agent_service") as mock_agent_svc,
             patch.object(h.container, "execution_service") as mock_exec_svc,
-            patch("ii_agent.agent.socket.command.query_handler.get_db_session_local", new=_noop_db_cm),
+            patch(
+                "ii_agent.agent.socket.command.query_handler.get_db_session_local", new=_noop_db_cm
+            ),
             patch(
                 "ii_agent.agent.socket.command.query_handler.convert_agent_event_to_realtime",
                 return_value=None,
@@ -209,7 +208,7 @@ class TestQueryHandlerRuntimeBillingCutover:
             )
 
         container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_chat_llm_call.assert_not_called()
+        container.llm_billing_service.settle_llm_call.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_cancelled_event_no_longer_triggers_handler_billing(self, handler):
@@ -223,7 +222,9 @@ class TestQueryHandlerRuntimeBillingCutover:
         with (
             patch.object(h.container, "agent_service") as mock_agent_svc,
             patch.object(h.container, "execution_service") as mock_exec_svc,
-            patch("ii_agent.agent.socket.command.query_handler.get_db_session_local", new=_noop_db_cm),
+            patch(
+                "ii_agent.agent.socket.command.query_handler.get_db_session_local", new=_noop_db_cm
+            ),
             patch(
                 "ii_agent.agent.socket.command.query_handler.convert_agent_event_to_realtime",
                 return_value=None,
@@ -266,7 +267,7 @@ class TestQueryHandlerRuntimeBillingCutover:
             )
 
         container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_chat_llm_call.assert_not_called()
+        container.llm_billing_service.settle_llm_call.assert_not_called()
 
 
 class TestContinueRunHandlerRuntimeBillingCutover:
@@ -300,8 +301,13 @@ class TestContinueRunHandlerRuntimeBillingCutover:
         mock_agent.acontinue_run = MagicMock(return_value=fake_continue())
 
         with (
-            patch("ii_agent.agent.socket.command.continue_run_handler.AgentSessionStore") as mock_store_cls,
-            patch("ii_agent.agent.socket.command.continue_run_handler.get_db_session_local", new=_noop_db_cm),
+            patch(
+                "ii_agent.agent.socket.command.continue_run_handler.AgentSessionStore"
+            ) as mock_store_cls,
+            patch(
+                "ii_agent.agent.socket.command.continue_run_handler.get_db_session_local",
+                new=_noop_db_cm,
+            ),
             patch(
                 "ii_agent.agent.socket.command.continue_run_handler.convert_agent_event_to_realtime",
                 return_value=None,
@@ -316,7 +322,7 @@ class TestContinueRunHandlerRuntimeBillingCutover:
             await h.handle({"run_id": run_id, "confirmed": True}, session_info)
 
         container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_chat_llm_call.assert_not_called()
+        container.llm_billing_service.settle_llm_call.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_cancelled_event_no_longer_triggers_handler_billing(self, handler):
@@ -338,8 +344,13 @@ class TestContinueRunHandlerRuntimeBillingCutover:
         mock_agent.acontinue_run = MagicMock(return_value=fake_continue())
 
         with (
-            patch("ii_agent.agent.socket.command.continue_run_handler.AgentSessionStore") as mock_store_cls,
-            patch("ii_agent.agent.socket.command.continue_run_handler.get_db_session_local", new=_noop_db_cm),
+            patch(
+                "ii_agent.agent.socket.command.continue_run_handler.AgentSessionStore"
+            ) as mock_store_cls,
+            patch(
+                "ii_agent.agent.socket.command.continue_run_handler.get_db_session_local",
+                new=_noop_db_cm,
+            ),
             patch(
                 "ii_agent.agent.socket.command.continue_run_handler.convert_agent_event_to_realtime",
                 return_value=None,
@@ -354,7 +365,7 @@ class TestContinueRunHandlerRuntimeBillingCutover:
             await h.handle({"run_id": run_id, "confirmed": True}, session_info)
 
         container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_chat_llm_call.assert_not_called()
+        container.llm_billing_service.settle_llm_call.assert_not_called()
 
 
 class TestPlanHandlerRuntimeBillingCutover:
@@ -376,7 +387,9 @@ class TestPlanHandlerRuntimeBillingCutover:
             yield _make_run_completed_event()
 
         with (
-            patch("ii_agent.agent.socket.command.plan_handler.get_db_session_local", new=_noop_db_cm),
+            patch(
+                "ii_agent.agent.socket.command.plan_handler.get_db_session_local", new=_noop_db_cm
+            ),
             patch(
                 "ii_agent.agent.socket.command.plan_handler.convert_agent_event_to_realtime",
                 return_value=None,
@@ -385,7 +398,7 @@ class TestPlanHandlerRuntimeBillingCutover:
             await h._process_agent_events(fake_stream(), session_info, running_task)
 
         container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_chat_llm_call.assert_not_called()
+        container.llm_billing_service.settle_llm_call.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_cancelled_event_no_longer_triggers_handler_billing(self, handler):
@@ -397,7 +410,9 @@ class TestPlanHandlerRuntimeBillingCutover:
             yield _make_run_cancelled_event()
 
         with (
-            patch("ii_agent.agent.socket.command.plan_handler.get_db_session_local", new=_noop_db_cm),
+            patch(
+                "ii_agent.agent.socket.command.plan_handler.get_db_session_local", new=_noop_db_cm
+            ),
             patch(
                 "ii_agent.agent.socket.command.plan_handler.convert_agent_event_to_realtime",
                 return_value=None,
@@ -406,4 +421,4 @@ class TestPlanHandlerRuntimeBillingCutover:
             await h._process_agent_events(fake_stream(), session_info, running_task)
 
         container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_chat_llm_call.assert_not_called()
+        container.llm_billing_service.settle_llm_call.assert_not_called()

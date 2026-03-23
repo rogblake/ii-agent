@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 import logging
-from typing import Optional, Dict, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.billing.credits.utils import usd_to_credits
+from ii_agent.billing.exceptions import InsufficientCreditsError
+from ii_agent.billing.types import BillingResult
+from ii_agent.billing.reservations.service import CreditReservationService
 from ii_agent.billing.reservations.types import SourceDomain
 from ii_agent.billing.usage.service import UsageService
 from ii_agent.content.storybook.repository import StorybookRepository
@@ -16,6 +19,12 @@ from ii_agent.content.storybook.schemas import (
     StorybookVoiceOverResponse,
 )
 from ii_agent.content.storybook.service import _storybook_to_detail
+from ii_agent.content.storybook.billing import (
+    DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD,
+    build_storybook_request,
+    build_storybook_scope,
+    run_storybook_sync_operation,
+)
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.request_context import get_or_generate_request_id
 
@@ -131,11 +140,13 @@ class StorybookVoiceService:
         storybook_service: StorybookService,
         config: Settings,
         usage_service: UsageService,
+        reservation_service: CreditReservationService,
     ) -> None:
         self._repo = repo
         self._storybook_service = storybook_service
         self._config = config
         self._usage_service = usage_service
+        self._reservation_service = reservation_service
 
     async def generate_voiceover(
         self,
@@ -166,9 +177,7 @@ class StorybookVoiceService:
             (p.page_metadata or {}).get("is_text_only_page") for p in pages
         )
 
-        resolved_language = _resolve_language_code(
-            language_code, storybook.style_json
-        )
+        resolved_language = _resolve_language_code(language_code, storybook.style_json)
         session_id = storybook.session_id or ""
         if not session_id:
             return (None, False, 0.0)
@@ -223,17 +232,146 @@ class StorybookVoiceService:
     ) -> StorybookVoiceOverResponse:
         """Generate voice-over and deduct credits in one service call."""
         await self._usage_service.require_billing_ok(db, user_id)
+        source_storybook = await self._repo.get_by_id(db, storybook_id)
+        if not source_storybook:
+            return StorybookVoiceOverResponse(
+                success=False,
+                error="Voice generation is unavailable right now.",
+            )
 
-        updated_storybook, generated_any, total_voice_cost_usd = (
-            await self.generate_voiceover(
+        resolved_session_id = source_storybook.session_id or session_id
+        if not resolved_session_id:
+            return StorybookVoiceOverResponse(
+                success=False,
+                error="Voice generation is unavailable right now.",
+            )
+
+        estimated_page_count = self._estimate_billable_voice_pages(
+            storybook=source_storybook,
+            force=force,
+        )
+
+        if estimated_page_count <= 0:
+            updated_storybook, generated_any, _ = await self.generate_voiceover(
                 db,
                 storybook_id=storybook_id,
                 user_id=user_id,
                 language_code=language_code,
                 force=force,
             )
+            return self._build_voiceover_response(
+                updated_storybook=updated_storybook,
+                generated_any=generated_any,
+                force=force,
+            )
+
+        request_id = get_or_generate_request_id()
+        operation_id = f"voice:{storybook_id}:{request_id}"
+        scope = build_storybook_scope(
+            user_id=user_id,
+            session_id=resolved_session_id,
+        )
+        request = build_storybook_request(
+            scope=scope,
+            namespace="storybook_voice",
+            operation_id=operation_id,
+            source_domain=SourceDomain.VOICE_GENERATION,
+            tool_name="storybook_voiceover",
+            reserve_usd=DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD * estimated_page_count,
+            metadata={
+                "storybook_id": storybook_id,
+                "voice_page_count_estimate": estimated_page_count,
+            },
+            explicit_idempotency_key=idempotency_key,
         )
 
+        async def _execute_voice_generation() -> BillingResult[tuple[StorybookDetail | None, bool]]:
+            updated_storybook, generated_any, total_voice_cost_usd = await self.generate_voiceover(
+                db,
+                storybook_id=storybook_id,
+                user_id=user_id,
+                language_code=language_code,
+                force=force,
+            )
+            await db.commit()
+            return BillingResult(
+                value=(updated_storybook, generated_any),
+                actual_usd=Decimal(str(total_voice_cost_usd)),
+                usage_payload={
+                    "provider": None,
+                    "latency_ms": None,
+                    "cost_usd": total_voice_cost_usd,
+                    "tool_name": "storybook_voiceover",
+                    "storybook_id": storybook_id,
+                    "voice_page_count_estimate": estimated_page_count,
+                },
+            )
+
+        try:
+            updated_storybook, generated_any = await run_storybook_sync_operation(
+                reservation_service=self._reservation_service,
+                scope=scope,
+                request=request,
+                execute_fn=_execute_voice_generation,
+                release_reason="storybook_voice_failed",
+                settlement_error="storybook_voice_settle_exception",
+            )
+        except InsufficientCreditsError:
+            logger.warning("[Storybook Voice] Insufficient credits for user %s", user_id)
+            return StorybookVoiceOverResponse(
+                success=False,
+                storybook=None,
+                error="Insufficient credits",
+            )
+
+        return self._build_voiceover_response(
+            updated_storybook=updated_storybook,
+            generated_any=generated_any,
+            force=force,
+        )
+
+    def _estimate_billable_voice_pages(
+        self,
+        *,
+        storybook,
+        force: bool,
+    ) -> int:
+        """Estimate how many voice pages may need provider work."""
+        pages = storybook.pages or []
+        if not pages:
+            return 0
+
+        has_separate_text_pages = any(
+            (getattr(page, "page_metadata", None) or getattr(page, "metadata", None) or {}).get(
+                "is_text_only_page"
+            )
+            for page in pages
+        )
+        billable_pages = 0
+        for page in pages:
+            if page.audio_link and not force:
+                continue
+
+            metadata = getattr(page, "page_metadata", None) or getattr(page, "metadata", None) or {}
+            if has_separate_text_pages:
+                is_cover_page = page.page_number == 1
+                if not is_cover_page and not metadata.get("is_text_only_page"):
+                    continue
+
+            text = (page.text_content or "").strip() or _extract_plain_text(page.html_content or "")
+            if text:
+                billable_pages += 1
+
+        return billable_pages
+
+    @staticmethod
+    def _build_voiceover_response(
+        *,
+        updated_storybook: StorybookDetail | None,
+        generated_any: bool,
+        force: bool,
+    ) -> StorybookVoiceOverResponse:
+        """Preserve the existing storybook voice response behavior."""
         if not updated_storybook:
             return StorybookVoiceOverResponse(
                 success=False,
@@ -241,48 +379,15 @@ class StorybookVoiceService:
             )
 
         if not generated_any:
-            if force and updated_storybook:
-                pages = updated_storybook.pages or []
-                has_audio = any(page.audio_link for page in pages)
-                if has_audio:
-                    return StorybookVoiceOverResponse(
-                        success=True, storybook=updated_storybook
-                    )
+            pages = updated_storybook.pages or []
+            has_audio = any(page.audio_link for page in pages)
+            if force and has_audio:
+                return StorybookVoiceOverResponse(success=True, storybook=updated_storybook)
             return StorybookVoiceOverResponse(
                 success=False,
                 storybook=updated_storybook,
                 error="No voice audio was generated for this storybook.",
             )
-
-        if total_voice_cost_usd > 0:
-            credits_to_deduct = float(usd_to_credits(total_voice_cost_usd))
-            request_scoped_key = (
-                idempotency_key
-                or f"storybook:voice:{storybook_id}:{get_or_generate_request_id()}"
-            )
-            deduct_success = await self._usage_service.deduct_and_track_session_usage(
-                db,
-                user_id=user_id,
-                session_id=session_id,
-                amount=credits_to_deduct,
-                source_domain=SourceDomain.VOICE_GENERATION,
-                idempotency_key=request_scoped_key,
-            )
-            if deduct_success:
-                logger.info(
-                    f"[Storybook Voice] Deducted {credits_to_deduct:.4f} credits "
-                    f"(voice cost: ${total_voice_cost_usd:.4f}) for storybook {storybook_id}"
-                )
-            else:
-                await db.rollback()
-                logger.warning(
-                    f"[Storybook Voice] Failed to deduct credits for user {user_id}"
-                )
-                return StorybookVoiceOverResponse(
-                    success=False,
-                    storybook=None,
-                    error="Insufficient credits",
-                )
 
         return StorybookVoiceOverResponse(success=True, storybook=updated_storybook)
 

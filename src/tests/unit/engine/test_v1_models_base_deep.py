@@ -13,11 +13,11 @@ Covers previously untested branches:
 - Model.aresponse() - basic happy path (no tool calls)
 - Model._populate_assistant_message()
 """
+
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncIterator, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -34,6 +34,7 @@ from ii_agent.core.logger import logger
 # ---------------------------------------------------------------------------
 # Concrete test subclass (since Model is abstract)
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class _ConcreteModel(Model):
@@ -55,6 +56,7 @@ class _ConcreteModel(Model):
 # ---------------------------------------------------------------------------
 # MessageData tests
 # ---------------------------------------------------------------------------
+
 
 class TestMessageData:
     def test_default_response_role_is_none(self):
@@ -123,7 +125,7 @@ class TestModelBillingFinalizationDeep:
 
         model = _ConcreteModel()
         llm_billing = MagicMock()
-        llm_billing.settle_agent_llm_call = AsyncMock(side_effect=RuntimeError("boom"))
+        llm_billing.settle_llm_call = AsyncMock(side_effect=RuntimeError("boom"))
         llm_billing.release_llm_call = AsyncMock()
         model.llm_billing_service = llm_billing
 
@@ -167,6 +169,7 @@ class TestModelDebugRequestLogging:
 # ---------------------------------------------------------------------------
 # _handle_agent_exception tests
 # ---------------------------------------------------------------------------
+
 
 class TestHandleAgentException:
     def test_user_message_string_creates_user_message(self):
@@ -268,6 +271,7 @@ class TestHandleAgentException:
 # Model.to_dict() and get_provider() tests
 # ---------------------------------------------------------------------------
 
+
 class TestModelToDict:
     def test_returns_dict(self):
         m = _ConcreteModel(id="my-model", name="TestModel")
@@ -289,6 +293,7 @@ class TestModelToDict:
 
     def test_get_provider_returns_provider_when_set(self):
         from ii_agent.agent.types import Provider
+
         m = _ConcreteModel(id="gpt-4", name="Test", provider=Provider.OPENAI)
         assert m.get_provider() == Provider.OPENAI
 
@@ -309,6 +314,7 @@ class TestModelToDict:
 # ---------------------------------------------------------------------------
 # Model._format_tools() tests
 # ---------------------------------------------------------------------------
+
 
 class TestModelFormatTools:
     def test_none_tools_returns_empty_list(self):
@@ -352,6 +358,7 @@ class TestModelFormatTools:
 # Model._get_retry_delay() tests
 # ---------------------------------------------------------------------------
 
+
 class TestModelGetRetryDelay:
     def test_linear_delay_returns_constant(self):
         m = _ConcreteModel(delay_between_retries=5, exponential_backoff=False)
@@ -361,10 +368,10 @@ class TestModelGetRetryDelay:
 
     def test_exponential_backoff_doubles_delay(self):
         m = _ConcreteModel(delay_between_retries=2, exponential_backoff=True)
-        assert m._get_retry_delay(0) == 2 * (2 ** 0)  # 2
-        assert m._get_retry_delay(1) == 2 * (2 ** 1)  # 4
-        assert m._get_retry_delay(2) == 2 * (2 ** 2)  # 8
-        assert m._get_retry_delay(3) == 2 * (2 ** 3)  # 16
+        assert m._get_retry_delay(0) == 2 * (2**0)  # 2
+        assert m._get_retry_delay(1) == 2 * (2**1)  # 4
+        assert m._get_retry_delay(2) == 2 * (2**2)  # 8
+        assert m._get_retry_delay(3) == 2 * (2**3)  # 16
 
     def test_default_delay_is_one(self):
         m = _ConcreteModel()
@@ -374,6 +381,7 @@ class TestModelGetRetryDelay:
 # ---------------------------------------------------------------------------
 # Model._ainvoke_with_retry() tests
 # ---------------------------------------------------------------------------
+
 
 class TestAInvokeWithRetry:
     @pytest.mark.asyncio
@@ -474,6 +482,7 @@ class TestAInvokeWithRetry:
 # Model._ainvoke_stream_with_retry() tests
 # ---------------------------------------------------------------------------
 
+
 class TestAInvokeStreamWithRetry:
     @pytest.mark.asyncio
     async def test_success_yields_responses(self):
@@ -553,6 +562,7 @@ class TestAInvokeStreamWithRetry:
 # Model._populate_assistant_message() tests
 # ---------------------------------------------------------------------------
 
+
 class TestPopulateAssistantMessage:
     def test_content_set_on_assistant_message(self):
         m = _ConcreteModel()
@@ -609,6 +619,7 @@ class TestPopulateAssistantMessage:
 # ---------------------------------------------------------------------------
 # Model.aresponse() basic path (no tool calls)
 # ---------------------------------------------------------------------------
+
 
 class TestModelAResponse:
     @pytest.mark.asyncio

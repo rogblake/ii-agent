@@ -5,6 +5,8 @@ from uuid import uuid4
 
 import pytest
 
+from ii_agent.billing.exceptions import BillingSettlementFinalError
+from ii_agent.billing.types import BillingContextValue
 from ii_agent.billing.reservations.types import BillingQuote
 from ii_agent.billing.usage.models import TokenUsage
 from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
@@ -193,7 +195,9 @@ class FakeStorybookTool:
 
 
 class FakeStorybookProvider:
-    async def stream(self, messages, tools, is_code_interpreter_enabled, session_id, provider_options=None):
+    async def stream(
+        self, messages, tools, is_code_interpreter_enabled, session_id, provider_options=None
+    ):
         yield RunResponseEvent(
             type=EventType.COMPLETE,
             response=RunResponseOutput(
@@ -220,7 +224,9 @@ async def test_llm_turn_loop_emits_usage_and_complete(monkeypatch):
     async def _compress_context(**kwargs):
         return kwargs["messages"]
 
-    monkeypatch.setattr("ii_agent.chat.application.turn_loop_service.cancel.raise_if_cancelled", _noop)
+    monkeypatch.setattr(
+        "ii_agent.chat.application.turn_loop_service.cancel.raise_if_cancelled", _noop
+    )
     monkeypatch.setattr(
         "ii_agent.chat.application.turn_loop_service.ContextWindowManager.compress_context_if_needed",
         _compress_context,
@@ -476,7 +482,10 @@ async def test_settle_chat_llm_billing_leaves_hold_on_settlement_failure(monkeyp
     async def _db_cm():
         yield object()
 
-    billing = SimpleNamespace(settle_chat_llm_call=AsyncMock(side_effect=RuntimeError("boom")))
+    billing = SimpleNamespace(
+        settle_llm_call=AsyncMock(side_effect=RuntimeError("boom")),
+        mark_settlement_failed=AsyncMock(),
+    )
     service = LLMTurnLoopService(message_service=FakeMessageService(), llm_billing=billing)
     release = AsyncMock()
     service._release_chat_llm_billing = release
@@ -496,6 +505,7 @@ async def test_settle_chat_llm_billing_leaves_hold_on_settlement_failure(monkeyp
 
     assert result is None
     release.assert_not_awaited()
+    billing.mark_settlement_failed.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -504,7 +514,10 @@ async def test_settle_chat_tool_billing_leaves_hold_on_settlement_failure(monkey
     async def _db_cm():
         yield object()
 
-    billing = SimpleNamespace(settle_tool_call=AsyncMock(side_effect=RuntimeError("boom")))
+    billing = SimpleNamespace(
+        settle_tool_call=AsyncMock(side_effect=RuntimeError("boom")),
+        mark_settlement_failed=AsyncMock(),
+    )
     service = LLMTurnLoopService(message_service=FakeMessageService(), llm_billing=billing)
     release = AsyncMock()
     service._release_chat_tool_billing = release
@@ -513,13 +526,91 @@ async def test_settle_chat_tool_billing_leaves_hold_on_settlement_failure(monkey
 
     result = await service._settle_chat_tool_billing(
         reservation=SimpleNamespace(hold=SimpleNamespace(reservation_id="res-1")),
+        user_id="user-1",
+        session_id="session-1",
         actual_cost_usd=0.2,
         run_id="run-1",
         tool_name="search_tool",
+        billing_context=BillingContextValue.TOOL_CALL,
     )
 
     assert result is None
     release.assert_not_awaited()
+    billing.mark_settlement_failed.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_settle_chat_llm_billing_raises_when_mark_failed_cannot_persist(monkeypatch):
+    @asynccontextmanager
+    async def _db_cm():
+        yield object()
+
+    billing = SimpleNamespace(
+        settle_llm_call=AsyncMock(side_effect=RuntimeError("boom")),
+        mark_settlement_failed=AsyncMock(side_effect=RuntimeError("db write failed")),
+    )
+    service = LLMTurnLoopService(message_service=FakeMessageService(), llm_billing=billing)
+
+    monkeypatch.setattr("ii_agent.chat.application.turn_loop_service.get_db_session_local", _db_cm)
+
+    with pytest.raises(BillingSettlementFinalError, match="persist settlement_failed"):
+        await service._settle_chat_llm_billing(
+            reservation=SimpleNamespace(hold=SimpleNamespace(reservation_id="res-1")),
+            user_id="u1",
+            session_id="s1",
+            run_id="run-1",
+            token_record=SimpleNamespace(),
+            provider="openai",
+            request_kind="chat_response",
+            latency_ms=12,
+        )
+
+
+@pytest.mark.asyncio
+async def test_settle_chat_tool_billing_raises_when_mark_failed_cannot_persist(monkeypatch):
+    @asynccontextmanager
+    async def _db_cm():
+        yield object()
+
+    billing = SimpleNamespace(
+        settle_tool_call=AsyncMock(side_effect=RuntimeError("boom")),
+        mark_settlement_failed=AsyncMock(side_effect=RuntimeError("db write failed")),
+    )
+    service = LLMTurnLoopService(message_service=FakeMessageService(), llm_billing=billing)
+
+    monkeypatch.setattr("ii_agent.chat.application.turn_loop_service.get_db_session_local", _db_cm)
+
+    with pytest.raises(BillingSettlementFinalError, match="persist settlement_failed"):
+        await service._settle_chat_tool_billing(
+            reservation=SimpleNamespace(hold=SimpleNamespace(reservation_id="res-1")),
+            user_id="user-1",
+            session_id="session-1",
+            actual_cost_usd=0.2,
+            run_id="run-1",
+            tool_name="search_tool",
+            billing_context=BillingContextValue.TOOL_CALL,
+        )
+
+
+@pytest.mark.asyncio
+async def test_settle_chat_llm_billing_marks_failed_when_usage_missing():
+    service = LLMTurnLoopService(message_service=FakeMessageService(), llm_billing=object())
+    mark_failed = AsyncMock()
+    service._mark_billing_settlement_failed = mark_failed
+
+    result = await service._settle_chat_llm_billing(
+        reservation=SimpleNamespace(hold=SimpleNamespace(reservation_id="res-1")),
+        user_id="u1",
+        session_id="s1",
+        run_id="run-1",
+        token_record=None,
+        provider="openai",
+        request_kind="chat_response",
+        latency_ms=None,
+    )
+
+    assert result is None
+    mark_failed.assert_awaited_once_with("res-1", "chat_llm_missing_usage")
 
 
 @pytest.mark.asyncio
@@ -530,7 +621,9 @@ async def test_storybook_progress_keeps_tool_reservation_open(monkeypatch):
     async def _compress_context(**kwargs):
         return kwargs["messages"]
 
-    monkeypatch.setattr("ii_agent.chat.application.turn_loop_service.cancel.raise_if_cancelled", _noop)
+    monkeypatch.setattr(
+        "ii_agent.chat.application.turn_loop_service.cancel.raise_if_cancelled", _noop
+    )
     monkeypatch.setattr(
         "ii_agent.chat.application.turn_loop_service.ContextWindowManager.compress_context_if_needed",
         _compress_context,

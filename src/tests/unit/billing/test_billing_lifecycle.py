@@ -14,10 +14,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from ii_agent.billing.credits.balance_models import BillingStatus
-from ii_agent.billing.credits.service import CreditDeductionResult, CreditService
+from ii_agent.billing.credits.service import CreditService
 from ii_agent.billing.exceptions import (
     BillingReconciliationRequiredError,
-    InsufficientCreditsError,
 )
 from ii_agent.billing.reservations.service import CreditReservationService
 from ii_agent.billing.reservations.types import BillingQuote
@@ -51,6 +50,7 @@ class FakeBalanceRepo:
         self.bonus = Decimal(bonus)
         self.status = status
         self.status_reason: str | None = None
+        self.lock_balance_state_calls = 0
 
     async def get_balance(self, db, user_id):
         return self.credits, self.bonus
@@ -65,6 +65,7 @@ class FakeBalanceRepo:
         return self.credits, self.bonus
 
     async def lock_balance_state(self, db, user_id):
+        self.lock_balance_state_calls += 1
         return self.credits, self.bonus, self.status
 
     async def apply_delta_locked(
@@ -84,6 +85,21 @@ class FakeBalanceRepo:
             self.status_reason = billing_status_reason
         return self.credits, self.bonus, self.status
 
+    async def set_billing_status(
+        self,
+        db,
+        user_id,
+        *,
+        billing_status,
+        billing_status_reason=None,
+        expected_current_status=None,
+    ):
+        if expected_current_status is not None and self.status != expected_current_status:
+            return False
+        self.status = billing_status
+        self.status_reason = billing_status_reason
+        return True
+
     async def get_or_create(self, db, user_id, **kwargs):
         return self.credits, self.bonus, False
 
@@ -102,6 +118,19 @@ class FakeBalanceRepo:
         if bonus_amount is not None:
             self.bonus = Decimal(str(bonus_amount))
         return old_credits, old_bonus, self.credits, self.bonus
+
+    async def _set_credits_locked(self, db, user_id, amount, *, bonus_amount=None):
+        self.credits = Decimal(str(amount))
+        if bonus_amount is not None:
+            self.bonus = Decimal(str(bonus_amount))
+        return self.credits, self.bonus
+
+    async def _apply_add_locked(self, db, user_id, amount, *, is_bonus=False):
+        if is_bonus:
+            self.bonus += Decimal(str(amount))
+        else:
+            self.credits += Decimal(str(amount))
+        return self.credits, self.bonus
 
     async def add_credits(self, db, user_id, amount, is_bonus=False):
         old_credits = self.credits
@@ -159,6 +188,12 @@ class FakeReservationRepo:
 
     async def lock_by_id(self, db, reservation_id):
         return self.by_id.get(reservation_id)
+
+    async def has_blocking_settlement_failures(self, db, *, user_id):
+        return any(
+            reservation.user_id == user_id and reservation.status == "settlement_failed"
+            for reservation in self.by_id.values()
+        )
 
 
 class FakeUsageService:
@@ -339,6 +374,7 @@ async def test_release_blocked_on_settlement_failed():
     # Balance must NOT be restored
     assert balance_repo.credits == credits_before
     assert balance_repo.bonus == bonus_before
+    assert balance_repo.status == BillingStatus.RECONCILIATION_REQUIRED
 
 
 @pytest.mark.asyncio

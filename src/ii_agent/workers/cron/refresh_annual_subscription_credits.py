@@ -122,7 +122,7 @@ async def refresh_annual_subscription_credits() -> None:
                 continue
 
             try:
-                await credit_service.set_balance(
+                await credit_service.reset_plan_balance(
                     db,
                     user.id,
                     monthly_credits,
@@ -131,7 +131,7 @@ async def refresh_annual_subscription_credits() -> None:
                     entry_metadata={"plan": bc.subscription_plan, "cycle": "annually"},
                 )
             except Exception:
-                app_logger.opt(exception=True).warning("Failed to set balance for user {}", user.id)
+                app_logger.warning("Failed to set balance for user %s", user.id, exc_info=True)
                 continue
 
             metadata = _ensure_metadata_dict(user.user_metadata)

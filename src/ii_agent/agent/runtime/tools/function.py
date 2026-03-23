@@ -21,7 +21,8 @@ from pydantic import BaseModel, Field, validate_call
 
 from ii_agent.agent.runtime.utils.json_schema import get_py_type_for_json_type
 from ii_agent.agent.runtime.exceptions import AgentRunException
-from ii_agent.billing.exceptions import InsufficientCreditsError
+from ii_agent.billing.exceptions import BillingSettlementFinalError, InsufficientCreditsError
+from ii_agent.billing.types import BillingContextValue, BillingScope
 from ii_agent.billing.reservations.types import SourceDomain
 from ii_agent.agent.runtime.media import Audio, File, Image, Video
 from ii_agent.agent.runtime.run import RunContext
@@ -1009,15 +1010,17 @@ class FunctionCall(BaseModel):
             self.billing_reservation = (
                 await dependencies.container.llm_billing_service.reserve_tool_call(
                     db,
-                    user_id=run_context.user_id,
-                    session_id=run_context.session_id,
-                    run_id=run_context.run_id,
+                    scope=BillingScope.for_session(
+                        user_id=run_context.user_id,
+                        app_kind="agent",
+                        session_id=run_context.session_id,
+                        billing_context=BillingContextValue.TOOL_CALL,
+                        run_id=run_context.run_id,
+                    ),
                     source_domain=SourceDomain.AGENT_TOOL,
                     source_id=self.call_id,
                     tool_name=tool.name,
                     quote=quote,
-                    idempotency_key=f"agent-tool:{run_context.run_id}:{self.call_id}",
-                    app_kind="agent",
                 )
             )
             await db.commit()
@@ -1058,12 +1061,16 @@ class FunctionCall(BaseModel):
                 async with get_db_session_local() as db:
                     await dependencies.container.llm_billing_service.record_zero_cost_tool_usage(
                         db,
-                        user_id=run_context.user_id,
-                        session_id=run_context.session_id,
-                        run_id=run_context.run_id,
+                        scope=BillingScope.for_session(
+                            user_id=run_context.user_id,
+                            app_kind="agent",
+                            session_id=run_context.session_id,
+                            billing_context=BillingContextValue.TOOL_CALL,
+                            run_id=run_context.run_id,
+                        ),
                         tool_name=tool.name,
                         succeeded=succeeded,
-                        app_kind="agent",
+                        source_domain=SourceDomain.AGENT_TOOL,
                     )
                     await db.commit()
             except Exception:
@@ -1077,6 +1084,13 @@ class FunctionCall(BaseModel):
                 if succeeded:
                     await dependencies.container.llm_billing_service.settle_tool_call(
                         db,
+                        scope=BillingScope.for_session(
+                            user_id=run_context.user_id,
+                            app_kind="agent",
+                            session_id=run_context.session_id,
+                            billing_context=BillingContextValue.TOOL_CALL,
+                            run_id=run_context.run_id,
+                        ),
                         reservation=self.billing_reservation,
                         actual_cost_usd=actual_cost_usd,
                         provider=None,
@@ -1115,6 +1129,10 @@ class FunctionCall(BaseModel):
                 except Exception:
                     logger.opt(exception=True).warning(
                         "Failed to mark tool reservation {} as settlement_failed", reservation_id
+                    )
+                    raise BillingSettlementFinalError(
+                        f"Failed to persist settlement_failed for reservation {reservation_id}",
+                        reservation_id=reservation_id,
                     )
 
     async def _handle_pre_hook_async(self):

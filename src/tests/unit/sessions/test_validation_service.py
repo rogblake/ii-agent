@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -69,9 +70,7 @@ async def test_validate_session_returns_error_when_session_missing():
     result = await service.validate_and_prepare_session(
         db=FakeDB(),
         session_id=uuid4(),
-        llm_setting_service=FakeLLMSettingService(
-            LLMConfig(model="gpt-4o", api_type="openai")
-        ),
+        llm_setting_service=FakeLLMSettingService(LLMConfig(model="gpt-4o", api_type="openai")),
     )
 
     assert result.is_valid is False
@@ -79,7 +78,9 @@ async def test_validate_session_returns_error_when_session_missing():
 
 
 @pytest.mark.asyncio
-async def test_validate_session_bypasses_billing_check_for_user_model(settings_factory, monkeypatch):
+async def test_validate_session_bypasses_billing_check_for_user_model(
+    settings_factory, monkeypatch
+):
     monkeypatch.setattr(
         "ii_agent.agent.application.validation_service.SessionService._build_session_info",
         lambda _session: SimpleNamespace(
@@ -186,6 +187,68 @@ async def test_validate_session_rejects_reconciliation_required(settings_factory
 
     assert result.is_valid is False
     assert result.error_type == "billing_reconciliation_required"
+
+
+@pytest.mark.asyncio
+async def test_validate_session_does_not_schedule_title_update_when_billing_is_blocked(
+    settings_factory,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "ii_agent.agent.application.validation_service.SessionService._build_session_info",
+        lambda _session: SimpleNamespace(
+            id=str(uuid4()),
+            user_id="u1",
+            created_at="2026-01-01T00:00:00+00:00",
+            updated_at="2026-01-01T00:00:00+00:00",
+            workspace_dir="/workspace",
+            is_public=False,
+            agent_type=None,
+            llm_setting_id=None,
+        ),
+    )
+
+    session = SimpleNamespace(
+        id=str(uuid4()),
+        user_id="u1",
+        status="active",
+        created_at=None,
+        updated_at=None,
+        api_version="v1",
+        agent_state_path="/workspace/state",
+        name=None,
+        agent_type=None,
+        llm_setting_id=None,
+        session_metadata={},
+        is_public=False,
+        public_url=None,
+        summary_message_id=None,
+        parent_session_id=None,
+        prompt_tokens=0,
+        completion_tokens=0,
+        cost=0.0,
+    )
+    llm_config = LLMConfig(model="gpt-4o", api_type="openai")
+    title_service = SessionTitleService(config=SessionTitleConfig(openai_api_key=None))
+    title_service.build_initial_title = MagicMock(return_value=(None, True))
+    title_service.schedule_title_update = MagicMock()
+
+    service = SessionValidationService(
+        session_service=FakeSessionService(session=session),
+        balance_repo=FakeBalanceRepo(credits=100, bonus=0, status="reconciliation_required"),
+        title_service=title_service,
+    )
+
+    result = await service.validate_and_prepare_session(
+        db=FakeDB(),
+        session_id=uuid4(),
+        query_text="hello",
+        llm_setting_service=FakeLLMSettingService(llm_config),
+    )
+
+    assert result.is_valid is False
+    assert result.error_type == "billing_reconciliation_required"
+    title_service.schedule_title_update.assert_not_called()
 
 
 @pytest.mark.asyncio

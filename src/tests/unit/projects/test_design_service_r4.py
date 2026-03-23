@@ -2,26 +2,20 @@
 
 from __future__ import annotations
 
-import json
 import uuid
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from ii_agent.projects.design.exceptions import (
-    DesignProxyFetchError,
-    DesignProxyHostNotAllowedError,
     DesignSessionAccessDeniedError,
     DesignSessionNotFoundError,
     DesignSandboxUnavailableError,
     DesignValidationError,
 )
 from ii_agent.projects.design.schemas import (
-    AIChangeRequest,
     DesignStateRequest,
     ElementInfoRequest,
-    IframeAIPlanRequest,
     IframeDocumentSnapshotNode,
     StyleChange,
     SyncRequest,
@@ -35,6 +29,7 @@ pytestmark = pytest.mark.unit
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_session(
     user_id: str = "user-1",
@@ -125,6 +120,7 @@ def _make_raw_style_change(design_id="did-1", prop="color", value="red") -> dict
 # _get_session_for_request
 # ---------------------------------------------------------------------------
 
+
 class TestGetSessionForRequestR4:
     @pytest.mark.asyncio
     async def test_raises_not_found_when_session_missing(self):
@@ -146,7 +142,9 @@ class TestGetSessionForRequestR4:
         svc = _make_service()
         session = _make_session(user_id="user-1")
         svc._repo.get_session = AsyncMock(return_value=session)
-        result = await svc._get_session_for_request(AsyncMock(), session_id=session.id, user_id="user-1")
+        result = await svc._get_session_for_request(
+            AsyncMock(), session_id=session.id, user_id="user-1"
+        )
         assert result is session
 
     @pytest.mark.asyncio
@@ -161,13 +159,16 @@ class TestGetSessionForRequestR4:
         session.user_id = 42  # non-string integer
         svc._repo.get_session = AsyncMock(return_value=session)
         # str(42) == str("42") => "42" == "42" => True, so no exception is raised
-        result = await svc._get_session_for_request(AsyncMock(), session_id=session.id, user_id="42")
+        result = await svc._get_session_for_request(
+            AsyncMock(), session_id=session.id, user_id="42"
+        )
         assert result is session
 
 
 # ---------------------------------------------------------------------------
 # _validate_proxy_url
 # ---------------------------------------------------------------------------
+
 
 class TestValidateProxyUrlR4:
     def test_valid_https_url(self):
@@ -226,6 +227,7 @@ class TestValidateProxyUrlR4:
 # _is_e2b_hostname
 # ---------------------------------------------------------------------------
 
+
 class TestIsE2bHostnameR4:
     def test_e2b_app_suffix(self):
         assert ProjectDesignService._is_e2b_hostname("abc.e2b.app") is True
@@ -252,6 +254,7 @@ class TestIsE2bHostnameR4:
 # ---------------------------------------------------------------------------
 # _extract_e2b_port_from_hostname
 # ---------------------------------------------------------------------------
+
 
 class TestExtractE2bPortFromHostnameR4:
     def test_extracts_valid_port(self):
@@ -286,18 +289,33 @@ class TestExtractE2bPortFromHostnameR4:
 # _hostname_matches_sandbox_id
 # ---------------------------------------------------------------------------
 
+
 class TestHostnameMatchesSandboxIdR4:
     def test_exact_match(self):
-        assert ProjectDesignService._hostname_matches_sandbox_id("sandbox123.e2b.app", "sandbox123") is True
+        assert (
+            ProjectDesignService._hostname_matches_sandbox_id("sandbox123.e2b.app", "sandbox123")
+            is True
+        )
 
     def test_port_prefixed_match(self):
-        assert ProjectDesignService._hostname_matches_sandbox_id("3000-sandbox123.e2b.app", "sandbox123") is True
+        assert (
+            ProjectDesignService._hostname_matches_sandbox_id(
+                "3000-sandbox123.e2b.app", "sandbox123"
+            )
+            is True
+        )
 
     def test_non_e2b_returns_false(self):
-        assert ProjectDesignService._hostname_matches_sandbox_id("sandbox.example.com", "sandbox") is False
+        assert (
+            ProjectDesignService._hostname_matches_sandbox_id("sandbox.example.com", "sandbox")
+            is False
+        )
 
     def test_different_sandbox_returns_false(self):
-        assert ProjectDesignService._hostname_matches_sandbox_id("other.e2b.app", "sandbox123") is False
+        assert (
+            ProjectDesignService._hostname_matches_sandbox_id("other.e2b.app", "sandbox123")
+            is False
+        )
 
     def test_empty_hostname_returns_false(self):
         assert ProjectDesignService._hostname_matches_sandbox_id("", "sandbox123") is False
@@ -306,12 +324,15 @@ class TestHostnameMatchesSandboxIdR4:
         assert ProjectDesignService._hostname_matches_sandbox_id("sandbox.e2b.app", "") is False
 
     def test_case_insensitive(self):
-        assert ProjectDesignService._hostname_matches_sandbox_id("SANDBOX.e2b.app", "sandbox") is True
+        assert (
+            ProjectDesignService._hostname_matches_sandbox_id("SANDBOX.e2b.app", "sandbox") is True
+        )
 
 
 # ---------------------------------------------------------------------------
 # _build_proxy_hostname_allow_check
 # ---------------------------------------------------------------------------
+
 
 class TestBuildProxyHostnameAllowCheckR4:
     def test_allows_matching_provider_sandbox(self):
@@ -393,43 +414,55 @@ class TestBuildProxyHostnameAllowCheckR4:
 # _inject_runtime_script_with_base
 # ---------------------------------------------------------------------------
 
+
 class TestInjectRuntimeScriptWithBaseR4:
     def test_injects_into_head_tag(self):
         svc = _make_service()
         html = "<html><head></head><body>Hello</body></html>"
-        result = svc._inject_runtime_script_with_base(html=html, base_url="https://sandbox.e2b.app/")
+        result = svc._inject_runtime_script_with_base(
+            html=html, base_url="https://sandbox.e2b.app/"
+        )
         assert "<head>" in result
         assert len(result) > len(html)
 
     def test_injects_after_head_with_attributes(self):
         svc = _make_service()
         html = '<html><head lang="en"></head><body></body></html>'
-        result = svc._inject_runtime_script_with_base(html=html, base_url="https://sandbox.e2b.app/")
+        result = svc._inject_runtime_script_with_base(
+            html=html, base_url="https://sandbox.e2b.app/"
+        )
         assert "head" in result
         assert len(result) > len(html)
 
     def test_injects_when_no_head_tag(self):
         svc = _make_service()
         html = "<p>No head here</p>"
-        result = svc._inject_runtime_script_with_base(html=html, base_url="https://sandbox.e2b.app/")
+        result = svc._inject_runtime_script_with_base(
+            html=html, base_url="https://sandbox.e2b.app/"
+        )
         assert len(result) > len(html)
 
     def test_adds_head_when_only_html_tag(self):
         svc = _make_service()
         html = "<html><body>content</body></html>"
-        result = svc._inject_runtime_script_with_base(html=html, base_url="https://sandbox.e2b.app/")
+        result = svc._inject_runtime_script_with_base(
+            html=html, base_url="https://sandbox.e2b.app/"
+        )
         assert "<head>" in result
 
     def test_base_url_appears_in_output(self):
         svc = _make_service()
         html = "<html><head></head><body></body></html>"
-        result = svc._inject_runtime_script_with_base(html=html, base_url="https://sandbox.e2b.app/app/")
+        result = svc._inject_runtime_script_with_base(
+            html=html, base_url="https://sandbox.e2b.app/app/"
+        )
         assert "sandbox.e2b.app" in result
 
 
 # ---------------------------------------------------------------------------
 # _rewrite_urls
 # ---------------------------------------------------------------------------
+
 
 class TestRewriteUrlsR4:
     def test_rewrites_absolute_src(self):
@@ -481,6 +514,7 @@ class TestRewriteUrlsR4:
 # _snapshot_nodes_by_id
 # ---------------------------------------------------------------------------
 
+
 class TestSnapshotNodesByIdR4:
     def test_indexes_nodes_by_design_id(self):
         nodes = [_make_snapshot_node("did-1"), _make_snapshot_node("did-2")]
@@ -518,6 +552,7 @@ class TestSnapshotNodesByIdR4:
 # _build_snapshot_desc
 # ---------------------------------------------------------------------------
 
+
 class TestBuildSnapshotDescR4:
     def test_empty_nodes_shows_count_zero(self):
         svc = _make_service()
@@ -548,6 +583,7 @@ class TestBuildSnapshotDescR4:
 # ---------------------------------------------------------------------------
 # _build_selected_desc
 # ---------------------------------------------------------------------------
+
 
 class TestBuildSelectedDescR4:
     def test_none_returns_none_string(self):
@@ -586,6 +622,7 @@ class TestBuildSelectedDescR4:
 # _build_selected_subtree_hint
 # ---------------------------------------------------------------------------
 
+
 class TestBuildSelectedSubtreeHintR4:
     def test_empty_when_no_design_id(self):
         svc = _make_service()
@@ -596,39 +633,49 @@ class TestBuildSelectedSubtreeHintR4:
     def test_empty_when_design_id_not_in_nodes(self):
         svc = _make_service()
         nodes = [_make_snapshot_node("did-1")]
-        result = svc._build_selected_subtree_hint(snapshot_nodes=nodes, selected_design_id="missing")
+        result = svc._build_selected_subtree_hint(
+            snapshot_nodes=nodes, selected_design_id="missing"
+        )
         assert result == ""
 
     def test_returns_subtree_for_valid_root(self):
         svc = _make_service()
         parent = _make_snapshot_node("did-root", children=["did-child"])
         child = _make_snapshot_node("did-child")
-        result = svc._build_selected_subtree_hint(snapshot_nodes=[parent, child], selected_design_id="did-root")
+        result = svc._build_selected_subtree_hint(
+            snapshot_nodes=[parent, child], selected_design_id="did-root"
+        )
         assert "did-root" in result
         assert "did-child" in result
 
     def test_marks_svg_presence_in_html(self):
         svc = _make_service()
         node = _make_snapshot_node("did-svg", html="<svg viewBox='0 0 24 24'>...</svg>")
-        result = svc._build_selected_subtree_hint(snapshot_nodes=[node], selected_design_id="did-svg")
+        result = svc._build_selected_subtree_hint(
+            snapshot_nodes=[node], selected_design_id="did-svg"
+        )
         assert "has_svg=True" in result
 
     def test_marks_svg_tag_name(self):
         svc = _make_service()
         node = _make_snapshot_node("did-svg", tag="svg")
-        result = svc._build_selected_subtree_hint(snapshot_nodes=[node], selected_design_id="did-svg")
+        result = svc._build_selected_subtree_hint(
+            snapshot_nodes=[node], selected_design_id="did-svg"
+        )
         assert "has_svg=True" in result
 
     def test_non_svg_has_svg_false(self):
         svc = _make_service()
         node = _make_snapshot_node("did-div", tag="div", html="<span>text</span>")
-        result = svc._build_selected_subtree_hint(snapshot_nodes=[node], selected_design_id="did-div")
+        result = svc._build_selected_subtree_hint(
+            snapshot_nodes=[node], selected_design_id="did-div"
+        )
         assert "has_svg=False" in result
 
     def test_max_nodes_limit(self):
         svc = _make_service()
         nodes = [
-            _make_snapshot_node(f"did-{i}", children=[f"did-{i+1}"] if i < 20 else [])
+            _make_snapshot_node(f"did-{i}", children=[f"did-{i + 1}"] if i < 20 else [])
             for i in range(21)
         ]
         result = svc._build_selected_subtree_hint(
@@ -636,7 +683,7 @@ class TestBuildSelectedSubtreeHintR4:
             selected_design_id="did-0",
             max_nodes=3,
         )
-        lines = [l for l in result.split("\n") if l.strip()]
+        lines = [line for line in result.split("\n") if line.strip()]
         assert len(lines) <= 3
 
     def test_no_infinite_loop_with_cycles(self):
@@ -654,6 +701,7 @@ class TestBuildSelectedSubtreeHintR4:
 # ---------------------------------------------------------------------------
 # _tool_result_value
 # ---------------------------------------------------------------------------
+
 
 class TestToolResultValueR4:
     def test_returns_value_from_output(self):
@@ -699,6 +747,7 @@ class TestToolResultValueR4:
 # _build_billing_context
 # ---------------------------------------------------------------------------
 
+
 class TestBuildBillingContextR4:
     def test_returns_none_when_no_billing_service(self):
         svc = _make_service(llm_billing_service=None)
@@ -712,6 +761,7 @@ class TestBuildBillingContextR4:
 
     def test_returns_billing_context_when_service_present(self):
         from ii_agent.core.llm.execution_service import LLMBillingContext
+
         billing_svc = MagicMock()
         svc = _make_service(llm_billing_service=billing_svc)
         llm_config = MagicMock()
@@ -724,15 +774,16 @@ class TestBuildBillingContextR4:
         )
         assert ctx is not None
         assert isinstance(ctx, LLMBillingContext)
+        assert ctx.scope.billing_context == "projectdesign"
 
 
 # ---------------------------------------------------------------------------
 # _build_llm_messages
 # ---------------------------------------------------------------------------
 
+
 class TestBuildLlmMessagesR4:
     def test_returns_single_user_message(self):
-        from ii_agent.chat.types import TextContent
         svc = _make_service()
         mock_message = MagicMock()
         svc._llm_execution_service.new_message = MagicMock(return_value=mock_message)
@@ -742,6 +793,7 @@ class TestBuildLlmMessagesR4:
 
     def test_passes_correct_prompt_to_new_message(self):
         from ii_agent.chat.types import TextContent
+
         svc = _make_service()
         svc._llm_execution_service.new_message = MagicMock(return_value=MagicMock())
         svc._build_llm_messages(session_id="sess-1", user_prompt="Design this")
@@ -753,6 +805,7 @@ class TestBuildLlmMessagesR4:
 # ---------------------------------------------------------------------------
 # _parse_design_request (fallback)
 # ---------------------------------------------------------------------------
+
 
 class TestParseDesignRequestR4:
     def test_parses_color_change(self):
@@ -782,6 +835,7 @@ class TestParseDesignRequestR4:
 # ---------------------------------------------------------------------------
 # get_design_state
 # ---------------------------------------------------------------------------
+
 
 class TestGetDesignStateR4:
     @pytest.mark.asyncio
@@ -818,6 +872,7 @@ class TestGetDesignStateR4:
 # ---------------------------------------------------------------------------
 # save_design_state
 # ---------------------------------------------------------------------------
+
 
 class TestSaveDesignStateR4:
     @pytest.mark.asyncio
@@ -868,6 +923,7 @@ class TestSaveDesignStateR4:
 # sync_persisted_design_changes
 # ---------------------------------------------------------------------------
 
+
 class TestSyncPersistedDesignChangesR4:
     @pytest.mark.asyncio
     async def test_invalid_session_id_raises(self):
@@ -887,7 +943,9 @@ class TestSyncPersistedDesignChangesR4:
             changes=None,
             project_info=None,
         )
-        result = await svc.sync_persisted_design_changes(AsyncMock(), user_id="user-1", request=request)
+        result = await svc.sync_persisted_design_changes(
+            AsyncMock(), user_id="user-1", request=request
+        )
         assert result.success is False
         assert result.total == 0
 
@@ -895,6 +953,7 @@ class TestSyncPersistedDesignChangesR4:
 # ---------------------------------------------------------------------------
 # _normalize_iframe_plan_operations
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeIframePlanOperationsR4:
     @pytest.mark.asyncio
@@ -1040,7 +1099,14 @@ class TestNormalizeIframePlanOperationsR4:
     @pytest.mark.asyncio
     async def test_set_icon_with_svg_inner(self):
         svc = _make_service()
-        ops = [{"op": "set_icon", "design_id": "did-1", "icon_name": "rocket", "svg_inner": "<path d='M0 0'/>"}]
+        ops = [
+            {
+                "op": "set_icon",
+                "design_id": "did-1",
+                "icon_name": "rocket",
+                "svg_inner": "<path d='M0 0'/>",
+            }
+        ]
         result = await svc._normalize_iframe_plan_operations(
             operations=ops,
             snapshot_nodes=[_make_snapshot_node("did-1")],
@@ -1066,7 +1132,9 @@ class TestNormalizeIframePlanOperationsR4:
     async def test_set_icon_svg_too_large_skipped(self):
         svc = _make_service()
         large_svg = "x" * 21000
-        ops = [{"op": "set_icon", "design_id": "did-1", "icon_name": "rocket", "svg_inner": large_svg}]
+        ops = [
+            {"op": "set_icon", "design_id": "did-1", "icon_name": "rocket", "svg_inner": large_svg}
+        ]
         result = await svc._normalize_iframe_plan_operations(
             operations=ops,
             snapshot_nodes=[_make_snapshot_node("did-1")],
@@ -1105,10 +1173,12 @@ class TestNormalizeIframePlanOperationsR4:
 # _resolve_llm_config_for_session
 # ---------------------------------------------------------------------------
 
+
 class TestResolveLlmConfigForSessionR4:
     @pytest.mark.asyncio
     async def test_returns_default_llm_config_when_no_setting(self):
         from ii_agent.core.config.llm_config import LLMConfig
+
         svc = _make_service()
         svc._config.llm_configs = {}
         session = _make_session(llm_setting_id=None)
@@ -1123,6 +1193,7 @@ class TestResolveLlmConfigForSessionR4:
     @pytest.mark.asyncio
     async def test_uses_llm_setting_from_service(self):
         from ii_agent.core.config.llm_config import LLMConfig
+
         svc = _make_service()
         mock_config = MagicMock(spec=LLMConfig)
         mock_config.model_copy = MagicMock(return_value=mock_config)
@@ -1140,6 +1211,7 @@ class TestResolveLlmConfigForSessionR4:
     @pytest.mark.asyncio
     async def test_falls_back_to_system_config_when_user_service_fails(self):
         from ii_agent.core.config.llm_config import LLMConfig
+
         svc = _make_service()
         svc._llm_setting_service.get_user_llm_config = AsyncMock(side_effect=Exception("not found"))
         svc._config.llm_configs = {}
@@ -1157,6 +1229,7 @@ class TestResolveLlmConfigForSessionR4:
 # ---------------------------------------------------------------------------
 # sync_design_changes (public method)
 # ---------------------------------------------------------------------------
+
 
 class TestSyncDesignChangesR4:
     @pytest.mark.asyncio

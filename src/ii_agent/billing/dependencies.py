@@ -8,6 +8,7 @@ from ii_agent.core.config.settings import get_settings
 from ii_agent.auth.users.dependencies import UserRepositoryDep
 from ii_agent.billing.credits.dependencies import CreditServiceDep
 from ii_agent.billing.customers.dependencies import BillingCustomerServiceDep
+from ii_agent.billing.reservations.dependencies import CreditReservationServiceDep
 from ii_agent.billing.repository import BillingTransactionRepository
 from ii_agent.billing.service import BillingService
 from ii_agent.billing.stripe_config import StripeConfig
@@ -58,6 +59,7 @@ def get_webhook_handler(
     user_repo: UserRepositoryDep,
     billing_customer_service: BillingCustomerServiceDep,
     credit_service: CreditServiceDep,
+    reservation_service: CreditReservationServiceDep,
 ) -> StripeWebhookHandler:
     """Provide StripeWebhookHandler instance."""
     return StripeWebhookHandler(
@@ -66,6 +68,7 @@ def get_webhook_handler(
         user_repo=user_repo,
         billing_customer_service=billing_customer_service,
         credit_service=credit_service,
+        reservation_service=reservation_service,
     )
 
 

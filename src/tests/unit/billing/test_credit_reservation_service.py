@@ -37,9 +37,14 @@ class FakeBalanceRepo:
         self.bonus = Decimal(bonus)
         self.status = status
         self.status_reason: str | None = None
+        self.lock_balance_state_calls = 0
 
     async def lock_balance_state(self, db, user_id):
+        self.lock_balance_state_calls += 1
         return self.credits, self.bonus, self.status
+
+    async def lock_balance(self, db, user_id):
+        return self.credits, self.bonus
 
     async def apply_delta_locked(
         self,
@@ -57,6 +62,21 @@ class FakeBalanceRepo:
             self.status = billing_status
             self.status_reason = billing_status_reason
         return self.credits, self.bonus, self.status
+
+    async def set_billing_status(
+        self,
+        db,
+        user_id,
+        *,
+        billing_status,
+        billing_status_reason=None,
+        expected_current_status=None,
+    ):
+        if expected_current_status is not None and self.status != expected_current_status:
+            return False
+        self.status = billing_status
+        self.status_reason = billing_status_reason
+        return True
 
 
 class FakeLedgerRepo:
@@ -100,6 +120,9 @@ class FakeReservationRepo:
     async def lock_by_id(self, db, reservation_id):
         return self.by_id.get(reservation_id)
 
+    async def get_by_id(self, db, reservation_id):
+        return self.by_id.get(reservation_id)
+
     async def list_stale_reserved(self, db, *, older_than, limit=100):
         reservations = [
             reservation
@@ -110,6 +133,12 @@ class FakeReservationRepo:
         ]
         return reservations[:limit]
 
+    async def has_blocking_settlement_failures(self, db, *, user_id):
+        return any(
+            reservation.user_id == user_id and reservation.status == "settlement_failed"
+            for reservation in self.by_id.values()
+        )
+
 
 class FakeCreditService:
     def __init__(self, deduct_result=None):
@@ -117,6 +146,10 @@ class FakeCreditService:
         self.calls: list[dict] = []
 
     async def deduct(self, db, user_id, amount, **kwargs):
+        self.calls.append({"user_id": user_id, "amount": amount, **kwargs})
+        return self.deduct_result
+
+    async def deduct_locked(self, db, user_id, amount, **kwargs):
         self.calls.append({"user_id": user_id, "amount": amount, **kwargs})
         return self.deduct_result
 
@@ -166,21 +199,23 @@ async def test_reserve_uses_bonus_then_regular_and_is_idempotent():
     hold = await service.reserve(
         db,
         user_id="user-1",
+        subject_kind="session",
+        subject_id="session-1",
         source_domain="chat_llm",
         source_id="call-1",
         billing_kind="llm_usage",
         quote=quote,
-        session_id="session-1",
         idempotency_key="idem-1",
     )
     duplicate = await service.reserve(
         db,
         user_id="user-1",
+        subject_kind="session",
+        subject_id="session-1",
         source_domain="chat_llm",
         source_id="call-1",
         billing_kind="llm_usage",
         quote=quote,
-        session_id="session-1",
         idempotency_key="idem-1",
     )
 
@@ -205,6 +240,8 @@ async def test_settle_refunds_unused_reserved_split_and_records_usage():
     hold = await service.reserve(
         db,
         user_id="user-1",
+        subject_kind="session",
+        subject_id="session-1",
         source_domain="chat_llm",
         source_id="call-1",
         billing_kind="llm_usage",
@@ -213,7 +250,6 @@ async def test_settle_refunds_unused_reserved_split_and_records_usage():
             reserve_usd=Decimal("0.075"),  # 5 credits
             max_usd=Decimal("0.075"),
         ),
-        session_id="session-1",
         idempotency_key="idem-2",
     )
 
@@ -239,6 +275,39 @@ async def test_settle_refunds_unused_reserved_split_and_records_usage():
 
 
 @pytest.mark.asyncio
+async def test_reserve_partially_holds_available_balance_within_controlled_shortfall_window():
+    service, balance_repo, ledger_repo, reservation_repo, _usage_service = _make_service(
+        credits="2",
+        bonus="1",
+    )
+    db = _make_db()
+
+    hold = await service.reserve(
+        db,
+        user_id="user-1",
+        source_domain="chat_llm",
+        source_id="call-partial",
+        billing_kind="llm_usage",
+        quote=BillingQuote(
+            strategy="bounded",
+            reserve_usd=Decimal("0.075"),  # target hold: 5 credits
+            max_usd=Decimal("0.075"),
+        ),
+        idempotency_key="idem-partial",
+    )
+
+    assert hold is not None
+    assert hold.total_reserved == Decimal("3")
+    assert hold.reserved_bonus_credits == Decimal("1")
+    assert hold.reserved_credits == Decimal("2")
+    assert balance_repo.credits == Decimal("0")
+    assert balance_repo.bonus == Decimal("0")
+    assert ledger_repo.entries[0]["entry_metadata"]["partial_reserve"] is True
+    assert ledger_repo.entries[0]["entry_metadata"]["requested_reserve_credits"] == 5.0
+    assert reservation_repo.by_id[hold.reservation_id].reserved_credits == Decimal("2")
+
+
+@pytest.mark.asyncio
 async def test_shortfall_failure_marks_reconciliation_required():
     credit_service = FakeCreditService(deduct_result=False)
     service, balance_repo, _ledger_repo, reservation_repo, usage_service = _make_service(
@@ -255,8 +324,8 @@ async def test_shortfall_failure_marks_reconciliation_required():
         billing_kind="tool_usage",
         quote=BillingQuote(
             strategy="bounded",
-            reserve_usd=Decimal("0.045"),  # 3 credits
-            max_usd=Decimal("0.045"),
+            reserve_usd=Decimal("0.075"),  # target hold: 5 credits, only 3 available
+            max_usd=Decimal("0.075"),
         ),
         run_id="00000000-0000-0000-0000-000000000001",
         idempotency_key="idem-3",
@@ -291,6 +360,8 @@ async def test_settlement_failed_reservation_can_retry_to_settled():
     hold = await service.reserve(
         db,
         user_id="user-1",
+        subject_kind="session",
+        subject_id="session-1",
         source_domain="chat_llm",
         source_id="call-2",
         billing_kind="llm_usage",
@@ -299,7 +370,6 @@ async def test_settlement_failed_reservation_can_retry_to_settled():
             reserve_usd=Decimal("0.045"),
             max_usd=Decimal("0.045"),
         ),
-        session_id="session-1",
         idempotency_key="idem-retry",
     )
 
@@ -314,6 +384,131 @@ async def test_settlement_failed_reservation_can_retry_to_settled():
         actual_credits=Decimal("2"),
         actual_usd=Decimal("0.03"),
         usage_payload={"app_kind": "chat", "request_kind": "chat_response"},
+    )
+
+    reservation = reservation_repo.by_id[hold.reservation_id]
+    assert result.status == "settled"
+    assert reservation.status == "settled"
+    assert len(usage_service.calls) == 1
+    assert _balance_repo.status == "ok"
+
+
+@pytest.mark.asyncio
+async def test_mark_settlement_failed_blocks_account_until_resolved():
+    service, balance_repo, _ledger_repo, reservation_repo, _usage_service = _make_service(
+        credits="4",
+        bonus="1",
+    )
+    db = _make_db()
+    hold = await service.reserve(
+        db,
+        user_id="user-1",
+        subject_kind="session",
+        subject_id="session-1",
+        source_domain="chat_llm",
+        source_id="call-block",
+        billing_kind="llm_usage",
+        quote=BillingQuote(
+            strategy="bounded",
+            reserve_usd=Decimal("0.045"),
+            max_usd=Decimal("0.045"),
+        ),
+        idempotency_key="idem-block",
+    )
+
+    await service.capture_settlement_input(
+        db,
+        reservation_id=hold.reservation_id,
+        actual_credits=Decimal("2"),
+        actual_usd=Decimal("0.03"),
+        usage_payload={"app_kind": "chat", "request_kind": "chat_response"},
+    )
+    await service.mark_settlement_failed(
+        db,
+        reservation_id=hold.reservation_id,
+        error="transient_error",
+    )
+
+    reservation = reservation_repo.by_id[hold.reservation_id]
+    assert reservation.status == "settlement_failed"
+    assert balance_repo.status == "reconciliation_required"
+    assert "Settlement failed" in (balance_repo.status_reason or "")
+
+
+@pytest.mark.asyncio
+async def test_capture_settlement_input_persists_manual_retry_payload():
+    service, _balance_repo, _ledger_repo, reservation_repo, _usage_service = _make_service()
+    db = _make_db()
+    hold = await service.reserve(
+        db,
+        user_id="user-1",
+        subject_kind="session",
+        subject_id="session-1",
+        source_domain="chat_llm",
+        source_id="call-capture",
+        billing_kind="llm_usage",
+        quote=BillingQuote(
+            strategy="bounded",
+            reserve_usd=Decimal("0.03"),
+            max_usd=Decimal("0.03"),
+        ),
+        idempotency_key="idem-capture",
+    )
+
+    await service.capture_settlement_input(
+        db,
+        reservation_id=hold.reservation_id,
+        actual_credits=Decimal("1.25"),
+        actual_usd=Decimal("0.01875"),
+        usage_payload={"app_kind": "chat", "request_kind": "chat_response"},
+    )
+
+    reservation = reservation_repo.by_id[hold.reservation_id]
+    capture = reservation.reservation_metadata["manual_settlement_capture"]
+    assert capture["actual_credits"] == "1.25"
+    assert capture["actual_usd"] == "0.01875"
+    assert capture["usage_payload"]["request_kind"] == "chat_response"
+
+
+@pytest.mark.asyncio
+async def test_retry_settlement_from_capture_replays_stored_usage():
+    service, _balance_repo, _ledger_repo, reservation_repo, usage_service = _make_service(
+        credits="4",
+        bonus="1",
+    )
+    db = _make_db()
+    hold = await service.reserve(
+        db,
+        user_id="user-1",
+        subject_kind="session",
+        subject_id="session-1",
+        source_domain="chat_llm",
+        source_id="call-manual-retry",
+        billing_kind="llm_usage",
+        quote=BillingQuote(
+            strategy="bounded",
+            reserve_usd=Decimal("0.045"),
+            max_usd=Decimal("0.045"),
+        ),
+        idempotency_key="idem-manual-retry",
+    )
+
+    await service.capture_settlement_input(
+        db,
+        reservation_id=hold.reservation_id,
+        actual_credits=Decimal("2"),
+        actual_usd=Decimal("0.03"),
+        usage_payload={"app_kind": "chat", "request_kind": "chat_response"},
+    )
+    await service.mark_settlement_failed(
+        db,
+        reservation_id=hold.reservation_id,
+        error="transient_error",
+    )
+
+    result = await service.retry_settlement_from_capture(
+        db,
+        reservation_id=hold.reservation_id,
     )
 
     reservation = reservation_repo.by_id[hold.reservation_id]
@@ -356,19 +551,60 @@ async def test_expire_stale_releases_reservations():
     assert balance_repo.bonus == Decimal("1")
 
 
+@pytest.mark.asyncio
+async def test_expire_stale_replays_captured_settlement_input():
+    service, balance_repo, _ledger_repo, reservation_repo, _usage_service = _make_service(
+        credits="4",
+        bonus="1",
+    )
+    db = _make_db()
+    hold = await service.reserve(
+        db,
+        user_id="user-1",
+        source_domain="chat_tool",
+        source_id="tool-captured",
+        billing_kind="tool_usage",
+        quote=BillingQuote(
+            strategy="bounded",
+            reserve_usd=Decimal("0.03"),
+            max_usd=Decimal("0.03"),
+        ),
+        idempotency_key="idem-captured",
+        expires_in=timedelta(seconds=-5),
+    )
+
+    await service.capture_settlement_input(
+        db,
+        reservation_id=hold.reservation_id,
+        actual_credits=Decimal("2"),
+        actual_usd=Decimal("0.03"),
+        usage_payload={"app_kind": "chat", "provider": "anthropic"},
+    )
+
+    expired = await service.expire_stale(
+        db,
+        older_than=datetime.now(timezone.utc),
+    )
+    reservation = reservation_repo.by_id[hold.reservation_id]
+
+    assert expired == 1
+    assert reservation.status == "settled"
+    assert balance_repo.credits == Decimal("3")
+    assert balance_repo.bonus == Decimal("0")
+
+
 # ---------------------------------------------------------------------------
-# Test 5: insufficient credits raises PaymentRequiredError
+# Test 5: zero credits or quote above the controlled window raises PaymentRequiredError
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_reserve_insufficient_credits_raises():
-    # credits=2, bonus=1 → total=3, but quote needs 5 credits (0.075 USD)
+async def test_reserve_zero_balance_raises():
     from ii_agent.core.exceptions import PaymentRequiredError
 
     service, _balance_repo, _ledger_repo, _reservation_repo, _usage_service = _make_service(
-        credits="2",
-        bonus="1",
+        credits="0",
+        bonus="0",
     )
     db = _make_db()
 
@@ -385,6 +621,32 @@ async def test_reserve_insufficient_credits_raises():
                 max_usd=Decimal("0.075"),
             ),
             idempotency_key="idem-5",
+        )
+
+
+@pytest.mark.asyncio
+async def test_reserve_rejects_when_quote_exceeds_controlled_shortfall_window():
+    from ii_agent.core.exceptions import PaymentRequiredError
+
+    service, _balance_repo, _ledger_repo, _reservation_repo, _usage_service = _make_service(
+        credits="2",
+        bonus="1",
+    )
+    db = _make_db()
+
+    with pytest.raises(PaymentRequiredError, match="Insufficient credits"):
+        await service.reserve(
+            db,
+            user_id="user-1",
+            source_domain="chat_llm",
+            source_id="call-over-window",
+            billing_kind="llm_usage",
+            quote=BillingQuote(
+                strategy="bounded",
+                reserve_usd=Decimal("0.9"),  # 60 credits
+                max_usd=Decimal("0.9"),
+            ),
+            idempotency_key="idem-over-window",
         )
 
 
@@ -453,6 +715,7 @@ async def test_settle_exact_match_no_refund():
     )
     # One ledger entry written for the reservation hold
     reserve_entry_count = len(ledger_repo.entries)
+    lock_calls_after_reserve = balance_repo.lock_balance_state_calls
 
     result = await service.settle(
         db,
@@ -472,6 +735,7 @@ async def test_settle_exact_match_no_refund():
     reservation = reservation_repo.by_id[hold.reservation_id]
     assert reservation.released_credits == Decimal("0")
     assert reservation.released_bonus_credits == Decimal("0")
+    assert balance_repo.lock_balance_state_calls == lock_calls_after_reserve
 
 
 # ---------------------------------------------------------------------------
@@ -518,6 +782,47 @@ async def test_settle_zero_actual_releases():
     assert reservation.status in {"released", "expired"}
 
 
+@pytest.mark.asyncio
+async def test_settle_zero_actual_records_zero_cost_usage():
+    service, _balance_repo, _ledger_repo, reservation_repo, usage_service = _make_service(
+        credits="4",
+        bonus="3",
+    )
+    db = _make_db()
+    hold = await service.reserve(
+        db,
+        user_id="user-1",
+        source_domain="chat_llm",
+        source_id="call-8b",
+        billing_kind="llm_usage",
+        quote=BillingQuote(
+            strategy="bounded",
+            reserve_usd=Decimal("0.075"),
+            max_usd=Decimal("0.075"),
+        ),
+        idempotency_key="idem-8b",
+    )
+
+    result = await service.settle(
+        db,
+        reservation_id=hold.reservation_id,
+        actual_credits=Decimal("0"),
+        actual_usd=Decimal("0"),
+        usage_payload={"app_kind": "chat", "provider": "anthropic", "input_tokens": 10},
+    )
+
+    assert result.status == "released"
+    assert result.usage_record_id == 99
+    assert len(usage_service.calls) == 1
+    call = usage_service.calls[0]
+    assert call["amount"] == 0.0
+    assert call["cost_usd"] == 0.0
+    assert call["usage_metadata"]["actual_requested_credits"] == 0.0
+    assert call["usage_metadata"]["released_credits"] == 5.0
+    assert call["usage_metadata"]["settlement_status"] == "released"
+    assert reservation_repo.by_id[hold.reservation_id].usage_record_id == 99
+
+
 # ---------------------------------------------------------------------------
 # Test 9: settle on already-settled reservation returns existing result
 # ---------------------------------------------------------------------------
@@ -525,7 +830,7 @@ async def test_settle_zero_actual_releases():
 
 @pytest.mark.asyncio
 async def test_settle_already_settled_returns_existing():
-    service, _balance_repo, _ledger_repo, _reservation_repo, usage_service = _make_service(
+    service, balance_repo, _ledger_repo, _reservation_repo, usage_service = _make_service(
         credits="4",
         bonus="3",
     )
@@ -551,6 +856,7 @@ async def test_settle_already_settled_returns_existing():
         actual_usd=Decimal("0.06"),
         usage_payload={"app_kind": "chat", "provider": "anthropic"},
     )
+    lock_calls_after_first_settle = balance_repo.lock_balance_state_calls
     # Second settle call on the same already-settled reservation — must be a no-op
     second = await service.settle(
         db,
@@ -566,6 +872,7 @@ async def test_settle_already_settled_returns_existing():
     assert len(usage_service.calls) == 1
     assert second.charged_credits == first.charged_credits
     assert second.charged_bonus_credits == first.charged_bonus_credits
+    assert balance_repo.lock_balance_state_calls == lock_calls_after_first_settle
 
 
 # ---------------------------------------------------------------------------
@@ -596,19 +903,17 @@ async def test_release_already_released_returns_existing():
     credits_after_reserve = balance_repo.credits
     bonus_after_reserve = balance_repo.bonus
 
-    first = await service.release(
-        db, reservation_id=hold.reservation_id, reason="cancelled"
-    )
+    first = await service.release(db, reservation_id=hold.reservation_id, reason="cancelled")
+    lock_calls_after_first_release = balance_repo.lock_balance_state_calls
     # Second release call — must be idempotent, no double-refund
-    second = await service.release(
-        db, reservation_id=hold.reservation_id, reason="cancelled"
-    )
+    second = await service.release(db, reservation_id=hold.reservation_id, reason="cancelled")
 
     assert first.status == "released"
     assert second.status == "released"
     # Balance must only have been restored once
     assert balance_repo.credits == credits_after_reserve + Decimal("2")
     assert balance_repo.bonus == bonus_after_reserve + Decimal("3")
+    assert balance_repo.lock_balance_state_calls == lock_calls_after_first_release
 
 
 @pytest.mark.asyncio
@@ -634,9 +939,7 @@ async def test_settle_already_released_returns_existing_release_result():
     credits_after_reserve = balance_repo.credits
     bonus_after_reserve = balance_repo.bonus
 
-    first = await service.release(
-        db, reservation_id=hold.reservation_id, reason="cancelled"
-    )
+    first = await service.release(db, reservation_id=hold.reservation_id, reason="cancelled")
     second = await service.settle(
         db,
         reservation_id=hold.reservation_id,
@@ -688,9 +991,7 @@ async def test_release_already_settled_returns_settled_result():
     )
 
     # Releasing a settled reservation should surface the settled outcome
-    result = await service.release(
-        db, reservation_id=hold.reservation_id, reason="cancelled"
-    )
+    result = await service.release(db, reservation_id=hold.reservation_id, reason="cancelled")
 
     assert result.status == "settled"
     assert result.charged_credits + result.charged_bonus_credits == Decimal("4")
@@ -801,6 +1102,8 @@ async def test_settle_records_correct_usage_metadata():
     hold = await service.reserve(
         db,
         user_id="user-1",
+        subject_kind="session",
+        subject_id="session-14",
         source_domain="chat_llm",
         source_id="call-14",
         billing_kind="llm_usage",
@@ -809,7 +1112,6 @@ async def test_settle_records_correct_usage_metadata():
             reserve_usd=Decimal("0.075"),  # 5 credits
             max_usd=Decimal("0.075"),
         ),
-        session_id="session-14",
         run_id="run-14",
         model_id="claude-3-opus",
         idempotency_key="idem-14",
@@ -838,7 +1140,8 @@ async def test_settle_records_correct_usage_metadata():
 
     # Top-level kwargs passed to record_settled_usage
     assert call["user_id"] == "user-1"
-    assert call["session_id"] == "session-14"
+    assert call["subject_kind"] == "session"
+    assert call["subject_id"] == "session-14"
     assert call["run_id"] == "run-14"
     assert call["model_id"] == "claude-3-opus"
     assert call["provider"] == "anthropic"

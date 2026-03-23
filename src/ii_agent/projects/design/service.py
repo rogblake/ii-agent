@@ -14,6 +14,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.billing.types import BillingContextValue, BillingScope
 from ii_agent.chat.types import (
     Message,
     MessageRole,
@@ -37,6 +38,7 @@ from ii_agent.core.llm.execution_service import (
     LLMExecutionService,
 )
 from ii_agent.core.logger import logger
+from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.projects.design.utils.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
     DESIGN_MODE_RUNTIME_SCRIPT,
@@ -232,7 +234,9 @@ class ProjectDesignService:
                     session_id=request.session_id,
                     llm_config=llm_config,
                 ),
-                usage_key_prefix=f"design_ai_change:{request.session_id}:{uuid.uuid4().hex[:12]}",
+                usage_key_prefix=(
+                    f"design_ai_change:{request.session_id}:{get_or_generate_request_id()}"
+                ),
             )
             payload = result.final_payload
         except Exception as exc:
@@ -348,7 +352,9 @@ class ProjectDesignService:
                     session_id=request.session_id,
                     llm_config=llm_config,
                 ),
-                usage_key_prefix=f"design_iframe:{request.session_id}:{uuid.uuid4().hex[:12]}",
+                usage_key_prefix=(
+                    f"design_iframe:{request.session_id}:{get_or_generate_request_id()}"
+                ),
             )
             payload = result.final_payload
         except Exception as exc:
@@ -622,9 +628,12 @@ class ProjectDesignService:
         if not self._llm_billing_service:
             return None
         return LLMBillingContext(
-            db=db,
-            user_id=user_id,
-            session_id=session_id,
+            scope=BillingScope.for_session(
+                user_id=user_id,
+                app_kind="chat",
+                session_id=session_id,
+                billing_context=BillingContextValue.PROJECT_DESIGN,
+            ),
             llm_config=llm_config,
             model_id=llm_config.model,
         )

@@ -19,7 +19,6 @@ MODEL_MODULES: tuple[str, ...] = (
     "ii_agent.billing.customers.models",
     "ii_agent.billing.credits.ledger_models",
     "ii_agent.billing.credits.balance_models",
-    "ii_agent.billing.outbox.models",
     "ii_agent.billing.reservations.models",
     "ii_agent.billing.usage.models",
     "ii_agent.chat.messages.models",

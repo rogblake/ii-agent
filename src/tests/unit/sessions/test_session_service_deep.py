@@ -11,7 +11,6 @@ import pytest
 
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.service import SessionService
-from ii_agent.agent.events.models import EventType
 
 
 # ---------------------------------------------------------------------------
@@ -92,8 +91,12 @@ class FakeSessionRepo:
     async def get_llm_setting_id(self, db, session_id):
         return None
 
-    async def get_user_sessions(self, db, user_id, search_term, page, per_page, public_only, session_type):
-        matching = [s for s in self.sessions.values() if s.user_id == user_id and s.deleted_at is None]
+    async def get_user_sessions(
+        self, db, user_id, search_term, page, per_page, public_only, session_type
+    ):
+        matching = [
+            s for s in self.sessions.values() if s.user_id == user_id and s.deleted_at is None
+        ]
         return matching, len(matching)
 
     async def get_non_deleted_by_ids_and_user(self, db, session_ids, user_id):
@@ -115,7 +118,9 @@ class FakeEventRepo:
         self.created_events = []
 
     async def get_by_session_filtered(self, db, session_id, excluded_types):
-        return [e for e in self.events if e.session_id == session_id and e.type not in excluded_types]
+        return [
+            e for e in self.events if e.session_id == session_id and e.type not in excluded_types
+        ]
 
     async def get_latest_by_type(self, db, session_id, event_type):
         return self.latest_by_type.get((session_id, event_type))
@@ -147,6 +152,7 @@ def _make_service(**kwargs) -> SessionService:
         event_repo=FakeEventRepo(),
         agent_run_service=FakeAgentRunService(),
         file_store=SimpleNamespace(get_download_signed_url=lambda path: f"signed://{path}"),
+        media_store=SimpleNamespace(get_download_signed_url=lambda path: f"media://{path}"),
         sandbox_repo=SimpleNamespace(),
         config=config,
     )
@@ -179,7 +185,9 @@ class TestCreateSession:
         with patch("ii_agent.sessions.service.Session") as MockSession:
             mock_session = _make_session_ns(id=str(session_uuid), name="My Session")
             MockSession.return_value = mock_session
-            session = await svc.create_session(None, session_uuid, "u-1", "/path/state", name="My Session")
+            session = await svc.create_session(
+                None, session_uuid, "u-1", "/path/state", name="My Session"
+            )
         assert session.name == "My Session"
 
 
@@ -459,6 +467,7 @@ class TestGetSessionEventsWithDetails:
     @pytest.mark.asyncio
     async def test_enriches_file_url_events(self):
         from ii_agent.agent.events.models import EventType as ET
+
         event_repo = FakeEventRepo()
         event_repo.events = [
             SimpleNamespace(
@@ -482,8 +491,69 @@ class TestGetSessionEventsWithDetails:
         assert events[0]["content"]["result"]["url"] == "signed://users/u1/file.txt"
 
     @pytest.mark.asyncio
+    async def test_session_artifact_paths_use_media_storage(self):
+        from ii_agent.agent.events.models import EventType as ET
+
+        event_repo = FakeEventRepo()
+        storage_path = "sessions/s-1/files/f-1-workspace/test_image.png"
+        event_repo.events = [
+            SimpleNamespace(
+                id="e1",
+                session_id="s-1",
+                created_at=datetime.now(timezone.utc),
+                type=ET.TOOL_RESULT,
+                content={
+                    "result": {
+                        "type": "file_url",
+                        "file_storage_path": storage_path,
+                        "url": "https://storage.googleapis.com/ii-agent-public/original.png",
+                    }
+                },
+                run_id=None,
+            )
+        ]
+
+        svc = _make_service(event_repo=event_repo)
+        events = await svc.get_session_events_with_details(None, "s-1")
+
+        assert events[0]["content"]["result"]["url"] == f"media://{storage_path}"
+
+    @pytest.mark.asyncio
+    async def test_missing_tool_result_file_falls_back_to_original_url(self):
+        from ii_agent.agent.events.models import EventType as ET
+
+        event_repo = FakeEventRepo()
+        original_url = "https://storage.googleapis.com/ii-agent-public/original.png"
+        storage_path = "sessions/s-1/files/f-1-workspace/test_image.png"
+        event_repo.events = [
+            SimpleNamespace(
+                id="e1",
+                session_id="s-1",
+                created_at=datetime.now(timezone.utc),
+                type=ET.TOOL_RESULT,
+                content={
+                    "result": {
+                        "type": "file_url",
+                        "file_storage_path": storage_path,
+                        "url": original_url,
+                    }
+                },
+                run_id=None,
+            )
+        ]
+
+        missing_media_store = SimpleNamespace(
+            get_download_signed_url=lambda path: (_ for _ in ()).throw(FileNotFoundError(path))
+        )
+        svc = _make_service(event_repo=event_repo, media_store=missing_media_store)
+        events = await svc.get_session_events_with_details(None, "s-1")
+
+        assert events[0]["content"]["result"]["url"] == original_url
+
+    @pytest.mark.asyncio
     async def test_non_file_url_events_not_modified(self):
         from ii_agent.agent.events.models import EventType as ET
+
         event_repo = FakeEventRepo()
         event_repo.events = [
             SimpleNamespace(
@@ -606,6 +676,7 @@ class TestEnsureSessionExists:
         svc = _make_service()
         sid = uuid.uuid4()
         from ii_agent.core.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             await svc.ensure_session_exists(None, sid, user_id=None)
 

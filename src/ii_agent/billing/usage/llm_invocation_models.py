@@ -20,8 +20,10 @@ class LLMInvocation(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     run_id: Mapped[uuid.UUID | None] = mapped_column(UUID, nullable=True)
-    session_id: Mapped[str] = mapped_column(String, nullable=False)
     user_id: Mapped[str] = mapped_column(String, nullable=False)
+    billing_context: Mapped[str] = mapped_column(String, nullable=False, default="unknown")
+    subject_kind: Mapped[str] = mapped_column(String, nullable=False, default="session")
+    subject_id: Mapped[str | None] = mapped_column(String, nullable=True)
     message_id: Mapped[uuid.UUID | None] = mapped_column(UUID, nullable=True)
     provider: Mapped[str | None] = mapped_column(String, nullable=True)
     model: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -63,7 +65,14 @@ class LLMInvocation(Base):
 
     __table_args__ = (
         Index("idx_llm_invocations_run", "run_id", "created_at"),
-        Index("idx_llm_invocations_session", "session_id", "created_at"),
+        Index("idx_llm_invocations_billing_context", "billing_context", "created_at"),
+        Index("idx_llm_invocations_subject", "subject_kind", "subject_id", "created_at"),
         Index("idx_llm_invocations_model", "model", "created_at"),
         Index("idx_llm_invocations_user", "user_id", "created_at"),
     )
+
+    @property
+    def session_id(self) -> str | None:
+        if self.subject_kind == "session":
+            return self.subject_id
+        return None

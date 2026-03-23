@@ -19,9 +19,11 @@ import httpx
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.billing.types import BillingContextValue, BillingScope
 from ii_agent.chat.types import BinaryContent, MessageRole, TextContent, ToolCall
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.llm.execution_service import LLMBillingContext, LLMExecutionService
+from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.projects.design.utils.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
     DESIGN_MODE_RUNTIME_SCRIPT,
@@ -218,9 +220,7 @@ class NanoBananaService:
         request: DetectRequest,
     ) -> DetectResponse:
         """Detect visual components in a slide image using vision LLM."""
-        await self._repo.validate_session_access(
-            db, session_id=request.session_id, user_id=user_id
-        )
+        await self._repo.validate_session_access(db, session_id=request.session_id, user_id=user_id)
 
         try:
             components, img_width, img_height = await self._run_detection(
@@ -268,9 +268,7 @@ class NanoBananaService:
         request: RegenerateRequest,
     ) -> RegenerateResponse:
         """Regenerate a slide image with user-specified modifications."""
-        await self._repo.validate_session_access(
-            db, session_id=request.session_id, user_id=user_id
-        )
+        await self._repo.validate_session_access(db, session_id=request.session_id, user_id=user_id)
 
         if not request.instructions:
             return RegenerateResponse(success=False, error="No instructions provided")
@@ -329,9 +327,7 @@ class NanoBananaService:
         request: RemoveBackgroundRequest,
     ) -> RemoveBackgroundResponse:
         """Remove the background from a slide image."""
-        await self._repo.validate_session_access(
-            db, session_id=request.session_id, user_id=user_id
-        )
+        await self._repo.validate_session_access(db, session_id=request.session_id, user_id=user_id)
 
         try:
             result = await self._run_background_removal(request.image_url)
@@ -382,9 +378,7 @@ class NanoBananaService:
         slide_number: int,
     ) -> GetVersionsResponse:
         """Get version history for a slide."""
-        await self._repo.validate_session_access(
-            db, session_id=session_id, user_id=user_id
-        )
+        await self._repo.validate_session_access(db, session_id=session_id, user_id=user_id)
 
         try:
             slide = await self._repo.get_slide(
@@ -396,9 +390,7 @@ class NanoBananaService:
 
             current_image_url = None
             if slide:
-                current_image_url = extract_image_url_from_slide_html(
-                    slide.slide_content or ""
-                )
+                current_image_url = extract_image_url_from_slide_html(slide.slide_content or "")
 
             versions = await self._repo.get_versions(
                 db,
@@ -448,14 +440,10 @@ class NanoBananaService:
         Creates a new version with the same image as the target version,
         preserving full history.
         """
-        await self._repo.validate_session_access(
-            db, session_id=request.session_id, user_id=user_id
-        )
+        await self._repo.validate_session_access(db, session_id=request.session_id, user_id=user_id)
 
         try:
-            target = await self._repo.get_version_by_id(
-                db, version_id=request.target_version_id
-            )
+            target = await self._repo.get_version_by_id(db, version_id=request.target_version_id)
             if not target:
                 return RevertResponse(success=False, error="Target version not found")
 
@@ -507,8 +495,6 @@ class NanoBananaService:
         session_id: str,
     ) -> Tuple[List[DetectedComponent], int, int]:
         """Detect visual components in a slide image via LLM tool calling."""
-        import uuid as _uuid_mod
-
         image_bytes, mime_type = await self._download_image(image_url)
         width, height = self._get_image_dimensions(image_bytes)
 
@@ -540,13 +526,16 @@ class NanoBananaService:
                 },
             },
             billing_context=LLMBillingContext(
-                db=db,
-                user_id=user_id,
-                session_id=session_id,
+                scope=BillingScope.for_session(
+                    user_id=user_id,
+                    app_kind="chat",
+                    session_id=session_id,
+                    billing_context=BillingContextValue.NANO_BANANA,
+                ),
                 llm_config=self._llm_config,
                 model_id=self._llm_config.model,
             ),
-            usage_key=f"nano_banana_detect:{session_id}:{_uuid_mod.uuid4().hex[:12]}",
+            usage_key=f"nano_banana_detect:{session_id}:{get_or_generate_request_id()}",
         )
 
         # Extract the structured payload from the tool call
@@ -816,9 +805,7 @@ def _build_components(
 
         bbox = _parse_bounding_box(raw.get("bounding_box", {}), img_width, img_height)
         if not bbox:
-            logger.warning(
-                "[NanoBanana] Invalid bounding box for %s, skipping", design_id
-            )
+            logger.warning("[NanoBanana] Invalid bounding box for %s, skipping", design_id)
             continue
 
         styles = _parse_styles(raw.get("styles"))
@@ -862,9 +849,7 @@ def _inject_runtime_script(html: str) -> str:
     return f"{injection}\n{html}"
 
 
-def _parse_bounding_box(
-    bb_raw: dict, img_width: int, img_height: int
-) -> Optional[BoundingBox]:
+def _parse_bounding_box(bb_raw: dict, img_width: int, img_height: int) -> Optional[BoundingBox]:
     """Parse bounding box from detection response, converting pixels to percentages."""
     if not isinstance(bb_raw, dict):
         return None

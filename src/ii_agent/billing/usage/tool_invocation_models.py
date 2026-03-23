@@ -19,8 +19,10 @@ class ToolInvocation(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     run_id: Mapped[uuid.UUID | None] = mapped_column(UUID, nullable=True)
-    session_id: Mapped[str] = mapped_column(String, nullable=False)
     user_id: Mapped[str] = mapped_column(String, nullable=False)
+    billing_context: Mapped[str] = mapped_column(String, nullable=False, default="unknown")
+    subject_kind: Mapped[str] = mapped_column(String, nullable=False, default="session")
+    subject_id: Mapped[str | None] = mapped_column(String, nullable=True)
     message_id: Mapped[uuid.UUID | None] = mapped_column(UUID, nullable=True)
     provider_tool_call_id: Mapped[str | None] = mapped_column(String, nullable=True)
     tool_name: Mapped[str] = mapped_column(String, nullable=False)
@@ -42,6 +44,13 @@ class ToolInvocation(Base):
 
     __table_args__ = (
         Index("idx_tool_invocations_run", "run_id", "created_at"),
-        Index("idx_tool_invocations_session", "session_id", "created_at"),
+        Index("idx_tool_invocations_billing_context", "billing_context", "created_at"),
+        Index("idx_tool_invocations_subject", "subject_kind", "subject_id", "created_at"),
         Index("idx_tool_invocations_tool", "tool_name", "created_at"),
     )
+
+    @property
+    def session_id(self) -> str | None:
+        if self.subject_kind == "session":
+            return self.subject_id
+        return None

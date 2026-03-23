@@ -18,7 +18,6 @@ Per-domain quality assessment. Updated periodically to track code health across 
 | **auth** | B | B | B | A | **B** |
 | **billing/credits** | A | A | A (CLAUDE.md) | A | **A** |
 | **billing/reservations** | A | A | A (CLAUDE.md) | A | **A** |
-| **billing/outbox** | B | A | A (CLAUDE.md) | A | **A-** |
 | **billing/usage** | B | B | B | A | **B** |
 | **sessions** | B | B | B | A | **B** |
 | **agent/runs** | B | B | C | A | **B-** |

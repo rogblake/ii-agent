@@ -134,43 +134,6 @@ Generated from SQLAlchemy models. All tables use `TimestampColumn` (TIMESTAMP WI
 **Indexes:** `idx_credit_reservations_user_created`, `idx_credit_reservations_source`, `idx_credit_reservations_status_expires`, `uq_credit_reservations_idempotency_key`
 **Enums:** ReservationStatus (RESERVED, SETTLED, RELEASED, EXPIRED, SETTLEMENT_FAILED), BillingKind (LLM_USAGE, TOOL_USAGE), SourceDomain (CHAT_LLM, AGENT_LLM, CHAT_TOOL, AGENT_TOOL, VOICE_GENERATION, IMAGE_GENERATION, WEBHOOK, CRON), QuoteStrategy (EXACT, BOUNDED, POST_FACTO)
 
-### `billing_usage_facts`
-| Column | Type | Constraints |
-|--------|------|------------|
-| id | BigInteger | PK, Identity always=True |
-| reservation_id | String | FK → credit_reservations.id, UNIQUE, CASCADE |
-| user_id | String | FK → users.id, CASCADE |
-| session_id | String | nullable |
-| run_id | UUID | nullable |
-| message_id | UUID | nullable |
-| billing_kind | String | |
-| event_kind | String | |
-| app_kind | String | nullable |
-| provider | String | nullable |
-| request_kind | String | nullable |
-| model_id | String | nullable |
-| tool_name | String | nullable |
-| prompt_tokens | BigInteger | default=0 |
-| completion_tokens | BigInteger | default=0 |
-| cache_read_tokens | BigInteger | default=0 |
-| cache_write_tokens | BigInteger | default=0 |
-| reasoning_tokens | BigInteger | default=0 |
-| latency_ms | BigInteger | nullable |
-| cost_usd | Decimal(18,6) | nullable |
-| charged_credits | Decimal(18,6) | nullable |
-| status | String | default="captured" |
-| attempt_count | BigInteger | default=0 |
-| last_error | Text | nullable |
-| captured_at | TimestampColumn | |
-| processing_started_at | DateTime | nullable |
-| last_enqueued_at | DateTime | nullable |
-| processed_at | DateTime | nullable |
-| failed_at | DateTime | nullable |
-| created_at | TimestampColumn | |
-| updated_at | TimestampColumn | |
-
-**Indexes:** `idx_billing_usage_facts_status_created`, `idx_billing_usage_facts_dispatchable`, `idx_billing_usage_facts_session_created`, `idx_billing_usage_facts_user_created`, `idx_billing_usage_facts_run_created`
-
 ## Telemetry Tables
 
 ### `llm_invocations`

@@ -121,6 +121,35 @@ class BillingTemporarilyUnavailableError(BillingException):
         }
 
 
+class BillingDuplicateOperationError(BillingException):
+    """A deterministic billing operation key was reused."""
+
+    status_code = 409
+
+    def __init__(
+        self,
+        message: str = "Billing operation key already in use",
+        *,
+        reservation_id: str | None = None,
+        reservation_status: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.retryable = False
+        self.reservation_id = reservation_id
+        self.reservation_status = reservation_status
+
+    def to_billing_payload(self) -> dict[str, Any]:
+        return {
+            "code": "duplicate_billing_operation",
+            "message": self.message,
+            "retryable": False,
+            "billing_context": {
+                "reservation_id": self.reservation_id,
+                "reservation_status": self.reservation_status,
+            },
+        }
+
+
 class BillingSettlementRetryableError(BillingException):
     """Settlement failed but can be retried."""
 

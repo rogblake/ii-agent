@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from decimal import Decimal
 import logging
 import re
 import uuid
@@ -12,12 +13,20 @@ from bs4 import BeautifulSoup
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.auth.users.service import UserService
-from ii_agent.billing.credits.utils import usd_to_credits
+from ii_agent.billing.exceptions import InsufficientCreditsError
+from ii_agent.billing.types import BillingContextValue, BillingResult, BillingScope
+from ii_agent.billing.reservations.service import CreditReservationService
 from ii_agent.billing.reservations.types import SourceDomain
 from ii_agent.billing.usage.service import UsageService
 from ii_agent.chat.llm.factory import get_client
 from ii_agent.chat.types import ImageURLContent, MessageRole, TextContent
 from ii_agent.content.media.service import _generate_image
+from ii_agent.content.storybook.billing import (
+    DEFAULT_STORYBOOK_IMAGE_RESERVE_USD,
+    build_storybook_request,
+    build_storybook_scope,
+    run_storybook_sync_operation,
+)
 from ii_agent.content.storybook.schemas import StorybookDetail
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.exceptions import ValidationError
@@ -340,6 +349,7 @@ class StorybookAIEditService:
         usage_service: UsageService,
         llm_setting_service: LLMSettingService,
         llm_execution: LLMExecutionService,
+        reservation_service: CreditReservationService,
         config: Settings,
     ) -> None:
         self._session_service = session_service
@@ -347,6 +357,7 @@ class StorybookAIEditService:
         self._usage_service = usage_service
         self._llm_setting_service = llm_setting_service
         self._llm_execution = llm_execution
+        self._reservation_service = reservation_service
         self._config = config
 
     async def rewrite_content(
@@ -399,13 +410,16 @@ class StorybookAIEditService:
             client=client,
             messages=messages,
             billing_context=LLMBillingContext(
-                db=db,
-                user_id=user_id,
-                session_id=storybook.session_id,
+                scope=BillingScope.for_session(
+                    user_id=user_id,
+                    app_kind="chat",
+                    session_id=storybook.session_id,
+                    billing_context=BillingContextValue.STORYBOOK,
+                ),
                 llm_config=llm_config,
                 model_id=model_id,
             ),
-            usage_key=f"storybook_ai_rewrite:{storybook.id}:{uuid.uuid4().hex[:12]}",
+            usage_key=f"storybook_ai_rewrite:{storybook.id}:{get_or_generate_request_id()}",
         )
         texts = []
         for part in result.content:
@@ -439,28 +453,25 @@ class StorybookAIEditService:
             raise ValidationError("No active API key found")
 
         style_json = storybook.style_json or {}
-        response = await _generate_image(
-            prompt=_build_extension_prompt(prompt.strip(), text_position),
-            aspect_ratio=storybook.aspect_ratio,
-            image_size=storybook.resolution,
-            session_id=storybook.session_id,
-            user_api_key=user_api_key,
-            image_urls=[page_image_url] if page_image_url else None,
-            model_name=style_json.get("image_model_name"),
-            provider=style_json.get("image_provider"),
-        )
-        image_url = response.get("url")
-        if not image_url:
-            raise RuntimeError("Image generation did not return an image URL")
-
-        await self._deduct_image_credits(
+        request_id = get_or_generate_request_id()
+        return await self._run_billed_image_operation(
             db,
+            storybook=storybook,
             user_id=user_id,
-            session_id=storybook.session_id,
-            raw_cost=response.get("cost"),
+            operation_id=f"background:{storybook.id}:{request_id}",
+            tool_name="storybook_background",
             context=f"storybook {storybook.id} background generation",
+            execute_fn=lambda: _generate_image(
+                prompt=_build_extension_prompt(prompt.strip(), text_position),
+                aspect_ratio=storybook.aspect_ratio,
+                image_size=storybook.resolution,
+                session_id=storybook.session_id,
+                user_api_key=user_api_key,
+                image_urls=[page_image_url] if page_image_url else None,
+                model_name=style_json.get("image_model_name"),
+                provider=style_json.get("image_provider"),
+            ),
         )
-        return image_url
 
     async def regenerate_image(
         self,
@@ -517,9 +528,7 @@ class StorybookAIEditService:
                 if next_page and next_meta.get("is_text_only_page"):
                     linked_image = next_meta.get("linked_image_page")
                     if linked_image in (None, page_number):
-                        resolved_scene_text = _extract_text_from_html(
-                            next_page.html_content or ""
-                        )
+                        resolved_scene_text = _extract_text_from_html(next_page.html_content or "")
             if not resolved_scene_text:
                 resolved_scene_text = _extract_text_from_html(page_html)
 
@@ -585,28 +594,27 @@ class StorybookAIEditService:
         last_exception: Exception | None = None
         for attempt in range(1, 6):
             try:
-                response = await _generate_image(
-                    prompt=final_prompt,
-                    aspect_ratio=gen_aspect_ratio,
-                    image_size=storybook.resolution,
-                    session_id=storybook.session_id,
-                    user_api_key=user_api_key,
-                    image_urls=reference_image_urls or None,
-                    model_name=style_json.get("image_model_name"),
-                    provider=style_json.get("image_provider"),
-                )
-                image_url = response.get("url")
-                if not image_url:
-                    raise RuntimeError("Image generation did not return an image URL")
-
-                await self._deduct_image_credits(
+                request_id = get_or_generate_request_id()
+                return await self._run_billed_image_operation(
                     db,
+                    storybook=storybook,
                     user_id=user_id,
-                    session_id=storybook.session_id,
-                    raw_cost=response.get("cost"),
+                    operation_id=f"regenerate:{storybook.id}:{page_number}:{request_id}",
+                    tool_name="storybook_image_regeneration",
                     context=f"storybook {storybook.id} page {page_number} regenerate",
+                    execute_fn=lambda: _generate_image(
+                        prompt=final_prompt,
+                        aspect_ratio=gen_aspect_ratio,
+                        image_size=storybook.resolution,
+                        session_id=storybook.session_id,
+                        user_api_key=user_api_key,
+                        image_urls=reference_image_urls or None,
+                        model_name=style_json.get("image_model_name"),
+                        provider=style_json.get("image_provider"),
+                    ),
                 )
-                return image_url
+            except InsufficientCreditsError:
+                raise
             except Exception as exc:
                 last_exception = exc
                 if attempt < 5:
@@ -658,36 +666,64 @@ class StorybookAIEditService:
             except Exception:
                 return fallback.model_copy(deep=True), "default"
 
-    async def _deduct_image_credits(
+    async def _run_billed_image_operation(
         self,
         db: AsyncSession,
         *,
+        storybook: StorybookDetail,
         user_id: str,
-        session_id: str,
-        raw_cost: Any,
+        operation_id: str,
+        tool_name: str,
         context: str,
-        idempotency_key: str | None = None,
-    ) -> None:
-        """Best-effort image credit deduction after a successful generation."""
-        credits_to_deduct = float(usd_to_credits(raw_cost or DEFAULT_IMAGE_COST_USD))
-        if credits_to_deduct <= 0:
-            return
-
-        deduct_success = await self._usage_service.deduct_and_track_session_usage(
-            db,
+        execute_fn,
+    ) -> str:
+        """Reserve, execute, then settle one storybook image generation call."""
+        scope = build_storybook_scope(
             user_id=user_id,
-            session_id=session_id,
-            amount=credits_to_deduct,
-            source_domain=SourceDomain.IMAGE_GENERATION,
-            idempotency_key=(
-                idempotency_key
-                or "storybook:image:"
-                f"{get_or_generate_request_id()}:{context.replace(' ', ':')}"
-            ),
+            session_id=storybook.session_id,
         )
-        if not deduct_success:
-            logger.warning(
-                "[Storybook AI Edit] Unable to deduct %.4f credits for %s",
-                credits_to_deduct,
-                context,
+        request = build_storybook_request(
+            scope=scope,
+            namespace="storybook_image",
+            operation_id=operation_id,
+            source_domain=SourceDomain.IMAGE_GENERATION,
+            tool_name=tool_name,
+            reserve_usd=DEFAULT_STORYBOOK_IMAGE_RESERVE_USD,
+            metadata={
+                "storybook_id": storybook.id,
+                "context": context,
+            },
+        )
+
+        async def _execute() -> BillingResult[str]:
+            response = await execute_fn()
+            image_url = response.get("url")
+            if not image_url:
+                raise RuntimeError("Image generation did not return an image URL")
+
+            actual_cost = response.get("cost") or DEFAULT_IMAGE_COST_USD
+            return BillingResult(
+                value=image_url,
+                actual_usd=Decimal(str(actual_cost)),
+                usage_payload={
+                    "provider": (storybook.style_json or {}).get("image_provider"),
+                    "latency_ms": None,
+                    "cost_usd": float(actual_cost),
+                    "tool_name": tool_name,
+                    "storybook_id": storybook.id,
+                    "context": context,
+                },
             )
+
+        try:
+            return await run_storybook_sync_operation(
+                reservation_service=self._reservation_service,
+                scope=scope,
+                request=request,
+                execute_fn=_execute,
+                release_reason="storybook_image_failed",
+                settlement_error="storybook_image_settle_exception",
+            )
+        except InsufficientCreditsError:
+            logger.warning("[Storybook AI Edit] Insufficient credits for %s", context)
+            raise

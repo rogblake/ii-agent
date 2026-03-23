@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
-from sqlalchemy import case, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.billing.credits.balance_models import BillingStatus, CreditBalanceRecord
@@ -23,13 +23,12 @@ class CreditBalanceRepository:
     at the API boundary (schemas / DTOs).
     """
 
-    async def get_balance(
-        self, db: AsyncSession, user_id: str
-    ) -> tuple[Decimal, Decimal] | None:
+    async def get_balance(self, db: AsyncSession, user_id: str) -> tuple[Decimal, Decimal] | None:
         """Return ``(credits, bonus_credits)`` or ``None`` if no row exists."""
         result = await db.execute(
-            select(CreditBalanceRecord.credits, CreditBalanceRecord.bonus_credits)
-            .where(CreditBalanceRecord.user_id == user_id)
+            select(CreditBalanceRecord.credits, CreditBalanceRecord.bonus_credits).where(
+                CreditBalanceRecord.user_id == user_id
+            )
         )
         row = result.first()
         if row is None:
@@ -52,14 +51,10 @@ class CreditBalanceRepository:
             return None
         return (row.credits, row.bonus_credits, row.billing_status)
 
-    async def get_billing_status(
-        self, db: AsyncSession, user_id: str
-    ) -> str | None:
+    async def get_billing_status(self, db: AsyncSession, user_id: str) -> str | None:
         """Return the account billing status or ``None`` if no row exists."""
         result = await db.execute(
-            select(CreditBalanceRecord.billing_status).where(
-                CreditBalanceRecord.user_id == user_id
-            )
+            select(CreditBalanceRecord.billing_status).where(CreditBalanceRecord.user_id == user_id)
         )
         return result.scalar_one_or_none()
 
@@ -79,9 +74,7 @@ class CreditBalanceRepository:
             return None
         return (row.credits, row.bonus_credits, row.updated_at)
 
-    async def check_sufficient(
-        self, db: AsyncSession, user_id: str, amount: Decimal
-    ) -> bool:
+    async def check_sufficient(self, db: AsyncSession, user_id: str, amount: Decimal) -> bool:
         """Return ``True`` if the user has at least *amount* total credits.
 
         Single-column fetch — avoids deserializing the full balance row.
@@ -151,9 +144,7 @@ class CreditBalanceRepository:
         bal = balance or (Decimal(str(credits)), Decimal(str(bonus_credits)))
         return (bal[0], bal[1], created)
 
-    async def lock_balance(
-        self, db: AsyncSession, user_id: str
-    ) -> tuple[Decimal, Decimal] | None:
+    async def lock_balance(self, db: AsyncSession, user_id: str) -> tuple[Decimal, Decimal] | None:
         """Lock and return ``(credits, bonus_credits)`` with ``FOR UPDATE``.
 
         Used to hold the row lock across multiple operations within a
@@ -162,9 +153,7 @@ class CreditBalanceRepository:
         """
         CB = CreditBalanceRecord
         result = await db.execute(
-            select(CB.credits, CB.bonus_credits)
-            .where(CB.user_id == user_id)
-            .with_for_update()
+            select(CB.credits, CB.bonus_credits).where(CB.user_id == user_id).with_for_update()
         )
         row = result.first()
         if row is None:
@@ -185,6 +174,35 @@ class CreditBalanceRepository:
         if row is None:
             return None
         return (row.credits, row.bonus_credits, row.billing_status)
+
+    async def set_billing_status(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        *,
+        billing_status: BillingStatus,
+        billing_status_reason: str | None = None,
+        expected_current_status: BillingStatus | None = None,
+    ) -> bool:
+        """Update only the billing status fields without a prior ``FOR UPDATE`` read."""
+        CB = CreditBalanceRecord
+        now = datetime.now(timezone.utc)
+        where_clauses = [CB.user_id == user_id]
+        if expected_current_status is not None:
+            where_clauses.append(CB.billing_status == expected_current_status)
+
+        result = await db.execute(
+            update(CB)
+            .where(*where_clauses)
+            .values(
+                billing_status=billing_status,
+                billing_status_reason=billing_status_reason,
+                billing_status_updated_at=now,
+                updated_at=now,
+            )
+            .returning(CB.user_id)
+        )
+        return result.first() is not None
 
     async def apply_delta_locked(
         self,
@@ -223,154 +241,16 @@ class CreditBalanceRepository:
             return None
         return (row.credits, row.bonus_credits, row.billing_status)
 
-    async def deduct_credits(
-        self, db: AsyncSession, user_id: str, amount: Decimal
-    ) -> tuple[Decimal, Decimal, Decimal, Decimal] | None:
-        """Atomically deduct credits (bonus first, then regular).
-
-        Locks the row with ``FOR UPDATE``, then applies the deduction.
-        Returns ``(old_credits, old_bonus, new_credits, new_bonus)`` after
-        deduction, or ``None`` if the row was not found or had insufficient balance.
-        """
-        CB = CreditBalanceRecord
-        amount = Decimal(str(amount))
-
-        # Lock and read old values
-        old_result = await db.execute(
-            select(CB.credits, CB.bonus_credits)
-            .where(CB.user_id == user_id)
-            .with_for_update()
-        )
-        old_row = old_result.first()
-        if old_row is None:
-            return None
-        old_credits: Decimal = old_row.credits
-        old_bonus: Decimal = old_row.bonus_credits
-
-        # Check sufficient balance using Decimal arithmetic
-        if (old_credits + old_bonus) < amount:
-            return None
-
-        new_values = await self._apply_deduction(db, user_id, amount)
-        if new_values is None:
-            return None
-        return (old_credits, old_bonus, new_values[0], new_values[1])
-
-    async def _apply_deduction(
-        self, db: AsyncSession, user_id: str, amount: Decimal
-    ) -> tuple[Decimal, Decimal] | None:
-        """Apply bonus-first deduction via UPDATE … RETURNING.
-
-        Caller must already hold the ``FOR UPDATE`` row lock.
-        Returns ``(new_credits, new_bonus)``
-        or ``None`` if the row was not found.
-        """
-        CB = CreditBalanceRecord
-
-        result = await db.execute(
-            update(CB)
-            .where(CB.user_id == user_id)
-            .values(
-                bonus_credits=case(
-                    (CB.bonus_credits >= amount, CB.bonus_credits - amount),
-                    else_=Decimal("0"),
-                ),
-                credits=case(
-                    (CB.bonus_credits >= amount, CB.credits),
-                    else_=CB.credits - (amount - CB.bonus_credits),
-                ),
-                updated_at=datetime.now(timezone.utc),
-            )
-            .returning(CB.credits, CB.bonus_credits)
-        )
-        row = result.first()
-        if row is None:
-            return None
-        # Read pre-update values from the CASE expressions isn't possible
-        # with RETURNING, so we rely on the caller having read them already.
-        # Return new values only; the caller pairs them with the old values.
-        return row.credits, row.bonus_credits
-
-    async def add_credits(
-        self,
-        db: AsyncSession,
-        user_id: str,
-        amount: Decimal,
-        *,
-        is_bonus: bool = False,
-    ) -> tuple[Decimal, Decimal, Decimal, Decimal] | None:
-        """Atomically add credits to a user.
-
-        Locks the row with ``FOR UPDATE`` to capture old values for accurate
-        delta computation.  Returns ``(old_credits, old_bonus, new_credits,
-        new_bonus)`` after addition, or ``None`` if the row was not found.
-        """
-        CB = CreditBalanceRecord
-        amount = Decimal(str(amount))
-
-        # Lock and read old values
-        old_result = await db.execute(
-            select(CB.credits, CB.bonus_credits)
-            .where(CB.user_id == user_id)
-            .with_for_update()
-        )
-        old_row = old_result.first()
-        if old_row is None:
-            return None
-        old_credits: Decimal = old_row.credits
-        old_bonus: Decimal = old_row.bonus_credits
-
-        if is_bonus:
-            values: dict[str, Any] = {
-                "bonus_credits": CB.bonus_credits + amount,
-                "updated_at": datetime.now(timezone.utc),
-            }
-        else:
-            values = {
-                "credits": CB.credits + amount,
-                "updated_at": datetime.now(timezone.utc),
-            }
-
-        result = await db.execute(
-            update(CB)
-            .where(CB.user_id == user_id)
-            .values(**values)
-            .returning(CB.credits, CB.bonus_credits)
-        )
-        row = result.first()
-        if row is None:
-            return None
-        return (old_credits, old_bonus, row.credits, row.bonus_credits)
-
-    async def set_credits(
+    async def _set_credits_locked(
         self,
         db: AsyncSession,
         user_id: str,
         amount: Decimal,
         *,
         bonus_amount: Decimal | None = None,
-    ) -> tuple[Decimal, Decimal, Decimal, Decimal] | None:
-        """Set a user's credit balance to exact amounts.
-
-        Reads the old balance with ``FOR UPDATE`` (row-level lock in PostgreSQL)
-        then writes new values with ``UPDATE … RETURNING``.  Returns
-        ``(old_credits, old_bonus, new_credits, new_bonus)`` so callers can
-        compute accurate deltas.  Returns ``None`` if the row was not found.
-        """
+    ) -> tuple[Decimal, Decimal] | None:
+        """Set exact balances while the caller already holds the row lock."""
         CB = CreditBalanceRecord
-        amount = Decimal(str(amount))
-
-        # Lock the row to prevent concurrent modification between read and write.
-        old_result = await db.execute(
-            select(CB.credits, CB.bonus_credits)
-            .where(CB.user_id == user_id)
-            .with_for_update()
-        )
-        old_row = old_result.first()
-        if old_row is None:
-            return None
-        old_credits: Decimal = old_row.credits
-        old_bonus: Decimal = old_row.bonus_credits
 
         values: dict[str, Any] = {
             "credits": amount,
@@ -388,4 +268,4 @@ class CreditBalanceRepository:
         row = result.first()
         if row is None:
             return None
-        return (old_credits, old_bonus, row.credits, row.bonus_credits)
+        return row.credits, row.bonus_credits

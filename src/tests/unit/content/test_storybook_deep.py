@@ -4,17 +4,14 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.content.storybook.edit_service import (
-    STORYBOOK_INLINE_EDIT_SCRIPT,
-    StorybookEditService,
-)
-from ii_agent.content.storybook.schemas import DesignChange
+from ii_agent.content.storybook.edit_service import StorybookEditService
 from ii_agent.content.storybook.router import _format_content_disposition
+from ii_agent.content.storybook.schemas import DesignChange
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +26,11 @@ def _now():
 def _make_edit_service(repo=None, version_service=None) -> StorybookEditService:
     repo = repo or MagicMock()
     version_service = version_service or MagicMock()
-    return StorybookEditService(repo=repo, version_service=version_service)
+    return StorybookEditService(
+        repo=repo,
+        version_service=version_service,
+        reservation_service=MagicMock(),
+    )
 
 
 def _change(
@@ -83,6 +84,7 @@ class TestFormatContentDisposition:
 class TestFindElementByContext:
     def _soup(self, html: str):
         from bs4 import BeautifulSoup
+
         return BeautifulSoup(html, "html.parser")
 
     def test_returns_none_when_no_tag_name(self):
@@ -97,7 +99,9 @@ class TestFindElementByContext:
 
     def test_finds_by_id(self):
         soup = self._soup("<div id='target'>hello</div>")
-        result = StorybookEditService._find_element_by_context(soup, {"tagName": "div", "id": "target"})
+        result = StorybookEditService._find_element_by_context(
+            soup, {"tagName": "div", "id": "target"}
+        )
         assert result is not None
         assert result.get("id") == "target"
 
@@ -124,9 +128,7 @@ class TestFindElementByContext:
 
     def test_falls_back_to_first_candidate(self):
         soup = self._soup("<div>A</div><div>B</div>")
-        result = StorybookEditService._find_element_by_context(
-            soup, {"tagName": "div"}
-        )
+        result = StorybookEditService._find_element_by_context(soup, {"tagName": "div"})
         assert result is not None
         assert result.get_text() == "A"
 
@@ -143,14 +145,18 @@ class TestApplyAttributeChange:
     def test_returns_original_when_no_attr(self):
         svc = self._svc()
         html = '<div data-design-id="d1">content</div>'
-        result, changed = svc._apply_attribute_change(html, design_id="d1", attr="", value="v", context=None)
+        result, changed = svc._apply_attribute_change(
+            html, design_id="d1", attr="", value="v", context=None
+        )
         assert result == html
         assert changed is False
 
     def test_returns_false_when_element_not_found(self):
         svc = self._svc()
         html = "<div>content</div>"
-        result, changed = svc._apply_attribute_change(html, design_id="no-id", attr="class", value="new", context=None)
+        result, changed = svc._apply_attribute_change(
+            html, design_id="no-id", attr="class", value="new", context=None
+        )
         assert changed is False
 
     def test_removes_attr_when_value_none(self):
@@ -230,10 +236,12 @@ class TestApplyChangesToHtml:
         svc = _make_edit_service()
         html = '<div data-design-id="d1" style="color: red;">hello</div>'
 
-        with patch("ii_agent.content.storybook.edit_service.apply_slide_style_change_with_status") as mock_fn:
+        with patch(
+            "ii_agent.content.storybook.edit_service.apply_slide_style_change_with_status"
+        ) as mock_fn:
             mock_fn.return_value = (html, True)
             change = _change("d1", "style", prop="color", value="blue")
-            result = await svc.apply_changes_to_html(html, [change])
+            await svc.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -241,7 +249,9 @@ class TestApplyChangesToHtml:
         svc = _make_edit_service()
         html = '<div data-design-id="d1">original</div>'
 
-        with patch("ii_agent.content.storybook.edit_service.apply_slide_text_change_with_status") as mock_fn:
+        with patch(
+            "ii_agent.content.storybook.edit_service.apply_slide_text_change_with_status"
+        ) as mock_fn:
             mock_fn.return_value = (html, True)
             change = _change("d1", "text", value="new text")
             await svc.apply_changes_to_html(html, [change])
@@ -252,7 +262,9 @@ class TestApplyChangesToHtml:
         svc = _make_edit_service()
         html = '<span data-design-id="d1">icon</span>'
 
-        with patch("ii_agent.content.storybook.edit_service.apply_slide_icon_change_with_status") as mock_fn:
+        with patch(
+            "ii_agent.content.storybook.edit_service.apply_slide_icon_change_with_status"
+        ) as mock_fn:
             mock_fn.return_value = (html, True)
             change = _change("d1", "attribute", prop="icon", value="new-icon")
             await svc.apply_changes_to_html(html, [change])
@@ -263,7 +275,9 @@ class TestApplyChangesToHtml:
         svc = _make_edit_service()
         html = '<div data-design-id="d1">delete me</div>'
 
-        with patch("ii_agent.content.storybook.edit_service.apply_slide_delete_change_with_status") as mock_fn:
+        with patch(
+            "ii_agent.content.storybook.edit_service.apply_slide_delete_change_with_status"
+        ) as mock_fn:
             mock_fn.return_value = (html, True)
             change = _change("d1", "delete")
             await svc.apply_changes_to_html(html, [change])
@@ -274,7 +288,9 @@ class TestApplyChangesToHtml:
         svc = _make_edit_service()
         html = '<div data-design-id="d1">item</div>'
 
-        with patch("ii_agent.content.storybook.edit_service.apply_slide_move_change_with_status") as mock_fn:
+        with patch(
+            "ii_agent.content.storybook.edit_service.apply_slide_move_change_with_status"
+        ) as mock_fn:
             mock_fn.return_value = (html, True)
             change = _change("d1", "move", value="after-d2")
             await svc.apply_changes_to_html(html, [change])
@@ -285,7 +301,9 @@ class TestApplyChangesToHtml:
         svc = _make_edit_service()
         html = '<div data-design-id="d1">item</div>'
 
-        with patch("ii_agent.content.storybook.edit_service.apply_slide_swap_change_with_status") as mock_fn:
+        with patch(
+            "ii_agent.content.storybook.edit_service.apply_slide_swap_change_with_status"
+        ) as mock_fn:
             mock_fn.return_value = (html, True)
             change = _change("d1", "swap", value="d2")
             await svc.apply_changes_to_html(html, [change])
@@ -332,9 +350,7 @@ class TestGetPageHtmlWithRuntime:
     @pytest.mark.asyncio
     async def test_returns_none_when_page_has_no_html(self):
         repo = AsyncMock()
-        repo.get_page_by_number = AsyncMock(
-            return_value=SimpleNamespace(html_content=None)
-        )
+        repo.get_page_by_number = AsyncMock(return_value=SimpleNamespace(html_content=None))
         svc = _make_edit_service(repo=repo)
         result = await svc.get_page_html_with_runtime(None, storybook_id="sb1", page_number=1)
         assert result is None

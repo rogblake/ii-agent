@@ -8,7 +8,14 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from celery import shared_task
+from sqlalchemy import select
 
+from ii_agent.billing.types import (
+    BillingContextValue,
+    BillingResult,
+    BillingScope,
+)
+from ii_agent.content.storybook.billing import finalize_storybook_async_operation
 from ii_agent.workers.celery.decorators import with_task_context
 from ii_agent.workers.celery.manager import get_celery_container
 from ii_agent.workers.celery.utils import queue_task
@@ -95,7 +102,6 @@ async def _mark_scene_completed(
     actual_cost_usd: float,
 ) -> bool:
     """Atomically record a completed scene and accumulate its actual billed cost."""
-    from sqlalchemy import select
     from ii_agent.core.db.manager import get_db_session_local
     from ii_agent.content.storybook.models import Storybook
 
@@ -140,9 +146,11 @@ async def _finalize_storybook_billing(
     """Settle or release the reserved storybook billing hold exactly once."""
     from ii_agent.core.db.manager import get_db_session_local
     from ii_agent.content.storybook.repository import StorybookRepository
+    from ii_agent.billing.reservations.repository import CreditReservationRepository
 
     container = get_celery_container()
     repo = StorybookRepository()
+    reservation_repo = CreditReservationRepository()
 
     try:
         async with get_db_session_local() as db_session:
@@ -161,33 +169,65 @@ async def _finalize_storybook_billing(
             if not reservation_id:
                 return
 
+            reservation = await reservation_repo.get_by_id(db_session, reservation_id)
+            if reservation is None:
+                logger.warning(
+                    "Storybook %s references missing billing reservation %s",
+                    storybook_id,
+                    reservation_id,
+                )
+                return
+
             tool_name = generation.get("tool_name", "generate_storybook")
             actual_cost_usd = float(generation.get("actual_cost_usd_total") or 0.0)
+            if reservation.subject_kind != "session" or not reservation.subject_id:
+                await container.credit_reservation_service.mark_settlement_failed(
+                    db_session,
+                    reservation_id=reservation_id,
+                    error="storybook_invalid_subject",
+                )
+                await db_session.commit()
+                return
+
+            scope = BillingScope.for_session(
+                user_id=str(reservation.user_id),
+                app_kind=str(generation.get("app_kind") or "chat"),
+                session_id=str(reservation.subject_id),
+                billing_context=BillingContextValue.STORYBOOK,
+                run_id=reservation.run_id,
+            )
 
             if actual_cost_usd > 0:
-                await container.llm_billing_service.settle_tool_call_by_reservation_id(
-                    db_session,
+                await finalize_storybook_async_operation(
+                    reservation_service=container.credit_reservation_service,
+                    scope=scope,
                     reservation_id=reservation_id,
-                    actual_cost_usd=actual_cost_usd,
-                    provider=None,
-                    latency_ms=None,
-                    extra_usage_metadata={
-                        "app_kind": "chat",
-                        "run_id": generation.get("run_id"),
-                        "tool_name": tool_name,
-                    },
+                    result=BillingResult(
+                        value=None,
+                        actual_usd=actual_cost_usd,
+                        usage_payload={
+                            "provider": None,
+                            "latency_ms": None,
+                            "cost_usd": actual_cost_usd,
+                            "tool_name": tool_name,
+                            "run_id": str(reservation.run_id) if reservation.run_id else None,
+                        },
+                    ),
+                    release_reason="unused",
+                    settlement_error="storybook_settle_exception",
                 )
             else:
-                await container.llm_billing_service.release_tool_call_by_reservation_id(
-                    db_session,
+                await finalize_storybook_async_operation(
+                    reservation_service=container.credit_reservation_service,
+                    scope=scope,
                     reservation_id=reservation_id,
-                    reason=(
+                    result=None,
+                    release_reason=(
                         "storybook_cancelled"
                         if terminal_status == "cancelled"
                         else ("unused" if terminal_status == "completed" else "storybook_failed")
                     ),
                 )
-            await db_session.commit()
     except Exception:
         logger.opt(exception=True).error(
             "Failed to finalize storybook billing for {}", storybook_id

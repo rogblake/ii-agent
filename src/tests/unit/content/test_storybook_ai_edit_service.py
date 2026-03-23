@@ -2,33 +2,32 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.content.storybook.ai_edit_service import (
-    DEFAULT_TEXT_PERCENTAGE,
     StorybookAIEditService,
     _build_extension_prompt,
     _build_style_context,
     _calculate_safe_zones,
-    _enhance_prompt_with_style,
     _extract_page,
     _extract_text_from_html,
     _extract_text_percentage_from_html,
     _extract_text_position_from_html,
     _get_optimal_aspect_ratio,
 )
-from ii_agent.chat.types import ImageURLContent, MessageRole, TextContent
+from ii_agent.chat.types import ImageURLContent, TextContent
 from ii_agent.core.exceptions import ValidationError
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_service():
     usage_svc = MagicMock()
@@ -39,6 +38,7 @@ def _make_service():
         usage_service=usage_svc,
         llm_setting_service=MagicMock(),
         llm_execution=MagicMock(),
+        reservation_service=MagicMock(),
         config=MagicMock(),
     )
 
@@ -68,11 +68,18 @@ def _llm_config_stub():
     model = SimpleNamespace(temperature=0.1, thinking_tokens=1)
 
     def _copy(deep: bool = True):
-        model_copy = SimpleNamespace(temperature=model.temperature, thinking_tokens=model.thinking_tokens)
+        model_copy = SimpleNamespace(
+            temperature=model.temperature, thinking_tokens=model.thinking_tokens
+        )
         return model_copy
 
     model.model_copy = _copy
     return model
+
+
+async def _run_sync_side_effect(*, execute_fn, **kwargs):
+    result = await execute_fn()
+    return result.value
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +98,10 @@ def test_build_extension_prompt_for_positions():
 
 def test_build_style_context_adds_fields_and_skips_empty():
     assert _build_style_context({"character_description": "hero"}) == "Character: hero"
-    assert _build_style_context({"art_style": "watercolor", "color_palette": "warm"}) == "Art style: watercolor. Color palette: warm"
+    assert (
+        _build_style_context({"art_style": "watercolor", "color_palette": "warm"})
+        == "Art style: watercolor. Color palette: warm"
+    )
     assert _build_style_context({"foo": "bar"}) == ""
 
 
@@ -101,24 +111,25 @@ def test_extract_text_from_html_extracts_editable_text():
 
 
 def test_extract_text_position_and_percentage_parsers():
-    assert _extract_text_position_from_html(
-        ".storybook-page{ flex-direction: row; }"
-    ) == "right"
-    assert _extract_text_position_from_html(
-        ""
-    ) is None
-    assert _extract_text_percentage_from_html(
-        ".text-section { flex: 0 0 30%; }"
-    ) == 30
-    assert _extract_text_percentage_from_html(
-        ".image-section { flex: 0 0 70%; }"
-    ) == 30
+    assert _extract_text_position_from_html(".storybook-page{ flex-direction: row; }") == "right"
+    assert _extract_text_position_from_html("") is None
+    assert _extract_text_percentage_from_html(".text-section { flex: 0 0 30%; }") == 30
+    assert _extract_text_percentage_from_html(".image-section { flex: 0 0 70%; }") == 30
 
 
 def test_optimal_aspect_ratio_and_safe_zones():
     assert _get_optimal_aspect_ratio("16:9", "none", 0, None) == "16:9"
     assert _get_optimal_aspect_ratio("16:9", "right", 0, None) == "16:9"
-    assert _get_optimal_aspect_ratio("16:9", "left", 25, "unknown") in {"1:1", "2:3", "3:2", "16:9", "21:9", "4:3", "3:4", "1.777"}
+    assert _get_optimal_aspect_ratio("16:9", "left", 25, "unknown") in {
+        "1:1",
+        "2:3",
+        "3:2",
+        "16:9",
+        "21:9",
+        "4:3",
+        "3:4",
+        "1.777",
+    }
     assert _get_optimal_aspect_ratio("invalid", "left", 25, "gemini") == "invalid"
 
     assert _calculate_safe_zones("16:9", "16:9", "none", 0) == (100, 100)
@@ -189,9 +200,7 @@ async def test_rewrite_content_raises_when_no_text_returned():
     user_client = MagicMock()
     user_client.new_message = MagicMock(side_effect=["msg1", "msg2"])
     user_client.send_once = AsyncMock(
-        return_value=SimpleNamespace(
-            content=[ImageURLContent(url="x")]
-        )
+        return_value=SimpleNamespace(content=[ImageURLContent(url="x")])
     )
     service._llm_execution = user_client
 
@@ -243,9 +252,14 @@ async def test_generate_background_requires_api_key():
 async def test_generate_background_success_and_deducts_credits():
     service = _make_service()
     service._user_service.get_active_api_key = AsyncMock(return_value="api-key")
-    service._deduct_image_credits = AsyncMock()
 
-    with patch_generate_image({"url": "https://cdn/image.png", "cost": 0.05}):
+    with (
+        patch_generate_image({"url": "https://cdn/image.png", "cost": 0.05}),
+        patch(
+            "ii_agent.content.storybook.ai_edit_service.run_storybook_sync_operation",
+            AsyncMock(side_effect=_run_sync_side_effect),
+        ) as run_storybook_sync_operation,
+    ):
         url = await service.generate_background(
             db=MagicMock(),
             storybook=_storybook(style_json={"image_provider": "gemini"}),
@@ -256,14 +270,20 @@ async def test_generate_background_success_and_deducts_credits():
         )
 
     assert url == "https://cdn/image.png"
-    service._deduct_image_credits.assert_awaited_once()
+    run_storybook_sync_operation.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_generate_background_missing_image_url_raises():
     service = _make_service()
     service._user_service.get_active_api_key = AsyncMock(return_value="api-key")
-    with patch_generate_image({"cost": 0.01}):
+    with (
+        patch_generate_image({"cost": 0.01}),
+        patch(
+            "ii_agent.content.storybook.ai_edit_service.run_storybook_sync_operation",
+            AsyncMock(side_effect=_run_sync_side_effect),
+        ),
+    ):
         with pytest.raises(RuntimeError, match="did not return an image URL"):
             await service.generate_background(
                 db=MagicMock(),
@@ -309,10 +329,18 @@ async def test_regenerate_image_success_with_separate_page_and_next_text_page():
 
     service = _make_service()
     service._user_service.get_active_api_key = AsyncMock(return_value="api-key")
-    service._deduct_image_credits = AsyncMock()
 
-    with patch_generate_image({"url": "https://out.png", "cost": 0.02}):
-        with patch("ii_agent.content.storybook.ai_edit_service._generate_image", AsyncMock(return_value={"url": "https://out.png", "cost": 0.02})):
+    with (
+        patch_generate_image({"url": "https://out.png", "cost": 0.02}),
+        patch(
+            "ii_agent.content.storybook.ai_edit_service.run_storybook_sync_operation",
+            AsyncMock(side_effect=_run_sync_side_effect),
+        ),
+    ):
+        with patch(
+            "ii_agent.content.storybook.ai_edit_service._generate_image",
+            AsyncMock(return_value={"url": "https://out.png", "cost": 0.02}),
+        ):
             result = await service.regenerate_image(
                 db=MagicMock(),
                 storybook=storybook,
@@ -336,9 +364,11 @@ async def test_regenerate_image_retries_and_raises_after_failures():
 
     service = _make_service()
     service._user_service.get_active_api_key = AsyncMock(return_value="api-key")
-    service._deduct_image_credits = AsyncMock()
 
-    with patch("ii_agent.content.storybook.ai_edit_service._generate_image", AsyncMock(side_effect=RuntimeError("boom"))):
+    with patch(
+        "ii_agent.content.storybook.ai_edit_service._generate_image",
+        AsyncMock(side_effect=RuntimeError("boom")),
+    ):
         with patch("ii_agent.content.storybook.ai_edit_service.asyncio.sleep", AsyncMock()):
             with pytest.raises(RuntimeError, match="Failed to regenerate image after 5 attempts"):
                 await service.regenerate_image(
@@ -351,7 +381,7 @@ async def test_regenerate_image_retries_and_raises_after_failures():
 
 
 # ---------------------------------------------------------------------------
-# _resolve_storybook_llm_config and _deduct_image_credits
+# _resolve_storybook_llm_config and billed image helper
 # ---------------------------------------------------------------------------
 
 
@@ -373,7 +403,9 @@ async def test_resolve_storybook_llm_config_invalid_session_and_valid_setting():
         assert config == "fallback_copy"
         assert model_id == "default"
 
-    service._session_service.get_session_by_id = AsyncMock(return_value=SimpleNamespace(llm_setting_id="m1"))
+    service._session_service.get_session_by_id = AsyncMock(
+        return_value=SimpleNamespace(llm_setting_id="m1")
+    )
     service._llm_setting_service.get_user_llm_config = AsyncMock(return_value=setting)
 
     with patch(
@@ -390,40 +422,46 @@ async def test_resolve_storybook_llm_config_invalid_session_and_valid_setting():
 
 
 @pytest.mark.asyncio
-async def test_deduct_image_credits_no_cost_skips_service():
+async def test_run_billed_image_operation_returns_image_url():
     service = _make_service()
-    service._usage_service.deduct_and_track_session_usage = AsyncMock()
-    await service._deduct_image_credits(
-        db=MagicMock(),
-        user_id="u1",
-        session_id="s1",
-        raw_cost=None,
-        context="ctx",
-    )
-    service._usage_service.deduct_and_track_session_usage.assert_awaited_once()
+    storybook = _storybook()
 
-    await service._deduct_image_credits(
-        db=MagicMock(),
-        user_id="u1",
-        session_id="s1",
-        raw_cost=-0.5,
-        context="ctx",
-    )
-    assert service._usage_service.deduct_and_track_session_usage.await_count == 1
+    with patch(
+        "ii_agent.content.storybook.ai_edit_service.run_storybook_sync_operation",
+        AsyncMock(side_effect=_run_sync_side_effect),
+    ):
+        image_url = await service._run_billed_image_operation(
+            db=MagicMock(),
+            storybook=storybook,
+            user_id="u1",
+            operation_id="background:sb-1:req-1",
+            tool_name="storybook_background",
+            context="ctx",
+            execute_fn=AsyncMock(return_value={"url": "https://cdn/image.png", "cost": None}),
+        )
+
+    assert image_url == "https://cdn/image.png"
 
 
 @pytest.mark.asyncio
-async def test_deduct_image_credits_tracks_when_service_says_no_funds():
+async def test_run_billed_image_operation_propagates_insufficient_credits():
     service = _make_service()
-    service._usage_service.deduct_and_track_session_usage = AsyncMock(return_value=False)
-    await service._deduct_image_credits(
-        db=MagicMock(),
-        user_id="u1",
-        session_id="s1",
-        raw_cost=0.5,
-        context="ctx",
-    )
-    service._usage_service.deduct_and_track_session_usage.assert_awaited_once()
+    storybook = _storybook()
+
+    with patch(
+        "ii_agent.content.storybook.ai_edit_service.run_storybook_sync_operation",
+        AsyncMock(side_effect=InsufficientCreditsError()),
+    ):
+        with pytest.raises(InsufficientCreditsError):
+            await service._run_billed_image_operation(
+                db=MagicMock(),
+                storybook=storybook,
+                user_id="u1",
+                operation_id="background:sb-1:req-1",
+                tool_name="storybook_background",
+                context="ctx",
+                execute_fn=AsyncMock(return_value={"url": "https://cdn/image.png", "cost": 0.5}),
+            )
 
 
 # ---------------------------------------------------------------------------

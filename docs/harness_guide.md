@@ -23,7 +23,7 @@ We used `openai-agents-python` as a reference for how harness engineering is imp
 | **Quality tracking** | `docs/QUALITY_SCORE.md` with per-domain quality grades |
 | **Tech debt tracking** | `docs/exec-plans/tech-debt-tracker.md` with prioritized items |
 | **Security documentation** | `docs/SECURITY.md` covering auth, secrets, data isolation |
-| **Reliability documentation** | `docs/RELIABILITY.md` covering billing, outbox, cron, Redis fallbacks |
+| **Reliability documentation** | `docs/RELIABILITY.md` covering billing, cron, Redis fallbacks |
 | **Frontend integration docs** | `docs/FRONTEND.md` with Socket.IO events, REST API surface |
 | **Product sense** | `docs/PRODUCT_SENSE.md` with pillars, personas, journeys |
 | **Database schema reference** | `docs/generated/db-schema.md` extracted from SQLAlchemy models |

@@ -27,7 +27,8 @@ from ii_agent.billing.credits.dependencies import CreditServiceDep
 from ii_agent.core.llm.dependencies import LLMBillingServiceDep
 from ii_agent.files.dependencies import FileRepositoryDep
 from ii_agent.integrations.connectors.dependencies import ConnectorRepositoryDep
-from ii_agent.sessions.dependencies import SessionRepositoryDep, SessionTitleServiceDep
+from ii_agent.sessions.dependencies import SessionRepositoryDep
+from ii_agent.sessions.title_dependencies import SessionTitleServiceDep
 
 
 def get_container(request: Request) -> ServiceContainer:

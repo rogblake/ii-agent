@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -31,12 +30,16 @@ class _FakeNestedTransaction:
 class FakeBalanceRepo:
     def __init__(self, *, billing_status: str = "ok"):
         self._billing_status = billing_status
-        self._billing_status_reason: str | None = "prior shortfall" if billing_status != "ok" else None
+        self._billing_status_reason: str | None = (
+            "prior shortfall" if billing_status != "ok" else None
+        )
+        self.lock_balance_state_calls = 0
 
     async def get_billing_status(self, db, user_id):
         return self._billing_status
 
     async def lock_balance_state(self, db, user_id):
+        self.lock_balance_state_calls += 1
         return Decimal("10"), Decimal("5"), self._billing_status
 
     async def apply_delta_locked(
@@ -53,6 +56,21 @@ class FakeBalanceRepo:
             self._billing_status = billing_status
             self._billing_status_reason = billing_status_reason
         return Decimal("10"), Decimal("5"), self._billing_status
+
+    async def set_billing_status(
+        self,
+        db,
+        user_id,
+        *,
+        billing_status,
+        billing_status_reason=None,
+        expected_current_status=None,
+    ):
+        if expected_current_status is not None and self._billing_status != expected_current_status:
+            return False
+        self._billing_status = billing_status
+        self._billing_status_reason = billing_status_reason
+        return True
 
 
 def _make_db():
@@ -112,6 +130,7 @@ class TestClearBillingStatus:
         assert result is True
         assert balance_repo._billing_status == BillingStatus.OK
         assert balance_repo._billing_status_reason is None
+        assert balance_repo.lock_balance_state_calls == 0
 
     @pytest.mark.asyncio
     async def test_returns_false_when_already_ok(self):
@@ -126,7 +145,7 @@ class TestClearBillingStatus:
     @pytest.mark.asyncio
     async def test_returns_false_when_user_not_found(self):
         service, balance_repo = _make_service()
-        balance_repo.lock_balance_state = AsyncMock(return_value=None)
+        balance_repo.set_billing_status = AsyncMock(return_value=False)
         db = _make_db()
 
         result = await service.clear_billing_status(db, "missing-user")

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import stripe
 
+from ii_agent.billing.reservations.types import ReservationStatus
 from ii_agent.billing.exceptions import BillingConfigurationError, BillingServiceError
 from ii_agent.billing.stripe_config import StripeConfig
 from ii_agent.billing.webhook_handler import StripeWebhookHandler, SubscriptionContext
@@ -16,6 +18,7 @@ from ii_agent.billing.webhook_handler import StripeWebhookHandler, SubscriptionC
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
+
 
 class _FakeBillingRepo:
     def __init__(self):
@@ -66,10 +69,16 @@ class _FakeBillingCustomerService:
         self.customers = {}
         self.subscription_updates = []
 
-    async def get_or_create(self, db, *, user_id, provider="stripe", external_customer_id, **kwargs):
+    async def get_or_create(
+        self, db, *, user_id, provider="stripe", external_customer_id, **kwargs
+    ):
         key = (user_id, provider)
         if key not in self.customers:
-            self.customers[key] = {"user_id": user_id, "provider": provider, "external_customer_id": external_customer_id}
+            self.customers[key] = {
+                "user_id": user_id,
+                "provider": provider,
+                "external_customer_id": external_customer_id,
+            }
         return SimpleNamespace(**self.customers[key])
 
     async def update_subscription(self, db, user_id, *, provider="stripe", **kwargs):
@@ -93,13 +102,65 @@ class _FakeBillingCustomerService:
         return None
 
 
-def _make_handler(settings_factory, *, user_repo=None, billing_repo=None, billing_customer_service=None, webhook_secret="whsec_test"):
+class _FakeReservationRepo:
+    def __init__(self, *, held_regular=0, held_bonus=0, replayable_shortfalls=None):
+        self.held_regular = held_regular
+        self.held_bonus = held_bonus
+        self.replayable_shortfalls = replayable_shortfalls or []
+
+    async def get_outstanding_hold_totals(self, db, *, user_id):
+        return self.held_regular, self.held_bonus
+
+    async def list_replayable_shortfall_failures(self, db, *, user_id, limit=50):
+        reservations = [
+            reservation
+            for reservation in self.replayable_shortfalls
+            if getattr(reservation, "user_id", None) == user_id
+            and getattr(reservation, "status", ReservationStatus.SETTLEMENT_FAILED)
+            == ReservationStatus.SETTLEMENT_FAILED
+            and getattr(reservation, "last_error", "settlement_shortfall_unreconciled")
+            == "settlement_shortfall_unreconciled"
+        ]
+        return reservations[:limit]
+
+    async def has_replayable_shortfall_failures(self, db, *, user_id):
+        reservations = await self.list_replayable_shortfall_failures(db, user_id=user_id, limit=1)
+        return bool(reservations)
+
+    async def has_blocking_settlement_failures(self, db, *, user_id):
+        return any(
+            getattr(reservation, "user_id", None) == user_id
+            and getattr(reservation, "status", None) == ReservationStatus.SETTLEMENT_FAILED
+            for reservation in self.replayable_shortfalls
+        )
+
+    def set_status(self, reservation_id, status):
+        for reservation in self.replayable_shortfalls:
+            if getattr(reservation, "id", None) == reservation_id:
+                reservation.status = status
+                return
+
+
+def _make_handler(
+    settings_factory,
+    *,
+    user_repo=None,
+    billing_repo=None,
+    billing_customer_service=None,
+    credit_service=None,
+    reservation_repo=None,
+    reservation_service=None,
+    webhook_secret="whsec_test",
+):
     settings = settings_factory(stripe={"webhook_secret": webhook_secret})
     return StripeWebhookHandler(
         stripe_config=StripeConfig(config=settings),
         billing_repo=billing_repo or _FakeBillingRepo(),
         user_repo=user_repo or _FakeUserRepo(),
         billing_customer_service=billing_customer_service or _FakeBillingCustomerService(),
+        credit_service=credit_service,
+        reservation_repo=reservation_repo,
+        reservation_service=reservation_service,
     )
 
 
@@ -123,6 +184,7 @@ def _make_user(user_id: str = "user-1"):
 # construct_webhook_event
 # ---------------------------------------------------------------------------
 
+
 class TestConstructWebhookEvent:
     def test_raises_when_webhook_secret_not_configured(self, settings_factory):
         handler = _make_handler(settings_factory, webhook_secret=None)
@@ -136,7 +198,11 @@ class TestConstructWebhookEvent:
 
     def test_raises_on_invalid_payload(self, settings_factory, monkeypatch):
         handler = _make_handler(settings_factory)
-        monkeypatch.setattr(stripe.Webhook, "construct_event", lambda *a, **kw: (_ for _ in ()).throw(ValueError("bad")))
+        monkeypatch.setattr(
+            stripe.Webhook,
+            "construct_event",
+            lambda *a, **kw: (_ for _ in ()).throw(ValueError("bad")),
+        )
         with pytest.raises(BillingServiceError, match="Invalid Stripe webhook payload"):
             handler.construct_webhook_event(b"bad", "sig")
 
@@ -161,6 +227,7 @@ class TestConstructWebhookEvent:
 # ---------------------------------------------------------------------------
 # handle_webhook_event - dispatch
 # ---------------------------------------------------------------------------
+
 
 class TestHandleWebhookEventDispatch:
     @pytest.mark.asyncio
@@ -227,6 +294,7 @@ class TestHandleWebhookEventDispatch:
 # _claim_event and _finalize_transaction
 # ---------------------------------------------------------------------------
 
+
 class TestClaimEvent:
     @pytest.mark.asyncio
     async def test_claim_returns_true_for_new_event(self, settings_factory):
@@ -284,6 +352,7 @@ class TestFinalizeTransaction:
 # ---------------------------------------------------------------------------
 # _resolve_subscription_context
 # ---------------------------------------------------------------------------
+
 
 class TestResolveSubscriptionContext:
     @pytest.mark.asyncio
@@ -348,6 +417,7 @@ class TestResolveSubscriptionContext:
 # _handle_checkout_session_completed
 # ---------------------------------------------------------------------------
 
+
 class TestHandleCheckoutSessionCompleted:
     @pytest.mark.asyncio
     async def test_skips_when_no_user_id(self, settings_factory):
@@ -371,17 +441,21 @@ class TestHandleCheckoutSessionCompleted:
             "customer": "cus_1",
             "status": "complete",
         }
-        with patch.object(handler, "_resolve_subscription_context", new=AsyncMock(
-            return_value=SubscriptionContext(
-                subscription=None,
-                user_id="missing-user",
-                plan_id="pro",
-                billing_cycle="monthly",
-                customer_id="cus_1",
-                period_end=None,
-                credits=100.0,
-            )
-        )):
+        with patch.object(
+            handler,
+            "_resolve_subscription_context",
+            new=AsyncMock(
+                return_value=SubscriptionContext(
+                    subscription=None,
+                    user_id="missing-user",
+                    plan_id="pro",
+                    billing_cycle="monthly",
+                    customer_id="cus_1",
+                    period_end=None,
+                    credits=100.0,
+                )
+            ),
+        ):
             await handler._handle_checkout_session_completed(None, "evt_1", session_obj)
         # Event NOT claimed — user not found returns before claiming so
         # Stripe retries can succeed once the user exists.
@@ -393,7 +467,12 @@ class TestHandleCheckoutSessionCompleted:
         user_repo = _FakeUserRepo(users={"user-1": user})
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+        )
 
         session_obj = {
             "id": "cs_test_123",
@@ -413,7 +492,9 @@ class TestHandleCheckoutSessionCompleted:
             credits=250.0,
         )
 
-        with patch.object(handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)):
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
             await handler._handle_checkout_session_completed(None, "evt_1", session_obj)
 
         assert len(billing_customer_service.subscription_updates) == 1
@@ -428,7 +509,12 @@ class TestHandleCheckoutSessionCompleted:
         user_repo = _FakeUserRepo(users={"user-1": user})
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+        )
 
         session_obj = {
             "id": "cs_test_123",
@@ -448,7 +534,9 @@ class TestHandleCheckoutSessionCompleted:
             credits=250.0,
         )
 
-        with patch.object(handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)):
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
             await handler._handle_checkout_session_completed(None, "evt_dup", session_obj)
             await handler._handle_checkout_session_completed(None, "evt_dup", session_obj)
 
@@ -461,6 +549,7 @@ class TestHandleCheckoutSessionCompleted:
 # _handle_invoice_payment_succeeded
 # ---------------------------------------------------------------------------
 
+
 class TestHandleInvoicePaymentSucceeded:
     @pytest.mark.asyncio
     async def test_looks_up_user_by_customer_id_when_metadata_missing(self, settings_factory):
@@ -469,9 +558,16 @@ class TestHandleInvoicePaymentSucceeded:
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
         billing_customer_service.customers[("user-2", "stripe")] = {
-            "user_id": "user-2", "provider": "stripe", "external_customer_id": "cus_2"
+            "user_id": "user-2",
+            "provider": "stripe",
+            "external_customer_id": "cus_2",
         }
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+        )
 
         invoice_obj = {
             "id": "inv_1",
@@ -495,7 +591,9 @@ class TestHandleInvoicePaymentSucceeded:
             credits=None,
         )
 
-        with patch.object(handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)):
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
             await handler._handle_invoice_payment_succeeded(None, "evt_2", invoice_obj)
 
         assert len(billing_customer_service.subscription_updates) == 1
@@ -528,7 +626,9 @@ class TestHandleInvoicePaymentSucceeded:
             credits=None,
         )
 
-        with patch.object(handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)):
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
             await handler._handle_invoice_payment_succeeded(None, "evt_3", invoice_obj)
 
         assert len(billing_repo.claimed) == 0
@@ -539,7 +639,12 @@ class TestHandleInvoicePaymentSucceeded:
         user_repo = _FakeUserRepo(users={"user-3": user})
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+        )
 
         invoice_obj = {
             "id": "inv_3",
@@ -563,7 +668,9 @@ class TestHandleInvoicePaymentSucceeded:
             credits=None,
         )
 
-        with patch.object(handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)):
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
             await handler._handle_invoice_payment_succeeded(None, "evt_4", invoice_obj)
 
         # Plan should be resolved to 'plus' from price_plus_m
@@ -571,10 +678,403 @@ class TestHandleInvoicePaymentSucceeded:
         sub_call = billing_customer_service.subscription_updates[0]
         assert sub_call.get("subscription_plan") == "plus"
 
+    @pytest.mark.asyncio
+    async def test_invoice_reset_preserves_unresolved_holds(self, settings_factory):
+        user = _make_user("user-4")
+        user_repo = _FakeUserRepo(users={"user-4": user})
+        billing_repo = _FakeBillingRepo()
+        billing_customer_service = _FakeBillingCustomerService()
+        credit_service = SimpleNamespace(
+            reset_plan_balance=AsyncMock(return_value=SimpleNamespace(updated=True)),
+            clear_billing_status=AsyncMock(return_value=True),
+        )
+        reservation_repo = _FakeReservationRepo(
+            held_regular=Decimal("7"),
+            held_bonus=Decimal("2"),
+        )
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+            credit_service=credit_service,
+            reservation_repo=reservation_repo,
+        )
+
+        invoice_obj = {
+            "id": "inv_4",
+            "metadata": {"user_id": "user-4"},
+            "subscription": None,
+            "customer": "cus_4",
+            "amount_paid": 1500,
+            "currency": "usd",
+            "status": "paid",
+            "lines": {"data": []},
+            "payment_intent": "pi_4",
+        }
+
+        ctx = SubscriptionContext(
+            subscription=None,
+            user_id="user-4",
+            plan_id="plus",
+            billing_cycle="monthly",
+            customer_id="cus_4",
+            period_end=None,
+            credits=100.0,
+        )
+
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
+            await handler._handle_invoice_payment_succeeded(None, "evt_5", invoice_obj)
+
+        reset_call = credit_service.reset_plan_balance.await_args
+        assert reset_call.args[1] == "user-4"
+        assert reset_call.args[2] == 100.0
+        credit_service.clear_billing_status.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_payment_replays_shortfall_failures_before_unblocking(self, settings_factory):
+        user = _make_user("user-6")
+        user_repo = _FakeUserRepo(users={"user-6": user})
+        billing_repo = _FakeBillingRepo()
+        billing_customer_service = _FakeBillingCustomerService()
+        credit_service = SimpleNamespace(
+            reset_plan_balance=AsyncMock(return_value=SimpleNamespace(updated=True)),
+            clear_billing_status=AsyncMock(return_value=True),
+        )
+        reservation_repo = _FakeReservationRepo(
+            replayable_shortfalls=[
+                SimpleNamespace(
+                    id="res-shortfall-1",
+                    user_id="user-6",
+                    status=ReservationStatus.SETTLEMENT_FAILED,
+                )
+            ]
+        )
+
+        async def _retry(db, *, reservation_id):
+            reservation_repo.set_status(reservation_id, ReservationStatus.SETTLED)
+            return SimpleNamespace(status=ReservationStatus.SETTLED)
+
+        reservation_service = SimpleNamespace(
+            retry_settlement_from_capture=AsyncMock(side_effect=_retry)
+        )
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+            credit_service=credit_service,
+            reservation_repo=reservation_repo,
+            reservation_service=reservation_service,
+        )
+
+        invoice_obj = {
+            "id": "inv_6",
+            "metadata": {"user_id": "user-6"},
+            "subscription": None,
+            "customer": "cus_6",
+            "amount_paid": 1500,
+            "currency": "usd",
+            "status": "paid",
+            "lines": {"data": []},
+            "payment_intent": "pi_6",
+        }
+
+        ctx = SubscriptionContext(
+            subscription=None,
+            user_id="user-6",
+            plan_id="plus",
+            billing_cycle="monthly",
+            customer_id="cus_6",
+            period_end=None,
+            credits=100.0,
+        )
+
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
+            await handler._handle_invoice_payment_succeeded(None, "evt_6", invoice_obj)
+
+        reservation_service.retry_settlement_from_capture.assert_awaited_once_with(
+            None,
+            reservation_id="res-shortfall-1",
+        )
+        credit_service.clear_billing_status.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_payment_replays_all_shortfall_batches_before_unblocking(self, settings_factory):
+        user = _make_user("user-6b")
+        user_repo = _FakeUserRepo(users={"user-6b": user})
+        billing_repo = _FakeBillingRepo()
+        billing_customer_service = _FakeBillingCustomerService()
+        credit_service = SimpleNamespace(
+            reset_plan_balance=AsyncMock(return_value=SimpleNamespace(updated=True)),
+            clear_billing_status=AsyncMock(return_value=True),
+        )
+        replayable_shortfalls = [
+            SimpleNamespace(
+                id=f"res-shortfall-batch-{index}",
+                user_id="user-6b",
+                status=ReservationStatus.SETTLEMENT_FAILED,
+            )
+            for index in range(51)
+        ]
+        reservation_repo = _FakeReservationRepo(replayable_shortfalls=replayable_shortfalls)
+
+        async def _retry(db, *, reservation_id):
+            reservation_repo.set_status(reservation_id, ReservationStatus.SETTLED)
+            return SimpleNamespace(status=ReservationStatus.SETTLED)
+
+        reservation_service = SimpleNamespace(
+            retry_settlement_from_capture=AsyncMock(side_effect=_retry)
+        )
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+            credit_service=credit_service,
+            reservation_repo=reservation_repo,
+            reservation_service=reservation_service,
+        )
+
+        invoice_obj = {
+            "id": "inv_6b",
+            "metadata": {"user_id": "user-6b"},
+            "subscription": None,
+            "customer": "cus_6b",
+            "amount_paid": 1500,
+            "currency": "usd",
+            "status": "paid",
+            "lines": {"data": []},
+            "payment_intent": "pi_6b",
+        }
+
+        ctx = SubscriptionContext(
+            subscription=None,
+            user_id="user-6b",
+            plan_id="plus",
+            billing_cycle="monthly",
+            customer_id="cus_6b",
+            period_end=None,
+            credits=100.0,
+        )
+
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
+            await handler._handle_invoice_payment_succeeded(None, "evt_6b", invoice_obj)
+
+        assert reservation_service.retry_settlement_from_capture.await_count == 51
+        credit_service.clear_billing_status.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_payment_keeps_block_when_shortfall_replay_still_fails(self, settings_factory):
+        user = _make_user("user-7")
+        user_repo = _FakeUserRepo(users={"user-7": user})
+        billing_repo = _FakeBillingRepo()
+        billing_customer_service = _FakeBillingCustomerService()
+        credit_service = SimpleNamespace(
+            reset_plan_balance=AsyncMock(return_value=SimpleNamespace(updated=True)),
+            clear_billing_status=AsyncMock(return_value=True),
+        )
+        reservation_repo = _FakeReservationRepo(
+            replayable_shortfalls=[
+                SimpleNamespace(
+                    id="res-shortfall-2",
+                    user_id="user-7",
+                    status=ReservationStatus.SETTLEMENT_FAILED,
+                )
+            ]
+        )
+        reservation_service = SimpleNamespace(
+            retry_settlement_from_capture=AsyncMock(
+                return_value=SimpleNamespace(status=ReservationStatus.SETTLEMENT_FAILED)
+            )
+        )
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+            credit_service=credit_service,
+            reservation_repo=reservation_repo,
+            reservation_service=reservation_service,
+        )
+
+        invoice_obj = {
+            "id": "inv_7",
+            "metadata": {"user_id": "user-7"},
+            "subscription": None,
+            "customer": "cus_7",
+            "amount_paid": 1500,
+            "currency": "usd",
+            "status": "paid",
+            "lines": {"data": []},
+            "payment_intent": "pi_7",
+        }
+
+        ctx = SubscriptionContext(
+            subscription=None,
+            user_id="user-7",
+            plan_id="plus",
+            billing_cycle="monthly",
+            customer_id="cus_7",
+            period_end=None,
+            credits=100.0,
+        )
+
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
+            await handler._handle_invoice_payment_succeeded(None, "evt_7", invoice_obj)
+
+        reservation_service.retry_settlement_from_capture.assert_awaited_once_with(
+            None,
+            reservation_id="res-shortfall-2",
+        )
+        credit_service.clear_billing_status.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_payment_keeps_block_when_non_shortfall_failure_remains(self, settings_factory):
+        user = _make_user("user-8a")
+        user_repo = _FakeUserRepo(users={"user-8a": user})
+        billing_repo = _FakeBillingRepo()
+        billing_customer_service = _FakeBillingCustomerService()
+        credit_service = SimpleNamespace(
+            reset_plan_balance=AsyncMock(return_value=SimpleNamespace(updated=True)),
+            clear_billing_status=AsyncMock(return_value=True),
+        )
+        reservation_repo = _FakeReservationRepo(
+            replayable_shortfalls=[
+                SimpleNamespace(
+                    id="res-generic-failed",
+                    user_id="user-8a",
+                    status=ReservationStatus.SETTLEMENT_FAILED,
+                    last_error="settle_exception",
+                )
+            ]
+        )
+        reservation_service = SimpleNamespace(
+            retry_settlement_from_capture=AsyncMock(),
+        )
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+            credit_service=credit_service,
+            reservation_repo=reservation_repo,
+            reservation_service=reservation_service,
+        )
+
+        invoice_obj = {
+            "id": "inv_8a",
+            "metadata": {"user_id": "user-8a"},
+            "subscription": None,
+            "customer": "cus_8a",
+            "amount_paid": 1500,
+            "currency": "usd",
+            "status": "paid",
+            "lines": {"data": []},
+            "payment_intent": "pi_8a",
+        }
+
+        ctx = SubscriptionContext(
+            subscription=None,
+            user_id="user-8a",
+            plan_id="plus",
+            billing_cycle="monthly",
+            customer_id="cus_8a",
+            period_end=None,
+            credits=100.0,
+        )
+
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
+            await handler._handle_invoice_payment_succeeded(None, "evt_8a", invoice_obj)
+
+        reservation_service.retry_settlement_from_capture.assert_not_awaited()
+        credit_service.clear_billing_status.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_payment_replays_multiple_shortfall_batches_before_unblocking(
+        self, settings_factory
+    ):
+        user = _make_user("user-8")
+        user_repo = _FakeUserRepo(users={"user-8": user})
+        billing_repo = _FakeBillingRepo()
+        billing_customer_service = _FakeBillingCustomerService()
+        credit_service = SimpleNamespace(
+            reset_plan_balance=AsyncMock(return_value=SimpleNamespace(updated=True)),
+            clear_billing_status=AsyncMock(return_value=True),
+        )
+        reservation_repo = _FakeReservationRepo(
+            replayable_shortfalls=[
+                SimpleNamespace(
+                    id=f"res-shortfall-{idx}",
+                    user_id="user-8",
+                    status=ReservationStatus.SETTLEMENT_FAILED,
+                )
+                for idx in range(51)
+            ]
+        )
+
+        async def _retry(db, *, reservation_id):
+            reservation_repo.set_status(reservation_id, ReservationStatus.SETTLED)
+            return SimpleNamespace(status=ReservationStatus.SETTLED)
+
+        reservation_service = SimpleNamespace(
+            retry_settlement_from_capture=AsyncMock(side_effect=_retry)
+        )
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+            credit_service=credit_service,
+            reservation_repo=reservation_repo,
+            reservation_service=reservation_service,
+        )
+
+        invoice_obj = {
+            "id": "inv_8",
+            "metadata": {"user_id": "user-8"},
+            "subscription": None,
+            "customer": "cus_8",
+            "amount_paid": 1500,
+            "currency": "usd",
+            "status": "paid",
+            "lines": {"data": []},
+            "payment_intent": "pi_8",
+        }
+
+        ctx = SubscriptionContext(
+            subscription=None,
+            user_id="user-8",
+            plan_id="plus",
+            billing_cycle="monthly",
+            customer_id="cus_8",
+            period_end=None,
+            credits=100.0,
+        )
+
+        with patch.object(
+            handler, "_resolve_subscription_context", new=AsyncMock(return_value=ctx)
+        ):
+            await handler._handle_invoice_payment_succeeded(None, "evt_8", invoice_obj)
+
+        assert reservation_service.retry_settlement_from_capture.await_count == 51
+        credit_service.clear_billing_status.assert_awaited_once()
+
 
 # ---------------------------------------------------------------------------
 # _handle_subscription_deleted
 # ---------------------------------------------------------------------------
+
 
 class TestHandleSubscriptionDeleted:
     @pytest.mark.asyncio
@@ -583,7 +1083,16 @@ class TestHandleSubscriptionDeleted:
         user_repo = _FakeUserRepo(users={"user-4": user})
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        credit_service = SimpleNamespace(
+            reset_plan_balance=AsyncMock(return_value=SimpleNamespace(updated=True))
+        )
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+            credit_service=credit_service,
+        )
 
         sub_obj = {
             "id": "sub_del_1",
@@ -598,7 +1107,13 @@ class TestHandleSubscriptionDeleted:
         await handler._handle_subscription_deleted(None, "evt_5", sub_obj)
 
         assert len(billing_customer_service.subscription_updates) == 1
-        assert billing_customer_service.customers[("user-4", "stripe")]["external_customer_id"] == "cus_4"
+        assert (
+            billing_customer_service.customers[("user-4", "stripe")]["external_customer_id"]
+            == "cus_4"
+        )
+        reset_call = credit_service.reset_plan_balance.await_args
+        assert reset_call.args[1] == "user-4"
+        assert reset_call.args[2] == handler._stripe_config.plan_credits("free")
         sub = billing_customer_service.subscription_updates[0]
         assert sub.get("subscription_plan") == "free"
         assert sub.get("subscription_status") == "canceled"
@@ -610,9 +1125,16 @@ class TestHandleSubscriptionDeleted:
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
         billing_customer_service.customers[("user-5", "stripe")] = {
-            "user_id": "user-5", "provider": "stripe", "external_customer_id": "cus_5"
+            "user_id": "user-5",
+            "provider": "stripe",
+            "external_customer_id": "cus_5",
         }
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+        )
 
         sub_obj = {
             "id": "sub_del_2",
@@ -652,7 +1174,12 @@ class TestHandleSubscriptionDeleted:
         user_repo = _FakeUserRepo(users={"user-6": user})
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+        )
 
         sub_obj = {
             "id": "sub_del_4",
@@ -673,6 +1200,7 @@ class TestHandleSubscriptionDeleted:
 # _handle_subscription_updated
 # ---------------------------------------------------------------------------
 
+
 class TestHandleSubscriptionUpdated:
     @pytest.mark.asyncio
     async def test_updates_subscription_plan_from_price(self, settings_factory):
@@ -680,7 +1208,12 @@ class TestHandleSubscriptionUpdated:
         user_repo = _FakeUserRepo(users={"user-7": user})
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+        )
 
         sub_obj = {
             "id": "sub_upd_1",
@@ -688,7 +1221,11 @@ class TestHandleSubscriptionUpdated:
             "customer": "cus_7",
             "status": "active",
             "current_period_end": 1999999999,
-            "items": {"data": [{"price": {"id": "price_pro_m", "recurring": {"interval": "month"}}, "plan": {}}]},
+            "items": {
+                "data": [
+                    {"price": {"id": "price_pro_m", "recurring": {"interval": "month"}}, "plan": {}}
+                ]
+            },
         }
 
         await handler._handle_subscription_updated(None, "evt_9", sub_obj)
@@ -721,7 +1258,12 @@ class TestHandleSubscriptionUpdated:
         user_repo = _FakeUserRepo(users={"user-8": user})
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+        )
 
         sub_obj = {
             "id": "sub_upd_3",
@@ -729,7 +1271,14 @@ class TestHandleSubscriptionUpdated:
             "customer": "cus_8",
             "status": "active",
             "current_period_end": 1999999999,
-            "items": {"data": [{"price": {"id": "price_unknown", "recurring": {"interval": "year"}}, "plan": {}}]},
+            "items": {
+                "data": [
+                    {
+                        "price": {"id": "price_unknown", "recurring": {"interval": "year"}},
+                        "plan": {},
+                    }
+                ]
+            },
         }
 
         await handler._handle_subscription_updated(None, "evt_11", sub_obj)
@@ -743,7 +1292,12 @@ class TestHandleSubscriptionUpdated:
         user_repo = _FakeUserRepo(users={"user-9": user})
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+        )
 
         sub_obj = {
             "id": "sub_upd_4",
@@ -751,12 +1305,14 @@ class TestHandleSubscriptionUpdated:
             "customer": "cus_9",
             "status": "active",
             "current_period_end": 1999999999,
-            "items": {"data": [
-                {
-                    "price": {"id": "price_unknown", "recurring": {}},
-                    "plan": {"interval": "month"},
-                }
-            ]},
+            "items": {
+                "data": [
+                    {
+                        "price": {"id": "price_unknown", "recurring": {}},
+                        "plan": {"interval": "month"},
+                    }
+                ]
+            },
         }
 
         await handler._handle_subscription_updated(None, "evt_12", sub_obj)
@@ -771,9 +1327,16 @@ class TestHandleSubscriptionUpdated:
         billing_repo = _FakeBillingRepo()
         billing_customer_service = _FakeBillingCustomerService()
         billing_customer_service.customers[("user-10", "stripe")] = {
-            "user_id": "user-10", "provider": "stripe", "external_customer_id": "cus_10"
+            "user_id": "user-10",
+            "provider": "stripe",
+            "external_customer_id": "cus_10",
         }
-        handler = _make_handler(settings_factory, user_repo=user_repo, billing_repo=billing_repo, billing_customer_service=billing_customer_service)
+        handler = _make_handler(
+            settings_factory,
+            user_repo=user_repo,
+            billing_repo=billing_repo,
+            billing_customer_service=billing_customer_service,
+        )
 
         sub_obj = {
             "id": "sub_upd_5",
@@ -812,6 +1375,7 @@ class TestHandleSubscriptionUpdated:
 # ---------------------------------------------------------------------------
 # SubscriptionContext dataclass
 # ---------------------------------------------------------------------------
+
 
 class TestSubscriptionContext:
     def test_can_be_created(self):

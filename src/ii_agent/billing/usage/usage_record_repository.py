@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +18,9 @@ class UsageRecordRepository:
         db: AsyncSession,
         *,
         user_id: str,
-        session_id: str | None,
+        billing_context: str = "unknown",
+        subject_kind: str,
+        subject_id: str | None,
         run_id: UUID | str | None,
         source_domain: str,
         billing_kind: str,
@@ -41,7 +42,9 @@ class UsageRecordRepository:
         """Insert one usage record."""
         usage_record = UsageRecord(
             user_id=user_id,
-            session_id=session_id,
+            billing_context=billing_context,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
             run_id=_coerce_uuid(run_id),
             source_domain=source_domain,
             billing_kind=billing_kind,
@@ -68,4 +71,7 @@ class UsageRecordRepository:
 def _coerce_uuid(value: UUID | str | None) -> UUID | None:
     if value is None or isinstance(value, UUID):
         return value
-    return UUID(str(value))
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError):
+        return None

@@ -6,7 +6,7 @@ import uuid
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -117,9 +117,7 @@ class SessionValidationService:
         # single money gate for actual credit sufficiency.
         billing_blocked = False
         if not llm_config.is_user_model() and self._balance_repo is not None:
-            billing_status = await self._balance_repo.get_billing_status(
-                db, str(session.user_id)
-            )
+            billing_status = await self._balance_repo.get_billing_status(db, str(session.user_id))
             if billing_status is not None and billing_status != BillingStatus.OK:
                 billing_blocked = True
 
@@ -128,8 +126,13 @@ class SessionValidationService:
         await db.refresh(session)
         await db.commit()
 
-        if title_pending:
-            self._title_service.schedule_title_update(str(session.id), query_text)
+        if title_pending and not billing_blocked and query_text:
+            self._title_service.schedule_title_update(
+                str(session.id),
+                query_text,
+                user_id=str(session.user_id),
+                app_kind=str(getattr(session, "app_kind", "agent") or "agent"),
+            )
 
         await db.refresh(session)
         # Rebuild session_info after flush

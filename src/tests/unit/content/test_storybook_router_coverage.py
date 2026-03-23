@@ -1,4 +1,5 @@
 """Targeted coverage tests for storybook router glue logic."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -6,6 +7,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.core.exceptions import PaymentRequiredError, ValidationError
 from ii_agent.content.storybook.exceptions import (
     StorybookAccessDeniedError,
@@ -37,9 +39,7 @@ def _user() -> SimpleNamespace:
     return SimpleNamespace(id="user-1")
 
 
-def _session(
-    storybook_id: str = "sb-1", session_id: str = "session-1"
-) -> SimpleNamespace:
+def _session(storybook_id: str = "sb-1", session_id: str = "session-1") -> SimpleNamespace:
     return SimpleNamespace(
         id=storybook_id,
         session_id=session_id,
@@ -120,8 +120,8 @@ async def test_generate_storybook_voiceover_success():
     service.get_storybook_detail.return_value = storybook
     session_service = AsyncMock()
     session_service.get_session_details.return_value = {"id": "session-1"}
-    voice_service.generate_voiceover_and_deduct_credits.return_value = (
-        SimpleNamespace(audio_url="ok")
+    voice_service.generate_voiceover_and_deduct_credits.return_value = SimpleNamespace(
+        audio_url="ok"
     )
 
     result = await generate_storybook_voiceover(
@@ -305,10 +305,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
     assert result.success is False
     assert result.error == "No changes to save"
 
-    edit_service.save_all_page_edits.return_value = (
-        _session("sb-2", "session-1"),
-        0.0,
-    )
+    edit_service.save_all_page_edits_with_billing.return_value = _session("sb-2", "session-1")
     edit_request.page_changes = [SimpleNamespace(changes=None, image_url=None, page_number=1)]
     result = await save_storybook_edits(
         "sb-1",
@@ -323,7 +320,10 @@ async def test_save_storybook_edits_validation_and_cost_handling():
     assert result.success is False
     assert result.error == "No changes to save"
 
-    edit_request.page_changes = [SimpleNamespace(changes=[SimpleNamespace()], image_url=None, page_number=1)]
+    edit_request.page_changes = [
+        SimpleNamespace(changes=[SimpleNamespace()], image_url=None, page_number=1)
+    ]
+    edit_service.save_all_page_edits_with_billing.return_value = _session("sb-2", "session-1")
     result = await save_storybook_edits(
         "sb-1",
         edit_request,
@@ -336,11 +336,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
     )
     assert result.success is True
 
-    edit_service.save_all_page_edits.return_value = (
-        _session("sb-3", "session-1"),
-        1.0,
-    )
-    usage_service.deduct_and_track_session_usage.return_value = False
+    edit_service.save_all_page_edits_with_billing.side_effect = InsufficientCreditsError()
     with pytest.raises(PaymentRequiredError):
         await save_storybook_edits(
             "sb-1",
@@ -432,19 +428,16 @@ async def test_ai_storybook_edit_endpoints():
 
     mismatch = SimpleNamespace(storybook_id="other")
     assert (
-        (
-            await ai_rewrite_storybook_content(
-                "sb-1",
-                mismatch,
-                _user(),
-                service,
-                session_service,
-                ai_service,
-                None,
-            )
-        ).success
-        is False
-    )
+        await ai_rewrite_storybook_content(
+            "sb-1",
+            mismatch,
+            _user(),
+            service,
+            session_service,
+            ai_service,
+            None,
+        )
+    ).success is False
 
     ai_service.rewrite_content.return_value = "rewritten"
     rewrite = SimpleNamespace(storybook_id="sb-1", content="text", page_image_url="x")

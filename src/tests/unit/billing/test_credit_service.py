@@ -15,7 +15,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ii_agent.auth.dependencies import get_current_user
 from ii_agent.billing.credits.dependencies import get_credit_service
-from ii_agent.billing.credits.exceptions import CreditBalanceNotFoundError
 from ii_agent.billing.credits.router import router as credits_router
 from ii_agent.billing.credits.service import CreditDeductionResult, CreditService
 from ii_agent.billing.usage.dependencies import get_usage_service
@@ -34,9 +33,7 @@ _USER_ID = str(uuid.uuid4())
 
 class FakeCreditBalanceRepo:
     def __init__(self, credits: float = 10.0, bonus_credits: float = 5.0):
-        self.balances = {
-            _USER_ID: SimpleNamespace(credits=credits, bonus_credits=bonus_credits)
-        }
+        self.balances = {_USER_ID: SimpleNamespace(credits=credits, bonus_credits=bonus_credits)}
 
     async def get_balance(self, db, user_id):
         bal = self.balances.get(user_id)
@@ -95,6 +92,23 @@ class FakeCreditBalanceRepo:
         bal.credits -= regular_used
         return bal.credits, bal.bonus_credits
 
+    async def apply_delta_locked(
+        self,
+        db,
+        user_id,
+        *,
+        delta_credits,
+        delta_bonus_credits,
+        billing_status=None,
+        billing_status_reason=None,
+    ):
+        bal = self.balances.get(user_id)
+        if not bal:
+            return None
+        bal.credits += float(delta_credits)
+        bal.bonus_credits += float(delta_bonus_credits)
+        return bal.credits, bal.bonus_credits, billing_status
+
     async def add_credits(self, db, user_id, amount, is_bonus=False):
         bal = self.balances.get(user_id)
         if not bal:
@@ -108,6 +122,17 @@ class FakeCreditBalanceRepo:
             bal.credits += amount_f
         return old_credits, old_bonus, bal.credits, bal.bonus_credits
 
+    async def _apply_add_locked(self, db, user_id, amount, *, is_bonus=False):
+        bal = self.balances.get(user_id)
+        if not bal:
+            return None
+        amount_f = float(amount)
+        if is_bonus:
+            bal.bonus_credits += amount_f
+        else:
+            bal.credits += amount_f
+        return bal.credits, bal.bonus_credits
+
     async def set_credits(self, db, user_id, amount, bonus_amount=None):
         bal = self.balances.get(user_id)
         if not bal:
@@ -118,6 +143,15 @@ class FakeCreditBalanceRepo:
         if bonus_amount is not None:
             bal.bonus_credits = float(bonus_amount)
         return old_credits, old_bonus, bal.credits, bal.bonus_credits
+
+    async def _set_credits_locked(self, db, user_id, amount, *, bonus_amount=None):
+        bal = self.balances.get(user_id)
+        if not bal:
+            return None
+        bal.credits = float(amount)
+        if bonus_amount is not None:
+            bal.bonus_credits = float(bonus_amount)
+        return bal.credits, bal.bonus_credits
 
 
 class FakeCreditBalanceRepoEmpty:
@@ -144,10 +178,28 @@ class FakeCreditBalanceRepoEmpty:
     async def _apply_deduction(self, db, user_id, amount):
         return None
 
+    async def apply_delta_locked(
+        self,
+        db,
+        user_id,
+        *,
+        delta_credits,
+        delta_bonus_credits,
+        billing_status=None,
+        billing_status_reason=None,
+    ):
+        return None
+
     async def add_credits(self, db, user_id, amount, is_bonus=False):
         return None
 
+    async def _apply_add_locked(self, db, user_id, amount, *, is_bonus=False):
+        return None
+
     async def set_credits(self, db, user_id, amount, bonus_amount=None):
+        return None
+
+    async def _set_credits_locked(self, db, user_id, amount, *, bonus_amount=None):
         return None
 
 
@@ -163,12 +215,20 @@ class FakeLedgerRepo:
         return self.entries, len(self.entries)
 
 
-def _make_service(
-    balance_repo=None, ledger_repo=None
-) -> CreditService:
+class FakeReservationRepo:
+    def __init__(self, *, held_regular: float = 0.0, held_bonus: float = 0.0):
+        self.held_regular = Decimal(str(held_regular))
+        self.held_bonus = Decimal(str(held_bonus))
+
+    async def get_outstanding_hold_totals(self, db, *, user_id):
+        return self.held_regular, self.held_bonus
+
+
+def _make_service(balance_repo=None, ledger_repo=None, reservation_repo=None) -> CreditService:
     return CreditService(
         balance_repo=balance_repo or FakeCreditBalanceRepo(),
         ledger_repo=ledger_repo or FakeLedgerRepo(),
+        reservation_repo=reservation_repo or FakeReservationRepo(),
     )
 
 
@@ -197,7 +257,6 @@ def _make_fake_db():
 @pytest.mark.asyncio
 async def test_get_balance_returns_credit_balance():
     """get_balance calls balance_repo.get_balance and returns a CreditBalance."""
-    from ii_agent.billing.credits.schemas import CreditBalance
 
     balance_repo = FakeCreditBalanceRepo(credits=10.0, bonus_credits=5.0)
     svc = _make_service(balance_repo=balance_repo)
@@ -425,6 +484,60 @@ async def test_set_balance_raises_on_sqlalchemy_error():
         await svc.set_balance(db, _USER_ID, 10.0)
 
 
+@pytest.mark.asyncio
+async def test_reset_plan_balance_preserves_unresolved_holds():
+    """reset_plan_balance subtracts outstanding regular holds before resetting."""
+    balance_repo = FakeCreditBalanceRepo(credits=100.0, bonus_credits=3.0)
+    ledger_repo = FakeLedgerRepo()
+    reservation_repo = FakeReservationRepo(held_regular=7.0, held_bonus=2.0)
+    db = _make_fake_db()
+    svc = _make_service(
+        balance_repo=balance_repo,
+        ledger_repo=ledger_repo,
+        reservation_repo=reservation_repo,
+    )
+
+    result = await svc.reset_plan_balance(
+        db,
+        _USER_ID,
+        100.0,
+        source_domain="webhook",
+    )
+
+    assert result.updated is True
+    assert result.spendable_credits == Decimal("93.0")
+    assert balance_repo.balances[_USER_ID].credits == 93.0
+    assert balance_repo.balances[_USER_ID].bonus_credits == 3.0
+    assert ledger_repo.entries[0]["entry_metadata"]["plan_credits"] == 100.0
+    assert ledger_repo.entries[0]["entry_metadata"]["held_regular_credits"] == 7.0
+    assert ledger_repo.entries[0]["entry_metadata"]["held_bonus_credits"] == 2.0
+
+
+@pytest.mark.asyncio
+async def test_reset_plan_balance_is_noop_when_spendable_balance_already_matches():
+    """reset_plan_balance skips ledger writes when the regular balance is already correct."""
+    balance_repo = FakeCreditBalanceRepo(credits=93.0, bonus_credits=3.0)
+    ledger_repo = FakeLedgerRepo()
+    reservation_repo = FakeReservationRepo(held_regular=7.0, held_bonus=2.0)
+    db = _make_fake_db()
+    svc = _make_service(
+        balance_repo=balance_repo,
+        ledger_repo=ledger_repo,
+        reservation_repo=reservation_repo,
+    )
+
+    result = await svc.reset_plan_balance(
+        db,
+        _USER_ID,
+        100.0,
+        source_domain="cron",
+    )
+
+    assert result.updated is False
+    assert result.spendable_credits == Decimal("93.0")
+    assert ledger_repo.entries == []
+
+
 # ---------------------------------------------------------------------------
 # Tests – Credits Router
 # ---------------------------------------------------------------------------
@@ -456,9 +569,7 @@ def _make_credit_service_mock(*, balance=None) -> MagicMock:
     return svc
 
 
-def _make_usage_service_mock(
-    *, history_result=None, history_total: int = 0
-) -> MagicMock:
+def _make_usage_service_mock(*, history_result=None, history_total: int = 0) -> MagicMock:
     svc = MagicMock()
     svc.get_history = AsyncMock(return_value=(history_result or [], history_total))
     return svc

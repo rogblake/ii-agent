@@ -17,10 +17,14 @@ from ii_agent.billing.exceptions import BillingConfigurationError, BillingServic
 from ii_agent.billing.stripe_config import StripeConfig
 from ii_agent.auth.users.repository import UserRepository
 from ii_agent.billing.credits.ledger_models import LedgerEntryType
-from ii_agent.billing.reservations.types import SourceDomain
+from ii_agent.billing.reservations.repository import CreditReservationRepository
+from ii_agent.billing.reservations.service import CreditReservationService
+from ii_agent.billing.reservations.types import ReservationStatus, SourceDomain
 
 
 logger = logging.getLogger(__name__)
+
+_SHORTFALL_REPLAY_LIMIT = 50
 
 
 @dataclass(slots=True)
@@ -54,19 +58,21 @@ class StripeWebhookHandler:
         user_repo: UserRepository,
         billing_customer_service: BillingCustomerService,
         credit_service: CreditService | None = None,
+        reservation_repo: CreditReservationRepository | None = None,
+        reservation_service: CreditReservationService | None = None,
     ) -> None:
         self._stripe_config = stripe_config
         self._billing_repo = billing_repo
         self._user_repo = user_repo
         self._billing_customer_service = billing_customer_service
         self._credit_service = credit_service
+        self._reservation_repo = reservation_repo or CreditReservationRepository()
+        self._reservation_service = reservation_service
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-    def construct_webhook_event(
-        self, payload: bytes, signature: str | None
-    ) -> stripe.Event:
+    def construct_webhook_event(self, payload: bytes, signature: str | None) -> stripe.Event:
         if not self._stripe_config.config.stripe.webhook_secret:
             raise BillingConfigurationError("Stripe webhook secret is not configured")
         if not signature:
@@ -100,7 +106,10 @@ class StripeWebhookHandler:
     # Internal helpers
     # ------------------------------------------------------------------
     async def _claim_event(
-        self, db: AsyncSession, event_id: str | None, user_id: str,
+        self,
+        db: AsyncSession,
+        event_id: str | None,
+        user_id: str,
     ) -> bool:
         """Atomically claim a Stripe event via INSERT … ON CONFLICT.
 
@@ -116,9 +125,7 @@ class StripeWebhookHandler:
             stripe_event_id=event_id,
         )
         if not claimed:
-            logger.debug(
-                "Duplicate Stripe event %s — skipping handler", event_id
-            )
+            logger.debug("Duplicate Stripe event %s — skipping handler", event_id)
         return claimed
 
     async def _finalize_transaction(
@@ -137,21 +144,18 @@ class StripeWebhookHandler:
             **values,
         )
         logger.info(
-            "Finalized billing transaction for event %s", event_id,
+            "Finalized billing transaction for event %s",
+            event_id,
         )
 
-    async def _retrieve_subscription(
-        self, subscription_id: str | None
-    ) -> dict[str, Any] | None:
+    async def _retrieve_subscription(self, subscription_id: str | None) -> dict[str, Any] | None:
         if not subscription_id:
             return None
 
         self._stripe_config.ensure_api_key()
 
         try:
-            subscription = await run_in_threadpool(
-                stripe.Subscription.retrieve, subscription_id
-            )
+            subscription = await run_in_threadpool(stripe.Subscription.retrieve, subscription_id)
             return self._stripe_config.as_dict(subscription)
         except stripe.error.StripeError as exc:  # pragma: no cover - network path
             logger.error("Failed to retrieve subscription %s: %s", subscription_id, exc)
@@ -171,6 +175,79 @@ class StripeWebhookHandler:
             customer_id,
             provider="stripe",
         )
+
+    async def _retry_shortfall_failures_after_payment(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+    ) -> tuple[int, bool]:
+        """Replay shortfall-driven settlement failures after a payment replenishes balance."""
+        if self._reservation_service is None:
+            has_remaining = await self._reservation_repo.has_replayable_shortfall_failures(
+                db,
+                user_id=user_id,
+            )
+            if has_remaining:
+                logger.warning(
+                    "Cannot replay shortfall settlement failures for user %s: "
+                    "reservation service is unavailable",
+                    user_id,
+                )
+            return 0, has_remaining
+
+        replayed = 0
+        while True:
+            reservations = await self._reservation_repo.list_replayable_shortfall_failures(
+                db,
+                user_id=user_id,
+                limit=_SHORTFALL_REPLAY_LIMIT,
+            )
+            if not reservations:
+                break
+
+            batch_has_unresolved = False
+            for reservation in reservations:
+                try:
+                    result = await self._reservation_service.retry_settlement_from_capture(
+                        db,
+                        reservation_id=reservation.id,
+                    )
+                except Exception:
+                    batch_has_unresolved = True
+                    logger.error(
+                        "Failed to replay shortfall settlement for reservation %s after payment",
+                        reservation.id,
+                        exc_info=True,
+                    )
+                    continue
+
+                status = (
+                    result.status.value
+                    if isinstance(result.status, ReservationStatus)
+                    else str(result.status)
+                )
+                if status == ReservationStatus.SETTLED.value:
+                    replayed += 1
+                    continue
+
+                batch_has_unresolved = True
+                logger.warning(
+                    "Shortfall settlement replay for reservation %s remained in status %s",
+                    reservation.id,
+                    status,
+                )
+
+            if batch_has_unresolved:
+                return replayed, True
+
+        if replayed:
+            logger.info(
+                "Replayed %d shortfall settlement failures for user %s after payment",
+                replayed,
+                user_id,
+            )
+        return replayed, False
 
     async def _resolve_subscription_context(
         self,
@@ -200,9 +277,8 @@ class StripeWebhookHandler:
                     plan_id = plan_id or mapped[0]
                     billing_cycle = billing_cycle or mapped[1]
 
-            period_end = (
-                first_item.get("current_period_end")
-                or subscription.get("current_period_end")
+            period_end = first_item.get("current_period_end") or subscription.get(
+                "current_period_end"
             )
         else:
             period_end = None
@@ -228,9 +304,7 @@ class StripeWebhookHandler:
 
         user_id = metadata.get("user_id")
         if not user_id:
-            logger.warning(
-                "Checkout session %s missing user or plan metadata", event_id
-            )
+            logger.warning("Checkout session %s missing user or plan metadata", event_id)
             return
 
         ctx = await self._resolve_subscription_context(
@@ -241,16 +315,13 @@ class StripeWebhookHandler:
             customer_id=session_data.get("customer"),
         )
 
-        status = (
-            ctx.subscription.get("status")
-            if ctx.subscription
-            else session_data.get("status")
-        )
+        status = ctx.subscription.get("status") if ctx.subscription else session_data.get("status")
 
         user = await self._user_repo.get_by_id(db, user_id)
         if not user:
             logger.warning(
-                "User %s not found for checkout session completion", user_id,
+                "User %s not found for checkout session completion",
+                user_id,
             )
             return
 
@@ -323,9 +394,7 @@ class StripeWebhookHandler:
             user_id = await self._lookup_user_id_by_customer_id(db, ctx.customer_id)
 
         if not user_id:
-            logger.warning(
-                "Invoice payment event %s missing user identification", event_id
-            )
+            logger.warning("Invoice payment event %s missing user identification", event_id)
             return
 
         # Fall back to invoice line items for plan resolution
@@ -341,7 +410,9 @@ class StripeWebhookHandler:
                     plan_id, inferred_cycle = mapped
                     billing_cycle = billing_cycle or inferred_cycle
 
-        credits = self._stripe_config.plan_credits(plan_id) if plan_id != ctx.plan_id else ctx.credits
+        credits = (
+            self._stripe_config.plan_credits(plan_id) if plan_id != ctx.plan_id else ctx.credits
+        )
         amount_paid = invoice_data.get("amount_paid")
         currency = invoice_data.get("currency")
         status = invoice_data.get("status")
@@ -356,21 +427,39 @@ class StripeWebhookHandler:
         if not await self._claim_event(db, event_id, user_id):
             return
 
-        resolved_status = (
-            ctx.subscription.get("status", status) if ctx.subscription else status
-        )
+        resolved_status = ctx.subscription.get("status", status) if ctx.subscription else status
 
         # invoice.payment_succeeded is the authoritative credit-granting
         # event — money was actually collected so the balance is reset to
-        # the plan's full allocation.  Also clear reconciliation_required
-        # if set, because a successful payment proves the account is healthy.
+        # the plan's full allocation.  For shortfall-driven settlement_failed
+        # reservations, payment also gives the system a chance to replay the
+        # captured settlement immediately instead of leaving the account blocked
+        # until manual intervention.
         if self._credit_service and credits is not None:
-            await self._credit_service.set_balance(
-                db, user_id, credits,
-                entry_type=LedgerEntryType.PLAN_CHANGE, source_domain=SourceDomain.WEBHOOK,
+            await self._credit_service.reset_plan_balance(
+                db,
+                user_id,
+                credits,
+                entry_type=LedgerEntryType.PLAN_CHANGE,
+                source_domain=SourceDomain.WEBHOOK,
                 idempotency_key=f"webhook:invoice:{event_id}" if event_id else None,
             )
-            await self._credit_service.clear_billing_status(db, user_id)
+            _replayed, replay_unresolved = await self._retry_shortfall_failures_after_payment(
+                db,
+                user_id=user_id,
+            )
+            has_blocking_failures = await self._reservation_repo.has_blocking_settlement_failures(
+                db,
+                user_id=user_id,
+            )
+            if not replay_unresolved and not has_blocking_failures:
+                await self._credit_service.clear_billing_status(db, user_id)
+            else:
+                logger.warning(
+                    "Keeping billing status blocked for user %s after payment; "
+                    "settlement failures remain unresolved",
+                    user_id,
+                )
 
         # Write subscription state to billing_customers
         period_end_dt = self._stripe_config.to_datetime(ctx.period_end) if ctx.period_end else None
@@ -429,15 +518,13 @@ class StripeWebhookHandler:
             user_id = await self._lookup_user_id_by_customer_id(db, customer_id)
 
         if not user_id:
-            logger.warning(
-                "Subscription cancel event %s missing user identification", event_id
-            )
+            logger.warning("Subscription cancel event %s missing user identification", event_id)
             return
 
         status = subscription_data.get("status") or "canceled"
-        period_end = subscription_data.get(
-            "current_period_end"
-        ) or subscription_data.get("canceled_at")
+        period_end = subscription_data.get("current_period_end") or subscription_data.get(
+            "canceled_at"
+        )
 
         user = await self._user_repo.get_by_id(db, user_id)
         if not user:
@@ -454,9 +541,15 @@ class StripeWebhookHandler:
 
         # Set credits via CreditService (writes to credit_balances + ledger)
         if self._credit_service:
-            await self._credit_service.set_balance(
-                db, user_id, self._stripe_config.config.credits.default_user_credits,
-                entry_type=LedgerEntryType.PLAN_CHANGE, source_domain=SourceDomain.WEBHOOK,
+            free_plan_credits = self._stripe_config.plan_credits("free")
+            if free_plan_credits is None:
+                free_plan_credits = self._stripe_config.config.credits.default_user_credits
+            await self._credit_service.reset_plan_balance(
+                db,
+                user_id,
+                free_plan_credits,
+                entry_type=LedgerEntryType.PLAN_CHANGE,
+                source_domain=SourceDomain.WEBHOOK,
                 idempotency_key=f"webhook:sub_deleted:{event_id}" if event_id else None,
             )
 
@@ -486,9 +579,7 @@ class StripeWebhookHandler:
 
         items = subscription_data.get("items", {}).get("data", []) or []
         first_plan = items[0].get("plan", {}) if items else {}
-        billing_cycle = self._stripe_config.normalize_billing_cycle(
-            first_plan.get("interval")
-        )
+        billing_cycle = self._stripe_config.normalize_billing_cycle(first_plan.get("interval"))
 
         await self._finalize_transaction(
             db,
@@ -540,9 +631,7 @@ class StripeWebhookHandler:
             user_id = await self._lookup_user_id_by_customer_id(db, customer_id)
 
         if not user_id:
-            logger.warning(
-                "Subscription update event %s missing user identification", event_id
-            )
+            logger.warning("Subscription update event %s missing user identification", event_id)
             return
 
         status = subscription_data.get("status")
@@ -551,9 +640,7 @@ class StripeWebhookHandler:
 
         user = await self._user_repo.get_by_id(db, user_id)
         if not user:
-            logger.warning(
-                "Could not update subscription for missing user %s", user_id
-            )
+            logger.warning("Could not update subscription for missing user %s", user_id)
             return
 
         # Claim after user lookup so a missing-user early return does not

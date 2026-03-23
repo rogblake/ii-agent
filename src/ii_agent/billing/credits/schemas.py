@@ -2,7 +2,6 @@
 
 from typing import List, Optional
 from datetime import datetime
-from decimal import Decimal
 from pydantic import BaseModel, Field
 
 
@@ -11,9 +10,7 @@ class CreditBalance(BaseModel):
 
     user_id: str
     credits: float = Field(description="Current credit balance")
-    bonus_credits: float = Field(
-        description="Current bonus credit balance", default=0.0
-    )
+    bonus_credits: float = Field(description="Current bonus credit balance", default=0.0)
     updated_at: datetime
 
 
@@ -22,7 +19,9 @@ class SessionCreditHistory(BaseModel):
 
     session_id: str
     session_title: str = Field(description="Name/title of the session")
-    credits: float = Field(description="Total credits used in this session (negative for deductions)")
+    credits: float = Field(
+        description="Total credits used in this session (negative for deductions)"
+    )
     updated_at: datetime = Field(description="When the session was last updated")
 
 
@@ -35,10 +34,30 @@ class CreditHistory(BaseModel):
     total: int = Field(description="Total number of sessions with credit usage")
 
 
+class SubjectCreditHistory(BaseModel):
+    """Credit history for a specific billing subject."""
+
+    subject_kind: str
+    subject_id: str
+    subject_title: Optional[str] = None
+    credits: float = Field(description="Total credits used for this subject")
+    updated_at: datetime = Field(description="When the subject was last billed")
+
+
+class CreditSubjectHistory(BaseModel):
+    """User credit history grouped by billing subject."""
+
+    subjects: List[SubjectCreditHistory] = Field(
+        description="List of billing subjects with their credit usage"
+    )
+    total: int = Field(description="Total number of billing subjects with credit usage")
+
+
 class SessionUsageItem(BaseModel):
     """A single usage record within a session."""
 
     id: int
+    billing_context: Optional[str] = None
     billing_kind: str = Field(description="Type of billing event (e.g. llm_usage, tool_usage)")
     source_domain: str
     model_id: Optional[str] = None
@@ -64,6 +83,17 @@ class SessionUsageDetail(BaseModel):
     total_items: int = Field(description="Total number of billing events")
 
 
+class SubjectUsageDetail(BaseModel):
+    """Detailed usage breakdown for a single billing subject."""
+
+    subject_kind: str
+    subject_id: str
+    subject_title: Optional[str] = None
+    items: List[SessionUsageItem] = Field(description="Individual billing events")
+    total_credits: float = Field(description="Total credits charged for this subject")
+    total_items: int = Field(description="Total number of billing events")
+
+
 class LedgerEntryResponse(BaseModel):
     """A single credit ledger entry."""
 
@@ -85,9 +115,7 @@ class LedgerEntryResponse(BaseModel):
 class LedgerHistory(BaseModel):
     """Paginated credit ledger history."""
 
-    entries: List[LedgerEntryResponse] = Field(
-        description="List of credit ledger entries"
-    )
+    entries: List[LedgerEntryResponse] = Field(description="List of credit ledger entries")
     total: int = Field(description="Total number of ledger entries")
 
 
@@ -95,6 +123,9 @@ class ReservationResponse(BaseModel):
     """A single credit reservation entry."""
 
     id: str
+    billing_context: str = "unknown"
+    subject_kind: str = "session"
+    subject_id: Optional[str] = None
     session_id: Optional[str] = None
     source_domain: str
     source_id: str
@@ -123,7 +154,5 @@ class ReservationResponse(BaseModel):
 class ReservationHistory(BaseModel):
     """Paginated reservation history."""
 
-    entries: List[ReservationResponse] = Field(
-        description="List of credit reservations"
-    )
+    entries: List[ReservationResponse] = Field(description="List of credit reservations")
     total: int = Field(description="Total number of reservations")

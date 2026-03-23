@@ -119,19 +119,13 @@ class CreditLedgerRepository:
         await db.flush()
         row = result.first()
         if row is None:
-            logger.info(
-                "Duplicate ledger entry skipped (idempotency_key=%s)", idempotency_key
-            )
+            logger.info("Duplicate ledger entry skipped (idempotency_key=%s)", idempotency_key)
             return None
         # Fetch the full entry for callers that need it
-        full = await db.execute(
-            select(CreditLedgerEntry).where(CreditLedgerEntry.id == row.id)
-        )
+        full = await db.execute(select(CreditLedgerEntry).where(CreditLedgerEntry.id == row.id))
         return full.scalar_one()
 
-    async def get_balance(
-        self, db: AsyncSession, user_id: str
-    ) -> tuple[Decimal, Decimal]:
+    async def get_balance(self, db: AsyncSession, user_id: str) -> tuple[Decimal, Decimal]:
         """Compute balance from ledger by summing deltas (reconciliation only).
 
         Always returns a ``(credits, bonus_credits)`` tuple.  Users with no
@@ -183,36 +177,57 @@ class CreditLedgerRepository:
         """Get paginated credit ledger entries for a specific session.
 
         Ledger entries are linked to sessions through reservations.
-        Each reservation stores the session_id and has FK references to
+        Each reservation stores the billing subject and has FK references to
         its reserve/release/shortfall ledger entries.
         """
-        session_filter = (
+        return await self.get_history_by_subject(
+            db,
+            user_id=user_id,
+            subject_kind="session",
+            subject_id=session_id,
+            page=page,
+            per_page=per_page,
+        )
+
+    async def get_history_by_subject(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        subject_kind: str,
+        subject_id: str,
+        *,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> tuple[list[CreditLedgerEntry], int]:
+        """Get paginated credit ledger entries for a billing subject."""
+        subject_filter = (
             (CreditReservation.user_id == user_id)
-            & (CreditReservation.session_id == session_id)
+            & (CreditReservation.subject_kind == subject_kind)
+            & (CreditReservation.subject_id == subject_id)
         )
         ledger_ids_subq = union_all(
             select(CreditReservation.reserve_ledger_entry_id.label("ledger_id")).where(
-                session_filter
-                & (CreditReservation.reserve_ledger_entry_id.isnot(None))
+                subject_filter & (CreditReservation.reserve_ledger_entry_id.isnot(None))
             ),
             select(CreditReservation.release_ledger_entry_id.label("ledger_id")).where(
-                session_filter
-                & (CreditReservation.release_ledger_entry_id.isnot(None))
+                subject_filter & (CreditReservation.release_ledger_entry_id.isnot(None))
             ),
             select(CreditReservation.shortfall_ledger_entry_id.label("ledger_id")).where(
-                session_filter
-                & (CreditReservation.shortfall_ledger_entry_id.isnot(None))
+                subject_filter & (CreditReservation.shortfall_ledger_entry_id.isnot(None))
+            ),
+            select(CreditLedgerEntry.id.label("ledger_id")).where(
+                CreditLedgerEntry.user_id == user_id,
+                CreditLedgerEntry.entry_metadata.isnot(None),
+                CreditLedgerEntry.entry_metadata["subject_kind"].astext == subject_kind,
+                CreditLedgerEntry.entry_metadata["subject_id"].astext == subject_id,
             ),
         ).subquery()
 
-        base_where = (
-            (CreditLedgerEntry.user_id == user_id)
-            & (CreditLedgerEntry.id.in_(select(ledger_ids_subq.c.ledger_id)))
+        base_where = (CreditLedgerEntry.user_id == user_id) & (
+            CreditLedgerEntry.id.in_(select(ledger_ids_subq.c.ledger_id))
         )
 
-        count_result = await db.execute(
-            select(func.count()).where(base_where)
-        )
+        count_result = await db.execute(select(func.count()).where(base_where))
         total = count_result.scalar() or 0
 
         offset = (page - 1) * per_page

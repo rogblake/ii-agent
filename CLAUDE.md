@@ -23,10 +23,9 @@ src/ii_agent/
 ├── auth/                       # Authentication & authorization (OAuth, JWT, API keys)
 │   └── users/                  # User profiles, waitlist, user CRUD
 │
-├── billing/                    # Credit ledger, reservations, outbox, Stripe webhooks
+├── billing/                    # Credit ledger, reservations, usage, Stripe webhooks
 │   ├── credits/                # Credit balance, ledger, pricing, service
 │   ├── reservations/           # Reserve → settle → release state machine
-│   ├── outbox/                 # Durable billing usage facts (capture → process → retry)
 │   └── usage/                  # Usage records, LLM/tool invocation telemetry
 │
 ├── sessions/                   # Chat sessions management (CRUD, state, fork, validation)
@@ -98,7 +97,6 @@ src/ii_agent/
 │   ├── a2a/                    # Agent-to-Agent protocol support
 │   ├── connectors/             # External connectors (GitHub, Google Drive)
 │   │   └── composio/           # Composio integration
-│   └── mcp_sse/                # MCP SSE server for ChatGPT integration
 │
 ├── projects/                   # Project & deployment management
 │   ├── cloud_run/              # Google Cloud Run deployment
@@ -343,10 +341,6 @@ billing/
 │   ├── repository.py           # Reservation CRUD with row locking
 │   ├── service.py              # CreditReservationService — reserve/settle/release state machine
 │   └── types.py                # BillingQuote, ReservationHold, BillingSettlementResult
-├── outbox/
-│   ├── models.py               # billing_usage_facts table (durable outbox)
-│   ├── repository.py           # Fact CRUD with batch dispatch
-│   └── service.py              # BillingUsageFactService — capture → process → retry
 ├── usage/
 │   ├── service.py              # UsageService — usage_records + session_metrics accumulation
 │   ├── llm_invocation_models.py    # llm_invocations telemetry table
@@ -377,7 +371,7 @@ RESERVED ──settle()──→ SETTLED       (actual cost charged, overage ref
     └──mark_settlement_failed()──→ SETTLEMENT_FAILED
                                       (work delivered but settle threw;
                                        blocks auto-expiry refund;
-                                       outbox retries later)
+                                       requires reconciliation)
 ```
 
 #### Atomicity Guarantees
@@ -396,6 +390,26 @@ async with db.begin_nested():           # SAVEPOINT
 - **Row lock** serializes concurrent operations for the same user
 - **SAVEPOINT** ensures ledger and balance are atomic (both succeed or both roll back)
 - **Idempotency key** on the ledger prevents double-charging on retries
+
+### Billing Identity Model
+
+Billing is keyed by a normalized identity, not by `session_id` alone.
+
+- `subject_kind` / `subject_id` — the business object that owns the charge
+- `billing_context` — the product/workflow surface (`chatloop`, `agentloop`, `storybook`, `factory`)
+- `source_domain` — the billing-producing subsystem (`chat_llm`, `agent_tool`, future `factory_llm`)
+- `run_id` — correlation id for one higher-level execution/run
+- `operation_id` — one exact billable step inside that run; used to build the idempotency key
+
+Use these rules:
+
+- `subject` answers "who owns this cost?"
+- `billing_context` answers "where in the product did this come from?"
+- `source_domain` answers "which billing pipeline emitted this record?"
+- `run_id` groups many charges from the same execution
+- `operation_id` must uniquely identify one billable action
+
+Do not collapse `billing_context` and `source_domain` into one field. One context can contain multiple source domains. Example: Storybook can emit `chat_llm`, `voice_generation`, and `image_generation`.
 
 ### LLM Billing Integration
 
@@ -424,17 +438,29 @@ class LLMBillingService:
 2. Look up ModelPricing for the model
 3. Compute:
    - input_cost       = input_tokens × input_price_per_million
-   - cache_reserve    = 75% of input_tokens × cache_write_price
-   - affordable_cap   = remaining balance after input/cache reserve
+   - cache_reserve    = 25% of input_tokens × cache_write_price
+   - if current balance > 0, use current balance + 50 controlled-shortfall credits as the output-cap budget
+   - affordable_cap   = remaining budget after input/cache reserve
    - output_estimate  = min(output_cap, ceil(input_tokens / 10))
    - reserve_estimate = input + cache + estimated output + $0.001
-   - max_usd          = min(input + cache + full output_cap + $0.001, $10)
-   - reserve_usd      = min(reserve_estimate, max_usd)
+   - uncapped_max_usd = input + cache + full output_cap + $0.001
+   - reserve_usd      = min(reserve_estimate, USD value of 15 credits)
 4. If output_cap < 128 tokens → raise InsufficientCreditsError
-5. Return BillingQuote(reserve_usd=estimated hold, max_usd=bounded max) + output_token_cap
+5. Return BillingQuote(reserve_usd=estimated hold, max_usd=uncapped max) + output_token_cap
 ```
 
-The output cap is enforced on the provider via `_apply_reserved_output_cap()` (agent) or `provider_options` (chat). The initial hold is only an estimate; settlement may charge a shortfall if actual usage exceeds that hold.
+The output cap is enforced on the provider via `_apply_reserved_output_cap()` (agent) or `provider_options` (chat). The initial hold is only the prepaid portion of the request. If the user has a positive balance but cannot fully cover the hold, reserve drains the remaining balance, leaves `credit_balances` non-negative, and any unpaid overrun is reflected later as a reservation shortfall.
+
+#### Controlled Shortfall Policy
+
+- `credit_balances` is always the spendable prepaid balance and never goes negative.
+- Reservation admission requires:
+  - current spendable balance `> 0`
+  - current spendable balance `+ 50 credits >= quoted max`
+- Reserve deducts only what is actually available at that moment.
+- If settlement cannot collect the overrun immediately, the reservation stays `SETTLEMENT_FAILED` with `last_error = settlement_shortfall_unreconciled`.
+- The exact settle input is already captured on the reservation, so payment-time replay can resolve the shortfall when new credits arrive.
+- `invoice.payment_succeeded` must replay replayable shortfalls before clearing `billing_status`.
 
 ### Two Runtime Paths
 
@@ -476,7 +502,15 @@ response = await execution_service.send_once(
     client=client,
     messages=messages,
     tools=tools,
-    billing_context=LLMBillingContext(db=db, user_id=..., session_id=..., llm_config=...),
+    billing_context=LLMBillingContext(
+        db=db,
+        scope=BillingScope.for_session(
+            user_id=user.id,
+            app_kind="chat",
+            session_id=session_id,
+        ),
+        llm_config=llm_config,
+    ),
     usage_key="my_feature:unique_key",
 )
 
@@ -506,6 +540,7 @@ result = await execution_service.run_tool_loop_until_final(
 **Always use `LLMExecutionService`** for any new code that needs to make LLM calls outside the agent runtime loop. Do NOT call LLM providers directly or use `CreditService.deduct()`.
 
 ```python
+from ii_agent.billing.types import BillingScope
 from ii_agent.core.llm.execution_service import LLMExecutionService, LLMBillingContext
 
 # 1. Get the execution service from the container
@@ -514,11 +549,13 @@ execution_service = container.llm_execution_service
 # 2. Create billing context
 billing_context = LLMBillingContext(
     db=db,
-    user_id=user.id,
-    session_id=session_id,
+    scope=BillingScope.for_session(
+        user_id=str(user.id),
+        app_kind="chat",
+        session_id=session_id,
+    ),
     llm_config=llm_config,
     model_id=llm_config.model,
-    run_id=run_id,
 )
 
 # 3. Call send_once (single LLM call) or run_tool_loop_until_final (multi-turn)
@@ -562,6 +599,131 @@ class MyTool(BaseAgentTool):
 
 The `Function` wrapper handles `_reserve_tool_billing()` → execute → `_finalize_tool_billing()` automatically.
 
+#### Adding a new billing subject (Factory example)
+
+If you add Factory billing, keep the subject and the node execution separate:
+
+- `subject_kind = factory_project` (or `factory_run` if run-level history is primary)
+- `subject_id = factory_id`
+- `billing_context = factory`
+- `run_id = factory_run_id`
+- `operation_id = node_execution_id` or `f"{node_id}:{attempt}"`
+
+Recommended shape:
+
+1. Add a new `SubjectKind` and a scope builder like `BillingScope.for_factory_project(...)`
+2. Keep `app_kind` as the actual launcher (`chat` or `agent`) until Factory becomes a first-class app surface
+3. Use `billing_context = BillingContextValue.FACTORY` to distinguish Factory from chatloop/agentloop
+4. Use `source_domain` for the billing-producing subsystem, not for the product surface:
+   - good: `factory_llm`, `factory_tool`, `factory_render`
+   - avoid: using `factory` as both `billing_context` and `source_domain`
+5. Use `scope.build_operation_key(namespace, operation_id)` for idempotency
+6. Put `node_id`, `node_type`, and `factory_run_id` into billing metadata for query/debugging
+
+Why this split matters:
+
+- query all billing for one Factory: filter by `subject_kind/subject_id`
+- query all billing for one Factory run: filter by `run_id`
+- dedupe one node execution: use `operation_id`
+- distinguish LLM vs tool vs render inside Factory: use `source_domain`
+
+Use the existing billing layers:
+
+- `LLMExecutionService.send_once(...)` for node-local LLM calls
+- `run_billed_operation(...)` for bounded synchronous non-LLM work
+- `reserve_billing_operation(...)` + `finalize_billing_operation(...)` for async/background non-LLM work
+- `CreditReservationService.reserve()` / `capture_settlement_input()` / `settle()` / `release()` only when the shared helpers do not fit the flow shape
+
+For bounded synchronous non-LLM work, use this shape:
+
+```python
+from ii_agent.billing.operations import run_billed_operation
+from ii_agent.billing.types import BillingReservationRequest, BillingResult
+from ii_agent.billing.reservations.types import BillingKind, BillingQuote
+
+request = BillingReservationRequest(
+    source_domain="factory_render",
+    source_id=operation_id,
+    billing_kind=BillingKind.TOOL_USAGE,
+    quote=BillingQuote(
+        strategy="bounded",
+        reserve_usd=quote.reserve_usd,
+        max_usd=quote.max_usd,
+    ),
+    tool_name="factory_render",
+    idempotency_key=scope.build_operation_key("factory_render", operation_id),
+    metadata={**scope.billing_metadata(), "node_id": node_id},
+)
+
+result = await run_billed_operation(
+    reservation_service=reservation_service,
+    scope=scope,
+    request=request,
+    release_reason="factory_render_failed",
+    settlement_error="factory_render_settle_exception",
+    execute_fn=render_node_with_billing,
+)
+
+async def render_node_with_billing() -> BillingResult[RenderResult]:
+    render_result = await render_node()
+    return BillingResult(
+        value=render_result,
+        actual_usd=render_result.actual_usd,
+        actual_credits=render_result.actual_credits,
+        usage_payload={**scope.billing_metadata(), **render_result.usage_payload},
+    )
+```
+
+For async/background work, reserve before enqueueing the job and persist the
+`reservation_id` with the job payload. In the worker:
+
+1. Reserve with `reserve_billing_operation(...)`
+2. Persist `reservation_id` with the job payload or owner record
+3. In the worker, call `finalize_billing_operation(...)`
+
+```python
+from ii_agent.billing.operations import (
+    finalize_billing_operation,
+    reserve_billing_operation,
+)
+
+async with get_db_session_local() as reserve_db:
+    hold = await reserve_billing_operation(
+        reserve_db,
+        reservation_service=reservation_service,
+        scope=scope,
+        request=request,
+    )
+    await reserve_db.commit()
+
+await enqueue_job(
+    ...,
+    reservation_id=hold.reservation_id if hold is not None else None,
+)
+
+# In the worker:
+await finalize_billing_operation(
+    reservation_service=reservation_service,
+    scope=scope,
+    reservation_id=reservation_id,
+    result=(
+        None
+        if no_billable_result
+        else BillingResult(
+            value=None,
+            actual_usd=actual_usd,
+            actual_credits=actual_credits,
+            usage_payload={**scope.billing_metadata(), **usage_payload},
+        )
+    ),
+    release_reason="factory_render_failed",
+    settlement_error="factory_render_settle_exception",
+)
+```
+
+Keep reserve and finalize in separate DB sessions. Do not hold the reservation
+transaction open across provider work.
+
 #### Anti-patterns (DO NOT)
 
 ```python
@@ -586,19 +748,12 @@ await credit_service.deduct(db, user_id, total_cost)
 # Billing is per-call inside the agent loop, not post-run
 ```
 
-### Outbox Pattern for Durability
+### Settlement Recovery
 
-When `BillingUsageFactService` is configured (production), settlement goes through the durable outbox:
-
-```
-1. capture_llm_fact() / capture_tool_fact()   — INSERT into billing_usage_facts (status=captured)
-2. process_fact()                              — settle reservation + mark processed
-3. On exception: mark retryable (up to 5 attempts), then manual_review
-```
+Settlement is synchronous. Before the final `settle()` call, the exact settlement input is captured onto the reservation metadata. If provider work completes but final settlement raises, the reservation is moved to `SETTLEMENT_FAILED` so stale-expiry does not refund delivered work and ops can replay settlement manually from the captured payload.
 
 Cron jobs in `workers/cron/billing_recovery.py`:
 - `expire_stale_reservations` (every 15 min) — releases RESERVED holds past `expires_at`
-- `retry_billing_usage_facts` (every 1 min) — retries captured/stale facts
 - `alert_settlement_failures` (every 5 min) — logs SETTLEMENT_FAILED reservations
 
 ### Validation Flow
@@ -613,12 +768,11 @@ Pre-execution validation (`agent/application/validation_service.py`) checks **ac
 | `core/llm/execution_service.py` | `LLMExecutionService` — single LLM calls & tool loops with billing |
 | `billing/reservations/service.py` | `CreditReservationService` — reservation state machine |
 | `billing/credits/service.py` | `CreditService` — ledger + balance mutations |
-| `billing/outbox/service.py` | `BillingUsageFactService` — durable outbox |
 | `billing/credits/pricing.py` | `ModelPricing` — per-model token prices |
 | `agent/runtime/models/base.py` | Agent runtime billing hooks (`_reserve/_settle/_release_llm_billing`) |
 | `agent/runtime/tools/function.py` | Agent tool billing hooks |
 | `billing/usage/service.py` | `UsageService` — usage_records + session_metrics |
-| `workers/cron/billing_recovery.py` | Cron jobs for stale reservation cleanup and fact retry |
+| `workers/cron/billing_recovery.py` | Cron jobs for stale reservation cleanup and settlement failure alerting |
 
 ## Key Files
 

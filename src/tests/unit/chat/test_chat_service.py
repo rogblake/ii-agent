@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from uuid import uuid4
 
 import pytest
 
@@ -60,8 +59,8 @@ def test_build_initial_title_marks_pending_when_llm_available(title_service):
     title_service._client = object()
 
     name, title_pending = title_service.build_initial_title(
-        'Generate a project plan with milestones, success metrics, delivery phases, '
-        'risk mitigation, staffing assumptions, and launch readiness checkpoints.'
+        "Generate a project plan with milestones, success metrics, delivery phases, "
+        "risk mitigation, staffing assumptions, and launch readiness checkpoints."
     )
 
     assert name is None
@@ -73,9 +72,9 @@ def test_build_initial_title_uses_truncation_for_short_query_even_when_llm_avail
 ):
     title_service._client = object()
 
-    name, title_pending = title_service.build_initial_title('Generate a project plan')
+    name, title_pending = title_service.build_initial_title("Generate a project plan")
 
-    assert name == 'Generate a project plan'
+    assert name == "Generate a project plan"
     assert title_pending is False
 
 
@@ -88,7 +87,7 @@ async def test_generate_title_skips_llm_for_short_query(monkeypatch):
         )
     )
 
-    async def _unexpected_llm_call(_query):
+    async def _unexpected_llm_call(_query, **_kwargs):
         raise AssertionError("LLM title generation should not run for short queries")
 
     monkeypatch.setattr(service, "_call_llm", _unexpected_llm_call)
@@ -110,7 +109,14 @@ async def test_background_title_update_retries_with_truncation_fallback(monkeypa
     fallback_title = SessionTitleService._truncate(query, max_length=80)
     attempts: list[str] = []
 
-    async def _fake_generate_title(_query, _max_length=80):
+    async def _fake_generate_title(
+        _query,
+        _max_length=80,
+        *,
+        session_id=None,
+        user_id=None,
+        app_kind="chat",
+    ):
         return "Semantic title"
 
     async def _fake_persist_title_update(_session_id: str, title: str) -> bool:
@@ -122,7 +128,13 @@ async def test_background_title_update_retries_with_truncation_fallback(monkeypa
     monkeypatch.setattr(service, "generate_title", _fake_generate_title)
     monkeypatch.setattr(service, "_persist_title_update", _fake_persist_title_update)
 
-    await service._background_title_update("session-1", query, 80)
+    await service._background_title_update(
+        session_id="session-1",
+        user_id="user-1",
+        app_kind="chat",
+        query=query,
+        max_length=80,
+    )
 
     assert attempts == ["Semantic title", fallback_title]
 
@@ -139,7 +151,14 @@ async def test_create_chat_session_commits_before_scheduling_title_update(
         async def commit(self):
             steps.append("commit")
 
-    def _schedule_title_update(_session_id: str, _query: str, _max_length: int = 80):
+    def _schedule_title_update(
+        _session_id: str,
+        _query: str,
+        _max_length: int = 80,
+        *,
+        user_id: str,
+        app_kind: str,
+    ):
         steps.append("schedule")
 
     monkeypatch.setattr(
@@ -166,11 +185,11 @@ async def test_create_chat_session_commits_before_scheduling_title_update(
 
 
 def test_set_title_pending_round_trips_metadata():
-    metadata = SessionTitleService.set_title_pending({'foo': 'bar'}, True)
+    metadata = SessionTitleService.set_title_pending({"foo": "bar"}, True)
 
-    assert metadata == {'foo': 'bar', 'title_pending': True}
+    assert metadata == {"foo": "bar", "title_pending": True}
     assert SessionTitleService.is_title_pending(metadata) is True
-    assert SessionTitleService.set_title_pending(metadata, False) == {'foo': 'bar'}
+    assert SessionTitleService.set_title_pending(metadata, False) == {"foo": "bar"}
 
 
 @pytest.mark.asyncio
@@ -204,5 +223,3 @@ async def test_validate_session_access_denies_non_owner(chat_service):
             session_id="s1",
             user_id="u1",
         )
-
-

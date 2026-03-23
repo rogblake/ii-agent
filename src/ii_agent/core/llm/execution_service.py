@@ -11,10 +11,12 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from ii_agent.billing.types import BillingScope
+from ii_agent.billing.exceptions import BillingSettlementFinalError
+from ii_agent.billing.reservations.types import SourceDomain
 from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
 from ii_agent.chat.llm import get_client
+from ii_agent.chat.tools.base import ToolCallInput
 from ii_agent.chat.types import (
     ContentPart,
     FinishReason,
@@ -26,6 +28,7 @@ from ii_agent.chat.types import (
 )
 from ii_agent.chat.application.tool_service import ChatToolService
 from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.llm.token_record import TokenTracker
 
 if TYPE_CHECKING:
@@ -37,8 +40,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _FORCE_FINAL_TOOL_PROMPT = (
-    "Submit the final tool payload exactly once now. "
-    "Do not reply with normal text."
+    "Submit the final tool payload exactly once now. Do not reply with normal text."
 )
 
 
@@ -46,13 +48,29 @@ _FORCE_FINAL_TOOL_PROMPT = (
 class LLMBillingContext:
     """Billing context for an LLM execution."""
 
-    db: AsyncSession
-    user_id: str
-    session_id: str
+    scope: BillingScope
     llm_config: LLMConfig
     model_id: str | None = None
-    run_id: _uuid_mod.UUID | None = None
     message_id: _uuid_mod.UUID | None = None
+    requested_output_token_cap: int | None = None
+    llm_source_domain: str | None = None
+    tool_source_domain: str | None = None
+
+    @property
+    def user_id(self) -> str:
+        return self.scope.user_id
+
+    @property
+    def session_id(self) -> str | None:
+        return self.scope.session_id
+
+    @property
+    def subject_id(self) -> str:
+        return self.scope.subject_id
+
+    @property
+    def run_id(self) -> _uuid_mod.UUID | str | None:
+        return self.scope.run_id
 
 
 @dataclass
@@ -170,10 +188,13 @@ class LLMExecutionService:
                 )
             usage_key = f"send_once:{_uuid_mod.uuid4().hex[:12]}"
         reservation = await self._reserve_if_needed(
-            billing_context, messages, usage_key,
+            billing_context,
+            messages,
+            usage_key,
         )
         effective_options = self._merge_provider_options(
-            provider_options, reservation.provider_options if reservation else None,
+            provider_options,
+            reservation.provider_options if reservation else None,
         )
 
         try:
@@ -202,7 +223,10 @@ class LLMExecutionService:
 
         usage = self._resolve_usage(response.usage, billing_context)
         billed_credits = await self._settle_if_needed(
-            billing_context, reservation, usage, usage_key,
+            billing_context,
+            reservation,
+            usage,
+            usage_key,
         )
         await self._record_llm_invocation_if_needed(
             usage=usage,
@@ -244,10 +268,13 @@ class LLMExecutionService:
             usage_key = f"{loop_id}:step_{step}"
 
             reservation = await self._reserve_if_needed(
-                billing_context, conversation, usage_key,
+                billing_context,
+                conversation,
+                usage_key,
             )
             effective_options = self._merge_provider_options(
-                provider_options, reservation.provider_options if reservation else None,
+                provider_options,
+                reservation.provider_options if reservation else None,
             )
 
             try:
@@ -277,7 +304,10 @@ class LLMExecutionService:
             last_response = response
             usage = self._resolve_usage(response.usage, billing_context)
             billed_credits = await self._settle_if_needed(
-                billing_context, reservation, usage, usage_key,
+                billing_context,
+                reservation,
+                usage,
+                usage_key,
             )
             await self._record_llm_invocation_if_needed(
                 usage=usage,
@@ -324,6 +354,7 @@ class LLMExecutionService:
 
             tool_result_parts = []
             for call in tool_calls:
+                tool = tool_registry.get(call.name)
                 tool_input = call.input
                 if not isinstance(tool_input, str):
                     tool_input = json.dumps(
@@ -332,12 +363,38 @@ class LLMExecutionService:
                         default=str,
                     )
 
+                tool_reservation = await self._reserve_tool_if_needed(
+                    billing_context=billing_context,
+                    tool_registry=tool_registry,
+                    tool_call=call,
+                    tool_input=tool_input,
+                )
                 tool_result = await ChatToolService.execute_tool(
                     tool_call_id=call.id,
                     tool_name=call.name,
                     tool_input=tool_input,
                     tool_registry=tool_registry,
                 )
+                is_tool_error = _is_tool_error(tool_result.output)
+                if tool_reservation is None and tool is not None:
+                    await self._record_zero_cost_tool_usage_if_needed(
+                        billing_context=billing_context,
+                        tool_name=call.name,
+                        succeeded=not is_tool_error,
+                    )
+                elif is_tool_error:
+                    await self._release_tool_reservation(
+                        billing_context=billing_context,
+                        reservation=tool_reservation,
+                        reason="tool_error",
+                    )
+                else:
+                    tool_result.credits_charged = await self._settle_tool_if_needed(
+                        billing_context=billing_context,
+                        reservation=tool_reservation,
+                        tool_name=call.name,
+                        actual_cost_usd=tool_result.cost_usd or 0.0,
+                    )
                 tool_result_parts.append(tool_result)
 
             if tool_result_parts:
@@ -379,22 +436,18 @@ class LLMExecutionService:
             return None
 
         try:
-            return await self._llm_billing.reserve_chat_llm_call(
-                billing_context.db,
-                user_id=billing_context.user_id,
-                session_id=billing_context.session_id,
-                run_id=str(billing_context.run_id or _uuid_mod.uuid4()),
-                model_id=(
-                    billing_context.model_id or billing_context.llm_config.model
-                ),
-                llm_config=billing_context.llm_config,
-                messages=messages,
-                source_id=f"exec:{billing_context.session_id}:{usage_key}",
-                idempotency_key=(
-                    f"llm:execution:{billing_context.session_id}:{usage_key}"
-                ),
-                request_kind=usage_key,
-            )
+            async with get_db_session_local() as billing_db:
+                return await self._llm_billing.reserve_chat_llm_call(
+                    billing_db,
+                    scope=billing_context.scope,
+                    model_id=(billing_context.model_id or billing_context.llm_config.model),
+                    llm_config=billing_context.llm_config,
+                    messages=messages,
+                    source_id=usage_key,
+                    request_kind=usage_key,
+                    requested_output_token_cap=billing_context.requested_output_token_cap,
+                    source_domain=billing_context.llm_source_domain or SourceDomain.CHAT_LLM,
+                )
         except Exception:
             # InsufficientCreditsError and BillingReconciliationRequiredError
             # propagate to the caller so they surface as user-facing errors.
@@ -411,39 +464,43 @@ class LLMExecutionService:
         if not self._llm_billing or not billing_context or not reservation:
             return None
         if not usage:
-            # No usage data — release instead of settling to zero.
-            await self._release_reservation(billing_context, reservation, "no_usage")
+            logger.error(
+                "Missing usage for completed LLM call; marking reservation settlement_failed",
+                extra={"reservation_id": reservation.hold.reservation_id},
+            )
+            await self._mark_settlement_failed(
+                billing_context,
+                reservation,
+                "missing_usage",
+            )
             return None
 
         try:
             token_record = TokenTracker.from_chat_usage(usage)
-            result = await self._llm_billing.settle_chat_llm_call(
-                billing_context.db,
-                reservation=reservation,
-                user_id=billing_context.user_id,
-                session_id=billing_context.session_id,
-                run_id=str(billing_context.run_id or ""),
-                token_record=token_record,
-                provider=(
-                    billing_context.llm_config.api_type.value
-                    if billing_context.llm_config.api_type is not None
-                    else None
-                ),
-                request_kind=usage_key,
-            )
+            async with get_db_session_local() as billing_db:
+                result = await self._llm_billing.settle_llm_call(
+                    billing_db,
+                    scope=billing_context.scope,
+                    reservation=reservation,
+                    token_record=token_record,
+                    provider=(
+                        billing_context.llm_config.api_type.value
+                        if billing_context.llm_config.api_type is not None
+                        else None
+                    ),
+                    request_kind=usage_key,
+                )
             if result and result.total_charged is not None:
                 return float(result.total_charged)
             return None
         except Exception:
             logger.error(
-                "Failed to settle LLM billing for session %s; "
+                "Failed to settle LLM billing for subject %s; "
                 "marking reservation settlement_failed",
-                billing_context.session_id,
+                f"{billing_context.scope.subject.kind.value}:{billing_context.scope.subject.id}",
                 exc_info=True,
             )
-            await self._mark_settlement_failed(
-                billing_context, reservation, "settle_exception"
-            )
+            await self._mark_settlement_failed(billing_context, reservation, "settle_exception")
             return None
 
     async def _mark_settlement_failed(
@@ -456,16 +513,24 @@ class LLMExecutionService:
         if not self._llm_billing or not billing_context or not reservation:
             return
         try:
-            await self._llm_billing.mark_settlement_failed(
-                billing_context.db,
-                reservation_id=reservation.hold.reservation_id,
-                error=error,
-            )
+            async with get_db_session_local() as billing_db:
+                await self._llm_billing.mark_settlement_failed(
+                    billing_db,
+                    reservation_id=reservation.hold.reservation_id,
+                    error=error,
+                )
         except Exception:
-            logger.warning(
-                "Failed to mark reservation settlement_failed for session %s",
-                billing_context.session_id,
+            logger.error(
+                "Failed to mark reservation settlement_failed for subject %s",
+                f"{billing_context.scope.subject.kind.value}:{billing_context.scope.subject.id}",
                 exc_info=True,
+            )
+            raise BillingSettlementFinalError(
+                (
+                    "Failed to persist settlement_failed for reservation "
+                    f"{reservation.hold.reservation_id}"
+                ),
+                reservation_id=reservation.hold.reservation_id,
             )
 
     async def _release_reservation(
@@ -478,15 +543,16 @@ class LLMExecutionService:
         if not self._llm_billing or not billing_context or not reservation:
             return
         try:
-            await self._llm_billing.release_llm_call(
-                billing_context.db,
-                reservation=reservation,
-                reason=reason,
-            )
+            async with get_db_session_local() as billing_db:
+                await self._llm_billing.release_llm_call(
+                    billing_db,
+                    reservation=reservation,
+                    reason=reason,
+                )
         except Exception:
             logger.warning(
-                "Failed to release LLM reservation for session %s",
-                billing_context.session_id,
+                "Failed to release LLM reservation for subject %s",
+                f"{billing_context.scope.subject.kind.value}:{billing_context.scope.subject.id}",
                 exc_info=True,
             )
 
@@ -504,9 +570,7 @@ class LLMExecutionService:
             return usage
 
         model_name = (
-            usage.model_name
-            or billing_context.model_id
-            or billing_context.llm_config.model
+            usage.model_name or billing_context.model_id or billing_context.llm_config.model
         )
         if model_name and usage.model_name != model_name:
             return usage.model_copy(update={"model_name": model_name})
@@ -529,12 +593,14 @@ class LLMExecutionService:
             return
 
         try:
-            async with billing_context.db.begin_nested():
+            async with get_db_session_local() as telemetry_db:
                 await self._llm_invocation_repo.create(
-                    billing_context.db,
+                    telemetry_db,
                     run_id=billing_context.run_id,
-                    session_id=billing_context.session_id,
                     user_id=billing_context.user_id,
+                    billing_context=billing_context.scope.billing_context,
+                    subject_kind=billing_context.scope.subject.kind.value,
+                    subject_id=billing_context.scope.subject.id,
                     message_id=billing_context.message_id,
                     provider=(
                         billing_context.llm_config.api_type.value
@@ -565,10 +631,188 @@ class LLMExecutionService:
                 )
         except Exception:
             logger.warning(
-                "Failed to write llm_invocation for session %s",
-                billing_context.session_id,
+                "Failed to write llm_invocation for %s:%s",
+                billing_context.scope.subject.kind.value,
+                billing_context.scope.subject.id,
                 exc_info=True,
             )
+
+    async def _record_zero_cost_tool_usage_if_needed(
+        self,
+        *,
+        billing_context: LLMBillingContext | None,
+        tool_name: str,
+        succeeded: bool,
+    ) -> None:
+        """Write best-effort usage for unquoted zero-cost chat tools."""
+        if not self._llm_billing or not billing_context:
+            return
+        try:
+            async with get_db_session_local() as billing_db:
+                await self._llm_billing.record_zero_cost_tool_usage(
+                    billing_db,
+                    scope=billing_context.scope,
+                    tool_name=tool_name,
+                    succeeded=succeeded,
+                    source_domain=billing_context.tool_source_domain or SourceDomain.CHAT_TOOL,
+                )
+        except Exception:
+            logger.debug(
+                "Failed to record zero-cost tool usage for %s:%s",
+                billing_context.scope.subject.kind.value,
+                billing_context.scope.subject.id,
+                exc_info=True,
+            )
+
+    async def _reserve_tool_if_needed(
+        self,
+        *,
+        billing_context: LLMBillingContext | None,
+        tool_registry: dict[str, Any],
+        tool_call: ToolCall,
+        tool_input: str,
+    ):
+        """Reserve credits for a billable chat tool used inside the loop."""
+        if not self._llm_billing or not billing_context:
+            return None
+
+        tool = tool_registry.get(tool_call.name)
+        if tool is None or not hasattr(tool, "quote_cost"):
+            return None
+
+        quote = await tool.quote_cost(
+            ToolCallInput(
+                id=tool_call.id,
+                name=tool_call.name,
+                input=tool_input,
+            )
+        )
+        if quote is None:
+            return None
+
+        async with get_db_session_local() as billing_db:
+            return await self._llm_billing.reserve_tool_call(
+                billing_db,
+                scope=billing_context.scope,
+                source_domain=billing_context.tool_source_domain or SourceDomain.CHAT_TOOL,
+                source_id=tool_call.id,
+                tool_name=tool_call.name,
+                quote=quote,
+            )
+
+    async def _settle_tool_if_needed(
+        self,
+        *,
+        billing_context: LLMBillingContext | None,
+        reservation,
+        tool_name: str,
+        actual_cost_usd: float,
+    ) -> float | None:
+        """Settle one reserved tool invocation to its final cost."""
+        if not self._llm_billing or not billing_context or not reservation:
+            return None
+
+        try:
+            async with get_db_session_local() as billing_db:
+                result = await self._llm_billing.settle_tool_call(
+                    billing_db,
+                    scope=billing_context.scope,
+                    reservation=reservation,
+                    actual_cost_usd=actual_cost_usd,
+                    provider=None,
+                    latency_ms=None,
+                    extra_usage_metadata={
+                        "app_kind": billing_context.scope.app_kind,
+                        "billing_context": billing_context.scope.billing_context,
+                        "run_id": (
+                            str(billing_context.scope.run_id)
+                            if billing_context.scope.run_id is not None
+                            else None
+                        ),
+                        "tool_name": tool_name,
+                    },
+                )
+            if result and result.total_charged is not None:
+                return float(result.total_charged)
+            return None
+        except Exception:
+            logger.error(
+                "Failed to settle tool billing for %s:%s; marking reservation settlement_failed",
+                billing_context.scope.subject.kind.value,
+                billing_context.scope.subject.id,
+                exc_info=True,
+            )
+            await self._mark_tool_settlement_failed(
+                billing_context=billing_context,
+                reservation=reservation,
+                error="tool_settle_exception",
+            )
+            return None
+
+    async def _release_tool_reservation(
+        self,
+        *,
+        billing_context: LLMBillingContext | None,
+        reservation,
+        reason: str,
+    ) -> None:
+        """Release a reserved tool invocation without charging."""
+        if not self._llm_billing or not billing_context or not reservation:
+            return
+        try:
+            async with get_db_session_local() as billing_db:
+                await self._llm_billing.release_tool_call(
+                    billing_db,
+                    reservation=reservation,
+                    reason=reason,
+                )
+        except Exception:
+            logger.warning(
+                "Failed to release tool reservation for %s:%s",
+                billing_context.scope.subject.kind.value,
+                billing_context.scope.subject.id,
+                exc_info=True,
+            )
+
+    async def _mark_tool_settlement_failed(
+        self,
+        *,
+        billing_context: LLMBillingContext | None,
+        reservation,
+        error: str,
+    ) -> None:
+        """Prevent auto-expiry refunds after a tool settle exception."""
+        if not self._llm_billing or not billing_context or not reservation:
+            return
+        try:
+            async with get_db_session_local() as billing_db:
+                await self._llm_billing.mark_settlement_failed(
+                    billing_db,
+                    reservation_id=reservation.hold.reservation_id,
+                    error=error,
+                )
+        except Exception:
+            logger.error(
+                "Failed to mark tool reservation settlement_failed for %s:%s",
+                billing_context.scope.subject.kind.value,
+                billing_context.scope.subject.id,
+                exc_info=True,
+            )
+            raise BillingSettlementFinalError(
+                (
+                    "Failed to persist settlement_failed for tool reservation "
+                    f"{reservation.hold.reservation_id}"
+                ),
+                reservation_id=reservation.hold.reservation_id,
+            )
+
+
+def _is_tool_error(output: Any) -> bool:
+    return getattr(output, "type", None) in {
+        "error-text",
+        "error-json",
+        "execution-denied",
+    }
 
 
 def _credits_decimal_or_none(value: float | Decimal | None) -> Decimal | None:

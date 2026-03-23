@@ -19,6 +19,7 @@ from ii_agent.content.storybook.schemas import DesignChange
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _now():
     return datetime.now(timezone.utc)
 
@@ -29,7 +30,11 @@ def _make_service(
 ) -> StorybookEditService:
     repo = repo or MagicMock()
     version_service = version_service or MagicMock()
-    return StorybookEditService(repo=repo, version_service=version_service)
+    return StorybookEditService(
+        repo=repo,
+        version_service=version_service,
+        reservation_service=MagicMock(),
+    )
 
 
 def _change(
@@ -52,6 +57,7 @@ def _change(
 # ---------------------------------------------------------------------------
 # _inject_runtime_script
 # ---------------------------------------------------------------------------
+
 
 class TestInjectRuntimeScript:
     def test_injects_into_head_tag(self):
@@ -91,7 +97,7 @@ class TestInjectRuntimeScript:
     def test_returns_original_html_if_nothing_to_inject(self):
         """Both markers already present → no injection at all."""
         html = (
-            '<html><head><!-- __DESIGN_MODE_RUNTIME__ -->'
+            "<html><head><!-- __DESIGN_MODE_RUNTIME__ -->"
             '<script data-storybook-inline-edit="true"></script>'
             "</head><body></body></html>"
         )
@@ -102,6 +108,7 @@ class TestInjectRuntimeScript:
 # ---------------------------------------------------------------------------
 # _extract_xpath
 # ---------------------------------------------------------------------------
+
 
 class TestExtractXpath:
     def test_returns_xpath_from_context(self):
@@ -126,6 +133,7 @@ class TestExtractXpath:
 # ---------------------------------------------------------------------------
 # _extract_slide_number
 # ---------------------------------------------------------------------------
+
 
 class TestExtractSlideNumber:
     def test_returns_int_from_context(self):
@@ -155,9 +163,11 @@ class TestExtractSlideNumber:
 # _find_element_by_context
 # ---------------------------------------------------------------------------
 
+
 class TestFindElementByContext:
     def _soup(self, html: str):
         from bs4 import BeautifulSoup
+
         return BeautifulSoup(html, "html.parser")
 
     def test_finds_by_id(self):
@@ -201,6 +211,7 @@ class TestFindElementByContext:
 # ---------------------------------------------------------------------------
 # _apply_attribute_change
 # ---------------------------------------------------------------------------
+
 
 class TestApplyAttributeChange:
     def test_applies_attribute_to_element(self):
@@ -252,6 +263,7 @@ class TestApplyAttributeChange:
 # apply_changes_to_html – dispatch logic
 # ---------------------------------------------------------------------------
 
+
 class TestApplyChangesToHtml:
     @pytest.mark.asyncio
     async def test_returns_unchanged_html_when_no_changes(self):
@@ -283,7 +295,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_style_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            result = await service.apply_changes_to_html(html, [change])
+            await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -295,7 +307,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_text_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            result = await service.apply_changes_to_html(html, [change])
+            await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -307,7 +319,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_icon_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            result = await service.apply_changes_to_html(html, [change])
+            await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -319,7 +331,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_delete_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            result = await service.apply_changes_to_html(html, [change])
+            await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -331,7 +343,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_move_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            result = await service.apply_changes_to_html(html, [change])
+            await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -343,7 +355,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_swap_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            result = await service.apply_changes_to_html(html, [change])
+            await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -363,6 +375,7 @@ class TestApplyChangesToHtml:
 # ---------------------------------------------------------------------------
 # get_version_history – repo interactions
 # ---------------------------------------------------------------------------
+
 
 class TestGetVersionHistory:
     @pytest.mark.asyncio
@@ -419,6 +432,7 @@ class TestGetVersionHistory:
 # ---------------------------------------------------------------------------
 # save_all_page_edits – guard clauses
 # ---------------------------------------------------------------------------
+
 
 class TestSaveAllPageEdits:
     @pytest.mark.asyncio

@@ -73,12 +73,12 @@ psql $DATABASE_URL -c "
   WHERE table_schema = 'public'
   AND table_name IN (
     'credit_ledger', 'credit_balances', 'credit_reservations',
-    'billing_customers', 'billing_usage_facts',
+    'billing_customers',
     'usage_records', 'llm_invocations', 'tool_invocations'
   )
   ORDER BY table_name;
 "
-# Expected: 8 rows
+# Expected: 7 rows
 
 # Verify backfill: credit_balances should match users count
 psql $DATABASE_URL -c "

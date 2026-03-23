@@ -35,7 +35,7 @@ def test_start_scheduler_registers_cleanup_jobs(monkeypatch):
     assert "cleanup_stale_agent_run_tasks" in job_ids
     assert "cleanup_stale_chat_runs" in job_ids
     assert "expire_stale_reservations" in job_ids
-    assert "retry_billing_usage_facts" in job_ids
+    assert "retry_shortfall_settlement_failures" in job_ids
     assert "alert_settlement_failures" in job_ids
 
 

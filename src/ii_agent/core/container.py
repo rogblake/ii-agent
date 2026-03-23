@@ -1,7 +1,7 @@
 """Centralized service container for non-router consumers.
 
 Created once in ii_agent.app lifespan after secrets are loaded.
-Passed to socket handlers, MCP SSE, subscribers, cron, etc.
+Passed to socket handlers, subscribers, cron, etc.
 
 Router endpoints use FastAPI Depends() via per-domain dependencies.py files instead.
 
@@ -28,10 +28,6 @@ from ii_agent.billing.credits.dependencies import (
 from ii_agent.billing.reservations.dependencies import (
     get_credit_reservation_repository,
     get_credit_reservation_service,
-)
-from ii_agent.billing.outbox.dependencies import (
-    get_billing_usage_fact_repository,
-    get_billing_usage_fact_service,
 )
 from ii_agent.billing.usage.dependencies import (
     get_llm_invocation_repository,
@@ -115,8 +111,8 @@ from ii_agent.sessions.dependencies import (
     get_session_fork_service,
     get_session_repository,
     get_session_service,
-    get_session_title_service,
 )
+from ii_agent.sessions.title_dependencies import get_session_title_service
 from ii_agent.settings.llm.dependencies import (
     get_llm_setting_repository,
     get_llm_setting_service,
@@ -135,7 +131,6 @@ if TYPE_CHECKING:
     from ii_agent.agent.application.execution_service import ExecutionService
     from ii_agent.agent.application.plan_service import PlanService
     from ii_agent.billing.service import BillingService
-    from ii_agent.billing.outbox.service import BillingUsageFactService
     from ii_agent.billing.credits.service import CreditService
     from ii_agent.billing.reservations.service import CreditReservationService
     from ii_agent.billing.usage.service import UsageService
@@ -172,7 +167,7 @@ class ServiceContainer:
 
     A single ServiceContainer is created once in ii_agent.app lifespan (after
     GCP secrets are loaded) and threaded through to all non-router consumers:
-    socket handlers, MCP SSE, subscribers, and cron tasks.
+    socket handlers, subscribers, and cron tasks.
 
     This avoids module-level singleton imports and ensures every consumer
     receives services wired with the post-secrets-loaded config.
@@ -181,7 +176,6 @@ class ServiceContainer:
     config: Settings
     credit_service: CreditService
     credit_reservation_service: CreditReservationService
-    billing_usage_fact_service: BillingUsageFactService
     usage_service: UsageService
     llm_billing_service: LLMBillingService
     llm_execution_service: LLMExecutionService
@@ -247,7 +241,6 @@ class ServiceContainer:
         credit_balance_repo = get_credit_balance_repository()
         credit_ledger_repo = get_credit_ledger_repository()
         credit_reservation_repo = get_credit_reservation_repository()
-        billing_usage_fact_repo = get_billing_usage_fact_repository()
         billing_customer_repo = get_billing_customer_repository()
 
         # ── Leaf services (depend only on repos / config) ────────────────────
@@ -259,11 +252,6 @@ class ServiceContainer:
             credit_reservation_repo,
             credit_svc,
             usage_svc,
-        )
-        billing_usage_fact_svc = get_billing_usage_fact_service(
-            billing_usage_fact_repo,
-            credit_reservation_repo,
-            credit_reservation_svc,
         )
         agent_run_svc = get_agent_run_service(agent_run_repo)
         event_svc = build_event_service(
@@ -297,7 +285,6 @@ class ServiceContainer:
         project_svc = get_project_service(project_repo, session_repo)
         deployments_svc = get_deployments_service(project_repo, deployments_repo)
         media_template_svc = get_media_template_service(media_template_repo)
-
         # ── Design services ──────────────────────────────────────────────
         slide_repo = get_slide_repository()
         project_design_repo = get_project_design_repository(session_repo)
@@ -309,14 +296,13 @@ class ServiceContainer:
             credit_svc,
             credit_reservation_svc,
             cfg,
-            billing_usage_fact_svc,
         )
         llm_execution_svc = get_llm_execution_service(
             llm_billing_svc,
             llm_invocation_repo,
         )
         llm_config_resolver = get_llm_config_resolver(llm_setting_svc, cfg)
-        title_svc = get_session_title_service()
+        title_svc = get_session_title_service(llm_execution_svc)
         session_validation_svc = get_session_validation_service(
             session_svc, title_svc, balance_repo=credit_balance_repo
         )
@@ -337,7 +323,6 @@ class ServiceContainer:
             config=cfg,
             credit_service=credit_svc,
             credit_reservation_service=credit_reservation_svc,
-            billing_usage_fact_service=billing_usage_fact_svc,
             usage_service=usage_svc,
             llm_billing_service=llm_billing_svc,
             llm_execution_service=llm_execution_svc,

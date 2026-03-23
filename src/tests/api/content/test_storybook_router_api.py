@@ -64,14 +64,18 @@ def _make_app(*, session_access: bool = True, export_bytes: bytes | None = b"pdf
             return {"id": session_id}
 
     class _EditService:
-        async def save_all_page_edits(self, db, storybook_id, page_changes, image_urls):
-            return storybook_detail, 0.0
+        async def save_all_page_edits_with_billing(
+            self, db, *, storybook_id, user_id, page_changes, image_urls
+        ):
+            return storybook_detail
 
         async def get_version_history(self, db, storybook_id):
             return []
 
     class _AIEditService:
-        async def rewrite_content(self, db, *, storybook, user_id: str, content: str, page_image_url=None):
+        async def rewrite_content(
+            self, db, *, storybook, user_id: str, content: str, page_image_url=None
+        ):
             if not content.strip():
                 raise ValidationError("No content provided to rewrite")
             return "rewritten text"
@@ -115,8 +119,8 @@ def _make_app(*, session_access: bool = True, export_bytes: bytes | None = b"pdf
             return export_bytes if page_number == 1 else None
 
     class _CreditService:
-        async def deduct_and_track_session_usage(self, *args, **kwargs):
-            return True
+        async def require_billing_ok(self, db, user_id: str):
+            return None
 
     class _VoiceService:
         def get_generation_status(self, storybook):
@@ -126,7 +130,9 @@ def _make_app(*, session_access: bool = True, export_bytes: bytes | None = b"pdf
             return None
 
     class _Storage:
-        def upload_and_get_permanent_url(self, file_obj, path: str, content_type: str | None = None):
+        def upload_and_get_permanent_url(
+            self, file_obj, path: str, content_type: str | None = None
+        ):
             return f"https://storage.local/{path}"
 
     async def _fake_db():

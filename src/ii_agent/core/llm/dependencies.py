@@ -5,7 +5,6 @@ from typing import Annotated
 from fastapi import Depends
 
 from ii_agent.billing.credits.dependencies import CreditServiceDep
-from ii_agent.billing.outbox.dependencies import BillingUsageFactServiceDep
 from ii_agent.billing.reservations.dependencies import CreditReservationServiceDep
 from ii_agent.billing.usage.dependencies import (
     LLMInvocationRepositoryDep,
@@ -23,7 +22,6 @@ def get_llm_billing_service(
     credit_service: CreditServiceDep,
     reservation_service: CreditReservationServiceDep,
     settings: SettingsDep,
-    outbox_service: BillingUsageFactServiceDep,
 ) -> LLMBillingService:
     """Provide LLMBillingService instance."""
     return LLMBillingService(
@@ -31,7 +29,6 @@ def get_llm_billing_service(
         credit_service=credit_service,
         reservation_service=reservation_service,
         config=settings,
-        outbox_service=outbox_service,
     )
 
 

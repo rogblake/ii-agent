@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import csv
-import io
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -22,6 +18,7 @@ pytestmark = pytest.mark.unit
 # ===========================================================================
 # refresh_free_user_credits.py
 # ===========================================================================
+
 
 class TestMonthlyFreeCredit:
     def test_returns_from_default_plans(self):
@@ -90,23 +87,41 @@ class TestRefreshFreeUserCredits:
 
         # Mock the CreditService used inside refresh_free_user_credits
         mock_credit_service = MagicMock()
-        mock_credit_service.ensure_balance_exists = AsyncMock(return_value=(0.0, 0.0))
-        mock_credit_service.set_balance = AsyncMock(return_value=True)
+        mock_credit_service.reset_plan_balance = AsyncMock(
+            return_value=SimpleNamespace(updated=True)
+        )
 
         with (
-            patch("ii_agent.workers.cron.refresh_free_user_credits.get_db_session_local", return_value=mock_ctx),
-            patch("ii_agent.workers.cron.refresh_free_user_credits.get_settings", return_value=mock_settings),
-            patch("ii_agent.billing.customers.repository.BillingCustomerRepository", return_value=MagicMock()),
-            patch("ii_agent.billing.customers.service.BillingCustomerService", return_value=mock_billing_customer_service),
-            patch("ii_agent.billing.credits.balance_repository.CreditBalanceRepository", return_value=MagicMock()),
-            patch("ii_agent.billing.credits.service.CreditService", return_value=mock_credit_service),
+            patch(
+                "ii_agent.workers.cron.refresh_free_user_credits.get_db_session_local",
+                return_value=mock_ctx,
+            ),
+            patch(
+                "ii_agent.workers.cron.refresh_free_user_credits.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
+                "ii_agent.billing.customers.repository.BillingCustomerRepository",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "ii_agent.billing.customers.service.BillingCustomerService",
+                return_value=mock_billing_customer_service,
+            ),
+            patch(
+                "ii_agent.billing.credits.balance_repository.CreditBalanceRepository",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "ii_agent.billing.credits.service.CreditService", return_value=mock_credit_service
+            ),
         ):
             await refresh_free_user_credits()
 
         mock_billing_customer_service.resolve_effective_profile.assert_called_once_with(
             customer=None,
         )
-        mock_credit_service.set_balance.assert_called_once()
+        mock_credit_service.reset_plan_balance.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_skips_users_with_correct_credits_and_plan(self):
@@ -140,21 +155,40 @@ class TestRefreshFreeUserCredits:
 
         # Mock balance repo returning current credits == monthly_credits
         mock_credit_service = MagicMock()
-        mock_credit_service.ensure_balance_exists = AsyncMock(return_value=(300.0, 0.0))
-        mock_credit_service.set_balance = AsyncMock(return_value=True)
+        mock_credit_service.reset_plan_balance = AsyncMock(
+            return_value=SimpleNamespace(updated=False)
+        )
 
         with (
-            patch("ii_agent.workers.cron.refresh_free_user_credits.get_db_session_local", return_value=mock_ctx),
-            patch("ii_agent.workers.cron.refresh_free_user_credits.get_settings", return_value=mock_settings),
-            patch("ii_agent.billing.customers.repository.BillingCustomerRepository", return_value=MagicMock()),
-            patch("ii_agent.billing.customers.service.BillingCustomerService", return_value=mock_billing_customer_service),
-            patch("ii_agent.billing.credits.balance_repository.CreditBalanceRepository", return_value=MagicMock()),
-            patch("ii_agent.billing.credits.service.CreditService", return_value=mock_credit_service),
+            patch(
+                "ii_agent.workers.cron.refresh_free_user_credits.get_db_session_local",
+                return_value=mock_ctx,
+            ),
+            patch(
+                "ii_agent.workers.cron.refresh_free_user_credits.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
+                "ii_agent.billing.customers.repository.BillingCustomerRepository",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "ii_agent.billing.customers.service.BillingCustomerService",
+                return_value=mock_billing_customer_service,
+            ),
+            patch(
+                "ii_agent.billing.credits.balance_repository.CreditBalanceRepository",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "ii_agent.billing.credits.service.CreditService", return_value=mock_credit_service
+            ),
         ):
             await refresh_free_user_credits()
 
-        # User had correct plan and credits - set_balance should NOT be called
-        mock_credit_service.set_balance.assert_not_called()
+        # The helper is always called; it decides whether the reset is a no-op.
+        mock_credit_service.reset_plan_balance.assert_called_once()
+
 
 class TestBuildFreeUserCronJobDefinition:
     def test_returns_correct_name(self):
@@ -205,6 +239,7 @@ class TestInstallFreeCronJob:
 # ===========================================================================
 # refresh_annual_subscription_credits.py
 # ===========================================================================
+
 
 class TestEnsureMetadataDict:
     def test_dict_returned_as_is_copy(self):
@@ -283,7 +318,6 @@ class TestAsUtc:
 
     def test_aware_datetime_converted_to_utc(self):
         from ii_agent.workers.cron.refresh_annual_subscription_credits import _as_utc
-        import pytz
 
         dt = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         result = _as_utc(dt)
@@ -323,7 +357,9 @@ class TestShouldRefresh:
         ):
             now = datetime.now(timezone.utc)
             should, credits = _should_refresh(
-                mock_user, now=now, plan_id="pro",
+                mock_user,
+                now=now,
+                plan_id="pro",
                 period_end=datetime(2020, 1, 1, tzinfo=timezone.utc),
             )
             assert should is False
@@ -353,7 +389,6 @@ class TestShouldRefresh:
     def test_returns_true_with_monthly_credits(self):
         from ii_agent.workers.cron.refresh_annual_subscription_credits import (
             _should_refresh,
-            REFRESH_METADATA_KEY,
         )
 
         now = datetime(2025, 7, 1, tzinfo=timezone.utc)
@@ -411,6 +446,7 @@ class TestBuildAnnualCronJobDefinition:
 # ===========================================================================
 # cron/tasks.py - cleanup_long_running_tasks
 # ===========================================================================
+
 
 class TestCleanupLongRunningTasks:
     @pytest.mark.asyncio
@@ -475,7 +511,7 @@ class TestCleanupLongRunningTasks:
 
 class TestStartScheduler:
     def test_scheduler_adds_jobs_and_starts(self):
-        from ii_agent.workers.cron.tasks import start_scheduler, scheduler
+        from ii_agent.workers.cron.tasks import start_scheduler
 
         mock_scheduler = MagicMock()
         mock_scheduler.running = False
@@ -487,7 +523,7 @@ class TestStartScheduler:
             assert "cleanup_stale_agent_run_tasks" in job_ids
             assert "cleanup_stale_chat_runs" in job_ids
             assert "expire_stale_reservations" in job_ids
-            assert "retry_billing_usage_facts" in job_ids
+            assert "retry_shortfall_settlement_failures" in job_ids
             assert "alert_settlement_failures" in job_ids
             mock_scheduler.start.assert_called_once()
 
@@ -517,6 +553,7 @@ class TestShutdownScheduler:
 # ===========================================================================
 # cron/jobs/import_waitlist.py
 # ===========================================================================
+
 
 class TestNormaliseTzSuffix:
     def test_no_tz_suffix_unchanged(self):
@@ -608,7 +645,9 @@ class TestImportWaitlist:
         csv_file.write_text("email\ntest@example.com\n")
 
         mock_db = AsyncMock()
-        mock_db.execute = AsyncMock(return_value=MagicMock(scalars=MagicMock(return_value=iter([]))))
+        mock_db.execute = AsyncMock(
+            return_value=MagicMock(scalars=MagicMock(return_value=iter([])))
+        )
         mock_db.add = MagicMock()
         mock_db.flush = AsyncMock()
 
@@ -616,7 +655,9 @@ class TestImportWaitlist:
         mock_ctx.__aenter__ = AsyncMock(return_value=mock_db)
         mock_ctx.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("ii_agent.workers.cron.jobs.import_waitlist.get_db_session_local", return_value=mock_ctx):
+        with patch(
+            "ii_agent.workers.cron.jobs.import_waitlist.get_db_session_local", return_value=mock_ctx
+        ):
             with pytest.raises(ValueError, match="missing required columns"):
                 await import_waitlist(csv_file)
 
@@ -640,7 +681,9 @@ class TestImportWaitlist:
         mock_ctx.__aenter__ = AsyncMock(return_value=mock_db)
         mock_ctx.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("ii_agent.workers.cron.jobs.import_waitlist.get_db_session_local", return_value=mock_ctx):
+        with patch(
+            "ii_agent.workers.cron.jobs.import_waitlist.get_db_session_local", return_value=mock_ctx
+        ):
             inserted, skipped = await import_waitlist(csv_file)
 
         assert inserted == 1
@@ -666,7 +709,9 @@ class TestImportWaitlist:
         mock_ctx.__aenter__ = AsyncMock(return_value=mock_db)
         mock_ctx.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("ii_agent.workers.cron.jobs.import_waitlist.get_db_session_local", return_value=mock_ctx):
+        with patch(
+            "ii_agent.workers.cron.jobs.import_waitlist.get_db_session_local", return_value=mock_ctx
+        ):
             inserted, skipped = await import_waitlist(csv_file)
 
         assert inserted == 0
@@ -695,7 +740,9 @@ class TestImportWaitlist:
         mock_ctx.__aenter__ = AsyncMock(return_value=mock_db)
         mock_ctx.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("ii_agent.workers.cron.jobs.import_waitlist.get_db_session_local", return_value=mock_ctx):
+        with patch(
+            "ii_agent.workers.cron.jobs.import_waitlist.get_db_session_local", return_value=mock_ctx
+        ):
             inserted, skipped = await import_waitlist(csv_file)
 
         assert inserted == 2

@@ -29,11 +29,7 @@ class SessionMetrics(Base):
 
     __tablename__ = "session_metrics"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     session_id: Mapped[str] = mapped_column(
         String,
         ForeignKey("sessions.id", ondelete="CASCADE"),
@@ -45,13 +41,12 @@ class SessionMetrics(Base):
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
         TimestampColumn,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )
 
     # Relationships
@@ -79,7 +74,9 @@ class UsageRecord(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    session_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    billing_context: Mapped[str] = mapped_column(String, nullable=False, default="unknown")
+    subject_kind: Mapped[str] = mapped_column(String, nullable=False, default="session")
+    subject_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     run_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         PG_UUID(as_uuid=True),
         nullable=True,
@@ -123,7 +120,8 @@ class UsageRecord(Base):
 
     __table_args__ = (
         Index("idx_usage_records_user_created", "user_id", "created_at"),
-        Index("idx_usage_records_session", "session_id", "created_at"),
+        Index("idx_usage_records_billing_context", "billing_context", "created_at"),
+        Index("idx_usage_records_subject", "subject_kind", "subject_id", "created_at"),
         Index("idx_usage_records_source", "source_domain", "created_at"),
         Index("idx_usage_records_billing_kind", "billing_kind", "created_at"),
         Index("idx_usage_records_model", "model_id", "created_at"),
@@ -135,6 +133,12 @@ class UsageRecord(Base):
         ),
     )
 
+    @property
+    def session_id(self) -> Optional[str]:
+        if self.subject_kind == "session":
+            return self.subject_id
+        return None
+
 
 # ==================== Pydantic Models ====================
 
@@ -145,23 +149,13 @@ class TokenUsage(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     prompt_tokens: int = Field(default=0, description="Number of tokens in the prompt")
-    completion_tokens: int = Field(
-        default=0, description="Number of tokens in the completion"
-    )
-    cache_read_tokens: int = Field(
-        default=0, description="Number of tokens read from cache"
-    )
-    cache_write_tokens: int = Field(
-        default=0, description="Number of tokens written to cache"
-    )
-    reasoning_tokens: int = Field(
-        default=0, description="Number of reasoning tokens consumed"
-    )
+    completion_tokens: int = Field(default=0, description="Number of tokens in the completion")
+    cache_read_tokens: int = Field(default=0, description="Number of tokens read from cache")
+    cache_write_tokens: int = Field(default=0, description="Number of tokens written to cache")
+    reasoning_tokens: int = Field(default=0, description="Number of reasoning tokens consumed")
 
     # Additional response metadata
-    model_name: Optional[str] = Field(
-        default=None, description="Name of the model used"
-    )
+    model_name: Optional[str] = Field(default=None, description="Name of the model used")
     response_time_ms: Optional[float] = Field(
         default=None, description="Response time in milliseconds"
     )
@@ -201,9 +195,7 @@ class TokenUsage(BaseModel):
         return self
 
     @classmethod
-    def from_raw_metrics(
-        cls, raw_metrics: dict, model_name: Optional[str] = None
-    ) -> "TokenUsage":
+    def from_raw_metrics(cls, raw_metrics: dict, model_name: Optional[str] = None) -> "TokenUsage":
         return cls(
             prompt_tokens=raw_metrics.get("input_tokens", 0),
             completion_tokens=raw_metrics.get("output_tokens", 0),

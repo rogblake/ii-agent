@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 import logging
 import re
 from typing import Any, Dict, List, Optional
@@ -9,6 +10,15 @@ from typing import Any, Dict, List, Optional
 from bs4 import BeautifulSoup
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.billing.types import BillingResult
+from ii_agent.billing.reservations.service import CreditReservationService
+from ii_agent.billing.reservations.types import SourceDomain
+from ii_agent.content.storybook.billing import (
+    DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD,
+    build_storybook_request,
+    build_storybook_scope,
+    run_storybook_sync_operation,
+)
 from ii_agent.content.storybook.models import Storybook
 from ii_agent.content.storybook.repository import StorybookRepository
 from ii_agent.content.storybook.schemas import DesignChange, StorybookDetail, VersionInfo
@@ -19,7 +29,11 @@ from ii_agent.content.storybook.voice_service import (
     _get_voice_service,
     _resolve_language_code,
 )
-from ii_agent.projects.design.utils.constants import DESIGN_MODE_GOOGLE_FONTS, DESIGN_MODE_RUNTIME_SCRIPT
+from ii_agent.core.request_context import get_or_generate_request_id
+from ii_agent.projects.design.utils.constants import (
+    DESIGN_MODE_GOOGLE_FONTS,
+    DESIGN_MODE_RUNTIME_SCRIPT,
+)
 from ii_agent.projects.design.utils.html_patch import (
     apply_slide_delete_change_with_status,
     apply_slide_icon_change_with_status,
@@ -63,9 +77,11 @@ class StorybookEditService:
         *,
         repo: StorybookRepository,
         version_service: StorybookVersionService,
+        reservation_service: CreditReservationService,
     ) -> None:
         self._repo = repo
         self._version_service = version_service
+        self._reservation_service = reservation_service
 
     async def get_page_html_with_runtime(
         self,
@@ -98,18 +114,10 @@ class StorybookEditService:
 
             change_type = (change.type or "").strip().lower()
             property_name = (change.property or "").strip()
-            raw_value = (
-                change.value.get("to")
-                if isinstance(change.value, dict)
-                else None
-            )
+            raw_value = change.value.get("to") if isinstance(change.value, dict) else None
             new_value = "" if raw_value is None else str(raw_value)
 
-            context = (
-                change.elementContext
-                if isinstance(change.elementContext, dict)
-                else None
-            )
+            context = change.elementContext if isinstance(change.elementContext, dict) else None
             xpath = self._extract_xpath(context)
             slide_number = self._extract_slide_number(context)
 
@@ -213,13 +221,9 @@ class StorybookEditService:
         if not source_storybook:
             return None, 0.0
 
-        source_pages_by_number = {
-            page.page_number: page for page in (source_storybook.pages or [])
-        }
+        source_pages_by_number = {page.page_number: page for page in (source_storybook.pages or [])}
         style_json = (
-            source_storybook.style_json
-            if isinstance(source_storybook.style_json, dict)
-            else {}
+            source_storybook.style_json if isinstance(source_storybook.style_json, dict) else {}
         )
         language_code = _resolve_language_code(None, style_json)
         voice_enabled = bool(style_json.get("voice_enabled", False))
@@ -286,6 +290,114 @@ class StorybookEditService:
             page_updates=page_updates,
         )
         return new_storybook, total_voice_cost_usd
+
+    async def save_all_page_edits_with_billing(
+        self,
+        db: AsyncSession,
+        *,
+        storybook_id: str,
+        user_id: str,
+        page_changes: Dict[int, List[DesignChange]],
+        image_urls: Optional[Dict[int, str]] = None,
+    ) -> Optional[StorybookDetail]:
+        """Apply storybook edits and settle any regenerated voice cost."""
+        source_storybook = await self._repo.get_by_id(db, storybook_id)
+        if source_storybook is None:
+            return None
+
+        estimated_voice_pages = self._estimate_voice_pages_for_edits(
+            storybook=source_storybook,
+            page_changes=page_changes,
+        )
+        if estimated_voice_pages <= 0:
+            new_storybook, _ = await self.save_all_page_edits(
+                db,
+                storybook_id=storybook_id,
+                page_changes=page_changes,
+                image_urls=image_urls,
+            )
+            return new_storybook
+
+        session_id = source_storybook.session_id or ""
+        if not session_id:
+            new_storybook, _ = await self.save_all_page_edits(
+                db,
+                storybook_id=storybook_id,
+                page_changes=page_changes,
+                image_urls=image_urls,
+            )
+            return new_storybook
+
+        request_id = get_or_generate_request_id()
+        scope = build_storybook_scope(
+            user_id=user_id,
+            session_id=session_id,
+        )
+        request = build_storybook_request(
+            scope=scope,
+            namespace="storybook_edit_voice",
+            operation_id=f"edit-voice:{storybook_id}:{request_id}",
+            source_domain=SourceDomain.VOICE_GENERATION,
+            tool_name="storybook_edit_voice",
+            reserve_usd=DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD * estimated_voice_pages,
+            metadata={
+                "storybook_id": storybook_id,
+                "voice_page_count_estimate": estimated_voice_pages,
+            },
+        )
+
+        async def _execute_edits() -> BillingResult[Optional[StorybookDetail]]:
+            new_storybook, total_voice_cost_usd = await self.save_all_page_edits(
+                db,
+                storybook_id=storybook_id,
+                page_changes=page_changes,
+                image_urls=image_urls,
+            )
+            await db.commit()
+            return BillingResult(
+                value=new_storybook,
+                actual_usd=Decimal(str(total_voice_cost_usd)),
+                usage_payload={
+                    "provider": None,
+                    "latency_ms": None,
+                    "cost_usd": total_voice_cost_usd,
+                    "tool_name": "storybook_edit_voice",
+                    "storybook_id": storybook_id,
+                    "voice_page_count_estimate": estimated_voice_pages,
+                },
+            )
+
+        return await run_storybook_sync_operation(
+            reservation_service=self._reservation_service,
+            scope=scope,
+            request=request,
+            execute_fn=_execute_edits,
+            release_reason="storybook_edit_failed",
+            settlement_error="storybook_edit_voice_settle_exception",
+        )
+
+    @staticmethod
+    def _estimate_voice_pages_for_edits(
+        *,
+        storybook,
+        page_changes: Dict[int, List[DesignChange]],
+    ) -> int:
+        """Estimate billable voice regenerations caused by text edits."""
+        style_json = storybook.style_json if isinstance(storybook.style_json, dict) else {}
+        if not style_json.get("voice_enabled"):
+            return 0
+
+        billable_pages = 0
+        source_pages = {page.page_number: page for page in (storybook.pages or [])}
+        for page_number, changes in (page_changes or {}).items():
+            if not any((change.type or "").lower() == "text" for change in (changes or [])):
+                continue
+
+            page = source_pages.get(page_number)
+            if page and page.html_content:
+                billable_pages += 1
+
+        return billable_pages
 
     async def get_version_history(
         self,

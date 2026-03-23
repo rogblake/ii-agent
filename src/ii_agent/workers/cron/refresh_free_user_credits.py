@@ -78,17 +78,15 @@ async def refresh_free_user_credits() -> None:
                 changed = True
 
             try:
-                balance = await credit_service.ensure_balance_exists(db, user.id)
-                current_credits = float(balance[0])
-                if current_credits != monthly_credits:
-                    await credit_service.set_balance(
-                        db,
-                        user.id,
-                        monthly_credits,
-                        entry_type=LedgerEntryType.REFRESH,
-                        source_domain=SourceDomain.CRON,
-                        entry_metadata={"plan": FREE_PLAN_ID},
-                    )
+                result = await credit_service.reset_plan_balance(
+                    db,
+                    user.id,
+                    monthly_credits,
+                    entry_type=LedgerEntryType.REFRESH,
+                    source_domain=SourceDomain.CRON,
+                    entry_metadata={"plan": FREE_PLAN_ID},
+                )
+                if result.updated:
                     changed = True
             except Exception:
                 app_logger.opt(exception=True).warning("Failed to set balance for user {}", user.id)

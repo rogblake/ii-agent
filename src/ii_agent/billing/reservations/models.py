@@ -28,7 +28,9 @@ class CreditReservation(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    session_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    billing_context: Mapped[str] = mapped_column(String, nullable=False, default="unknown")
+    subject_kind: Mapped[str] = mapped_column(String, nullable=False, default="session")
+    subject_id: Mapped[str | None] = mapped_column(String, nullable=True)
     run_id: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
     source_domain: Mapped[str] = mapped_column(String, nullable=False)
     source_id: Mapped[str] = mapped_column(String, nullable=False)
@@ -107,6 +109,17 @@ class CreditReservation(Base):
 
     __table_args__ = (
         Index("idx_credit_reservations_user_created", "user_id", "created_at"),
+        Index(
+            "idx_credit_reservations_billing_context_created",
+            "billing_context",
+            "created_at",
+        ),
+        Index(
+            "idx_credit_reservations_subject_created",
+            "subject_kind",
+            "subject_id",
+            "created_at",
+        ),
         Index("idx_credit_reservations_source", "source_domain", "source_id"),
         Index("idx_credit_reservations_status_expires", "status", "expires_at"),
         Index(
@@ -117,3 +130,8 @@ class CreditReservation(Base):
         ),
     )
 
+    @property
+    def session_id(self) -> str | None:
+        if self.subject_kind == "session":
+            return self.subject_id
+        return None

@@ -9,6 +9,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from ii_agent.billing.exceptions import BillingDuplicateOperationError
+
 
 class ReservationStatus(str, enum.Enum):
     """Lifecycle states for a credit reservation."""
@@ -48,6 +50,9 @@ class QuoteStrategy(str, enum.Enum):
     POST_FACTO = "post_facto"
 
 
+SETTLEMENT_ERROR_SHORTFALL_UNRECONCILED = "settlement_shortfall_unreconciled"
+
+
 class BillingQuote(BaseModel):
     """Upfront cost quote for a prepaid billable operation."""
 
@@ -78,10 +83,30 @@ class ReservationHold:
     quoted_usd: Decimal
     max_usd: Decimal
     output_token_cap: int | None = None
+    status: ReservationStatus = ReservationStatus.RESERVED
+    was_created: bool = True
 
     @property
     def total_reserved(self) -> Decimal:
         return self.reserved_credits + self.reserved_bonus_credits
+
+
+def raise_if_duplicate_operation(hold: ReservationHold | None) -> None:
+    """Raise when an idempotent reservation lookup returns prior work."""
+    if hold is None or hold.was_created:
+        return
+
+    status = hold.status.value if isinstance(hold.status, ReservationStatus) else str(hold.status)
+    if hold.status == ReservationStatus.RESERVED:
+        message = "Billing operation key is already in progress"
+    else:
+        message = "Billing operation key has already been finalized"
+
+    raise BillingDuplicateOperationError(
+        message,
+        reservation_id=hold.reservation_id,
+        reservation_status=status,
+    )
 
 
 @dataclass(frozen=True)
@@ -100,4 +125,3 @@ class BillingSettlementResult:
     @property
     def total_charged(self) -> Decimal:
         return self.charged_credits + self.charged_bonus_credits
-

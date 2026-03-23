@@ -175,7 +175,7 @@ def start_scheduler():
         from ii_agent.workers.cron.billing_recovery import (
             alert_settlement_failures,
             expire_stale_reservations,
-            retry_billing_usage_facts,
+            retry_shortfall_settlement_failures,
         )
 
         # ── Run / chat cleanup ────────────────────────────────────────────
@@ -208,10 +208,10 @@ def start_scheduler():
         )
 
         scheduler.add_job(
-            retry_billing_usage_facts,
-            trigger=IntervalTrigger(minutes=1),
-            id="retry_billing_usage_facts",
-            name="Retry captured billing usage facts",
+            retry_shortfall_settlement_failures,
+            trigger=IntervalTrigger(minutes=5),
+            id="retry_shortfall_settlement_failures",
+            name="Retry replayable shortfall settlement failures",
             replace_existing=True,
             max_instances=1,
         )

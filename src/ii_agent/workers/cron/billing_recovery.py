@@ -4,7 +4,7 @@ These run as in-process APScheduler tasks alongside the existing stale-run
 cleanup jobs.  They close the operational gap described in credit_fix.md:
 
 - expire_stale_reservations: release holds that were never settled
-- retry_billing_usage_facts: replay durable invocation facts after settle failures
+- retry_shortfall_settlement_failures: replay captured shortfall settlements
 - alert_settlement_failures: surface reservations stuck in settlement_failed
 """
 
@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 from ii_agent.billing.reservations.repository import CreditReservationRepository
 from ii_agent.billing.reservations.service import CreditReservationService
+from ii_agent.billing.reservations.types import ReservationStatus
 from ii_agent.core.container import ServiceContainer
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.logger import logger
@@ -37,11 +38,12 @@ _EXPIRE_BATCH_LIMIT = 200
 
 
 async def expire_stale_reservations() -> None:
-    """Release reserved holds whose expires_at has passed.
+    """Recover reserved holds whose expires_at has passed.
 
-    Runs every 15 minutes.  A reservation that was never settled or released
-    (e.g. worker crash, network failure) will have credits locked forever
-    without this job.
+    Runs every 15 minutes.  Plain stale reservations are released.  Stale
+    reservations that already captured exact settlement input are replayed or
+    moved to ``settlement_failed`` so they do not remain stranded in
+    ``reserved`` forever after a crash between capture and settle.
     """
     try:
         svc = _build_reservation_service()
@@ -65,31 +67,80 @@ async def expire_stale_reservations() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Job 2: retry billing facts
+# Job 2: retry replayable shortfall failures
 # ---------------------------------------------------------------------------
 
-_RETRY_FACT_BATCH_LIMIT = 50
+_RETRY_SHORTFALL_BATCH = 50
 
 
-async def retry_billing_usage_facts() -> None:
-    """Retry durable billing facts that were captured but not fully processed."""
+async def retry_shortfall_settlement_failures() -> None:
+    """Replay captured shortfall failures and unblock users when fully reconciled."""
     try:
-        llm_billing = _build_container().llm_billing_service
+        repo = CreditReservationRepository()
+        container = _build_container()
+        replayed = 0
+        unresolved = 0
+        cleared_users = 0
 
         async with get_db_session_local() as db:
-            retried = await llm_billing.retry_captured_usage_facts(
-                db,
-                limit=_RETRY_FACT_BATCH_LIMIT,
+            failed = await repo.list_replayable_shortfall_failures_batch(
+                db, limit=_RETRY_SHORTFALL_BATCH
             )
-            await db.commit()
+            if not failed:
+                logger.debug("No replayable shortfall settlement failures to retry")
+                return
 
-        if retried:
-            logger.warning("Retried {} billing usage fact(s)", retried)
-        else:
-            logger.debug("No captured billing usage facts to retry")
+            touched_users: set[str] = set()
+            for reservation in failed:
+                touched_users.add(reservation.user_id)
+                try:
+                    result = (
+                        await container.credit_reservation_service.retry_settlement_from_capture(
+                            db,
+                            reservation_id=reservation.id,
+                        )
+                    )
+                except Exception:
+                    unresolved += 1
+                    logger.error(
+                        "Automatic shortfall settlement retry failed for reservation %s",
+                        reservation.id,
+                        exc_info=True,
+                    )
+                    continue
+
+                status = (
+                    result.status.value
+                    if isinstance(result.status, ReservationStatus)
+                    else str(result.status)
+                )
+                if status == ReservationStatus.SETTLED.value:
+                    replayed += 1
+                    continue
+
+                unresolved += 1
+                logger.warning(
+                    "Automatic shortfall settlement retry for reservation %s remained in status %s",
+                    reservation.id,
+                    status,
+                )
+
+            for user_id in touched_users:
+                if await repo.has_blocking_settlement_failures(db, user_id=user_id):
+                    continue
+                cleared = await container.credit_service.clear_billing_status(db, user_id)
+                if cleared:
+                    cleared_users += 1
+
+        logger.info(
+            "Shortfall settlement retry completed: replayed=%d unresolved=%d cleared_users=%d",
+            replayed,
+            unresolved,
+            cleared_users,
+        )
 
     except Exception:
-        logger.opt(exception=True).error("retry_billing_usage_facts failed")
+        logger.error("retry_shortfall_settlement_failures failed", exc_info=True)
 
 
 # ---------------------------------------------------------------------------

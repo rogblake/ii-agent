@@ -10,7 +10,9 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.billing.exceptions import BillingSettlementFinalError
 from ii_agent.billing.reservations.types import SourceDomain
+from ii_agent.billing.types import BillingContextValue, BillingScope
 from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
 from ii_agent.billing.usage.tool_invocation_repository import ToolInvocationRepository
 from ii_agent.chat.application.context_service import ContextWindowManager
@@ -103,12 +105,9 @@ class LLMTurnLoopService:
                     llm_config=llm_config,
                     messages=messages,
                     source_id=f"{run_id}:{llm_step_seq}",
-                    idempotency_key=f"chat-llm:{session_id}:{run_id}:{llm_step_seq}",
                     request_kind="chat_turn",
                 )
-                provider_options = (
-                    llm_reservation.provider_options if llm_reservation else None
-                )
+                provider_options = llm_reservation.provider_options if llm_reservation else None
 
             try:
                 async for event in provider.stream(
@@ -134,6 +133,7 @@ class LLMTurnLoopService:
                     provider=llm_config.api_type.value if llm_config else None,
                     model=model_id,
                     request_kind="chat_response",
+                    billing_context=BillingContextValue.CHAT_LOOP,
                     usage=None,
                     finish_reason=None,
                     credits_charged=None,
@@ -183,8 +183,12 @@ class LLMTurnLoopService:
                 messages.append(assistant_message)
 
                 billed_credits = None
-                if self._llm_billing and run_response.usage and llm_reservation:
-                    record = TokenTracker.from_chat_usage(run_response.usage)
+                if self._llm_billing and llm_reservation:
+                    record = (
+                        TokenTracker.from_chat_usage(run_response.usage)
+                        if run_response.usage is not None
+                        else None
+                    )
                     llm_settlement = await self._settle_chat_llm_billing(
                         reservation=llm_reservation,
                         user_id=user_id,
@@ -199,15 +203,13 @@ class LLMTurnLoopService:
                         ),
                         latency_ms=(
                             int(run_response.usage.response_time_ms)
-                            if run_response.usage
+                            if run_response.usage is not None
                             and run_response.usage.response_time_ms is not None
                             else None
                         ),
                     )
                     billed_credits = (
-                        float(llm_settlement.total_charged)
-                        if llm_settlement is not None
-                        else None
+                        float(llm_settlement.total_charged) if llm_settlement is not None else None
                     )
 
                 if run_response.finish_reason == FinishReason.TOOL_USE:
@@ -247,6 +249,7 @@ class LLMTurnLoopService:
                                     run_id=run_id,
                                     tool_call_id=tool_call.id,
                                     tool_name=tool_call.name,
+                                    billing_context=self._tool_billing_context(tool_call.name),
                                     quote=sb_quote,
                                 )
 
@@ -284,6 +287,7 @@ class LLMTurnLoopService:
                                     message_id=assistant_message.id,
                                     tool_call_id=tool_call.id,
                                     tool_name=tool_call.name,
+                                    billing_context=self._tool_billing_context(tool_call.name),
                                     started_at=started_at,
                                     finished_at=finished_at,
                                     tool_input=tool_call.input,
@@ -301,11 +305,14 @@ class LLMTurnLoopService:
 
                             # Non-polling storybook result — settle inline
                             if self._llm_billing and tool_reservation is not None:
-                                sb_settlement = await self._settle_chat_tool_billing(
+                                await self._settle_chat_tool_billing(
                                     reservation=tool_reservation,
+                                    user_id=user_id,
+                                    session_id=session_id,
                                     actual_cost_usd=tool_response.cost_usd or 0.0,
                                     run_id=run_id,
                                     tool_name=tool_call.name,
+                                    billing_context=self._tool_billing_context(tool_call.name),
                                 )
                             tool_result = ToolResult(
                                 tool_call_id=tool_call.id,
@@ -329,6 +336,7 @@ class LLMTurnLoopService:
                                         run_id=run_id,
                                         tool_call_id=tool_call.id,
                                         tool_name=tool_call.name,
+                                        billing_context=self._tool_billing_context(tool_call.name),
                                         quote=quote,
                                     )
                                 tool_result = await tool_service.execute_tool(
@@ -346,9 +354,14 @@ class LLMTurnLoopService:
                                     else:
                                         tool_settlement = await self._settle_chat_tool_billing(
                                             reservation=tool_reservation,
+                                            user_id=user_id,
+                                            session_id=session_id,
                                             actual_cost_usd=tool_result.cost_usd or 0.0,
                                             run_id=run_id,
                                             tool_name=tool_call.name,
+                                            billing_context=self._tool_billing_context(
+                                                tool_call.name
+                                            ),
                                         )
                                         tool_result.credits_charged = (
                                             float(tool_settlement.total_charged)
@@ -371,6 +384,7 @@ class LLMTurnLoopService:
                             message_id=assistant_message.id,
                             tool_call_id=tool_call.id,
                             tool_name=tool_call.name,
+                            billing_context=self._tool_billing_context(tool_call.name),
                             started_at=started_at,
                             finished_at=finished_at,
                             tool_input=tool_call.input,
@@ -398,6 +412,7 @@ class LLMTurnLoopService:
                             provider=llm_config.api_type.value if llm_config else None,
                             model=run_response.usage.model_name or model_id,
                             request_kind="chat_tool_use",
+                            billing_context=BillingContextValue.CHAT_LOOP,
                             usage=run_response.usage,
                             finish_reason=(
                                 run_response.finish_reason.value
@@ -445,11 +460,10 @@ class LLMTurnLoopService:
                         provider=llm_config.api_type.value if llm_config else None,
                         model=run_response.usage.model_name or model_id,
                         request_kind="chat_tool_use",
+                        billing_context=BillingContextValue.CHAT_LOOP,
                         usage=run_response.usage,
                         finish_reason=(
-                            run_response.finish_reason.value
-                            if run_response.finish_reason
-                            else None
+                            run_response.finish_reason.value if run_response.finish_reason else None
                         ),
                         credits_charged=billed_credits,
                     )
@@ -465,11 +479,10 @@ class LLMTurnLoopService:
                     provider=llm_config.api_type.value if llm_config else None,
                     model=run_response.usage.model_name or model_id,
                     request_kind="chat_response",
+                    billing_context=BillingContextValue.CHAT_LOOP,
                     usage=run_response.usage,
                     finish_reason=(
-                        run_response.finish_reason.value
-                        if run_response.finish_reason
-                        else None
+                        run_response.finish_reason.value if run_response.finish_reason else None
                     ),
                     credits_charged=billed_credits,
                 )
@@ -495,8 +508,12 @@ class LLMTurnLoopService:
                 }
                 break
             except Exception:
-                if run_response and run_response.usage and llm_reservation:
-                    record = TokenTracker.from_chat_usage(run_response.usage)
+                if run_response and llm_reservation:
+                    record = (
+                        TokenTracker.from_chat_usage(run_response.usage)
+                        if run_response.usage is not None
+                        else None
+                    )
                     await self._settle_chat_llm_billing(
                         reservation=llm_reservation,
                         user_id=user_id,
@@ -511,7 +528,8 @@ class LLMTurnLoopService:
                         ),
                         latency_ms=(
                             int(run_response.usage.response_time_ms)
-                            if run_response.usage.response_time_ms is not None
+                            if run_response.usage is not None
+                            and run_response.usage.response_time_ms is not None
                             else None
                         ),
                     )
@@ -526,8 +544,18 @@ class LLMTurnLoopService:
         if self._llm_billing is None:
             return None
         async with get_db_session_local() as billing_db:
+            session_id = kwargs.pop("session_id")
+            user_id = kwargs.pop("user_id")
+            run_id = kwargs.pop("run_id")
             return await self._llm_billing.reserve_chat_llm_call(
                 billing_db,
+                scope=BillingScope.for_session(
+                    user_id=user_id,
+                    app_kind="chat",
+                    session_id=session_id,
+                    billing_context=BillingContextValue.CHAT_LOOP,
+                    run_id=run_id,
+                ),
                 **kwargs,
             )
 
@@ -535,10 +563,33 @@ class LLMTurnLoopService:
         if self._llm_billing is None:
             return None
         reservation = kwargs.get("reservation")
+        token_record = kwargs.get("token_record")
+        if token_record is None:
+            reservation_id = getattr(
+                getattr(reservation, "hold", None),
+                "reservation_id",
+                None,
+            )
+            logger.error(
+                "Missing chat LLM usage; marking settlement_failed",
+                extra={"reservation_id": reservation_id},
+            )
+            await self._mark_billing_settlement_failed(reservation_id, "chat_llm_missing_usage")
+            return None
         try:
             async with get_db_session_local() as billing_db:
-                return await self._llm_billing.settle_chat_llm_call(
+                session_id = kwargs.pop("session_id")
+                user_id = kwargs.pop("user_id")
+                run_id = kwargs.pop("run_id")
+                return await self._llm_billing.settle_llm_call(
                     billing_db,
+                    scope=BillingScope.for_session(
+                        user_id=user_id,
+                        app_kind="chat",
+                        session_id=session_id,
+                        billing_context=BillingContextValue.CHAT_LOOP,
+                        run_id=run_id,
+                    ),
                     **kwargs,
                 )
         except Exception:
@@ -552,9 +603,7 @@ class LLMTurnLoopService:
                 extra={"reservation_id": reservation_id},
                 exc_info=True,
             )
-            await self._mark_billing_settlement_failed(
-                reservation_id, "chat_llm_settle_exception"
-            )
+            await self._mark_billing_settlement_failed(reservation_id, "chat_llm_settle_exception")
             return None
 
     async def _release_chat_llm_billing(self, *, reservation, reason: str) -> None:
@@ -578,6 +627,7 @@ class LLMTurnLoopService:
         run_id: str,
         tool_call_id: str,
         tool_name: str,
+        billing_context: str,
         quote,
     ):
         if self._llm_billing is None:
@@ -585,24 +635,29 @@ class LLMTurnLoopService:
         async with get_db_session_local() as billing_db:
             return await self._llm_billing.reserve_tool_call(
                 billing_db,
-                user_id=user_id,
-                session_id=session_id,
-                run_id=run_id,
+                scope=BillingScope.for_session(
+                    user_id=user_id,
+                    app_kind="chat",
+                    session_id=session_id,
+                    billing_context=billing_context,
+                    run_id=run_id,
+                ),
                 source_domain=SourceDomain.CHAT_TOOL,
                 source_id=tool_call_id,
                 tool_name=tool_name,
                 quote=quote,
-                idempotency_key=f"chat-tool:{session_id}:{run_id}:{tool_call_id}",
-                app_kind="chat",
             )
 
     async def _settle_chat_tool_billing(
         self,
         *,
         reservation,
+        user_id: str,
+        session_id: str,
         actual_cost_usd: float,
         run_id: str,
         tool_name: str,
+        billing_context: str,
     ):
         if self._llm_billing is None:
             return None
@@ -610,12 +665,20 @@ class LLMTurnLoopService:
             async with get_db_session_local() as billing_db:
                 return await self._llm_billing.settle_tool_call(
                     billing_db,
+                    scope=BillingScope.for_session(
+                        user_id=user_id,
+                        app_kind="chat",
+                        session_id=session_id,
+                        billing_context=billing_context,
+                        run_id=run_id,
+                    ),
                     reservation=reservation,
                     actual_cost_usd=actual_cost_usd,
                     provider=None,
                     latency_ms=None,
                     extra_usage_metadata={
                         "app_kind": "chat",
+                        "billing_context": billing_context,
                         "run_id": run_id,
                         "tool_name": tool_name,
                     },
@@ -631,9 +694,7 @@ class LLMTurnLoopService:
                 extra={"reservation_id": reservation_id},
                 exc_info=True,
             )
-            await self._mark_billing_settlement_failed(
-                reservation_id, "chat_tool_settle_exception"
-            )
+            await self._mark_billing_settlement_failed(reservation_id, "chat_tool_settle_exception")
             return None
 
     async def _release_chat_tool_billing(self, *, reservation, reason: str) -> None:
@@ -665,10 +726,14 @@ class LLMTurnLoopService:
                     error=error,
                 )
         except Exception:
-            logger.warning(
+            logger.error(
                 "Failed to mark reservation %s as settlement_failed",
                 reservation_id,
                 exc_info=True,
+            )
+            raise BillingSettlementFinalError(
+                f"Failed to persist settlement_failed for reservation {reservation_id}",
+                reservation_id=reservation_id,
             )
 
     async def _record_llm_invocation(
@@ -682,6 +747,7 @@ class LLMTurnLoopService:
         provider: str | None,
         model: str | None,
         request_kind: str,
+        billing_context: str,
         usage,
         finish_reason: str | None,
         credits_charged: float | None,
@@ -697,6 +763,7 @@ class LLMTurnLoopService:
                 await self._llm_invocation_repo.create(
                     db,
                     run_id=_coerce_uuid(run_id),
+                    billing_context=billing_context,
                     session_id=session_id,
                     user_id=user_id,
                     message_id=message_id,
@@ -731,6 +798,7 @@ class LLMTurnLoopService:
         message_id,
         tool_call_id: str,
         tool_name: str,
+        billing_context: str,
         started_at: datetime,
         finished_at: datetime,
         tool_input: str | None,
@@ -749,6 +817,7 @@ class LLMTurnLoopService:
                 await self._tool_invocation_repo.create(
                     db,
                     run_id=_coerce_uuid(run_id),
+                    billing_context=billing_context,
                     session_id=session_id,
                     user_id=user_id,
                     message_id=message_id,
@@ -768,6 +837,12 @@ class LLMTurnLoopService:
                 )
         except Exception:
             logger.warning("Failed to write tool_invocation", exc_info=True)
+
+    @staticmethod
+    def _tool_billing_context(tool_name: str) -> str:
+        if tool_name == "generate_storybook":
+            return BillingContextValue.STORYBOOK
+        return BillingContextValue.TOOL_CALL
 
 
 def _coerce_uuid(value: str | uuid.UUID | None) -> uuid.UUID | None:

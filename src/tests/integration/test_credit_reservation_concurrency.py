@@ -20,6 +20,7 @@ from ii_agent.billing.credits.balance_models import CreditBalanceRecord
 from ii_agent.billing.credits.balance_repository import CreditBalanceRepository
 from ii_agent.billing.credits.ledger_models import CreditLedgerEntry
 from ii_agent.billing.credits.ledger_repository import CreditLedgerRepository
+from ii_agent.billing.credits.service import CreditService
 from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.billing.reservations.models import CreditReservation
 from ii_agent.billing.reservations.repository import CreditReservationRepository
@@ -71,6 +72,22 @@ class _BlockingReservationRepository(CreditReservationRepository):
 
     async def lock_by_id(self, db, reservation_id):
         result = await super().lock_by_id(db, reservation_id)
+        if not self._did_block:
+            self._did_block = True
+            self.first_lock_acquired.set()
+            await self.release_first_lock.wait()
+        return result
+
+
+class _BlockingPlanResetBalanceRepository(CreditBalanceRepository):
+    def __init__(self) -> None:
+        super().__init__()
+        self.first_lock_acquired = asyncio.Event()
+        self.release_first_lock = asyncio.Event()
+        self._did_block = False
+
+    async def lock_balance(self, db, user_id):
+        result = await super().lock_balance(db, user_id)
         if not self._did_block:
             self._did_block = True
             self.first_lock_acquired.set()
@@ -397,3 +414,96 @@ async def test_concurrent_settle_and_release_share_one_terminal_outcome(
         assert bonus_credits == Decimal("0")
         assert ledger_count == 2
         assert usage_service.calls == []
+
+
+@pytest.mark.asyncio
+async def test_plan_reset_serializes_with_concurrent_reserve(reservation_db):
+    user_id = "plan-reset-race-user"
+    await _seed_user_with_balance(
+        reservation_db.session_factory,
+        user_id=user_id,
+        credits=Decimal("2"),
+    )
+
+    balance_repo = _BlockingPlanResetBalanceRepository()
+    reservation_repo = CreditReservationRepository()
+    credit_service = CreditService(
+        balance_repo=balance_repo,
+        ledger_repo=CreditLedgerRepository(),
+        reservation_repo=reservation_repo,
+    )
+    reservation_service = _make_service(
+        balance_repo=balance_repo,
+        reservation_repo=reservation_repo,
+    )
+    quote = BillingQuote(
+        strategy="bounded",
+        reserve_usd=Decimal("0.015"),
+        max_usd=Decimal("0.015"),
+    )
+    reserve_started = asyncio.Event()
+
+    async def _reset():
+        async with reservation_db.session_factory() as session:
+            result = await credit_service.reset_plan_balance(
+                session,
+                user_id,
+                10.0,
+                source_domain="webhook",
+                idempotency_key="plan-reset-1",
+            )
+            await session.commit()
+            return result
+
+    async def _reserve():
+        async with reservation_db.session_factory() as session:
+            reserve_started.set()
+            hold = await reservation_service.reserve(
+                session,
+                user_id=user_id,
+                source_domain="chat_llm",
+                source_id="reserve-after-reset",
+                billing_kind="llm_usage",
+                quote=quote,
+                idempotency_key="reserve-after-reset-1",
+            )
+            await session.commit()
+            return hold
+
+    reset_task = asyncio.create_task(_reset())
+    await asyncio.wait_for(balance_repo.first_lock_acquired.wait(), timeout=5)
+
+    reserve_task = asyncio.create_task(_reserve())
+    await asyncio.wait_for(reserve_started.wait(), timeout=5)
+    await asyncio.sleep(0.1)
+    assert not reserve_task.done()
+
+    balance_repo.release_first_lock.set()
+    reset_result, hold = await asyncio.wait_for(
+        asyncio.gather(reset_task, reserve_task),
+        timeout=5,
+    )
+
+    assert reset_result.updated is True
+    assert hold is not None
+
+    async with reservation_db.session_factory() as session:
+        credits, bonus_credits = (
+            await session.execute(
+                select(
+                    CreditBalanceRecord.credits,
+                    CreditBalanceRecord.bonus_credits,
+                ).where(CreditBalanceRecord.user_id == user_id)
+            )
+        ).one()
+        reservation_count = (
+            await session.execute(select(func.count()).select_from(CreditReservation))
+        ).scalar_one()
+        ledger_count = (
+            await session.execute(select(func.count()).select_from(CreditLedgerEntry))
+        ).scalar_one()
+
+    assert credits == Decimal("9")
+    assert bonus_credits == Decimal("0")
+    assert reservation_count == 1
+    assert ledger_count == 2

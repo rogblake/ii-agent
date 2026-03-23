@@ -676,13 +676,8 @@ class E2BSandboxManager(SandboxManager):
             logger.warning(f"Sandbox is not yet initialized for session: {self.session_id}")
             return
         sandbox_url = await self.expose_port(get_settings().mcp.port)
-        credentials = {
-            "session_id": str(self.session_id),
-            "user_api_key": "deprecated",
-            "host_url": "-".join(sandbox_url.split("-")[1:])
-        }
         self.get_mcp_client(sandbox_url=sandbox_url)
-        await self._pre_configure_mcp_server(credentials, sandbox_url)
+        await self._pre_configure_mcp_server(sandbox_url)
         await self._register_user_mcp_servers(user_id, sandbox_url)
 
     def get_mcp_client(self, sandbox_url) -> Client:
@@ -691,16 +686,9 @@ class E2BSandboxManager(SandboxManager):
             self.mcp_client = Client(mcp_url, timeout=get_settings().mcp.timeout)
         return self.mcp_client
 
-    async def _pre_configure_mcp_server(self, credential: Dict, sandbox_url):
+    async def _pre_configure_mcp_server(self, sandbox_url):
         """Set the tool server url for the sandbox."""
         async with MCPClient(sandbox_url) as client:
-            try:
-                await client.set_credential(credential)
-                # await client.set_tool_server_url(get_settings().tool_server_url)
-            except Exception as e:
-                logger.warning(f"Error when setting tool server: {str(e)}")
-            # Ensure that service is available
-
             await client.ping()
             await client.list_tools()
         return True

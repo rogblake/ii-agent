@@ -125,6 +125,16 @@ class FullStackInitTool(MCPTool):
         await super().on_tool_start(agent, fc)
         self._session_id = getattr(agent, "session_id", None)
         self._user_id = getattr(agent, "user_id", None)
+        self._host_url = None
+
+        try:
+            get_host = getattr(self.sandbox, "get_host", None)
+            if callable(get_host):
+                self._host_url = await get_host()
+            else:
+                logger.warning("Host url not supported for this provider")
+        except Exception as exc:
+            logger.warning("Failed to derive sandbox host_url: %s", exc)
 
     async def execute(self, tool_input: dict[str, Any]) -> ToolResult:
         try:
@@ -272,10 +282,14 @@ class FullStackInitTool(MCPTool):
     # TODO: Remove this later when original mcp is deleted, add internal v1 tool for backward compatibility
     async def _execute(self, tool_input: dict[str, Any]) -> ToolResult:
         try:
+            remote_input = dict(tool_input)
+            if self._host_url and not remote_input.get("host_url"):
+                remote_input["host_url"] = self._host_url
+
             async with self.mcp_client:
                 mcp_results = await self.mcp_client.call_tool(
-                    self.name + "_internal",
-                    tool_input,
+                    self.name,
+                    remote_input,
                     timeout=DEFAULT_TIMEOUT,
                 )
 

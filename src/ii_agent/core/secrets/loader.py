@@ -32,7 +32,6 @@ SECRET_TO_SETTINGS: dict[SecretKey, tuple[str | None, str]] = {
     SecretKey.COMPOSIO_API_KEY: (None, "composio_api_key"),
     SecretKey.COMPOSIO_ENCRYPTION_KEY: (None, "composio_encryption_key"),
     SecretKey.COMPOSIO_WEBHOOK_SECRET: (None, "composio_webhook_secret"),
-    SecretKey.A2A_SANDBOX_API_KEY: (None, "a2a_sandbox_api_key"),
     SecretKey.JWT_SECRET_KEY: (None, "jwt_secret_key"),
     # ENCRYPTION_KEY is not directly mapped - extend if needed
 }

@@ -57,8 +57,6 @@ def pytest_collection_modifyitems(config, items: list[pytest.Item]):
                 item.add_marker(pytest.mark.integration)
             elif "src/tests/smoke/" in nodeid:
                 item.add_marker(pytest.mark.smoke)
-            elif "src/tests/a2a/" in nodeid:
-                item.add_marker(pytest.mark.external)
 
         suite_markers = _suite_markers_for_item(item) & _REQUIRED_SUITE_MARKERS
         if len(suite_markers) > 1:

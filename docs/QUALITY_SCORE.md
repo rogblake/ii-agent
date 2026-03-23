@@ -36,9 +36,7 @@ Per-domain quality assessment. Updated periodically to track code health across 
 | **projects** | B | B | C | A | **B** |
 | **projects/deployments** | C | B | D | B | **C+** |
 | **projects/secrets** | B | B | D | B | **B-** |
-| **integrations/a2a** | C | C | D | C | **C-** |
 | **integrations/connectors** | C | C | D | B | **C** |
-| **integrations/mcp_sse** | C | C | D | C | **C-** |
 | **settings** | B | B | C | A | **B** |
 | **workers/cron** | B | B | C | B | **B-** |
 
@@ -69,7 +67,7 @@ Per-domain quality assessment. Updated periodically to track code health across 
 ## Top Improvement Priorities
 
 1. **Content domain (slides, storybook, media)** — Needs documentation, better test coverage
-2. **Integrations domain (a2a, connectors, mcp_sse)** — Needs documentation, consistent DI patterns
+2. **Integrations domain (connectors)** — Needs documentation, consistent DI patterns
 3. **Agent socket handlers** — Complex orchestration logic needs more test coverage
 4. **Chat media pipeline** — Underdocumented, complex orchestration
 5. **Deployment pipeline** — Cloud Run deployment needs reliability documentation

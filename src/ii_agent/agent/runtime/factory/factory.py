@@ -149,16 +149,12 @@ class AgentFactory:
         if system_prompt is None:
             workspace_path = workspace_path or "/workspace"
 
-            # Check if A2A agents are available (from metadata or config)
-            has_a2a = False  # This would be determined by A2AManager in production
-
             system_prompt = await get_system_prompt_for_agent_type(
                 agent_type=agent_type,
                 workspace_path=workspace_path,
                 design_document=has_design_doc,
                 researcher=has_researcher,
                 media=has_media,
-                a2a_agents=has_a2a,
                 task_agent=has_task_agent,
                 metadata=metadata,
                 api_type=llm_config.api_type if llm_config else None,

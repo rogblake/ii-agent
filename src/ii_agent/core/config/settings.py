@@ -60,8 +60,6 @@ class Settings(BaseSettings):
         VSCODE_PORT: VS Code server port
         CODEX_PORT: Codex server port
         TOOL_SERVER_URL: Tool server URL
-        A2A_SANDBOX_USER_ID: A2A sandbox user ID
-        A2A_SANDBOX_API_KEY: A2A sandbox API key
         MINIMIZE_STDOUT_LOGS: Minimize stdout logs
         TIME_TIL_CLEAN_UP: Time until sandbox cleanup (seconds)
 
@@ -110,6 +108,7 @@ class Settings(BaseSettings):
         """
         if os.getenv("USE_GCP_SECRETS"):
             from ii_agent.core.config.gcp_source import GCPSecretManagerSource
+
             return (
                 init_settings,
                 env_settings,
@@ -241,31 +240,6 @@ class Settings(BaseSettings):
         description="Tool server URL for external tool execution",
     )
 
-    # ========== A2A Configuration ==========
-
-    a2a_sandbox_user_id: Optional[str] = Field(
-        default=None,
-        description="User ID whose API key is used for A2A sandbox provisioning",
-    )
-
-    a2a_sandbox_api_key: Optional[str] = Field(
-        default=None,
-        description="API key for A2A sandbox authentication",
-    )
-
-    a2a_default_session_user_id: Optional[str] = Field(
-        default=None,
-        description="Fallback user_id used to back persistent A2A sessions when caller does not provide one",
-    )
-
-    a2a_default_session_user_email: Optional[str] = Field(
-        default=None,
-        description=(
-            "Fallback email template used when auto-creating service users for A2A sessions; "
-            "supports {user_id} placeholder and falls back to `<user_id>@a2a.local` when conflicts occur."
-        ),
-    )
-
     # ========== Composio Configuration ==========
 
     composio_api_key: Optional[str] = Field(
@@ -347,13 +321,6 @@ class Settings(BaseSettings):
         gt=0,
     )
 
-    # ========== MCP API Configuration ==========
-
-    mcp_api_url: Optional[str] = Field(
-        default=None,
-        description="Public MCP API URL (used for OAuth discovery endpoints)",
-    )
-
     llm_configs_json: Optional[str] = Field(
         default=None,
         alias="LLM_CONFIGS",
@@ -388,6 +355,7 @@ class Settings(BaseSettings):
         """Get storage client singleton."""
         # Use lazy import to avoid circular import
         from ii_agent.core.storage.client import storage
+
         return storage
 
     @property
@@ -416,9 +384,7 @@ class Settings(BaseSettings):
     @property
     def workspace_root(self) -> str:
         """Resolve the absolute filesystem path used for local workspace operations."""
-        workspace = (
-            Path(os.path.expanduser(self.storage.file_store_path)) / "workspace"
-        )
+        workspace = Path(os.path.expanduser(self.storage.file_store_path)) / "workspace"
         try:
             workspace.mkdir(parents=True, exist_ok=True)
             return str(workspace.resolve())
@@ -451,7 +417,6 @@ class Settings(BaseSettings):
     @property
     def mcp_ii_token_url(self) -> str:
         return self.ii_token_url
-
 
 
 @lru_cache()

@@ -28,7 +28,6 @@ class SecretKey(str, Enum):
     COMPOSIO_API_KEY = "composio-api-key"
     COMPOSIO_ENCRYPTION_KEY = "composio-encryption-key"
     COMPOSIO_WEBHOOK_SECRET = "composio-webhook-secret"
-    A2A_SANDBOX_API_KEY = "a2a-sandbox-api-key"
     JWT_SECRET_KEY = "jwt-secret-key"
     ENCRYPTION_KEY = "encryption-key"
 
@@ -70,7 +69,6 @@ LLM_SECRETS = {SecretKey.JWT_SECRET_KEY}
 
 TOOL_SERVER_SECRETS = {
     SecretKey.SANDBOX_E2B_API_KEY,
-    SecretKey.A2A_SANDBOX_API_KEY,
 }
 
 COMPOSIO_SECRETS = {

@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from ii_agent.agent.prompts.a2a_agents_prompt import get_a2a_agents_rules
 from ii_agent.agent.prompts.specs_first_prompt import (
     FEATURE_DOCUMENT_SECTION_LIST,
     SPECS_FIRST_DEVELOPMENT_RULES,
@@ -240,8 +239,6 @@ Developer: # Role and Objective
 - Conclude only when the HTML website contains the final rewritten report, is very attractively styled, includes comprehensive, labeled, and well written, and the user receives a valid public URL of the report blogpost.
 </researcher>
 """
-
-A2A_AGENTS_RULES = get_a2a_agents_rules()
 
 SUB_AGENT_TASK_RULES = """
 <agent_tools>
@@ -1025,7 +1022,6 @@ def get_system_prompt(
     task_agent: bool = False,
     claude: bool = False,
     gemini: bool = False,
-    a2a_agents: bool = True,
     mobile: bool = False,
 ) -> str:
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -1070,8 +1066,6 @@ def get_system_prompt(
         if media:
             prompt += MEDIA_USAGE_RULES
         prompt += BROWSER_RULES
-        if a2a_agents:
-            prompt += A2A_AGENTS_RULES
         if task_agent:
             prompt += SUB_AGENT_TASK_RULES
 

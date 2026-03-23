@@ -198,7 +198,7 @@ Last comprehensive review: 2026-03-17
 - **Effort:** Medium — document key services, models, and flows
 
 ### Integrations domain consistency
-- **What:** `integrations/a2a/`, `integrations/connectors/`, `integrations/mcp_sse/` have inconsistent DI patterns
+- **What:** `integrations/connectors/` has inconsistent DI patterns
 - **Impact:** New code in these domains may not follow project conventions
 - **Effort:** Medium — standardize on Dep alias pattern
 

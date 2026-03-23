@@ -1045,7 +1045,6 @@ async def get_system_prompt_for_agent_type(
     design_document: bool = True,
     researcher: bool = True,
     media: bool = True,
-    a2a_agents: bool = True,
     task_agent: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
     api_type: Optional[APITypes] = None,
@@ -1063,7 +1062,6 @@ async def get_system_prompt_for_agent_type(
             design_document=False,  # CODEX agent doesn't use design document rules
             researcher=False,  # CODEX agent doesn't use researcher rules
             codex=True,  # Use CODEX system prompt
-            a2a_agents=a2a_agents,
             task_agent=False,  # CODEX agent doesn't use task agent rules
         )
     elif agent_type == AgentType.CLAUDE_CODE:
@@ -1072,7 +1070,6 @@ async def get_system_prompt_for_agent_type(
             design_document=False,  # CLAUDE_CODE agent doesn't use design document rules
             researcher=False,  # CLAUDE_CODE agent doesn't use researcher rules
             claude=True,  # Use CLAUDE_CODE system prompt
-            a2a_agents=a2a_agents,
             task_agent=False,  # CLAUDE_CODE agent doesn't use task agent rules
         )
     elif agent_type == AgentType.MOBILE_APP:
@@ -1082,7 +1079,6 @@ async def get_system_prompt_for_agent_type(
             researcher=researcher,
             media=media,
             gemini=is_gemini,
-            a2a_agents=a2a_agents,
             task_agent=task_agent,
             mobile=True,
         )
@@ -1095,7 +1091,6 @@ async def get_system_prompt_for_agent_type(
             researcher=researcher,
             media=media,
             gemini=is_gemini,
-            a2a_agents=a2a_agents,
             task_agent=task_agent,
         )
 

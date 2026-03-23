@@ -40,7 +40,6 @@ _SECRET_FIELD_MAP: dict[str, tuple[str | None, str]] = {
     "COMPOSIO_API_KEY": (None, "composio_api_key"),
     "COMPOSIO_ENCRYPTION_KEY": (None, "composio_encryption_key"),
     "COMPOSIO_WEBHOOK_SECRET": (None, "composio_webhook_secret"),
-    "A2A_SANDBOX_API_KEY": (None, "a2a_sandbox_api_key"),
     "JWT_SECRET_KEY": (None, "jwt_secret_key"),
 }
 
@@ -101,9 +100,7 @@ class GCPSecretManagerSource(PydanticBaseSettingsSource):
 
         return self._secrets
 
-    def get_field_value(
-        self, field: Any, field_name: str
-    ) -> Tuple[Any, str, bool]:
+    def get_field_value(self, field: Any, field_name: str) -> Tuple[Any, str, bool]:
         """Get the value for a single field.
 
         This method is called by PydanticBaseSettingsSource for each field.

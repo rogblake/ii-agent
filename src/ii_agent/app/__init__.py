@@ -15,29 +15,12 @@ logger = logging.getLogger(__name__)
 # Module-level Socket.IO instance (set during app creation)
 sio: socketio.AsyncServer | None = None
 
-# Suppress noisy MCP session crash logs caused by expected client disconnections.
-logging.getLogger("mcp.server.streamable_http_manager").setLevel(logging.CRITICAL)
-
 
 def create_lifespan():
     """Return the application lifespan context manager factory."""
     from .lifespan import create_lifespan as _create_lifespan
 
     return _create_lifespan()
-
-
-def mount_fastmcp_server(app: FastAPI, mount_path: str = "/mcp") -> None:
-    """Mount the FastMCP server for ChatGPT integration."""
-    from .mounts import mount_fastmcp_server as _mount_fastmcp_server
-
-    _mount_fastmcp_server(app, mount_path)
-
-
-def mount_a2a_server(app: FastAPI, mount_path: str = "/a2a") -> None:
-    """Mount the embedded A2A server as a sub-application."""
-    from .mounts import mount_a2a_server as _mount_a2a_server
-
-    _mount_a2a_server(app, mount_path)
 
 
 def create_app():
@@ -96,7 +79,5 @@ __all__ = [
     "create_app",
     "create_lifespan",
     "health_router",
-    "mount_a2a_server",
-    "mount_fastmcp_server",
     "sio",
 ]

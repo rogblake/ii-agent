@@ -21,12 +21,8 @@ class ModelPricing(BaseModel):
     provider: Optional[Provider] = Field(
         default=None, description="Provider (Anthropic, OpenAI, Google, etc.)"
     )
-    input_price_per_million: float = Field(
-        description="Price per million input tokens in USD"
-    )
-    output_price_per_million: float = Field(
-        description="Price per million output tokens in USD"
-    )
+    input_price_per_million: float = Field(description="Price per million input tokens in USD")
+    output_price_per_million: float = Field(description="Price per million output tokens in USD")
     cache_write_price_per_million: float = Field(
         default=0.0, description="Price per million cache write tokens"
     )
@@ -215,10 +211,9 @@ class ModelPricing(BaseModel):
 
         # Provider-based defaults
         logger.error(
-            "BILLING_PRICING_FALLBACK: No exact or prefix pricing match "
-            "for model '%s' (provider=%s) — using provider default. "
-            "Add this model to the pricing table to ensure correct billing.",
-            model_id, provider,
+            "BILLING_PRICING_FALLBACK: No exact or prefix pricing match for model '{}' (provider={}) — using provider default. Add this model to the pricing table to ensure correct billing.",
+            model_id,
+            provider,
         )
         if provider:
             provider_defaults = {
@@ -253,10 +248,9 @@ class ModelPricing(BaseModel):
         # No provider either — this should not happen in production.
         # Log at error level so monitoring/alerting catches it.
         logger.error(
-            "BILLING_PRICING_MISSING: No provider default for model '%s' "
-            "(provider=%s) — using global conservative fallback. "
-            "This model is being billed at an estimated rate.",
-            model_id, provider,
+            "BILLING_PRICING_MISSING: No provider default for model '{}' (provider={}) — using global conservative fallback. This model is being billed at an estimated rate.",
+            model_id,
+            provider,
         )
         return cls(
             model_id=model_id,

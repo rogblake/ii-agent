@@ -35,6 +35,8 @@ if TYPE_CHECKING:
     from ii_agent.agent.runtime.agents.agent import IIAgent
 
 T = TypeVar("T")
+
+
 def get_entrypoint_docstring(entrypoint: Callable) -> str:
     from inspect import getdoc
 
@@ -75,7 +77,7 @@ class Function(BaseModel):
 
     # Display metadata (for frontend rendering)
     display_name: Optional[str] = None  # Human-readable name for the tool
-    tool_logo: Optional[str] = None     # URL for tool icon/logo
+    tool_logo: Optional[str] = None  # URL for tool icon/logo
 
     instructions: Optional[str] = None
     # If True, add instructions to the Agent's system message
@@ -295,7 +297,7 @@ class Function(BaseModel):
 
             # logger.debug(f"JSON schema for {function_name}: {parameters}")
         except Exception as e:
-            logger.warning(f"Could not parse args for {function_name}: {e}", exc_info=True)
+            logger.opt(exception=True).warning(f"Could not parse args for {function_name}: {e}")
 
         entrypoint = cls._wrap_callable(c)
 
@@ -539,7 +541,7 @@ class Function(BaseModel):
 
             # logger.debug(f"JSON schema for {self.name}: {parameters}")
         except Exception as e:
-            logger.warning(f"Could not parse args for {self.name}: {e}", exc_info=True)
+            logger.opt(exception=True).warning(f"Could not parse args for {self.name}: {e}")
 
         if not params_set_by_user:
             self.parameters = parameters
@@ -984,7 +986,9 @@ class FunctionCall(BaseModel):
             return
 
         run_context = self.function._run_context
-        dependencies = getattr(tool, "dependencies", None) or getattr(self.function, "_dependencies", None)
+        dependencies = getattr(tool, "dependencies", None) or getattr(
+            self.function, "_dependencies", None
+        )
         if (
             run_context is None
             or dependencies is None
@@ -1002,17 +1006,19 @@ class FunctionCall(BaseModel):
         from ii_agent.core.db.manager import get_db_session_local
 
         async with get_db_session_local() as db:
-            self.billing_reservation = await dependencies.container.llm_billing_service.reserve_tool_call(
-                db,
-                user_id=run_context.user_id,
-                session_id=run_context.session_id,
-                run_id=run_context.run_id,
-                source_domain=SourceDomain.AGENT_TOOL,
-                source_id=self.call_id,
-                tool_name=tool.name,
-                quote=quote,
-                idempotency_key=f"agent-tool:{run_context.run_id}:{self.call_id}",
-                app_kind="agent",
+            self.billing_reservation = (
+                await dependencies.container.llm_billing_service.reserve_tool_call(
+                    db,
+                    user_id=run_context.user_id,
+                    session_id=run_context.session_id,
+                    run_id=run_context.run_id,
+                    source_domain=SourceDomain.AGENT_TOOL,
+                    source_id=self.call_id,
+                    tool_name=tool.name,
+                    quote=quote,
+                    idempotency_key=f"agent-tool:{run_context.run_id}:{self.call_id}",
+                    app_kind="agent",
+                )
             )
             await db.commit()
 
@@ -1027,12 +1033,10 @@ class FunctionCall(BaseModel):
             return
 
         run_context = self.function._run_context
-        dependencies = getattr(tool, "dependencies", None) or getattr(self.function, "_dependencies", None)
-        if (
-            run_context is None
-            or dependencies is None
-            or dependencies.container is None
-        ):
+        dependencies = getattr(tool, "dependencies", None) or getattr(
+            self.function, "_dependencies", None
+        )
+        if run_context is None or dependencies is None or dependencies.container is None:
             return
 
         from ii_agent.core.db.manager import get_db_session_local
@@ -1040,8 +1044,7 @@ class FunctionCall(BaseModel):
 
         actual_cost_usd = 0.0
         succeeded = (
-            function_execution_result is not None
-            and function_execution_result.status == "success"
+            function_execution_result is not None and function_execution_result.status == "success"
         )
         result_obj = function_execution_result.result if function_execution_result else None
         if isinstance(result_obj, BaseToolResult):
@@ -1064,10 +1067,8 @@ class FunctionCall(BaseModel):
                     )
                     await db.commit()
             except Exception:
-                logger.debug(
-                    "Failed to record zero-cost tool usage for %s",
-                    tool.name,
-                    exc_info=True,
+                logger.opt(exception=True).debug(
+                    "Failed to record zero-cost tool usage for {}", tool.name
                 )
             return
 
@@ -1098,11 +1099,9 @@ class FunctionCall(BaseModel):
                 "reservation_id",
                 None,
             )
-            logger.error(
-                "Failed to finalize tool billing for %s; marking settlement_failed",
+            logger.bind(reservation_id=reservation_id).opt(exception=True).error(
+                "Failed to finalize tool billing for {}; marking settlement_failed",
                 tool.name,
-                extra={"reservation_id": reservation_id},
-                exc_info=True,
             )
             if succeeded and reservation_id is not None:
                 try:
@@ -1114,10 +1113,8 @@ class FunctionCall(BaseModel):
                         )
                         await db2.commit()
                 except Exception:
-                    logger.warning(
-                        "Failed to mark tool reservation %s as settlement_failed",
-                        reservation_id,
-                        exc_info=True,
+                    logger.opt(exception=True).warning(
+                        "Failed to mark tool reservation {} as settlement_failed", reservation_id
                     )
 
     async def _handle_pre_hook_async(self):
@@ -1332,9 +1329,7 @@ class FunctionCall(BaseModel):
                 await self._handle_post_hook_async()
             else:
                 self._handle_post_hook()
-            await self._finalize_tool_billing(
-                function_execution_result=tool_result_for_billing
-            )
+            await self._finalize_tool_billing(function_execution_result=tool_result_for_billing)
 
         if exception_to_raise is not None:
             raise exception_to_raise

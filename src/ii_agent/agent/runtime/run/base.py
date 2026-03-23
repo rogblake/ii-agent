@@ -13,6 +13,7 @@ from ii_agent.core.logger import logger
 # Re-export RunStatus for convenience
 __all__ = ["RunStatus", "RunContext", "BaseRunOutputEvent"]
 
+
 @dataclass
 class RunContext:
     run_id: str | None
@@ -141,7 +142,7 @@ class BaseRunOutputEvent:
         try:
             _dict = self.to_dict()
         except Exception:
-            logger.error("Failed to convert response event to json", exc_info=True)
+            logger.opt(exception=True).error("Failed to convert response event to json")
             raise
 
         if indent is None:

@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.files.exceptions import (
     FileAccessDeniedError,
     FileUploadNotFoundError,
@@ -36,6 +36,7 @@ from ii_agent.core.storage.locations import get_session_file_path
 # Constants for file processing
 IMAGE_CONTENT_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
 SEVEN_DAY_SECONDS = 7 * 24 * 3600
+
 
 class FileService:
     """Service for managing file uploads - business logic layer."""
@@ -97,9 +98,7 @@ class FileService:
         files = await self._file_repo.get_by_session_id(db, session_id)
         return [self._to_file_data(file) for file in files]
 
-    async def update_file_session_id(
-        self, db: AsyncSession, file_id: str, session_id: str
-    ) -> bool:
+    async def update_file_session_id(self, db: AsyncSession, file_id: str, session_id: str) -> bool:
         """Update file session ID."""
         return await self._file_repo.update_session_id(db, file_id, session_id)
 
@@ -168,7 +167,8 @@ class FileService:
             session_id=session_id,
         )
 
-        self._storage.write_from_url(url, storage_path, content_type)
+        storage_client = self._get_storage_for_path(storage_path)
+        storage_client.write_from_url(url, storage_path, content_type)
 
         return self._to_file_data(file)
 
@@ -234,17 +234,21 @@ class FileService:
             if not file_data.url:
                 continue
 
-            files.append({
-                "id": file_data.id,
-                "url": file_data.url,
-                "filename": file_data.name,
-            })
+            files.append(
+                {
+                    "id": file_data.id,
+                    "url": file_data.url,
+                    "filename": file_data.name,
+                }
+            )
 
             if file_data.content_type in IMAGE_CONTENT_TYPES:
-                images.append({
-                    "url": file_data.url,
-                    "mime_type": file_data.content_type,
-                })
+                images.append(
+                    {
+                        "url": file_data.url,
+                        "mime_type": file_data.content_type,
+                    }
+                )
 
         return images, files
 
@@ -326,9 +330,7 @@ class FileService:
         storage_client = self._get_storage_for_path(file_upload.storage_path)
 
         async def file_stream() -> AsyncIterator[bytes]:
-            file_obj = await anyio.to_thread.run_sync(
-                storage_client.read, file_upload.storage_path
-            )
+            file_obj = await anyio.to_thread.run_sync(storage_client.read, file_upload.storage_path)
             try:
                 chunk_size = 64 * 1024
                 while True:
@@ -362,9 +364,7 @@ class FileService:
         """Generate signed download URLs for a list of storage paths owned by user."""
         normalized_paths = [path.lstrip("/") for path in storage_paths]
 
-        file_uploads = await self._file_repo.get_by_user_and_paths(
-            db, user_id, normalized_paths
-        )
+        file_uploads = await self._file_repo.get_by_user_and_paths(db, user_id, normalized_paths)
         file_map = {file.storage_path: file for file in file_uploads}
 
         files_to_sign: List[FileUpload] = []
@@ -432,8 +432,7 @@ class FileService:
                     name=file_upload.file_name,
                     url=signed_url,
                     source="generated"
-                    if file_upload.storage_path
-                    and "generated" in file_upload.storage_path
+                    if file_upload.storage_path and "generated" in file_upload.storage_path
                     else "upload",
                     created_at=file_upload.created_at,
                 )
@@ -493,9 +492,7 @@ class FileService:
             storage_path = file_upload.storage_path
             if not storage_path:
                 results[idx] = None
-            elif storage_path.startswith("http://") or storage_path.startswith(
-                "https://"
-            ):
+            elif storage_path.startswith("http://") or storage_path.startswith("https://"):
                 results[idx] = storage_path
             else:
                 if storage_path.startswith("sessions/"):
@@ -524,9 +521,7 @@ class FileService:
                         results[idx] = signed_url
                     elif not force_signed:
                         try:
-                            results[idx] = storage_client.get_permanent_url(
-                                storage_path
-                            )
+                            results[idx] = storage_client.get_permanent_url(storage_path)
                         except Exception:
                             if bucket_name:
                                 results[idx] = (
@@ -545,7 +540,9 @@ class FileService:
                                 results[idx] = storage_client.get_permanent_url(path)
                             except Exception:
                                 if bucket_name:
-                                    results[idx] = f"https://storage.googleapis.com/{bucket_name}/{path}"
+                                    results[idx] = (
+                                        f"https://storage.googleapis.com/{bucket_name}/{path}"
+                                    )
                                 else:
                                     results[idx] = None
                         else:
@@ -553,12 +550,8 @@ class FileService:
 
         media_client = self._media_storage or self._storage
         await asyncio.gather(
-            process_storage_batch(
-                media_client, media_storage_indices, media_bucket_name
-            ),
-            process_storage_batch(
-                self._storage, file_storage_indices, upload_bucket_name
-            ),
+            process_storage_batch(media_client, media_storage_indices, media_bucket_name),
+            process_storage_batch(self._storage, file_storage_indices, upload_bucket_name),
         )
 
         return results

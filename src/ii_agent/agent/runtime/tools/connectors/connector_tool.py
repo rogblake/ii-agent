@@ -14,6 +14,7 @@ from ii_agent.agent.runtime.tools.connectors.custom_mcp import load_custom_mcp_t
 from ii_agent.agent.runtime.tools.connectors.github import GitHubAgentTool
 from ii_agent.core.logger import logger
 
+
 def _add_tools_without_duplicates(
     tools: List[BaseAgentTool],
     new_tools: List[BaseAgentTool],
@@ -78,9 +79,7 @@ class ConnectorTool(BaseConnectorTool):
                     tools.append(github_tool)
                     logger.info(f"Loaded GitHub connector tool for user {self._user_id}")
             except Exception as e:
-                logger.error(
-                    f"Failed to create connector tool for {connector.connector_type}: {e}"
-                )
+                logger.error(f"Failed to create connector tool for {connector.connector_type}: {e}")
 
         return tools
 
@@ -88,7 +87,7 @@ class ConnectorTool(BaseConnectorTool):
         self,
     ) -> List[BaseAgentTool]:
         """Load Composio-based connector tools from database.
-        
+
         Uses composio_mcp module to:
         1. Query active Composio profiles from database
         2. Get actions from Composio SDK
@@ -110,7 +109,7 @@ class ConnectorTool(BaseConnectorTool):
             return composio_tools
 
         except Exception as e:
-            logger.error(f"Failed to load Composio connector tools: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Failed to load Composio connector tools: {e}")
 
         return tools
 
@@ -132,12 +131,14 @@ class ConnectorTool(BaseConnectorTool):
                 user_id=self._user_id,
             )
 
-            logger.info(f"[V1 Connector] Loaded {len(custom_mcp_tools)} custom MCP tools from database")
+            logger.info(
+                f"[V1 Connector] Loaded {len(custom_mcp_tools)} custom MCP tools from database"
+            )
 
             return custom_mcp_tools
 
         except Exception as e:
-            logger.error(f"Failed to load custom MCP connector tools: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Failed to load custom MCP connector tools: {e}")
 
         return tools
 
@@ -168,7 +169,9 @@ class ConnectorTool(BaseConnectorTool):
         # Load Composio tools
         composio_tools = await self._load_composio_tools()
         _add_tools_without_duplicates(tools, composio_tools, existing_names)
-        logger.debug(f"[V1 Connector] Loaded {len(composio_tools)} Composio connector tools for {composio_tools}")
+        logger.debug(
+            f"[V1 Connector] Loaded {len(composio_tools)} Composio connector tools for {composio_tools}"
+        )
 
         # Load custom MCP tools
         custom_mcp_tools = await self._load_custom_mcp_tools()
@@ -177,7 +180,9 @@ class ConnectorTool(BaseConnectorTool):
 
         # Log summary
         if tools:
-            logger.info(f"[V1 Connector] Created {len(tools)} total connector tools for user {self._user_id}")
+            logger.info(
+                f"[V1 Connector] Created {len(tools)} total connector tools for user {self._user_id}"
+            )
             logger.debug(f"[V1 Connector] Final tool list: {[t.name for t in tools]}")
         else:
             logger.warning(f"[V1 Connector] No connector tools available for user {self._user_id}")

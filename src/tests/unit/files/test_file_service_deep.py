@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -13,7 +12,7 @@ from ii_agent.files.exceptions import (
     FileUploadNotFoundError,
     FileSizeLimitExceededError,
 )
-from ii_agent.files.service import FileService, IMAGE_CONTENT_TYPES
+from ii_agent.files.service import FileService
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +78,7 @@ class FakeFileRepo:
 
     async def get_user_images(self, db, user_id, limit, offset):
         imgs = [f for f in self.files.values() if f.content_type.startswith("image/")]
-        return imgs[offset:offset + limit]
+        return imgs[offset : offset + limit]
 
 
 class FakeSessionRepo:
@@ -248,6 +247,7 @@ class TestCreateFileRecord:
     async def test_raises_when_session_not_found(self):
         svc = _make_service()
         from ii_agent.sessions.exceptions import SessionNotFoundError
+
         with pytest.raises(SessionNotFoundError):
             await svc.create_file_record(
                 None,
@@ -302,9 +302,38 @@ class TestWriteFileFromUrl:
         assert "file.txt" in result.name
 
     @pytest.mark.asyncio
+    async def test_uses_media_store_for_session_files(self):
+        session_repo = FakeSessionRepo()
+        session_repo.sessions["s-1"] = SimpleNamespace(id="s-1", user_id="u-1")
+        file_store = MagicMock()
+        file_store.write_from_url = MagicMock()
+        media_store = MagicMock()
+        media_store.write_from_url = MagicMock()
+        media_store.get_download_signed_url = MagicMock(return_value="signed://media")
+        svc = _make_service(
+            session_repo=session_repo,
+            file_store=file_store,
+            media_store=media_store,
+        )
+
+        result = await svc.write_file_from_url(
+            None,
+            url="https://example.com/file.txt",
+            file_name="file.txt",
+            file_size=500,
+            content_type="text/plain",
+            session_id="s-1",
+        )
+
+        media_store.write_from_url.assert_called_once()
+        file_store.write_from_url.assert_not_called()
+        assert result.url == "signed://media"
+
+    @pytest.mark.asyncio
     async def test_raises_when_session_not_found_and_no_user_id(self):
         svc = _make_service()
         from ii_agent.sessions.exceptions import SessionNotFoundError
+
         with pytest.raises(SessionNotFoundError):
             await svc.write_file_from_url(
                 None,
@@ -430,6 +459,7 @@ class TestGetFileStream:
     @pytest.mark.asyncio
     async def test_returns_streaming_response(self):
         from fastapi.responses import StreamingResponse
+
         repo = FakeFileRepo()
         repo.files["f-1"] = _make_file(id="f-1", user_id="u-1")
         svc = _make_service(file_repo=repo)
@@ -452,6 +482,7 @@ class TestGetPublicFileStream:
     @pytest.mark.asyncio
     async def test_returns_streaming_response(self):
         from fastapi.responses import StreamingResponse
+
         repo = FakeFileRepo()
         repo.files["f-1"] = _make_file(id="f-1", session_id="s-1")
         svc = _make_service(file_repo=repo)
@@ -491,9 +522,7 @@ class TestUploadAvatar:
 class TestGetAvatarUrl:
     def test_returns_public_url(self):
         svc = _make_service()
-        avatar_storage = SimpleNamespace(
-            get_public_url=lambda path: f"public://{path}"
-        )
+        avatar_storage = SimpleNamespace(get_public_url=lambda path: f"public://{path}")
         result = svc.get_avatar_url("users/u1/profile/avatar.jpg", avatar_storage)
         assert result == "public://users/u1/profile/avatar.jpg"
 
@@ -591,6 +620,7 @@ class TestGetMediaLibrary:
     async def test_returns_items_with_signed_urls(self):
         repo = FakeFileRepo()
         from datetime import datetime, timezone
+
         repo.files["img-1"] = _make_file(
             id="img-1",
             content_type="image/png",
@@ -614,9 +644,12 @@ class TestGetMediaLibrary:
     async def test_has_more_flag(self):
         repo = FakeFileRepo()
         from datetime import datetime, timezone
+
         now = datetime.now(timezone.utc)
         for i in range(5):
-            f = _make_file(id=f"img-{i}", content_type="image/jpeg", storage_path=f"sessions/s1/img{i}.jpg")
+            f = _make_file(
+                id=f"img-{i}", content_type="image/jpeg", storage_path=f"sessions/s1/img{i}.jpg"
+            )
             f.created_at = now
             repo.files[f"img-{i}"] = f
 

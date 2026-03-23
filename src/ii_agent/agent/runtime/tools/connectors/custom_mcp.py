@@ -8,7 +8,7 @@ This module:
 Similar pattern to composio_mcp.py but for user-configured custom MCP servers.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, List
 
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.redis.cache import create_entity_cache
@@ -21,7 +21,7 @@ from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 from ii_agent.core.logger import logger
 
 # Cache MCP tool definitions to avoid reconnecting to MCP servers on every request
-_mcp_tools_cache = create_entity_cache(namespace="mcp_tools", ttl=14400) # 4 hours
+_mcp_tools_cache = create_entity_cache(namespace="mcp_tools", ttl=14400)  # 4 hours
 
 
 async def load_custom_mcp_tools_for_user(
@@ -45,7 +45,9 @@ async def load_custom_mcp_tools_for_user(
     try:
         # Load active MCP settings from database
         async with get_db_session_local() as db:
-            mcp_settings = await MCPSettingService(config=get_settings(), repo=MCPSettingRepository()).list_mcp_settings(
+            mcp_settings = await MCPSettingService(
+                config=get_settings(), repo=MCPSettingRepository()
+            ).list_mcp_settings(
                 db,
                 user_id=user_id,
                 only_active=True,
@@ -57,9 +59,11 @@ async def load_custom_mcp_tools_for_user(
 
         # Filter out Composio MCP settings (handled separately)
         non_composio_settings = [
-            setting for setting in mcp_settings.settings
+            setting
+            for setting in mcp_settings.settings
             if setting.metadata is None
-            or getattr(setting.metadata, 'tool_type', None) not in ('composio', 'codex', 'claude_code')
+            or getattr(setting.metadata, "tool_type", None)
+            not in ("composio", "codex", "claude_code")
         ]
 
         if not non_composio_settings:
@@ -88,22 +92,16 @@ async def load_custom_mcp_tools_for_user(
                     user_id=user_id,
                 )
                 tools.extend(server_tools)
-                logger.info(
-                    f"Loaded {len(server_tools)} tools from MCP server '{server_name}'"
-                )
+                logger.info(f"Loaded {len(server_tools)} tools from MCP server '{server_name}'")
             except Exception as e:
-                logger.error(
-                    f"Failed to load tools from MCP server '{server_name}': {e}",
-                    exc_info=True,
+                logger.opt(exception=True).error(
+                    f"Failed to load tools from MCP server '{server_name}': {e}"
                 )
 
         logger.info(f"Loaded {len(tools)} total custom MCP tools for user {user_id}")
 
     except Exception as e:
-        logger.error(
-            f"Failed to load custom MCP tools for user {user_id}: {e}",
-            exc_info=True,
-        )
+        logger.opt(exception=True).error(f"Failed to load custom MCP tools for user {user_id}: {e}")
 
     return tools
 
@@ -144,18 +142,14 @@ async def _load_tools_from_server(
 
     # Cache miss — connect to MCP server
     # Determine transport type
-    if hasattr(server_config, 'url'):
+    if hasattr(server_config, "url"):
         # SSE/HTTP transport
         transport = server_config.url
         logger.debug(f"Using SSE transport for '{server_name}': {transport}")
     else:
         # Stdio transport - wrap in mcpServers config format expected by fastmcp
         server_dict = server_config.model_dump(exclude_none=True)
-        transport = {
-            "mcpServers": {
-                server_name: server_dict
-            }
-        }
+        transport = {"mcpServers": {server_name: server_dict}}
         logger.debug(
             f"Using stdio transport for '{server_name}': {server_dict.get('command', 'unknown')}"
         )

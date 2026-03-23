@@ -109,9 +109,7 @@ class UserQueryHandler(CommandHandler):
             # Build instruction text with milestone context if available
             instruction_text = query_command.text
             if milestone_context:
-                instruction_text = (
-                    f"{milestone_context}\n\nUser instruction: {query_command.text}"
-                )
+                instruction_text = f"{milestone_context}\n\nUser instruction: {query_command.text}"
 
             event_stream = await agent.arun(
                 instruction_text,
@@ -182,7 +180,7 @@ class UserQueryHandler(CommandHandler):
                 error_type="insufficient_credits",
             )
         except Exception as e:
-            logger.error(f"Error processing query: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error processing query: {e}")
             # Reset milestones to pending on error
             if query_command.milestone_ids:
                 reset_events = await execution_svc.update_milestones_after_run(

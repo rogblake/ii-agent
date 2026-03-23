@@ -125,7 +125,7 @@ class PlanHandler(CommandHandler):
                 error_type="insufficient_credits",
             )
         except Exception as e:
-            logger.error(f"Error in plan handler: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in plan handler: {e}")
             raise
 
     async def _handle_plan_generation(
@@ -186,7 +186,7 @@ class PlanHandler(CommandHandler):
             await self._process_agent_events(event_stream, session_info, running_task, llm_config)
 
         except Exception as e:
-            logger.error(f"Error in plan generation: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in plan generation: {e}")
             await self.container.plan_service.fail_task(
                 running_task.id, agent_run_service=self.container.agent_run_service
             )
@@ -265,7 +265,7 @@ class PlanHandler(CommandHandler):
             await self._process_agent_events(event_stream, session_info, running_task, llm_config)
 
         except Exception as e:
-            logger.error(f"Error generating modification suggestions: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error generating modification suggestions: {e}")
             await self.container.plan_service.fail_task(
                 running_task.id, agent_run_service=self.container.agent_run_service
             )
@@ -359,7 +359,7 @@ class PlanHandler(CommandHandler):
             await self._process_agent_events(event_stream, session_info, running_task, llm_config)
 
         except Exception as e:
-            logger.error(f"Error in plan modification: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in plan modification: {e}")
             await self.container.plan_service.fail_task(
                 running_task.id, agent_run_service=self.container.agent_run_service
             )

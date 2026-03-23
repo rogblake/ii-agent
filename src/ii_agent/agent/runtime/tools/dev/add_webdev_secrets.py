@@ -77,8 +77,6 @@ class AddWebDevSecrets(MCPTool):
             return
 
         secrets = user_display.get("secrets")
-        project_directory = user_display.get("project_directory")
-
         secrets_payload = secrets if isinstance(secrets, dict) else None
         if secrets_payload and secrets_payload:
             user_display["secrets"] = {key: "***" for key in secrets_payload.keys()}
@@ -97,9 +95,11 @@ class AddWebDevSecrets(MCPTool):
         user_id = getattr(agent, "user_id", None)
         if not user_id:
             async with get_db_session_local() as db:
-                user_id = await self.dependencies.session_service.get_session_user_id(db, str(session_id))
+                user_id = await self.dependencies.session_service.get_session_user_id(
+                    db, str(session_id)
+                )
             if not user_id:
-                logger.warning("AddWebDevSecrets: Session %s not found", session_id)
+                logger.warning("AddWebDevSecrets: Session {} not found", session_id)
                 return
 
         try:
@@ -109,6 +109,7 @@ class AddWebDevSecrets(MCPTool):
                 from ii_agent.projects.databases.service import DatabaseService
                 from ii_agent.projects.repository import ProjectRepository
                 from ii_agent.core.config.settings import get_settings
+
                 _db_service = DatabaseService(
                     project_repo=ProjectRepository(),
                     config=get_settings(),
@@ -121,7 +122,7 @@ class AddWebDevSecrets(MCPTool):
                         source=DatabaseSourceEnum.USER.value,
                     )
                 logger.info(
-                    "AddWebDevSecrets: Synced DATABASE_URL to ProjectDatabases for session %s",
+                    "AddWebDevSecrets: Synced DATABASE_URL to ProjectDatabases for session {}",
                     session_id,
                 )
 
@@ -142,13 +143,13 @@ class AddWebDevSecrets(MCPTool):
                 )
 
             logger.info(
-                "AddWebDevSecrets: Saved %s secrets for session %s",
+                "AddWebDevSecrets: Saved {} secrets for session {}",
                 len(secrets_payload),
                 session_id,
             )
         except ProjectNotFoundError:
-            logger.warning("AddWebDevSecrets: Project not found for session %s", session_id)
+            logger.warning("AddWebDevSecrets: Project not found for session {}", session_id)
             return
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("AddWebDevSecrets: Failed to save/sync secrets: %s", exc)
+            logger.warning("AddWebDevSecrets: Failed to save/sync secrets: {}", exc)
             return

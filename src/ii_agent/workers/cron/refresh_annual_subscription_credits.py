@@ -66,7 +66,7 @@ def _should_refresh(
     monthly_credits = get_settings().credits.default_plans_credits.get(plan_id or "")
     if monthly_credits is None:
         app_logger.warning(
-            "Skipping annual credit refresh for user %s: plan '%s' has no default credits",
+            "Skipping annual credit refresh for user {}: plan '{}' has no default credits",
             user.id,
             plan_id,
         )
@@ -78,11 +78,7 @@ def _should_refresh(
 
     metadata = _ensure_metadata_dict(user.user_metadata)
     last_refresh = _parse_iso_date(str(metadata.get(REFRESH_METADATA_KEY)))
-    if (
-        last_refresh
-        and last_refresh.year == now.year
-        and last_refresh.month == now.month
-    ):
+    if last_refresh and last_refresh.year == now.year and last_refresh.month == now.month:
         return False, None
 
     return True, monthly_credits
@@ -96,9 +92,8 @@ async def refresh_annual_subscription_credits() -> None:
     from ii_agent.billing.credits.service import CreditService
     from ii_agent.billing.customers.repository import BillingCustomerRepository
     from ii_agent.billing.customers.service import BillingCustomerService
-    billing_customer_service = BillingCustomerService(
-        customer_repo=BillingCustomerRepository()
-    )
+
+    billing_customer_service = BillingCustomerService(customer_repo=BillingCustomerRepository())
     balance_repo = CreditBalanceRepository()
     credit_service = CreditService(balance_repo=balance_repo)
 
@@ -128,15 +123,15 @@ async def refresh_annual_subscription_credits() -> None:
 
             try:
                 await credit_service.set_balance(
-                    db, user.id, monthly_credits,
+                    db,
+                    user.id,
+                    monthly_credits,
                     entry_type=LedgerEntryType.REFRESH,
                     source_domain=SourceDomain.CRON,
                     entry_metadata={"plan": bc.subscription_plan, "cycle": "annually"},
                 )
             except Exception:
-                app_logger.warning(
-                    "Failed to set balance for user %s", user.id, exc_info=True
-                )
+                app_logger.opt(exception=True).warning("Failed to set balance for user {}", user.id)
                 continue
 
             metadata = _ensure_metadata_dict(user.user_metadata)
@@ -146,9 +141,7 @@ async def refresh_annual_subscription_credits() -> None:
 
         await db.flush()
 
-    app_logger.info(
-        "Annual subscription credit refresh completed: %s users updated", refreshed
-    )
+    app_logger.info("Annual subscription credit refresh completed: {} users updated", refreshed)
 
 
 def _project_root() -> Path:

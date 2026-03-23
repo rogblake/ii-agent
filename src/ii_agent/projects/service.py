@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.core.logger import logger
 
 from ii_agent.projects.exceptions import ProjectNotFoundError
@@ -45,8 +45,7 @@ class ProjectService:
         session = await self._session_repo.get_by_id(db, session_id)
         if not session:
             logger.warning(
-                "Unable to persist project metadata because session %s was not found",
-                session_id,
+                "Unable to persist project metadata because session {} was not found", session_id
             )
             return None
 

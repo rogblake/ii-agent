@@ -315,9 +315,7 @@ class SlideDesignService:
                         counters.errors.append(f"Unknown change type: {change.type}")
                 except Exception as exc:
                     counters.failed += 1
-                    counters.errors.append(
-                        f"Failed slide {slide_number} {change.design_id}: {exc}"
-                    )
+                    counters.errors.append(f"Failed slide {slide_number} {change.design_id}: {exc}")
 
             if modified_html != html:
                 await self._repo.update_slide_html(
@@ -517,7 +515,7 @@ class SlideDesignService:
                         slides=slides,
                     )
                 except Exception as exc:
-                    logger.warning("[DesignMode] Failed writing metadata.json: %s", exc)
+                    logger.warning("[DesignMode] Failed writing metadata.json: {}", exc)
             except Exception as exc:
                 sandbox_error = str(exc)
                 counters.errors.append(f"Sandbox not available: {sandbox_error}")
@@ -640,7 +638,7 @@ class SlideDesignService:
             return html, False, f"Unsupported change type: {change_type}"
         except Exception as exc:
             logger.warning(
-                "[DesignMode] Failed applying change design_id=%s type=%s property=%s: %s",
+                "[DesignMode] Failed applying change design_id={} type={} property={}: {}",
                 design_id,
                 change_type,
                 property_name,

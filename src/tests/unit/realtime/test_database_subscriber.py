@@ -23,8 +23,12 @@ async def test_database_subscriber_skips_ignored_event_types(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.get_db_session_local", _db_cm)
-    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.EventRepository.save", _fake_save)
+    monkeypatch.setattr(
+        "ii_agent.agent.subscribers.database_subscriber.get_db_session_local", _db_cm
+    )
+    monkeypatch.setattr(
+        "ii_agent.agent.subscribers.database_subscriber.EventRepository.save", _fake_save
+    )
 
     event = RealtimeEvent(type=EventType.USER_MESSAGE, session_id=uuid4(), content={"text": "hi"})
     await subscriber.handle_event(event)
@@ -51,8 +55,12 @@ async def test_database_subscriber_converts_file_url_tool_result(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.get_db_session_local", _db_cm)
-    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.EventRepository.save", _fake_save)
+    monkeypatch.setattr(
+        "ii_agent.agent.subscribers.database_subscriber.get_db_session_local", _db_cm
+    )
+    monkeypatch.setattr(
+        "ii_agent.agent.subscribers.database_subscriber.EventRepository.save", _fake_save
+    )
 
     event = RealtimeEvent(
         type=EventType.TOOL_RESULT,
@@ -77,6 +85,61 @@ async def test_database_subscriber_converts_file_url_tool_result(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_database_subscriber_logs_and_saves_event_when_file_persist_fails(monkeypatch):
+    async def _write_file_from_url(**kwargs):
+        raise FileNotFoundError("missing blob")
+
+    container = SimpleNamespace(
+        file_service=SimpleNamespace(write_file_from_url=_write_file_from_url)
+    )
+    subscriber = DatabaseSubscriber(container=container)
+
+    saved = []
+    logged = []
+
+    async def _fake_save(self, db, session_id, event):
+        saved.append(event)
+
+    @asynccontextmanager
+    async def _db_cm():
+        yield None
+
+    def _fake_exception(message, *args, **kwargs):
+        logged.append(message)
+
+    monkeypatch.setattr(
+        "ii_agent.agent.subscribers.database_subscriber.get_db_session_local", _db_cm
+    )
+    monkeypatch.setattr(
+        "ii_agent.agent.subscribers.database_subscriber.EventRepository.save", _fake_save
+    )
+    monkeypatch.setattr(
+        "ii_agent.agent.subscribers.database_subscriber.logger.exception", _fake_exception
+    )
+
+    event = RealtimeEvent(
+        type=EventType.TOOL_RESULT,
+        session_id=uuid4(),
+        content={
+            "tool_name": "generate_image",
+            "result": {
+                "type": "file_url",
+                "url": "https://cdn/image.png",
+                "name": "image.png",
+                "size": 123,
+                "mime_type": "image/png",
+            },
+        },
+    )
+
+    await subscriber.handle_event(event)
+
+    assert saved == [event]
+    assert "file_id" not in event.content["result"]
+    assert logged
+
+
+@pytest.mark.asyncio
 async def test_database_subscriber_ignores_integrity_errors(monkeypatch):
     container = SimpleNamespace(file_service=SimpleNamespace())
     subscriber = DatabaseSubscriber(container=container)
@@ -88,8 +151,12 @@ async def test_database_subscriber_ignores_integrity_errors(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.get_db_session_local", _db_cm)
-    monkeypatch.setattr("ii_agent.agent.subscribers.database_subscriber.EventRepository.save", _raise_integrity)
+    monkeypatch.setattr(
+        "ii_agent.agent.subscribers.database_subscriber.get_db_session_local", _db_cm
+    )
+    monkeypatch.setattr(
+        "ii_agent.agent.subscribers.database_subscriber.EventRepository.save", _raise_integrity
+    )
 
     event = RealtimeEvent(type=EventType.SYSTEM, session_id=uuid4(), content={"message": "ok"})
 

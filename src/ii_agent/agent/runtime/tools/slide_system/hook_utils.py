@@ -11,10 +11,13 @@ from ii_agent.core.logger import logger
 if TYPE_CHECKING:
     from ii_agent.agent.runtime.agents.agent import IIAgent
 
+
 def _build_storage():
     settings = get_settings()
     project_id = settings.storage.slide_assets_project_id or settings.storage.file_upload_project_id
-    bucket_name = settings.storage.slide_assets_bucket_name or settings.storage.file_upload_bucket_name
+    bucket_name = (
+        settings.storage.slide_assets_bucket_name or settings.storage.file_upload_bucket_name
+    )
     if not project_id or not bucket_name:
         logger.warning("Slide content processing skipped: storage config missing")
         return None
@@ -27,7 +30,7 @@ def _build_storage():
             settings.storage.custom_domain,
         )
     except Exception as exc:  # pragma: no cover - defensive
-        logger.warning("Slide content processing skipped: %s", exc)
+        logger.warning("Slide content processing skipped: {}", exc)
         return None
 
 
@@ -97,7 +100,7 @@ async def process_slide_content(
 
         return user_display_content
     except Exception as exc:  # pragma: no cover - defensive
-        logger.error("Error processing slide content for %s: %s", tool_name, exc)
+        logger.error("Error processing slide content for {}: {}", tool_name, exc)
         return user_display_content
 
 
@@ -150,7 +153,7 @@ async def persist_slide_tool_result(
                 tool_name=tool_name,
             )
     except Exception as exc:  # pragma: no cover - defensive
-        logger.error("Failed to persist slide tool result for %s: %s", tool_name, exc)
+        logger.error("Failed to persist slide tool result for {}: {}", tool_name, exc)
 
 
 async def _persist_slide_apply_patch(
@@ -178,15 +181,11 @@ async def _persist_slide_apply_patch(
         presentation_name = path_parts[0]
         slide_filename = path_parts[1]
 
-        if not slide_filename.startswith("slide_") or not slide_filename.endswith(
-            ".html"
-        ):
+        if not slide_filename.startswith("slide_") or not slide_filename.endswith(".html"):
             continue
 
         try:
-            slide_number = int(
-                slide_filename.replace("slide_", "").replace(".html", "")
-            )
+            slide_number = int(slide_filename.replace("slide_", "").replace(".html", ""))
         except ValueError:
             continue
 

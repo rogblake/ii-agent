@@ -291,7 +291,7 @@ class CloudRunPublishHandler(CommandHandler):
                     return None
 
         except Exception:
-            logger.exception("Failed to get sandbox for session %s", session_info.id)
+            logger.exception("Failed to get sandbox for session {}", session_info.id)
             return None
 
     async def _download_source_from_sandbox(

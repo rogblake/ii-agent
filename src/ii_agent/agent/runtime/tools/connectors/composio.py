@@ -196,7 +196,7 @@ class ComposioAgentTool(BaseAgentTool):
             )
 
         except Exception as e:
-            logger.error(f"Error executing Composio action {action_name}: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error executing Composio action {action_name}: {e}")
             return self._error_result(f"Error executing {action_name}: {str(e)}")
 
     def _extract_action_metadata(self, action: Any) -> (str, str, Dict[str, Any]):  # type: ignore
@@ -365,7 +365,7 @@ class ComposioActionTool(BaseAgentTool):
             )
 
         except Exception as e:
-            logger.error(f"Error executing Composio action {self.name}: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error executing Composio action {self.name}: {e}")
             return ToolResponse(output=ErrorTextContent(value=f"Error: {str(e)}"), error=True)
 
     async def execute(self, tool_input: Dict[str, Any]) -> ToolResult:

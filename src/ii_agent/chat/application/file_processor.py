@@ -72,7 +72,9 @@ class ProcessedFiles:
     large_file_info: List[dict]  # Info about large files for logging
     skipped_files: List[dict]  # Files that couldn't be processed
     total_text_tokens: int = 0  # Total estimated tokens from text content
-    vector_store_reason: List[dict] = field(default_factory=list)  # Reasons files were routed to vector store
+    vector_store_reason: List[dict] = field(
+        default_factory=list
+    )  # Reasons files were routed to vector store
 
 
 # ============================================================================
@@ -89,6 +91,7 @@ def estimate_tokens(text: str) -> int:
     Uses ceiling division to avoid underestimation.
     """
     import math
+
     return math.ceil(len(text) / CHARS_PER_TOKEN)
 
 
@@ -277,7 +280,7 @@ def compress_image_for_provider(
     except ImageCompressionError:
         raise
     except Exception as e:
-        logger.error(f"[IMAGE_COMPRESSION] Error during compression: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"[IMAGE_COMPRESSION] Error during compression: {e}")
         raise ImageCompressionError(
             f"Failed to compress image: {str(e)}. Please upload a smaller image."
         )
@@ -317,12 +320,14 @@ async def process_files_for_message(
     if not file_ids:
         logger.info(f"[FILE_PROCESSOR] session={session_id}: No files to process")
         return ProcessedFiles(
-            binary_parts=[], text_parts=[], large_file_ids=set(), large_file_info=[], skipped_files=[]
+            binary_parts=[],
+            text_parts=[],
+            large_file_ids=set(),
+            large_file_info=[],
+            skipped_files=[],
         )
 
-    logger.info(
-        f"[FILE_PROCESSOR] session={session_id}: Processing {len(file_ids)} files"
-    )
+    logger.info(f"[FILE_PROCESSOR] session={session_id}: Processing {len(file_ids)} files")
 
     # Load all files in one query
     stmt = select(FileUpload).where(FileUpload.id.in_(file_ids))
@@ -369,9 +374,7 @@ async def process_files_for_message(
                 import httpx
 
                 if is_remote_url(file_upload.storage_path):
-                    async with httpx.AsyncClient(
-                        follow_redirects=True, timeout=30.0
-                    ) as client:
+                    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
                         response = await client.get(file_upload.storage_path)
                         response.raise_for_status()
                         file_bytes = response.content
@@ -406,16 +409,13 @@ async def process_files_for_message(
                     )
 
                 # Check PDF page count for Anthropic API limit
-                is_pdf = (
-                    mime_type == "application/pdf"
-                    or file_upload.file_name.lower().endswith(".pdf")
+                is_pdf = mime_type == "application/pdf" or file_upload.file_name.lower().endswith(
+                    ".pdf"
                 )
 
                 if is_pdf:
                     page_count = get_pdf_page_count(file_bytes)
-                    logger.info(
-                        f"[FILE_PROCESSOR] PDF {file_upload.file_name}: {page_count} pages"
-                    )
+                    logger.info(f"[FILE_PROCESSOR] PDF {file_upload.file_name}: {page_count} pages")
 
                     # Treat page count failure (-1) or excessive pages as needing text extraction
                     if page_count == -1 or page_count > MAX_PDF_PAGES:
@@ -493,9 +493,7 @@ async def process_files_for_message(
                     data=file_bytes,
                 )
                 binary_parts.append(binary_part)
-                logged_size_mb = (
-                    file_size_mb if file_size_mb > 0 else len(file_bytes) / 1024 / 1024
-                )
+                logged_size_mb = file_size_mb if file_size_mb > 0 else len(file_bytes) / 1024 / 1024
                 logger.info(
                     f"[FILE_PROCESSOR] BINARY: {file_upload.file_name} "
                     f"({logged_size_mb:.2f}MB, {len(file_bytes)} bytes) → BinaryContent"
@@ -504,9 +502,8 @@ async def process_files_for_message(
                 # Re-raise compression errors to be handled by service.py
                 raise
             except Exception as e:
-                logger.error(
-                    f"Failed to load binary file {file_upload.file_name}: {e}",
-                    exc_info=True,
+                logger.opt(exception=True).error(
+                    f"Failed to load binary file {file_upload.file_name}: {e}"
                 )
                 skipped_files.append(
                     {
@@ -524,9 +521,7 @@ async def process_files_for_message(
                 # Generated images from sessions/ path use media_storage (public bucket)
                 # User uploaded files use storage (private bucket)
                 storage_client = (
-                    media_storage
-                    if file_upload.storage_path.startswith("sessions/")
-                    else storage
+                    media_storage if file_upload.storage_path.startswith("sessions/") else storage
                 )
                 file_content = await anyio.to_thread.run_sync(
                     storage_client.read, file_upload.storage_path
@@ -591,9 +586,8 @@ async def process_files_for_message(
                         }
                     )
             except Exception as e:
-                logger.error(
-                    f"Failed to extract text from {file_upload.file_name}: {e}",
-                    exc_info=True,
+                logger.opt(exception=True).error(
+                    f"Failed to extract text from {file_upload.file_name}: {e}"
                 )
                 skipped_files.append(
                     {
@@ -623,14 +617,10 @@ async def process_files_for_message(
     )
 
     if skipped_files:
-        logger.warning(
-            f"[FILE_PROCESSOR] Skipped files: {[f['file_name'] for f in skipped_files]}"
-        )
+        logger.warning(f"[FILE_PROCESSOR] Skipped files: {[f['file_name'] for f in skipped_files]}")
 
     if vector_store_reason:
-        logger.info(
-            f"[FILE_PROCESSOR] Vector store routing reasons: {vector_store_reason}"
-        )
+        logger.info(f"[FILE_PROCESSOR] Vector store routing reasons: {vector_store_reason}")
 
     return ProcessedFiles(
         binary_parts=binary_parts,
@@ -797,9 +787,7 @@ class WordExtractor(ContentExtractor):
             return "\n".join(text_content) if text_content else None
 
         except ImportError:
-            logger.warning(
-                "[EXTRACTOR] python-docx not available, cannot extract Word document"
-            )
+            logger.warning("[EXTRACTOR] python-docx not available, cannot extract Word document")
             return None
         except Exception as e:
             logger.error(f"[EXTRACTOR] Error extracting Word doc: {e}")
@@ -825,16 +813,12 @@ class PowerPointExtractor(ContentExtractor):
                         slide_texts.append(shape.text)
 
                 if slide_texts:
-                    text_content.append(
-                        f"[Slide {slide_num + 1}]\n" + "\n".join(slide_texts)
-                    )
+                    text_content.append(f"[Slide {slide_num + 1}]\n" + "\n".join(slide_texts))
 
             return "\n\n".join(text_content) if text_content else None
 
         except ImportError:
-            logger.warning(
-                "[EXTRACTOR] python-pptx not available, cannot extract PowerPoint"
-            )
+            logger.warning("[EXTRACTOR] python-pptx not available, cannot extract PowerPoint")
             return None
         except Exception as e:
             logger.error(f"[EXTRACTOR] Error extracting PowerPoint: {e}")
@@ -902,9 +886,7 @@ class CSVExtractor(ContentExtractor):
                 return "\n".join(formatted_rows)
             else:
                 # For large CSV, just return raw content with warning
-                logger.info(
-                    f"[EXTRACTOR] Large CSV ({len(rows)} rows), returning raw content"
-                )
+                logger.info(f"[EXTRACTOR] Large CSV ({len(rows)} rows), returning raw content")
                 return content
 
         except Exception as e:
@@ -942,18 +924,14 @@ class ExcelExtractor(ContentExtractor):
                 # Format as markdown table if reasonable size
                 if len(rows) <= 100 and len(rows[0]) <= 20:
                     for i, row in enumerate(rows):
-                        row_text = " | ".join(
-                            str(cell) if cell is not None else "" for cell in row
-                        )
+                        row_text = " | ".join(str(cell) if cell is not None else "" for cell in row)
                         text_content.append(row_text)
                         # Add separator after header
                         if i == 0:
                             text_content.append(" | ".join("---" for _ in row))
                 else:
                     # For large sheets, just show row count
-                    text_content.append(
-                        f"(Large sheet: {len(rows)} rows, {len(rows[0])} columns)"
-                    )
+                    text_content.append(f"(Large sheet: {len(rows)} rows, {len(rows[0])} columns)")
 
             return "\n".join(text_content) if text_content else None
 
@@ -1025,9 +1003,7 @@ class HTMLExtractor(ContentExtractor):
             return text if text else None
 
         except ImportError:
-            logger.warning(
-                "[EXTRACTOR] BeautifulSoup not available, returning raw HTML"
-            )
+            logger.warning("[EXTRACTOR] BeautifulSoup not available, returning raw HTML")
             # Fallback: return raw HTML
             try:
                 file_obj.seek(0)
@@ -1109,9 +1085,7 @@ class ContentExtractorFactory:
     }
 
     @staticmethod
-    def get_extractor(
-        content_type: Optional[str], file_name: str
-    ) -> Optional[ContentExtractor]:
+    def get_extractor(content_type: Optional[str], file_name: str) -> Optional[ContentExtractor]:
         """
         Get appropriate content extractor based on content type and filename.
 
@@ -1188,9 +1162,7 @@ class ContentExtractorFactory:
             extractor_class = extension_map[suffix]
             return extractor_class()
 
-        logger.warning(
-            f"[EXTRACTOR] No extractor found for {file_name} (type: {content_type})"
-        )
+        logger.warning(f"[EXTRACTOR] No extractor found for {file_name} (type: {content_type})")
         return None
 
     @staticmethod
@@ -1212,8 +1184,7 @@ class ContentExtractorFactory:
 
         if not extractor:
             logger.warning(
-                f"[EXTRACTOR] Cannot extract content from {file_name}, "
-                f"no suitable extractor found"
+                f"[EXTRACTOR] Cannot extract content from {file_name}, no suitable extractor found"
             )
             return None
 

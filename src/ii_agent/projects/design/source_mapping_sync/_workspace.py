@@ -30,7 +30,7 @@ def _normalize_workspace_file_path(file_path: str) -> Optional[str]:
 
     path = path.replace("\\", "/")
     if path.startswith("file://"):
-        path = path[len("file://"):]
+        path = path[len("file://") :]
     if path.startswith("workspace/"):
         path = f"/{path}"
     elif path == "workspace":
@@ -43,22 +43,18 @@ def _normalize_workspace_file_path(file_path: str) -> Optional[str]:
         normalized = posixpath.normpath(path)
     elif path.startswith("/"):
         # Keep Design Mode sync safely scoped to workspace.
-        logger.warning(
-            "[DesignMode Sync] Rejecting non-workspace absolute path: %s", path
-        )
+        logger.warning("[DesignMode Sync] Rejecting non-workspace absolute path: {}", path)
         return None
     else:
         normalized = posixpath.normpath(posixpath.join("/workspace", path))
 
     if normalized == "/workspace":
-        logger.warning("[DesignMode Sync] Rejecting workspace root path: %s", file_path)
+        logger.warning("[DesignMode Sync] Rejecting workspace root path: {}", file_path)
         return None
 
     if not normalized.startswith("/workspace/"):
         logger.warning(
-            "[DesignMode Sync] Rejecting path escaping workspace: %s -> %s",
-            file_path,
-            normalized,
+            "[DesignMode Sync] Rejecting path escaping workspace: {} -> {}", file_path, normalized
         )
         return None
 
@@ -89,7 +85,7 @@ def _normalize_react_source_file_name(raw: Any) -> Optional[str]:
 
     # Handle webpack style: webpack:///./src/App.tsx
     if value.startswith("webpack://"):
-        value = value[len("webpack://"):]
+        value = value[len("webpack://") :]
 
     value = value.lstrip("/")
     if value.startswith("./"):
@@ -97,11 +93,7 @@ def _normalize_react_source_file_name(raw: Any) -> Optional[str]:
 
     # If the path is absolute but not under /workspace, salvage a src-relative suffix.
     # This commonly happens when devtools report an absolute host path.
-    if (
-        value.startswith("Users/")
-        or value.startswith("home/")
-        or value.startswith("var/")
-    ):
+    if value.startswith("Users/") or value.startswith("home/") or value.startswith("var/"):
         match = re.search(r"(?P<suffix>src/.*)$", value)
         if match:
             value = match.group("suffix")
@@ -119,7 +111,7 @@ def _workspace_relative_path(normalized_workspace_path: str) -> Optional[str]:
     path = normalized_workspace_path.strip()
     if not path.startswith("/workspace/"):
         return None
-    rel = path[len("/workspace/"):]
+    rel = path[len("/workspace/") :]
     if not rel or rel.startswith("/"):
         return None
     rel = posixpath.normpath(rel)
@@ -145,9 +137,7 @@ async def _get_workspace_top_level_dirs(sandbox: Any) -> List[str]:
         roots_out = await sandbox.run_command(
             "find /workspace -maxdepth 1 -mindepth 1 -type d -print"
         )
-        roots = [
-            line.strip() for line in (roots_out or "").splitlines() if line.strip()
-        ]
+        roots = [line.strip() for line in (roots_out or "").splitlines() if line.strip()]
     except Exception:
         roots = []
 
@@ -304,8 +294,8 @@ async def _search_workspace_for_fixed_string(sandbox: Any, query: str) -> str:
 
 def _parse_search_paths(output: str) -> List[str]:
     paths: List[str] = []
-    for line in (output or "").splitlines():
-        line = line.strip()
+    for raw_line in (output or "").splitlines():
+        line = raw_line.strip()
         if not line:
             continue
         match = re.match(r"^(?P<path>/[^:]+):(?P<line>\d+):", line)

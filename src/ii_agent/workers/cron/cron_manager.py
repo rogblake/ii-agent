@@ -34,9 +34,7 @@ class CronManager:
         """Create or update a cron job based on its ``name`` comment."""
 
         command = job.render_command()
-        existing = [
-            scheduled for scheduled in self._cron if scheduled.comment == job.name
-        ]
+        existing = [scheduled for scheduled in self._cron if scheduled.comment == job.name]
 
         for scheduled in existing:
             self._cron.remove(scheduled)
@@ -46,13 +44,11 @@ class CronManager:
 
         if dry_run:
             for entry in self._cron:
-                app_logger.info("Cron job (dry-run): %s", entry)
+                app_logger.info("Cron job (dry-run): {}", entry)
             return
 
         self._cron.write()
-        app_logger.info(
-            "Installed cron job '%s' with schedule '%s'", job.name, job.schedule
-        )
+        app_logger.info("Installed cron job '{}' with schedule '{}'", job.name, job.schedule)
 
     def remove(self, *, name: str, dry_run: bool = False) -> bool:
         """Remove a cron job matching ``name``. Returns True when removed."""
@@ -64,14 +60,14 @@ class CronManager:
                 removed = True
 
         if dry_run:
-            app_logger.info("Dry-run removal for cron job '%s'", name)
+            app_logger.info("Dry-run removal for cron job '{}'", name)
             return removed
 
         if removed:
             self._cron.write()
-            app_logger.info("Removed cron job '%s'", name)
+            app_logger.info("Removed cron job '{}'", name)
         else:
-            app_logger.info("No cron job named '%s' found", name)
+            app_logger.info("No cron job named '{}' found", name)
 
         return removed
 
@@ -94,18 +90,16 @@ class CronManager:
                 self._cron.remove(existing)
 
         for job in jobs:
-            scheduled_job = self._cron.new(
-                command=job.render_command(), comment=job.name
-            )
+            scheduled_job = self._cron.new(command=job.render_command(), comment=job.name)
             scheduled_job.setall(job.schedule)
 
         if dry_run:
             for entry in self._cron:
-                app_logger.info("Cron job (dry-run sync): %s", entry)
+                app_logger.info("Cron job (dry-run sync): {}", entry)
             return
 
         self._cron.write()
-        app_logger.info("Synchronized %d cron job(s)", len(managed_names))
+        app_logger.info("Synchronized {} cron job(s)", len(managed_names))
 
 
 __all__ = ["CronJobDefinition", "CronManager"]

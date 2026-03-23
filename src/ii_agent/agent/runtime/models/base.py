@@ -514,7 +514,10 @@ class Model(ABC):
             logger.debug(f"{self.get_provider()} Async Response End")
         finally:
             # Close the Gemini client
-            if self.__class__.__name__ in ["Gemini", "GeminiInteractions"] and self.client is not None:
+            if (
+                self.__class__.__name__ in ["Gemini", "GeminiInteractions"]
+                and self.client is not None
+            ):
                 try:
                     await self.client.aio.aclose()  # type: ignore
                     self.client = None
@@ -769,7 +772,10 @@ class Model(ABC):
             )
         except Exception as exc:
             settlement = None
-            if stream_data.response_metrics is not None and stream_data.response_metrics.total_tokens > 0:
+            if (
+                stream_data.response_metrics is not None
+                and stream_data.response_metrics.total_tokens > 0
+            ):
                 settlement = await self._settle_llm_billing(
                     reservation=billing_reservation,
                     run_response=run_response,
@@ -928,7 +934,10 @@ class Model(ABC):
             )
         finally:
             # Close the Gemini client
-            if self.__class__.__name__ in ["Gemini", "GeminiInteractions"] and self.client is not None:
+            if (
+                self.__class__.__name__ in ["Gemini", "GeminiInteractions"]
+                and self.client is not None
+            ):
                 try:
                     await self.client.aio.aclose()  # type: ignore
                     self.client = None
@@ -1036,9 +1045,7 @@ class Model(ABC):
                     token_record=record,
                     provider=str(self.provider) if self.provider is not None else None,
                     latency_ms=(
-                        int(metrics.duration * 1000)
-                        if metrics.duration is not None
-                        else None
+                        int(metrics.duration * 1000) if metrics.duration is not None else None
                     ),
                 )
                 await db.commit()
@@ -1049,10 +1056,8 @@ class Model(ABC):
                 "reservation_id",
                 None,
             )
-            logger.error(
-                "Failed to settle agent LLM billing; marking settlement_failed",
-                extra={"reservation_id": reservation_id},
-                exc_info=True,
+            logger.bind(reservation_id=reservation_id).opt(exception=True).error(
+                "Failed to settle agent LLM billing; marking settlement_failed"
             )
             await self._mark_llm_settlement_failed(
                 reservation_id=reservation_id,
@@ -1074,14 +1079,14 @@ class Model(ABC):
 
             async with get_db_session_local() as db:
                 await self.llm_billing_service.mark_settlement_failed(
-                    db, reservation_id=reservation_id, error=error,
+                    db,
+                    reservation_id=reservation_id,
+                    error=error,
                 )
                 await db.commit()
         except Exception:
-            logger.warning(
-                "Failed to mark reservation %s as settlement_failed",
-                reservation_id,
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to mark reservation {} as settlement_failed", reservation_id
             )
 
     async def _release_llm_billing(self, *, reservation, reason: str) -> None:
@@ -1100,7 +1105,7 @@ class Model(ABC):
                 )
                 await db.commit()
         except Exception:
-            logger.warning("Failed to release agent LLM reservation", exc_info=True)
+            logger.opt(exception=True).warning("Failed to release agent LLM reservation")
 
     async def _record_llm_invocation(
         self,
@@ -1116,11 +1121,7 @@ class Model(ABC):
         Called from aprocess_response_stream for every LLM call regardless
         of whether billing is enabled.
         """
-        if (
-            run_response is None
-            or not run_response.user_id
-            or not run_response.session_id
-        ):
+        if run_response is None or not run_response.user_id or not run_response.session_id:
             return
 
         try:
@@ -1157,7 +1158,7 @@ class Model(ABC):
                 )
                 await db.commit()
         except Exception:
-            logger.warning("Failed to write llm_invocation for agent LLM call", exc_info=True)
+            logger.opt(exception=True).warning("Failed to write llm_invocation for agent LLM call")
 
     def _apply_reserved_output_cap(self, reservation) -> dict[str, Any]:
         """Temporarily clamp provider output limits to the reserved cap."""
@@ -1199,7 +1200,7 @@ class Model(ABC):
         if model_response_delta.content is not None:
             if model_response_delta.is_delta:
                 stream_data.response_content += model_response_delta.content
-            else: 
+            else:
                 stream_data.response_content = model_response_delta.content
             should_yield = True
 
@@ -1216,7 +1217,9 @@ class Model(ABC):
                     model_response_delta.redacted_reasoning_content
                 )
             else:
-                stream_data.response_redacted_reasoning_content = model_response_delta.redacted_reasoning_content
+                stream_data.response_redacted_reasoning_content = (
+                    model_response_delta.redacted_reasoning_content
+                )
             should_yield = True
 
         if model_response_delta.citations is not None:
@@ -1627,14 +1630,15 @@ class Model(ABC):
                             if task in detached_tasks:
                                 asyncio.create_task(
                                     _write_detached_result(
-                                        task, fc.call_id, fc.function.name,
+                                        task,
+                                        fc.call_id,
+                                        fc.function.name,
                                         session_id or "",
                                     ),
                                     name=f"detached-{fc.call_id}",
                                 )
                         logger.info(
-                            "Run %s cancelled during tool execution — "
-                            "%d tool task(s) detached",
+                            "Run {} cancelled during tool execution — {} tool task(s) detached",
                             run_id,
                             len(detached_tasks),
                         )
@@ -1648,15 +1652,29 @@ class Model(ABC):
             for fc, task in tool_tasks:
                 if task in detached_tasks:
                     # Tool is still running in background — return placeholder
-                    results.append((False, Timer(), fc, FunctionExecutionResult(
-                        status="failure",
-                        result=_TOOL_DETACHED_MESSAGE.format(call_id=fc.call_id),
-                    )))
+                    results.append(
+                        (
+                            False,
+                            Timer(),
+                            fc,
+                            FunctionExecutionResult(
+                                status="failure",
+                                result=_TOOL_DETACHED_MESSAGE.format(call_id=fc.call_id),
+                            ),
+                        )
+                    )
                 elif task.cancelled():
-                    results.append((False, Timer(), fc, FunctionExecutionResult(
-                        status="failure",
-                        result=_TOOL_CANCELLED_MESSAGE,
-                    )))
+                    results.append(
+                        (
+                            False,
+                            Timer(),
+                            fc,
+                            FunctionExecutionResult(
+                                status="failure",
+                                result=_TOOL_CANCELLED_MESSAGE,
+                            ),
+                        )
+                    )
                 elif task.done() and task.exception():
                     results.append(task.exception())
                 else:
@@ -1935,6 +1953,7 @@ class Model(ABC):
             # Use function_call.result if it's a BaseToolResult (for websocket display),
             # otherwise fallback to stringified content
             from ii_agent.agent.runtime.tools.base import ToolResult as BaseToolResult
+
             tool_execution_result = (
                 function_call.result
                 if isinstance(function_call.result, BaseToolResult)
@@ -1970,9 +1989,7 @@ class Model(ABC):
         # If the run was cancelled during tool execution, raise after processing
         # all completed results so they are saved in history
         if run_was_cancelled:
-            raise RunCancelledException(
-                f"Run {run_id} was cancelled during tool execution"
-            )
+            raise RunCancelledException(f"Run {run_id} was cancelled during tool execution")
 
         # Add any additional messages at the end
         if additional_input:

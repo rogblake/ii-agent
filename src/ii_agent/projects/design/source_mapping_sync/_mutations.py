@@ -34,6 +34,7 @@ from ii_agent.projects.design.source_mapping_sync._workspace import (
 # Delete
 # ---------------------------------------------------------------------------
 
+
 def _apply_delete_change_by_design_id(
     *,
     content: str,
@@ -49,7 +50,7 @@ def _apply_delete_change_by_design_id(
     span = _find_element_span_for_design_id(content, design_id)
     if not span:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Could not locate element span for delete designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) Could not locate element span for delete designId={} in {}",
             design_id,
             file_path,
         )
@@ -74,7 +75,7 @@ def _apply_delete_change_by_design_id(
     updated = content[:start] + content[end:]
 
     logger.info(
-        "[DesignMode Sync] (source-mapping) Deleted element designId=%s from %s (removed %d chars)",
+        "[DesignMode Sync] (source-mapping) Deleted element designId={} from {} (removed {} chars)",
         design_id,
         file_path,
         end - start,
@@ -87,6 +88,7 @@ def _apply_delete_change_by_design_id(
 # Icon helpers
 # ---------------------------------------------------------------------------
 
+
 def _normalize_lucide_icon_name(name: str) -> str:
     value = (name or "").strip()
     if not value:
@@ -95,6 +97,7 @@ def _normalize_lucide_icon_name(name: str) -> str:
     value = re.sub(r"[^a-zA-Z0-9-]+", "", value)
     value = re.sub(r"-{2,}", "-", value).strip("-")
     return value.lower()
+
 
 def _lucide_icon_name_to_component_name(icon_name: str) -> Optional[str]:
     if not isinstance(icon_name, str):
@@ -118,6 +121,7 @@ def _lucide_icon_name_to_component_name(icon_name: str) -> Optional[str]:
         return None
     return component
 
+
 def _sanitize_svg_inner_for_jsx(svg_inner: str) -> str:
     """Convert common SVG dash-case attributes to JSX-compatible camelCase."""
     if not isinstance(svg_inner, str) or not svg_inner:
@@ -127,9 +131,7 @@ def _sanitize_svg_inner_for_jsx(svg_inner: str) -> str:
 
     # If a full `<svg>...</svg>` was provided, keep only its inner markup so we don't
     # nest `<svg>` elements when patching an existing SVG node.
-    outer_svg_match = re.search(
-        r"(?is)^\s*<svg\b[^>]*>(?P<inner>.*?)</svg\s*>\s*$", raw
-    )
+    outer_svg_match = re.search(r"(?is)^\s*<svg\b[^>]*>(?P<inner>.*?)</svg\s*>\s*$", raw)
     if outer_svg_match:
         raw = (outer_svg_match.group("inner") or "").strip()
     elif re.match(r"(?is)^\s*<svg\b[^>]*/>\s*$", raw):
@@ -162,6 +164,7 @@ def _sanitize_svg_inner_for_jsx(svg_inner: str) -> str:
         out = re.sub(rf"(?<![\w-]){re.escape(src)}\s*=", f"{dst}=", out)
     return out
 
+
 def _upsert_jsx_attribute_if_missing(tag: str, attr: str, value: str) -> str:
     """
     Best-effort helper to add `attr="value"` to a JSX opening tag string if missing.
@@ -178,9 +181,8 @@ def _upsert_jsx_attribute_if_missing(tag: str, attr: str, value: str) -> str:
         return re.sub(r"\s*/>\s*$", insertion + " />", tag, count=1)
     return re.sub(r">\s*$", insertion + ">", tag, count=1)
 
-def _upsert_lucide_class_names_in_svg_opening_tag(
-    tag: str, *, icon_name: Optional[str]
-) -> str:
+
+def _upsert_lucide_class_names_in_svg_opening_tag(tag: str, *, icon_name: Optional[str]) -> str:
     """
     Best-effort: if `className="..."` is a string literal, append lucide marker classes so
     the resulting icon matches the runtime mutation behavior.
@@ -209,7 +211,7 @@ def _upsert_lucide_class_names_in_svg_opening_tag(
     if not added:
         return tag
 
-    new_attr = f'className={quote}{" ".join(classes)}{quote}'
+    new_attr = f"className={quote}{' '.join(classes)}{quote}"
     start, end = match.span()
     return tag[:start] + new_attr + tag[end:]
 
@@ -232,7 +234,7 @@ def _apply_icon_change_by_design_id(
     bounds = _find_opening_tag_bounds_for_design_id(content, design_id)
     if not bounds:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Could not locate tag for designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) Could not locate tag for designId={} in {}",
             design_id,
             file_path,
         )
@@ -244,7 +246,7 @@ def _apply_icon_change_by_design_id(
     tag_name = _extract_opening_tag_name(tag)
     if not tag_name:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Could not extract tag name for designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) Could not extract tag name for designId={} in {}",
             design_id,
             file_path,
         )
@@ -254,7 +256,7 @@ def _apply_icon_change_by_design_id(
     if tag_name[:1].isupper():
         if not isinstance(icon_name, str) or not icon_name.strip():
             logger.warning(
-                "[DesignMode Sync] (source-mapping) Missing icon name for designId=%s in %s",
+                "[DesignMode Sync] (source-mapping) Missing icon name for designId={} in {}",
                 design_id,
                 file_path,
             )
@@ -265,7 +267,7 @@ def _apply_icon_change_by_design_id(
         new_icon_component = _lucide_icon_name_to_component_name(icon_name)
         if not new_icon_component:
             logger.warning(
-                "[DesignMode Sync] (source-mapping) Invalid lucide icon name %r for designId=%s in %s",
+                "[DesignMode Sync] (source-mapping) Invalid lucide icon name {!r} for designId={} in {}",
                 icon_name,
                 design_id,
                 file_path,
@@ -296,17 +298,15 @@ def _apply_icon_change_by_design_id(
             window = updated_content[window_start:window_end]
 
             if re.search(closing_tag_pattern, window):
-                window = re.sub(
-                    closing_tag_pattern, f"</{new_icon_component}>", window, count=1
-                )
+                window = re.sub(closing_tag_pattern, f"</{new_icon_component}>", window, count=1)
                 updated_content = (
-                    updated_content[:window_start]
-                    + window
-                    + updated_content[window_end:]
+                    updated_content[:window_start] + window + updated_content[window_end:]
                 )
 
         # Update the lucide-react import line to include the new icon (and sanitize any invalid ones).
-        import_pattern = r"import\s*\{\s*(?P<names>[^}]*)\s*\}\s*from\s*(?P<q>['\"])lucide-react(?P=q)\s*;?"
+        import_pattern = (
+            r"import\s*\{\s*(?P<names>[^}]*)\s*\}\s*from\s*(?P<q>['\"])lucide-react(?P=q)\s*;?"
+        )
         import_match = re.search(import_pattern, updated_content)
 
         if import_match:
@@ -328,9 +328,7 @@ def _apply_icon_change_by_design_id(
                     imported_name = alias_parts[0].strip()
                     alias = alias_parts[1].strip() or None
 
-                fixed_name = (
-                    _lucide_icon_name_to_component_name(imported_name) or imported_name
-                )
+                fixed_name = _lucide_icon_name_to_component_name(imported_name) or imported_name
                 spec_text = f"{fixed_name} as {alias}" if alias else fixed_name
 
                 imported_symbol = fixed_name.strip()
@@ -343,8 +341,7 @@ def _apply_icon_change_by_design_id(
                 seen.add(new_icon_component)
 
             content_without_import_line = (
-                updated_content[: import_match.start()]
-                + updated_content[import_match.end() :]
+                updated_content[: import_match.start()] + updated_content[import_match.end() :]
             )
             old_icon_usage_pattern = r"<" + re.escape(old_icon_name) + r"[\s/>]"
             if not re.search(old_icon_usage_pattern, content_without_import_line):
@@ -354,9 +351,7 @@ def _apply_icon_change_by_design_id(
                     if re.split(r"\s+as\s+", s, maxsplit=1)[0].strip() != old_icon_name
                 ]
 
-            rebuilt_import = (
-                f"import {{ {', '.join(specifiers)} }} from {quote}lucide-react{quote}"
-            )
+            rebuilt_import = f"import {{ {', '.join(specifiers)} }} from {quote}lucide-react{quote}"
             if had_semicolon:
                 rebuilt_import += ";"
             updated_content = (
@@ -368,28 +363,22 @@ def _apply_icon_change_by_design_id(
             # No lucide-react import found, add one at the top after other imports
             # Find the last import statement
             last_import_match = None
-            for match in re.finditer(
-                r"import\s+.*?from\s+['\"].*?['\"];?\s*\n", updated_content
-            ):
+            for match in re.finditer(r"import\s+.*?from\s+['\"].*?['\"];?\s*\n", updated_content):
                 last_import_match = match
 
             if last_import_match:
                 insert_pos = last_import_match.end()
                 new_import = f"import {{ {new_icon_component} }} from 'lucide-react'\n"
                 updated_content = (
-                    updated_content[:insert_pos]
-                    + new_import
-                    + updated_content[insert_pos:]
+                    updated_content[:insert_pos] + new_import + updated_content[insert_pos:]
                 )
             else:
                 # No imports found, add at the beginning
-                new_import = (
-                    f"import {{ {new_icon_component} }} from 'lucide-react'\n\n"
-                )
+                new_import = f"import {{ {new_icon_component} }} from 'lucide-react'\n\n"
                 updated_content = new_import + updated_content
 
         logger.info(
-            "[DesignMode Sync] (source-mapping) Replaced icon %s -> %s for designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) Replaced icon {} -> {} for designId={} in {}",
             old_icon_name,
             new_icon_component,
             design_id,
@@ -401,7 +390,7 @@ def _apply_icon_change_by_design_id(
     # Case 2: Inline SVG replacement (<svg>...</svg>) when we have svg payload.
     if not isinstance(svg_inner, str) or not svg_inner.strip():
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Missing SVG payload for icon change designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) Missing SVG payload for icon change designId={} in {}",
             design_id,
             file_path,
         )
@@ -410,7 +399,7 @@ def _apply_icon_change_by_design_id(
     svg_inner = _sanitize_svg_inner_for_jsx(svg_inner.strip())
     if not svg_inner:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) SVG payload empty after sanitization for designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) SVG payload empty after sanitization for designId={} in {}",
             design_id,
             file_path,
         )
@@ -422,25 +411,13 @@ def _apply_icon_change_by_design_id(
             opening = tag.rstrip()[:-2].rstrip() + ">"
             opening = _upsert_jsx_attribute_if_missing(opening, "viewBox", "0 0 24 24")
             opening = _upsert_jsx_attribute_if_missing(opening, "fill", "none")
-            opening = _upsert_jsx_attribute_if_missing(
-                opening, "stroke", "currentColor"
-            )
+            opening = _upsert_jsx_attribute_if_missing(opening, "stroke", "currentColor")
             opening = _upsert_jsx_attribute_if_missing(opening, "strokeWidth", "2")
-            opening = _upsert_jsx_attribute_if_missing(
-                opening, "strokeLinecap", "round"
-            )
-            opening = _upsert_jsx_attribute_if_missing(
-                opening, "strokeLinejoin", "round"
-            )
-            opening = _upsert_lucide_class_names_in_svg_opening_tag(
-                opening, icon_name=icon_name
-            )
+            opening = _upsert_jsx_attribute_if_missing(opening, "strokeLinecap", "round")
+            opening = _upsert_jsx_attribute_if_missing(opening, "strokeLinejoin", "round")
+            opening = _upsert_lucide_class_names_in_svg_opening_tag(opening, icon_name=icon_name)
             updated_content = (
-                content[:tag_start]
-                + opening
-                + svg_inner
-                + "</svg>"
-                + content[tag_end + 1 :]
+                content[:tag_start] + opening + svg_inner + "</svg>" + content[tag_end + 1 :]
             )
             return updated_content, True
 
@@ -458,13 +435,9 @@ def _apply_icon_change_by_design_id(
         opening = _upsert_jsx_attribute_if_missing(opening, "strokeWidth", "2")
         opening = _upsert_jsx_attribute_if_missing(opening, "strokeLinecap", "round")
         opening = _upsert_jsx_attribute_if_missing(opening, "strokeLinejoin", "round")
-        opening = _upsert_lucide_class_names_in_svg_opening_tag(
-            opening, icon_name=icon_name
-        )
+        opening = _upsert_lucide_class_names_in_svg_opening_tag(opening, icon_name=icon_name)
 
-        updated_content = (
-            content[:tag_start] + opening + svg_inner + content[closing_start:]
-        )
+        updated_content = content[:tag_start] + opening + svg_inner + content[closing_start:]
         return updated_content, True
 
     # Fallback: designId may be on a wrapper; replace the first <svg> within the element span.
@@ -481,9 +454,7 @@ def _apply_icon_change_by_design_id(
         return content, False
     svg_open_tag = fragment[svg_start : svg_open_end + 1]
     svg_tag_name = _extract_opening_tag_name(svg_open_tag) or "svg"
-    svg_close_end = _find_matching_closing_tag_end(
-        fragment, svg_open_end + 1, svg_tag_name
-    )
+    svg_close_end = _find_matching_closing_tag_end(fragment, svg_open_end + 1, svg_tag_name)
     if svg_close_end is None:
         return content, False
     svg_close_start = fragment.rfind("</", svg_open_end + 1, svg_close_end + 1)
@@ -491,24 +462,12 @@ def _apply_icon_change_by_design_id(
         return content, False
 
     updated_svg_open = svg_open_tag
-    updated_svg_open = _upsert_jsx_attribute_if_missing(
-        updated_svg_open, "viewBox", "0 0 24 24"
-    )
-    updated_svg_open = _upsert_jsx_attribute_if_missing(
-        updated_svg_open, "fill", "none"
-    )
-    updated_svg_open = _upsert_jsx_attribute_if_missing(
-        updated_svg_open, "stroke", "currentColor"
-    )
-    updated_svg_open = _upsert_jsx_attribute_if_missing(
-        updated_svg_open, "strokeWidth", "2"
-    )
-    updated_svg_open = _upsert_jsx_attribute_if_missing(
-        updated_svg_open, "strokeLinecap", "round"
-    )
-    updated_svg_open = _upsert_jsx_attribute_if_missing(
-        updated_svg_open, "strokeLinejoin", "round"
-    )
+    updated_svg_open = _upsert_jsx_attribute_if_missing(updated_svg_open, "viewBox", "0 0 24 24")
+    updated_svg_open = _upsert_jsx_attribute_if_missing(updated_svg_open, "fill", "none")
+    updated_svg_open = _upsert_jsx_attribute_if_missing(updated_svg_open, "stroke", "currentColor")
+    updated_svg_open = _upsert_jsx_attribute_if_missing(updated_svg_open, "strokeWidth", "2")
+    updated_svg_open = _upsert_jsx_attribute_if_missing(updated_svg_open, "strokeLinecap", "round")
+    updated_svg_open = _upsert_jsx_attribute_if_missing(updated_svg_open, "strokeLinejoin", "round")
     updated_svg_open = _upsert_lucide_class_names_in_svg_opening_tag(
         updated_svg_open, icon_name=icon_name
     )
@@ -520,9 +479,7 @@ def _apply_icon_change_by_design_id(
     return updated_content, True
 
 
-def _upsert_lucide_react_import_add_only(
-    *, content: str, new_icon_component: str
-) -> str:
+def _upsert_lucide_react_import_add_only(*, content: str, new_icon_component: str) -> str:
     """
     Ensure `new_icon_component` is imported from `lucide-react`, without trying to remove
     other imports (some projects reference icons as identifiers, e.g. `icon: Shield`).
@@ -533,7 +490,9 @@ def _upsert_lucide_react_import_add_only(
         return content
     new_icon_component = new_icon_component.strip()
 
-    import_pattern = r"import\s*\{\s*(?P<names>[^}]*)\s*\}\s*from\s*(?P<q>['\"])lucide-react(?P=q)\s*;?"
+    import_pattern = (
+        r"import\s*\{\s*(?P<names>[^}]*)\s*\}\s*from\s*(?P<q>['\"])lucide-react(?P=q)\s*;?"
+    )
     import_match = re.search(import_pattern, content)
 
     if import_match:
@@ -555,9 +514,7 @@ def _upsert_lucide_react_import_add_only(
                 imported_name = alias_parts[0].strip()
                 alias = alias_parts[1].strip() or None
 
-            fixed_name = (
-                _lucide_icon_name_to_component_name(imported_name) or imported_name
-            )
+            fixed_name = _lucide_icon_name_to_component_name(imported_name) or imported_name
             spec_text = f"{fixed_name} as {alias}" if alias else fixed_name
 
             imported_symbol = fixed_name.strip()
@@ -568,16 +525,10 @@ def _upsert_lucide_react_import_add_only(
         if new_icon_component not in seen:
             specifiers.append(new_icon_component)
 
-        rebuilt_import = (
-            f"import {{ {', '.join(specifiers)} }} from {quote}lucide-react{quote}"
-        )
+        rebuilt_import = f"import {{ {', '.join(specifiers)} }} from {quote}lucide-react{quote}"
         if had_semicolon:
             rebuilt_import += ";"
-        return (
-            content[: import_match.start()]
-            + rebuilt_import
-            + content[import_match.end() :]
-        )
+        return content[: import_match.start()] + rebuilt_import + content[import_match.end() :]
 
     # No lucide-react import found: add one at the top after other imports (if any).
     last_import_match = None
@@ -646,16 +597,14 @@ def _apply_icon_change_by_item_id_assignment(
         return content, True
 
     updated_content = (
-        content[: match.start("icon")]
-        + new_icon_component
-        + content[match.end("icon") :]
+        content[: match.start("icon")] + new_icon_component + content[match.end("icon") :]
     )
     updated_content = _upsert_lucide_react_import_add_only(
         content=updated_content, new_icon_component=new_icon_component
     )
 
     logger.info(
-        "[DesignMode Sync] (source-mapping) Updated icon assignment %s -> %s for item_id=%s in %s",
+        "[DesignMode Sync] (source-mapping) Updated icon assignment {} -> {} for item_id={} in {}",
         old_icon_component or "?",
         new_icon_component,
         item_id,
@@ -667,6 +616,7 @@ def _apply_icon_change_by_item_id_assignment(
 # ---------------------------------------------------------------------------
 # Move / Swap
 # ---------------------------------------------------------------------------
+
 
 def _apply_move_change_by_design_ids(
     *,
@@ -685,7 +635,7 @@ def _apply_move_change_by_design_ids(
     span_a = _find_element_span_for_design_id(content, design_id)
     if not span_a:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Could not locate element span for designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) Could not locate element span for designId={} in {}",
             design_id,
             file_path,
         )
@@ -694,7 +644,7 @@ def _apply_move_change_by_design_ids(
     span_b = _find_element_span_for_design_id(content, target_design_id)
     if not span_b:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Could not locate element span for target designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) Could not locate element span for target designId={} in {}",
             target_design_id,
             file_path,
         )
@@ -706,7 +656,7 @@ def _apply_move_change_by_design_ids(
     # Don't attempt to reorder nested/overlapping spans (not siblings in source).
     if not (a_end <= b_start or b_end <= a_start):
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Move spans overlap for designId=%s target=%s in %s",
+            "[DesignMode Sync] (source-mapping) Move spans overlap for designId={} target={} in {}",
             design_id,
             target_design_id,
             file_path,
@@ -720,7 +670,7 @@ def _apply_move_change_by_design_ids(
     span_b2 = _find_element_span_for_design_id(removed, target_design_id)
     if not span_b2:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Could not re-locate target span for move designId=%s target=%s in %s",
+            "[DesignMode Sync] (source-mapping) Could not re-locate target span for move designId={} target={} in {}",
             design_id,
             target_design_id,
             file_path,
@@ -759,14 +709,14 @@ def _apply_move_change_by_design_id_anchor(
     target_design_id: Optional[str] = None
     if anchor.startswith("before:"):
         mode = "before"
-        target_design_id = anchor[len("before:"):].strip() or None
+        target_design_id = anchor[len("before:") :].strip() or None
     elif anchor.startswith("after:"):
         mode = "after"
-        target_design_id = anchor[len("after:"):].strip() or None
+        target_design_id = anchor[len("after:") :].strip() or None
 
     if not mode or not target_design_id:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Unsupported move anchor for designId=%s in %s: %s",
+            "[DesignMode Sync] (source-mapping) Unsupported move anchor for designId={} in {}: {}",
             design_id,
             file_path,
             _truncate_for_log(anchor, limit=200),
@@ -792,7 +742,7 @@ def _apply_swap_change_by_design_ids(
     span_a = _find_element_span_for_design_id(content, design_id)
     if not span_a:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Could not locate element span for designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) Could not locate element span for designId={} in {}",
             design_id,
             file_path,
         )
@@ -801,7 +751,7 @@ def _apply_swap_change_by_design_ids(
     span_b = _find_element_span_for_design_id(content, target_design_id)
     if not span_b:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Could not locate element span for target designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) Could not locate element span for target designId={} in {}",
             target_design_id,
             file_path,
         )
@@ -818,7 +768,7 @@ def _apply_swap_change_by_design_ids(
 
     if a_end > b_start:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Swap spans overlap for designId=%s target=%s in %s",
+            "[DesignMode Sync] (source-mapping) Swap spans overlap for designId={} target={} in {}",
             design_id,
             target_design_id,
             file_path,
@@ -827,15 +777,14 @@ def _apply_swap_change_by_design_ids(
 
     a_block = content[a_start:a_end]
     b_block = content[b_start:b_end]
-    updated = (
-        content[:a_start] + b_block + content[a_end:b_start] + a_block + content[b_end:]
-    )
+    updated = content[:a_start] + b_block + content[a_end:b_start] + a_block + content[b_end:]
     return updated, True
 
 
 # ---------------------------------------------------------------------------
 # Text
 # ---------------------------------------------------------------------------
+
 
 def _apply_text_change_by_design_id(
     *,
@@ -868,6 +817,7 @@ def _apply_text_change_by_design_id(
 # ---------------------------------------------------------------------------
 # Style (CSS overrides + inline)
 # ---------------------------------------------------------------------------
+
 
 async def _locate_project_globals_css(
     *, sandbox: Any, manifest_path: Optional[str]
@@ -950,18 +900,14 @@ def _upsert_design_mode_css_override(
             return section + block
 
         body = match.group("body") or ""
-        prop_line = re.compile(
-            rf"(?m)^(?P<indent>\s*){re.escape(css_prop)}\s*:\s*[^;]*;\s*$"
-        )
+        prop_line = re.compile(rf"(?m)^(?P<indent>\s*){re.escape(css_prop)}\s*:\s*[^;]*;\s*$")
 
         if not value:
             new_body = prop_line.sub("", body)
         elif prop_line.search(body):
             new_body = prop_line.sub(rf"\g<indent>{css_prop}: {value};", body, count=1)
         else:
-            indent_match = re.search(
-                r"(?m)^(?P<indent>\s*)[A-Za-z_-][A-Za-z0-9_-]*\s*:", body
-            )
+            indent_match = re.search(r"(?m)^(?P<indent>\s*)[A-Za-z_-][A-Za-z0-9_-]*\s*:", body)
             indent = indent_match.group("indent") if indent_match else "  "
             trimmed = body.rstrip("\n")
             if trimmed.strip():
@@ -997,13 +943,7 @@ def _upsert_design_mode_css_override(
     section_start = start + len(_DESIGN_MODE_CSS_OVERRIDES_START)
     section_body = css_text[section_start:end].strip("\n")
     updated_section = _upsert_rule(section_body)
-    return (
-        css_text[:section_start]
-        + "\n"
-        + updated_section.strip("\n")
-        + "\n"
-        + css_text[end:]
-    )
+    return css_text[:section_start] + "\n" + updated_section.strip("\n") + "\n" + css_text[end:]
 
 
 async def _apply_style_change_as_css_override(
@@ -1047,14 +987,12 @@ async def _apply_style_change_as_css_override(
         return False, None
 
 
-def _upsert_html_style_declaration(
-    style_value: str, css_prop: str, css_value: str
-) -> str:
+def _upsert_html_style_declaration(style_value: str, css_prop: str, css_value: str) -> str:
     declarations: Dict[str, str] = {}
     order: List[str] = []
 
-    for part in (style_value or "").split(";"):
-        part = part.strip()
+    for raw_part in (style_value or "").split(";"):
+        part = raw_part.strip()
         if not part:
             continue
         if ":" not in part:
@@ -1089,14 +1027,10 @@ def _upsert_html_style_declaration(
     return rebuilt + ";"
 
 
-def _upsert_html_style_attribute(
-    tag: str, css_prop: str, css_value: str
-) -> Optional[str]:
+def _upsert_html_style_attribute(tag: str, css_prop: str, css_value: str) -> Optional[str]:
     if not isinstance(tag, str):
         return None
-    match = re.search(
-        r"(?<![\w-])style\s*=\s*(?P<q>['\"])(?P<val>.*?)(?P=q)", tag, re.DOTALL
-    )
+    match = re.search(r"(?<![\w-])style\s*=\s*(?P<q>['\"])(?P<val>.*?)(?P=q)", tag, re.DOTALL)
     if not match:
         insert_at = None
         if tag.rstrip().endswith("/>"):
@@ -1142,9 +1076,7 @@ def _escape_js_string_literal(value: str) -> str:
     return value.replace("\\", "\\\\").replace("'", "\\'")
 
 
-def _upsert_jsx_style_attribute(
-    tag: str, css_prop: str, css_value: str
-) -> Optional[str]:
+def _upsert_jsx_style_attribute(tag: str, css_prop: str, css_value: str) -> Optional[str]:
     if not isinstance(tag, str):
         return None
 
@@ -1259,18 +1191,17 @@ def _upsert_jsx_style_attribute(
 
         spread_parts.append(f"...({trimmed})")
 
-    merged_inner = ", ".join(
-        spread_parts + kv_parts + [f"{style_key}: {value_literal}"]
-    )
+    merged_inner = ", ".join(spread_parts + kv_parts + [f"{style_key}: {value_literal}"])
     new_attr = f"style={{{{ {merged_inner} }}}}"
 
     # Remove all but the first style attribute.
     new_tag = tag
-    for start, end, _expr in reversed(style_ranges[1:]):
+    for attr_start, attr_end, _expr in reversed(style_ranges[1:]):
         # Remove a preceding space if present to avoid leaving double spaces.
-        if start > 0 and new_tag[start - 1].isspace():
-            start -= 1
-        new_tag = new_tag[:start] + new_tag[end:]
+        remove_start = attr_start
+        if remove_start > 0 and new_tag[remove_start - 1].isspace():
+            remove_start -= 1
+        new_tag = new_tag[:remove_start] + new_tag[attr_end:]
 
     first_start, first_end, _first_expr = style_ranges[0]
     return new_tag[:first_start] + new_attr + new_tag[first_end:]
@@ -1287,7 +1218,7 @@ def _apply_style_change_by_design_id(
     bounds = _find_opening_tag_bounds_for_design_id(content, design_id)
     if not bounds:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Could not locate tag for designId=%s in %s",
+            "[DesignMode Sync] (source-mapping) Could not locate tag for designId={} in {}",
             design_id,
             file_path,
         )
@@ -1306,7 +1237,7 @@ def _apply_style_change_by_design_id(
 
     if not updated_tag:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Could not update style for designId=%s css=%s in %s; tag=%s",
+            "[DesignMode Sync] (source-mapping) Could not update style for designId={} css={} in {}; tag={}",
             design_id,
             css_prop,
             file_path,
@@ -1322,6 +1253,7 @@ def _apply_style_change_by_design_id(
 # ---------------------------------------------------------------------------
 # Icon extraction helpers (used by orchestrator)
 # ---------------------------------------------------------------------------
+
 
 def _extract_icon_payload_from_change(
     change: Any,
@@ -1418,9 +1350,8 @@ def _extract_item_id_from_icon_design_id(design_id: str) -> Optional[str]:
 # Source file finders (for icon changes)
 # ---------------------------------------------------------------------------
 
-async def _find_best_source_file_for_design_id(
-    *, sandbox: Any, design_id: str
-) -> Optional[str]:
+
+async def _find_best_source_file_for_design_id(*, sandbox: Any, design_id: str) -> Optional[str]:
     if not isinstance(design_id, str) or not design_id.strip():
         return None
 
@@ -1434,29 +1365,27 @@ async def _find_best_source_file_for_design_id(
 
     if not candidates:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) No matches for data-design-id=%r in /workspace",
+            "[DesignMode Sync] (source-mapping) No matches for data-design-id={!r} in /workspace",
             design_id,
         )
         return None
     ranked = sorted(candidates, key=_score_source_path)
     best = ranked[0]
     logger.info(
-        "[DesignMode Sync] (source-mapping) data-design-id=%r matched %d file(s); best=%s",
+        "[DesignMode Sync] (source-mapping) data-design-id={!r} matched {} file(s); best={}",
         design_id,
         len(ranked),
         best,
     )
     logger.debug(
-        "[DesignMode Sync] (source-mapping) Candidate files for %r: %s",
+        "[DesignMode Sync] (source-mapping) Candidate files for {!r}: {}",
         design_id,
         ", ".join(ranked[:10]) + (" ..." if len(ranked) > 10 else ""),
     )
     return best
 
 
-async def _find_best_source_file_for_icon_item_id(
-    *, sandbox: Any, item_id: str
-) -> Optional[str]:
+async def _find_best_source_file_for_icon_item_id(*, sandbox: Any, item_id: str) -> Optional[str]:
     if not isinstance(item_id, str) or not item_id.strip():
         return None
     item_id = item_id.strip()
@@ -1475,9 +1404,7 @@ async def _find_best_source_file_for_icon_item_id(
 
     for path in ranked[:20]:
         try:
-            content, resolved_path = await _read_file_with_workspace_fallback(
-                sandbox, path
-            )
+            content, resolved_path = await _read_file_with_workspace_fallback(sandbox, path)
         except Exception:
             continue
         if not isinstance(content, str) or not content:
@@ -1505,6 +1432,7 @@ async def _find_best_source_file_for_icon_item_id(
 # ---------------------------------------------------------------------------
 # Dynamic icon pattern matching
 # ---------------------------------------------------------------------------
+
 
 def _update_icon_at_array_index(
     *,
@@ -1552,11 +1480,7 @@ def _update_icon_at_array_index(
     absolute_match_start = array_start + obj_start + icon_match.start(1)
     absolute_match_end = array_start + obj_start + icon_match.end(1)
 
-    return (
-        content[:absolute_match_start]
-        + new_icon_component
-        + content[absolute_match_end:]
-    )
+    return content[:absolute_match_start] + new_icon_component + content[absolute_match_end:]
 
 
 def _update_icon_where_field_matches(
@@ -1598,12 +1522,8 @@ def _update_icon_where_field_matches(
                     if icon_match:
                         old_icon = icon_match.group(1)
                         if old_icon != new_icon_component:
-                            absolute_match_start = (
-                                array_start + obj_start + icon_match.start(1)
-                            )
-                            absolute_match_end = (
-                                array_start + obj_start + icon_match.end(1)
-                            )
+                            absolute_match_start = array_start + obj_start + icon_match.start(1)
+                            absolute_match_end = array_start + obj_start + icon_match.end(1)
 
                             return (
                                 content[:absolute_match_start]
@@ -1769,9 +1689,7 @@ def _apply_icon_change_by_dynamic_pattern(
         context = content[context_start : match.end() + 500]
 
         # Find array.map((item, index) => pattern
-        map_pattern = re.compile(
-            r"(\[[\s\S]*?\])\.map\s*\(\s*\(([^,)]+)(?:,\s*([^)]+))?\)\s*=>"
-        )
+        map_pattern = re.compile(r"(\[[\s\S]*?\])\.map\s*\(\s*\(([^,)]+)(?:,\s*([^)]+))?\)\s*=>")
         map_match = map_pattern.search(context)
 
         if not map_match:
@@ -1782,13 +1700,10 @@ def _apply_icon_change_by_dynamic_pattern(
         index_var = map_match.group(3).strip() if map_match.group(3) else None
 
         # Check if our variable expression uses this iterator
-        if iterator_var not in variable_expr and (
-            not index_var or index_var not in variable_expr
-        ):
+        if iterator_var not in variable_expr and (not index_var or index_var not in variable_expr):
             continue
 
         # Find the array definition
-        array_text = map_match.group(1)
         array_start_in_context = map_match.start(1)
         array_start = context_start + array_start_in_context
 
@@ -1810,7 +1725,7 @@ def _apply_icon_change_by_dynamic_pattern(
                 content=updated, new_icon_component=new_icon_component
             )
             logger.info(
-                "[DesignMode Sync] (dynamic-pattern) Updated icon via pattern matching in %s",
+                "[DesignMode Sync] (dynamic-pattern) Updated icon via pattern matching in {}",
                 file_path,
             )
             return updated, True
@@ -1899,7 +1814,7 @@ async def _find_icon_by_dynamic_pattern(
         return None, False
 
     logger.info(
-        "[DesignMode Sync] (dynamic-pattern) Searching for pattern: %s (from designId=%s)",
+        "[DesignMode Sync] (dynamic-pattern) Searching for pattern: {} (from designId={})",
         pattern,
         design_id,
     )
@@ -1952,15 +1867,13 @@ async def _find_icon_by_dynamic_pattern(
                 ok = True
                 if ok:
                     logger.info(
-                        "[DesignMode Sync] (dynamic-pattern) Successfully applied icon change in %s",
+                        "[DesignMode Sync] (dynamic-pattern) Successfully applied icon change in {}",
                         resolved_path,
                     )
                     return updated_content, True
             except Exception as exc:
                 logger.warning(
-                    "[DesignMode Sync] (dynamic-pattern) Failed to write %s: %s",
-                    resolved_path,
-                    exc,
+                    "[DesignMode Sync] (dynamic-pattern) Failed to write {}: {}", resolved_path, exc
                 )
                 continue
 

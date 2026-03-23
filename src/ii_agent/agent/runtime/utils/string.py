@@ -9,6 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from ii_agent.core.logger import logger
 
+
 def is_valid_uuid(uuid_str: str) -> bool:
     """
     Check if a string is a valid UUID
@@ -154,7 +155,7 @@ def _parse_individual_json(content: str, output_schema: Type[BaseModel]) -> Opti
     try:
         return output_schema.model_validate(merged_data)
     except ValidationError as e:
-        logger.warning("Validation failed on merged data: %s", e)
+        logger.warning("Validation failed on merged data: {}", e)
         return None
 
 

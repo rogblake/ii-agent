@@ -135,7 +135,9 @@ class SendUserFile(BaseSandboxTool):
 def _build_storage() -> Optional["BaseStorage"]:
     settings = get_settings()
     project_id = settings.storage.slide_assets_project_id or settings.storage.file_upload_project_id
-    bucket_name = settings.storage.slide_assets_bucket_name or settings.storage.file_upload_bucket_name
+    bucket_name = (
+        settings.storage.slide_assets_bucket_name or settings.storage.file_upload_bucket_name
+    )
     if not project_id or not bucket_name:
         logger.warning("Message attachments skipped: storage config missing")
         return None
@@ -148,7 +150,7 @@ def _build_storage() -> Optional["BaseStorage"]:
             settings.storage.custom_domain,
         )
     except Exception as exc:  # pragma: no cover - defensive
-        logger.warning("Message attachments skipped: %s", exc)
+        logger.warning("Message attachments skipped: {}", exc)
         return None
 
 
@@ -187,7 +189,7 @@ async def _process_attachment(
         }
 
     if not sandbox:
-        logger.warning("No sandbox available to fetch attachment %s", attachment)
+        logger.warning("No sandbox available to fetch attachment {}", attachment)
         return None
 
     filename = Path(attachment).name or "attachment"
@@ -202,7 +204,7 @@ async def _process_attachment(
         )
     except Exception as exc:
         logger.error(
-            "Failed to create signed upload URL for attachment %s: %s",
+            "Failed to create signed upload URL for attachment {}: {}",
             attachment,
             exc,
         )
@@ -210,23 +212,23 @@ async def _process_attachment(
 
     if not upload_url:
         logger.error(
-            "Failed to create signed upload URL for attachment %s",
+            "Failed to create signed upload URL for attachment {}",
             attachment,
         )
         return None
 
     try:
-        stream = sandbox.download_file_stream(attachment)
+        stream = await sandbox.download_file_stream(attachment)
     except Exception as exc:
         logger.warning(
-            "Unable to stream attachment %s from sandbox: %s",
+            "Unable to stream attachment {} from sandbox: {}",
             attachment,
             exc,
         )
         return None
 
     if stream is None:
-        logger.warning("Attachment %s could not be streamed from sandbox", attachment)
+        logger.warning("Attachment {} could not be streamed from sandbox", attachment)
         return None
 
     try:
@@ -238,7 +240,7 @@ async def _process_attachment(
             )
     except httpx.HTTPError as exc:
         logger.error(
-            "Failed to upload attachment %s to signed URL: %s",
+            "Failed to upload attachment {} to signed URL: {}",
             attachment,
             exc,
         )
@@ -246,7 +248,7 @@ async def _process_attachment(
 
     if not response.is_success:
         logger.error(
-            "Failed to upload attachment %s to signed URL: %s %s",
+            "Failed to upload attachment {} to signed URL: {} {}",
             attachment,
             response.status_code,
             response.text,
@@ -255,7 +257,7 @@ async def _process_attachment(
 
     try:
         permanent_url = storage.get_permanent_url(storage_path)
-        logger.info("Uploaded attachment %s to %s", attachment, storage_path)
+        logger.info("Uploaded attachment {} to {}", attachment, storage_path)
         return {
             "name": filename,
             "file_type": _determine_file_type(filename),
@@ -263,7 +265,7 @@ async def _process_attachment(
         }
     except Exception as exc:
         logger.error(
-            "Failed to finalize attachment %s after upload: %s",
+            "Failed to finalize attachment {} after upload: {}",
             attachment,
             exc,
         )

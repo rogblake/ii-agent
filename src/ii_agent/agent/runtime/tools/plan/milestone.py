@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from ii_agent.sessions.service import SessionService
     from ii_agent.agent.events.service import EventService
 
+
 class MilestoneTool(BaseAgentTool):
     """V1 Tool for submitting project plans with milestones.
 
@@ -135,7 +136,7 @@ class MilestoneTool(BaseAgentTool):
             )
 
         except Exception as e:
-            logger.error(f"Error submitting plan: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error submitting plan: {e}")
             return ToolResult(
                 llm_content=f"Error submitting plan: {str(e)}",
                 is_error=True,

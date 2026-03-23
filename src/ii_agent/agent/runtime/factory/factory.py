@@ -139,7 +139,9 @@ class AgentFactory:
                     )
 
             except Exception as e:
-                logger.error(f"[V1 Factory] Failed to load connector tools: {e}", exc_info=True)
+                logger.opt(exception=True).error(
+                    f"[V1 Factory] Failed to load connector tools: {e}"
+                )
 
         AgentToolManager.log_tool_summary(agent_tools, f"Agent {agent_type.value}")
 

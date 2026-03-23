@@ -43,9 +43,7 @@ class CancelHandler(CommandHandler):
                 db=db, session_id=session_info.id
             )
             if not last_task:
-                await self._send_error_event(
-                    session_info.id, message="Task Run not found"
-                )
+                await self._send_error_event(session_info.id, message="Task Run not found")
                 return
 
             if last_task.status not in [RunStatus.RUNNING.value, RunStatus.PAUSED.value]:
@@ -73,6 +71,5 @@ class CancelHandler(CommandHandler):
 
         if original_status == RunStatus.PAUSED.value:
             logger.info(
-                "Paused run %s cancelled; per-call billing already settled in runtime",
-                run_id,
+                "Paused run {} cancelled; per-call billing already settled in runtime", run_id
             )

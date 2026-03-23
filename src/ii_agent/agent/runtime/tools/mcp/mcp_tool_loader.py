@@ -95,7 +95,7 @@ async def load_tools_from_mcp(
         else:
             await transport.close()
     except Exception as e:
-        logger.error(f"Failed to load tools from MCP server: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Failed to load tools from MCP server: {e}")
         return tools
 
     logger.info(f"Loaded {len(tools)} tools from MCP server")

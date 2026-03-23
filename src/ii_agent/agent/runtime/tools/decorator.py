@@ -7,6 +7,8 @@ from ii_agent.core.logger import logger
 # Type variable for better type hints
 F = TypeVar("F", bound=Callable[..., Any])
 ToolConfig = TypeVar("ToolConfig", bound=Dict[str, Any])
+
+
 def _is_async_function(func: Callable) -> bool:
     """
     Check if a function is async, even when wrapped by decorators like @staticmethod.
@@ -167,10 +169,7 @@ def tool(*args, **kwargs) -> Union[Function, Callable[[F], Function]]:
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                logger.error(
-                    f"Error in tool {func.__name__!r}: {e!r}",
-                    exc_info=True,
-                )
+                logger.opt(exception=True).error(f"Error in tool {func.__name__!r}: {e!r}")
                 raise
 
         @wraps(func)
@@ -178,10 +177,7 @@ def tool(*args, **kwargs) -> Union[Function, Callable[[F], Function]]:
             try:
                 return await func(*args, **kwargs)
             except Exception as e:
-                logger.error(
-                    f"Error in async tool {func.__name__!r}: {e!r}",
-                    exc_info=True,
-                )
+                logger.opt(exception=True).error(f"Error in async tool {func.__name__!r}: {e!r}")
                 raise
 
         @wraps(func)
@@ -189,9 +185,8 @@ def tool(*args, **kwargs) -> Union[Function, Callable[[F], Function]]:
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                logger.error(
-                    f"Error in async generator tool {func.__name__!r}: {e!r}",
-                    exc_info=True,
+                logger.opt(exception=True).error(
+                    f"Error in async generator tool {func.__name__!r}: {e!r}"
                 )
                 raise
 

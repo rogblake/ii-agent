@@ -98,7 +98,7 @@ async def cleanup_long_running_tasks():
         )
 
     except Exception as e:
-        logger.error(f"Error during AgentRunTask cleanup: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Error during AgentRunTask cleanup: {e}")
         # Don't re-raise - we want the scheduler to continue running
 
 
@@ -164,7 +164,7 @@ async def cleanup_long_running_chat_runs():
         )
 
     except Exception as e:
-        logger.error(f"Error during ChatRun cleanup: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Error during ChatRun cleanup: {e}")
 
 
 def start_scheduler():
@@ -227,10 +227,10 @@ def start_scheduler():
 
         # Start the scheduler
         scheduler.start()
-        logger.info("Scheduler started with %d jobs", len(scheduler.get_jobs()))
+        logger.info("Scheduler started with {} jobs", len(scheduler.get_jobs()))
 
     except Exception as e:
-        logger.error(f"Error starting scheduler: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Error starting scheduler: {e}")
         raise
 
 
@@ -243,4 +243,4 @@ def shutdown_scheduler():
             scheduler.shutdown(wait=True)
             logger.info("Scheduler shutdown successfully")
     except Exception as e:
-        logger.error(f"Error shutting down scheduler: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Error shutting down scheduler: {e}")

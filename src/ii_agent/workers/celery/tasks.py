@@ -88,7 +88,6 @@ def _estimate_page_credits(
     return float(usd_to_credits(total_usd))
 
 
-
 async def _mark_scene_completed(
     storybook_id: str,
     scene_index: int,
@@ -102,9 +101,7 @@ async def _mark_scene_completed(
 
     async with get_db_session_local() as db_session:
         result = await db_session.execute(
-            select(Storybook)
-            .where(Storybook.id == storybook_id)
-            .with_for_update()
+            select(Storybook).where(Storybook.id == storybook_id).with_for_update()
         )
         storybook = result.scalar_one_or_none()
         if not storybook:
@@ -187,19 +184,13 @@ async def _finalize_storybook_billing(
                     reason=(
                         "storybook_cancelled"
                         if terminal_status == "cancelled"
-                        else (
-                            "unused"
-                            if terminal_status == "completed"
-                            else "storybook_failed"
-                        )
+                        else ("unused" if terminal_status == "completed" else "storybook_failed")
                     ),
                 )
             await db_session.commit()
     except Exception:
-        logger.error(
-            "Failed to finalize storybook billing for %s",
-            storybook_id,
-            exc_info=True,
+        logger.opt(exception=True).error(
+            "Failed to finalize storybook billing for {}", storybook_id
         )
 
 
@@ -245,9 +236,7 @@ async def _create_storybook_tool_result(
     for page in sorted(storybook.pages or [], key=lambda p: p.page_number):
         if not page.image_url:
             continue
-        display_page = _db_page_to_display_page(
-            page.page_number, separate_page_mode
-        )
+        display_page = _db_page_to_display_page(page.page_number, separate_page_mode)
         metadata = page.metadata or {}
         page_results.append(
             StorybookPageResult(
@@ -352,10 +341,8 @@ async def _fail_storybook(
                 tool_name=payload.get("tool_name", "generate_storybook"),
             )
         except Exception:
-            logger.error(
-                "Failed to create storybook error tool result for %s",
-                storybook_id,
-                exc_info=True,
+            logger.opt(exception=True).error(
+                "Failed to create storybook error tool result for {}", storybook_id
             )
 
     await _finalize_storybook_billing(storybook_id, terminal_status="failed")
@@ -424,7 +411,7 @@ async def _generate_storybook_page_async(
         return {"status": "failed"}
 
     if await cancel.is_cancelled(storybook_id):
-        logger.info("Storybook %s cancelled before scene %s", storybook_id, scene_index)
+        logger.info("Storybook {} cancelled before scene {}", storybook_id, scene_index)
         await _finalize_storybook_billing(storybook_id, terminal_status="cancelled")
         return {"status": "cancelled"}
 
@@ -477,9 +464,7 @@ async def _generate_storybook_page_async(
             )
             return {"status": "failed", "error": "session_not_found"}
 
-        user_api_key = await container.user_service.get_active_api_key(
-            db_session, session.user_id
-        )
+        user_api_key = await container.user_service.get_active_api_key(db_session, session.user_id)
         if not user_api_key:
             await _fail_storybook(
                 storybook_id,
@@ -522,9 +507,7 @@ async def _generate_storybook_page_async(
 
     base_page_number = _scene_base_page_number(scene_index, separate_page_mode)
     async with get_db_session_local() as db_session:
-        existing_page = await repo.get_page_by_number(
-            db_session, storybook_id, base_page_number
-        )
+        existing_page = await repo.get_page_by_number(db_session, storybook_id, base_page_number)
 
     image_url: Optional[str] = None
     voice_cost_usd: float = 0.0
@@ -532,7 +515,7 @@ async def _generate_storybook_page_async(
     if existing_page and existing_page.image_url:
         image_url = existing_page.image_url
         logger.info(
-            "Storybook %s scene %s already has an image, skipping generation",
+            "Storybook {} scene {} already has an image, skipping generation",
             storybook_id,
             scene_index + 1,
         )
@@ -541,9 +524,7 @@ async def _generate_storybook_page_async(
         if scene_index > 0:
             prev_base_page = _scene_base_page_number(scene_index - 1, separate_page_mode)
             async with get_db_session_local() as db_session:
-                prev_page = await repo.get_page_by_number(
-                    db_session, storybook_id, prev_base_page
-                )
+                prev_page = await repo.get_page_by_number(db_session, storybook_id, prev_base_page)
             if prev_page and prev_page.image_url:
                 reference_image_url = prev_page.image_url
 
@@ -561,12 +542,8 @@ async def _generate_storybook_page_async(
                 page_number=base_page_number,
             )
         except Exception as exc:
-            logger.error(
-                "Storybook page %s (scene %s) failed: %s",
-                display_page,
-                scene_index + 1,
-                exc,
-                exc_info=True,
+            logger.opt(exception=True).error(
+                "Storybook page {} (scene {}) failed: {}", display_page, scene_index + 1, exc
             )
             await _fail_storybook(storybook_id, str(exc), failure_payload)
             return {"status": "failed", "error": str(exc)}
@@ -614,17 +591,15 @@ async def _generate_storybook_page_async(
                     tool_name=generation.get("tool_name", "generate_storybook"),
                 )
             except Exception:
-                logger.error(
-                    "Failed to create storybook tool result for %s",
-                    storybook_id,
-                    exc_info=True,
+                logger.opt(exception=True).error(
+                    "Failed to create storybook tool result for {}", storybook_id
                 )
 
         return {"status": "completed", "completed_pages": total_scenes}
 
     if await cancel.is_cancelled(storybook_id):
         logger.info(
-            "Storybook %s cancelled after scene %s, not queuing next page",
+            "Storybook {} cancelled after scene {}, not queuing next page",
             storybook_id,
             scene_index,
         )
@@ -699,12 +674,11 @@ def storybook_generate_page(self, payload: dict[str, Any]) -> dict[str, Any]:
     try:
         return _run_async(_generate_storybook_page_async(payload, self.request.id))
     except Exception as exc:
-        logger.opt(exception=True).error("Storybook page task failed: %s", exc)
+        logger.opt(exception=True).error("Storybook page task failed: {}", exc)
         try:
             _run_async(_handle_storybook_page_failure(payload, str(exc)))
         except Exception:
-            logger.error(
-                "Failed to update storybook generation after page task error",
-                exc_info=True,
+            logger.opt(exception=True).error(
+                "Failed to update storybook generation after page task error"
             )
         return {"status": "failed", "error": str(exc)}

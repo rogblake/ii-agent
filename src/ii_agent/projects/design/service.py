@@ -49,7 +49,6 @@ from ii_agent.projects.design.exceptions import (
     DesignSessionAccessDeniedError,
     DesignValidationError,
 )
-from ii_agent.projects.design.models import PersistedDesignSyncResult
 from ii_agent.projects.design.repository import ProjectDesignRepository
 from ii_agent.projects.design.schemas import (
     AIChangeRequest,
@@ -237,7 +236,7 @@ class ProjectDesignService:
             )
             payload = result.final_payload
         except Exception as exc:
-            logger.warning("[DesignMode AI Change] LLM call failed: %s", exc)
+            logger.warning("[DesignMode AI Change] LLM call failed: {}", exc)
             fallback_changes, fallback_explanation = self._parse_design_request(
                 request.user_request,
                 request.element_info.computedStyles or {},
@@ -353,7 +352,7 @@ class ProjectDesignService:
             )
             payload = result.final_payload
         except Exception as exc:
-            logger.warning("[DesignMode AI Iframe] LLM call failed: %s", exc)
+            logger.warning("[DesignMode AI Iframe] LLM call failed: {}", exc)
             return IframeAIPlanResponse(
                 operations=[],
                 explanation="I couldn't generate an edit plan due to an error.",
@@ -476,7 +475,7 @@ class ProjectDesignService:
             try:
                 event_id = await on_summary(summary)
             except Exception as exc:
-                logger.warning("[DesignMode Sync] Failed to emit summary event: %s", exc)
+                logger.warning("[DesignMode Sync] Failed to emit summary event: {}", exc)
         elif self._event_service:
             try:
                 event_id = await self._emit_sync_summary(
@@ -485,7 +484,7 @@ class ProjectDesignService:
                     summary=summary,
                 )
             except Exception as exc:
-                logger.warning("[DesignMode Sync] Failed to emit summary event: %s", exc)
+                logger.warning("[DesignMode Sync] Failed to emit summary event: {}", exc)
 
         return SyncStateResponse(
             success=all_applied,
@@ -587,7 +586,7 @@ class ProjectDesignService:
                     return resolved.model_copy(deep=True)
                 except Exception:
                     logger.warning(
-                        "[DesignMode] Failed loading session model %s for session %s",
+                        "[DesignMode] Failed loading session model {} for session {}",
                         model_id,
                         session_id,
                     )
@@ -790,14 +789,14 @@ class ProjectDesignService:
 
                 raise DesignProxyFetchError("Failed to fetch sandbox content (too many redirects)")
         except httpx.HTTPStatusError as exc:
-            logger.error("Failed to fetch sandbox URL: %s", exc)
+            logger.error("Failed to fetch sandbox URL: {}", exc)
             raise DesignProxyFetchError(
                 f"Failed to fetch sandbox content: {exc.response.status_code}"
             ) from exc
         except DesignProxyFetchError:
             raise
         except Exception as exc:
-            logger.error("Error fetching sandbox URL: %s", exc)
+            logger.error("Error fetching sandbox URL: {}", exc)
             raise DesignProxyFetchError("Failed to fetch sandbox content") from exc
 
     def _inject_runtime_script_with_base(self, *, html: str, base_url: str) -> str:

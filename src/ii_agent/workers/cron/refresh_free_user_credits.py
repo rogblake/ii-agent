@@ -29,7 +29,7 @@ def _monthly_free_credit_allowance() -> float:
     if allowance is None:
         allowance = settings.credits.default_user_credits
         app_logger.warning(
-            "No configured credit allowance for free plan; falling back to default_user_credits=%s",
+            "No configured credit allowance for free plan; falling back to default_user_credits={}",
             allowance,
         )
     return allowance
@@ -45,16 +45,13 @@ async def refresh_free_user_credits() -> None:
     from ii_agent.billing.customers.service import BillingCustomerService
     from ii_agent.billing.credits.balance_repository import CreditBalanceRepository
     from ii_agent.billing.credits.service import CreditService
-    billing_customer_service = BillingCustomerService(
-        customer_repo=BillingCustomerRepository()
-    )
+
+    billing_customer_service = BillingCustomerService(customer_repo=BillingCustomerRepository())
     balance_repo = CreditBalanceRepository()
     credit_service = CreditService(balance_repo=balance_repo)
 
     async with get_db_session_local() as db:
-        result = await db.execute(
-            select(User).where(User.is_active.is_(True))
-        )
+        result = await db.execute(select(User).where(User.is_active.is_(True)))
         users = result.scalars().all()
         customers_by_user = await billing_customer_service.list_by_user_ids(
             db,
@@ -85,16 +82,16 @@ async def refresh_free_user_credits() -> None:
                 current_credits = float(balance[0])
                 if current_credits != monthly_credits:
                     await credit_service.set_balance(
-                        db, user.id, monthly_credits,
+                        db,
+                        user.id,
+                        monthly_credits,
                         entry_type=LedgerEntryType.REFRESH,
                         source_domain=SourceDomain.CRON,
                         entry_metadata={"plan": FREE_PLAN_ID},
                     )
                     changed = True
             except Exception:
-                app_logger.warning(
-                    "Failed to set balance for user %s", user.id, exc_info=True
-                )
+                app_logger.opt(exception=True).warning("Failed to set balance for user {}", user.id)
                 continue
 
             if changed:
@@ -102,9 +99,7 @@ async def refresh_free_user_credits() -> None:
 
         await db.flush()
 
-    app_logger.info(
-        "Free user credit refresh completed: %s users updated", updated_users
-    )
+    app_logger.info("Free user credit refresh completed: {} users updated", updated_users)
 
 
 def _project_root() -> Path:
@@ -115,8 +110,7 @@ def _default_command() -> str:
     python_executable = sys.executable
     repo_root = _project_root()
     return (
-        f"cd {repo_root} && {python_executable} -m "
-        "ii_agent.workers.cron.refresh_free_user_credits"
+        f"cd {repo_root} && {python_executable} -m ii_agent.workers.cron.refresh_free_user_credits"
     )
 
 

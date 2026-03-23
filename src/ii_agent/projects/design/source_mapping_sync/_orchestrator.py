@@ -112,22 +112,20 @@ async def _apply_changes_with_source_mapping(
     remaining: List[StyleChange] = []
 
     logger.info(
-        "[DesignMode Sync] (source-mapping) Applying %d change(s) using data-design-id mapping",
+        "[DesignMode Sync] (source-mapping) Applying {} change(s) using data-design-id mapping",
         len(changes),
     )
 
     manifest_path: Optional[str]
     manifest_mapping: Dict[str, List[str]]
     try:
-        manifest_path, manifest_mapping = await _load_design_mode_manifest_mapping(
-            sandbox
-        )
+        manifest_path, manifest_mapping = await _load_design_mode_manifest_mapping(sandbox)
     except Exception:
         manifest_path, manifest_mapping = None, {}
 
     if manifest_mapping:
         logger.info(
-            "[DesignMode Sync] (source-mapping) Loaded %d Design Mode manifest entries from %s",
+            "[DesignMode Sync] (source-mapping) Loaded {} Design Mode manifest entries from {}",
             len(manifest_mapping),
             manifest_path or f"/workspace/{DESIGN_MODE_MANIFEST_FILENAME}",
         )
@@ -168,7 +166,7 @@ async def _apply_changes_with_source_mapping(
             remaining.append(change)
             errors.append(f"Change {idx}: Missing designId")
             logger.warning(
-                "[DesignMode Sync] (source-mapping) Change %d/%d missing designId",
+                "[DesignMode Sync] (source-mapping) Change {}/{} missing designId",
                 idx,
                 len(changes),
             )
@@ -179,17 +177,13 @@ async def _apply_changes_with_source_mapping(
             if isinstance(change.value, dict):
                 to_preview = change.value.get("to")
             logger.info(
-                "[DesignMode Sync] (source-mapping) Change %d/%d: designId=%s type=%s property=%s to=%s",
+                "[DesignMode Sync] (source-mapping) Change {}/{}: designId={} type={} property={} to={}",
                 idx,
                 len(changes),
                 design_id,
                 change.type,
                 change.property,
-                (
-                    _truncate_for_log(str(to_preview), limit=200)
-                    if to_preview is not None
-                    else "None"
-                ),
+                _truncate_for_log(str(to_preview), limit=200) if to_preview is not None else "None",
             )
         except Exception:
             pass
@@ -204,7 +198,7 @@ async def _apply_changes_with_source_mapping(
             else:
                 if not manifest_paths:
                     logger.warning(
-                        "[DesignMode Sync] (source-mapping) Change %d/%d: designId=%s missing from %s; falling back to workspace search",
+                        "[DesignMode Sync] (source-mapping) Change {}/{}: designId={} missing from {}; falling back to workspace search",
                         idx,
                         len(changes),
                         design_id,
@@ -212,7 +206,7 @@ async def _apply_changes_with_source_mapping(
                     )
                 else:
                     logger.warning(
-                        "[DesignMode Sync] (source-mapping) Change %d/%d: manifest mapping ambiguous for designId=%s: %s; falling back to workspace search",
+                        "[DesignMode Sync] (source-mapping) Change {}/{}: manifest mapping ambiguous for designId={}: {}; falling back to workspace search",
                         idx,
                         len(changes),
                         design_id,
@@ -237,7 +231,7 @@ async def _apply_changes_with_source_mapping(
                 remaining.append(change)
                 errors.append(f"Change {idx}: Failed to read {file_path}: {exc}")
                 logger.warning(
-                    "[DesignMode Sync] (source-mapping) Change %d/%d: failed to read %s: %s",
+                    "[DesignMode Sync] (source-mapping) Change {}/{}: failed to read {}: {}",
                     idx,
                     len(changes),
                     file_path,
@@ -250,7 +244,7 @@ async def _apply_changes_with_source_mapping(
                     and f"data-design-id='{design_id}'" not in content
                 ):
                     logger.warning(
-                        "[DesignMode Sync] (source-mapping) Manifest drift: designId=%s not found in %s; falling back to workspace search",
+                        "[DesignMode Sync] (source-mapping) Manifest drift: designId={} not found in {}; falling back to workspace search",
                         design_id,
                         resolved_path,
                     )
@@ -259,10 +253,8 @@ async def _apply_changes_with_source_mapping(
                     )
                     if searched:
                         try:
-                            content, resolved_path = (
-                                await _read_file_with_workspace_fallback(
-                                    sandbox, searched
-                                )
+                            content, resolved_path = await _read_file_with_workspace_fallback(
+                                sandbox, searched
                             )
                         except Exception:
                             pass
@@ -276,11 +268,10 @@ async def _apply_changes_with_source_mapping(
                     )
                     if candidate_path:
                         try:
-                            cand_content, cand_resolved_path = (
-                                await _read_file_with_workspace_fallback(
-                                    sandbox, candidate_path
-                                )
-                            )
+                            (
+                                cand_content,
+                                cand_resolved_path,
+                            ) = await _read_file_with_workspace_fallback(sandbox, candidate_path)
                         except Exception:
                             cand_content = None
                             cand_resolved_path = None
@@ -301,9 +292,7 @@ async def _apply_changes_with_source_mapping(
                             )
                             if applied_candidate:
                                 try:
-                                    await sandbox.write_file(
-                                        cand_resolved_path, updated_candidate
-                                    )
+                                    await sandbox.write_file(cand_resolved_path, updated_candidate)
                                     ok = True
                                 except Exception as exc:
                                     ok = False
@@ -313,7 +302,7 @@ async def _apply_changes_with_source_mapping(
                                 if ok:
                                     applied_count += 1
                                     logger.info(
-                                        "[DesignMode Sync] (source-mapping) Change %d/%d applied via icon assignment fallback in %s",
+                                        "[DesignMode Sync] (source-mapping) Change {}/{} applied via icon assignment fallback in {}",
                                         idx,
                                         len(changes),
                                         cand_resolved_path,
@@ -321,7 +310,7 @@ async def _apply_changes_with_source_mapping(
                                     continue
 
             logger.warning(
-                "[DesignMode Sync] (source-mapping) Change %d/%d: data-design-id=%s not found in source; attempting backfill",
+                "[DesignMode Sync] (source-mapping) Change {}/{}: data-design-id={} not found in source; attempting backfill",
                 idx,
                 len(changes),
                 design_id,
@@ -341,7 +330,7 @@ async def _apply_changes_with_source_mapping(
                 )
                 if not ok:
                     logger.warning(
-                        "[DesignMode Sync] (source-mapping) Change %d/%d: rejecting reactSource backfill candidate for designId=%s (%s)",
+                        "[DesignMode Sync] (source-mapping) Change {}/{}: rejecting reactSource backfill candidate for designId={} ({})",
                         idx,
                         len(changes),
                         design_id,
@@ -364,7 +353,7 @@ async def _apply_changes_with_source_mapping(
                     )
                     if not ok:
                         logger.warning(
-                            "[DesignMode Sync] (source-mapping) Change %d/%d: rejecting text-search backfill candidate for designId=%s (%s)",
+                            "[DesignMode Sync] (source-mapping) Change {}/{}: rejecting text-search backfill candidate for designId={} ({})",
                             idx,
                             len(changes),
                             design_id,
@@ -387,7 +376,7 @@ async def _apply_changes_with_source_mapping(
                     )
                     if not ok:
                         logger.warning(
-                            "[DesignMode Sync] (source-mapping) Change %d/%d: rejecting className backfill candidate for designId=%s (%s)",
+                            "[DesignMode Sync] (source-mapping) Change {}/{}: rejecting className backfill candidate for designId={} ({})",
                             idx,
                             len(changes),
                             design_id,
@@ -395,12 +384,10 @@ async def _apply_changes_with_source_mapping(
                         )
                         backfilled = None
             if not backfilled:
-                backfilled = (
-                    await _backfill_design_id_in_source_from_component_callsite(
-                        sandbox=sandbox,
-                        change=change,
-                        design_id=design_id,
-                    )
+                backfilled = await _backfill_design_id_in_source_from_component_callsite(
+                    sandbox=sandbox,
+                    change=change,
+                    design_id=design_id,
                 )
                 if backfilled:
                     candidate_path, candidate_content = backfilled
@@ -412,7 +399,7 @@ async def _apply_changes_with_source_mapping(
                     )
                     if not ok:
                         logger.warning(
-                            "[DesignMode Sync] (source-mapping) Change %d/%d: rejecting callsite backfill candidate for designId=%s (%s)",
+                            "[DesignMode Sync] (source-mapping) Change {}/{}: rejecting callsite backfill candidate for designId={} ({})",
                             idx,
                             len(changes),
                             design_id,
@@ -425,23 +412,21 @@ async def _apply_changes_with_source_mapping(
                     icon_name = _extract_icon_name_from_change(change)
                     if icon_name:
                         logger.info(
-                            "[DesignMode Sync] (source-mapping) Change %d/%d: attempting dynamic pattern matching for icon designId=%s",
+                            "[DesignMode Sync] (source-mapping) Change {}/{}: attempting dynamic pattern matching for icon designId={}",
                             idx,
                             len(changes),
                             design_id,
                         )
-                        dynamic_content, dynamic_success = (
-                            await _find_icon_by_dynamic_pattern(
-                                sandbox=sandbox,
-                                design_id=design_id,
-                                icon_name=icon_name,
-                                element_context=change.elementContext,
-                            )
+                        dynamic_content, dynamic_success = await _find_icon_by_dynamic_pattern(
+                            sandbox=sandbox,
+                            design_id=design_id,
+                            icon_name=icon_name,
+                            element_context=change.elementContext,
                         )
                         if dynamic_success:
                             applied_count += 1
                             logger.info(
-                                "[DesignMode Sync] (source-mapping) Change %d/%d applied via dynamic pattern matching",
+                                "[DesignMode Sync] (source-mapping) Change {}/{} applied via dynamic pattern matching",
                                 idx,
                                 len(changes),
                             )
@@ -463,7 +448,7 @@ async def _apply_changes_with_source_mapping(
                         if css_ok:
                             applied_count += 1
                             logger.info(
-                                "[DesignMode Sync] (source-mapping) Change %d/%d applied as CSS override in %s",
+                                "[DesignMode Sync] (source-mapping) Change {}/{} applied as CSS override in {}",
                                 idx,
                                 len(changes),
                                 css_path,
@@ -473,22 +458,16 @@ async def _apply_changes_with_source_mapping(
                 try:
                     ctx = change.elementContext
                     logger.warning(
-                        "[DesignMode Sync] (source-mapping) Change %d/%d: backfill failed for designId=%s (tag=%s class=%s text=%s reactSource.file=%s)",
+                        "[DesignMode Sync] (source-mapping) Change {}/{}: backfill failed for designId={} (tag={} class={} text={} reactSource.file={})",
                         idx,
                         len(changes),
                         design_id,
                         getattr(ctx, "tagName", None),
-                        _truncate_for_log(
-                            str(getattr(ctx, "className", "") or ""), limit=160
-                        ),
-                        _truncate_for_log(
-                            str(getattr(ctx, "textContent", "") or ""), limit=160
-                        ),
-                        (
-                            (getattr(ctx, "reactSource", None) or {}).get("fileName")
-                            if getattr(ctx, "reactSource", None)
-                            else None
-                        ),
+                        _truncate_for_log(str(getattr(ctx, "className", "") or ""), limit=160),
+                        _truncate_for_log(str(getattr(ctx, "textContent", "") or ""), limit=160),
+                        (getattr(ctx, "reactSource", None) or {}).get("fileName")
+                        if getattr(ctx, "reactSource", None)
+                        else None,
                     )
                 except Exception:
                     pass
@@ -500,7 +479,7 @@ async def _apply_changes_with_source_mapping(
 
             resolved_path, content = backfilled
             logger.info(
-                "[DesignMode Sync] (source-mapping) Change %d/%d: backfilled data-design-id=%s into %s",
+                "[DesignMode Sync] (source-mapping) Change {}/{}: backfilled data-design-id={} into {}",
                 idx,
                 len(changes),
                 design_id,
@@ -511,7 +490,7 @@ async def _apply_changes_with_source_mapping(
             remaining.append(change)
             errors.append(f"Change {idx}: File is empty/unreadable: {resolved_path}")
             logger.warning(
-                "[DesignMode Sync] (source-mapping) Change %d/%d: file empty/unreadable: %s",
+                "[DesignMode Sync] (source-mapping) Change {}/{}: file empty/unreadable: {}",
                 idx,
                 len(changes),
                 resolved_path,
@@ -519,9 +498,7 @@ async def _apply_changes_with_source_mapping(
             continue
         if not isinstance(resolved_path, str) or not resolved_path:
             remaining.append(change)
-            errors.append(
-                f"Change {idx}: Missing/invalid resolved_path for designId={design_id}"
-            )
+            errors.append(f"Change {idx}: Missing/invalid resolved_path for designId={design_id}")
             continue
 
         match_ok, mismatch_reason = _verify_design_mode_target_matches_context(
@@ -546,7 +523,7 @@ async def _apply_changes_with_source_mapping(
                     if css_ok:
                         applied_count += 1
                         logger.info(
-                            "[DesignMode Sync] (source-mapping) Change %d/%d applied as CSS override in %s (mismatch guard bypass)",
+                            "[DesignMode Sync] (source-mapping) Change {}/{} applied as CSS override in {} (mismatch guard bypass)",
                             idx,
                             len(changes),
                             css_path,
@@ -558,7 +535,7 @@ async def _apply_changes_with_source_mapping(
                 f'Change {idx}: data-design-id="{design_id}" matched an unexpected element in {resolved_path} ({mismatch_reason})'
             )
             logger.warning(
-                "[DesignMode Sync] (source-mapping) Change %d/%d: mismatch guard blocked apply for designId=%s in %s (%s)",
+                "[DesignMode Sync] (source-mapping) Change {}/{}: mismatch guard blocked apply for designId={} in {} ({})",
                 idx,
                 len(changes),
                 design_id,
@@ -578,7 +555,7 @@ async def _apply_changes_with_source_mapping(
                 remaining.append(change)
                 errors.append(f"Change {idx}: Missing style 'to' value")
                 logger.warning(
-                    "[DesignMode Sync] (source-mapping) Change %d/%d missing style 'to' value",
+                    "[DesignMode Sync] (source-mapping) Change {}/{} missing style 'to' value",
                     idx,
                     len(changes),
                 )
@@ -601,7 +578,7 @@ async def _apply_changes_with_source_mapping(
                 remaining.append(change)
                 errors.append(f"Change {idx}: Missing text from/to values")
                 logger.warning(
-                    "[DesignMode Sync] (source-mapping) Change %d/%d missing text from/to values",
+                    "[DesignMode Sync] (source-mapping) Change {}/{} missing text from/to values",
                     idx,
                     len(changes),
                 )
@@ -622,7 +599,7 @@ async def _apply_changes_with_source_mapping(
                 remaining.append(change)
                 errors.append(f"Change {idx}: Missing move target")
                 logger.warning(
-                    "[DesignMode Sync] (source-mapping) Change %d/%d missing move target",
+                    "[DesignMode Sync] (source-mapping) Change {}/{} missing move target",
                     idx,
                     len(changes),
                 )
@@ -637,14 +614,12 @@ async def _apply_changes_with_source_mapping(
                 if to_value == "only":
                     updated_content, did_apply = content, True
                 else:
-                    target_id = (
-                        to_value.split(":", 1)[1].strip() if ":" in to_value else ""
-                    )
+                    target_id = to_value.split(":", 1)[1].strip() if ":" in to_value else ""
                     if not target_id:
                         remaining.append(change)
                         errors.append(f"Change {idx}: Invalid move anchor '{to_value}'")
                         logger.warning(
-                            "[DesignMode Sync] (source-mapping) Change %d/%d invalid move anchor: %s",
+                            "[DesignMode Sync] (source-mapping) Change {}/{} invalid move anchor: {}",
                             idx,
                             len(changes),
                             to_value,
@@ -657,7 +632,7 @@ async def _apply_changes_with_source_mapping(
                             f'Change {idx}: Could not find target data-design-id="{target_id}" in {resolved_path}'
                         )
                         logger.warning(
-                            "[DesignMode Sync] (source-mapping) Change %d/%d move target designId not found in %s: %s",
+                            "[DesignMode Sync] (source-mapping) Change {}/{} move target designId not found in {}: {}",
                             idx,
                             len(changes),
                             resolved_path,
@@ -681,7 +656,7 @@ async def _apply_changes_with_source_mapping(
                         f'Change {idx}: Could not find target data-design-id="{target_id}" in {resolved_path}'
                     )
                     logger.warning(
-                        "[DesignMode Sync] (source-mapping) Change %d/%d target designId not found in %s: %s",
+                        "[DesignMode Sync] (source-mapping) Change {}/{} target designId not found in {}: {}",
                         idx,
                         len(changes),
                         resolved_path,
@@ -700,11 +675,9 @@ async def _apply_changes_with_source_mapping(
             icon_name, svg_inner = _extract_icon_payload_from_change(change)
             if not icon_name and not svg_inner:
                 remaining.append(change)
-                errors.append(
-                    f"Change {idx}: Missing icon payload for attribute change"
-                )
+                errors.append(f"Change {idx}: Missing icon payload for attribute change")
                 logger.warning(
-                    "[DesignMode Sync] (source-mapping) Change %d/%d missing icon payload",
+                    "[DesignMode Sync] (source-mapping) Change {}/{} missing icon payload",
                     idx,
                     len(changes),
                 )
@@ -720,13 +693,11 @@ async def _apply_changes_with_source_mapping(
             if not did_apply and icon_name:
                 item_id = _extract_item_id_from_icon_design_id(design_id)
                 if item_id:
-                    updated_content, did_apply = (
-                        _apply_icon_change_by_item_id_assignment(
-                            content=content,
-                            file_path=resolved_path,
-                            item_id=item_id,
-                            icon_name=icon_name,
-                        )
+                    updated_content, did_apply = _apply_icon_change_by_item_id_assignment(
+                        content=content,
+                        file_path=resolved_path,
+                        item_id=item_id,
+                        icon_name=icon_name,
                     )
         elif change.type == "delete":
             # Handle delete changes - remove the element from the source
@@ -739,7 +710,7 @@ async def _apply_changes_with_source_mapping(
             remaining.append(change)
             errors.append(f"Change {idx}: Unsupported change type '{change.type}'")
             logger.warning(
-                "[DesignMode Sync] (source-mapping) Change %d/%d unsupported type: %s",
+                "[DesignMode Sync] (source-mapping) Change {}/{} unsupported type: {}",
                 idx,
                 len(changes),
                 change.type,
@@ -762,7 +733,7 @@ async def _apply_changes_with_source_mapping(
                     if css_ok:
                         applied_count += 1
                         logger.info(
-                            "[DesignMode Sync] (source-mapping) Change %d/%d applied as CSS override in %s (source patch failed)",
+                            "[DesignMode Sync] (source-mapping) Change {}/{} applied as CSS override in {} (source patch failed)",
                             idx,
                             len(changes),
                             css_path,
@@ -772,7 +743,7 @@ async def _apply_changes_with_source_mapping(
             remaining.append(change)
             errors.append(f"Change {idx}: Could not apply change in {resolved_path}")
             logger.warning(
-                "[DesignMode Sync] (source-mapping) Change %d/%d failed to apply in %s (designId=%s)",
+                "[DesignMode Sync] (source-mapping) Change {}/{} failed to apply in {} (designId={})",
                 idx,
                 len(changes),
                 resolved_path,
@@ -787,7 +758,7 @@ async def _apply_changes_with_source_mapping(
             ok = False
             errors.append(f"Change {idx}: Failed to write {resolved_path}: {exc}")
             logger.warning(
-                "[DesignMode Sync] (source-mapping) Change %d/%d failed to write %s: %s",
+                "[DesignMode Sync] (source-mapping) Change {}/{} failed to write {}: {}",
                 idx,
                 len(changes),
                 resolved_path,
@@ -797,7 +768,7 @@ async def _apply_changes_with_source_mapping(
         if ok:
             applied_count += 1
             logger.info(
-                "[DesignMode Sync] (source-mapping) Change %d/%d applied in %s",
+                "[DesignMode Sync] (source-mapping) Change {}/{} applied in {}",
                 idx,
                 len(changes),
                 resolved_path,
@@ -806,7 +777,7 @@ async def _apply_changes_with_source_mapping(
             remaining.append(change)
             errors.append(f"Change {idx}: Failed to persist changes to {resolved_path}")
             logger.warning(
-                "[DesignMode Sync] (source-mapping) Change %d/%d failed to persist in %s",
+                "[DesignMode Sync] (source-mapping) Change {}/{} failed to persist in {}",
                 idx,
                 len(changes),
                 resolved_path,

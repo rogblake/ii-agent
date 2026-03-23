@@ -3,6 +3,7 @@
 Refactored: DB access moved to repository; this service accepts an optional
 existing_auth_config_id instead of querying the database directly.
 """
+
 from typing import Optional, Dict
 from pydantic import BaseModel
 
@@ -13,6 +14,7 @@ from ii_agent.core.logger import logger
 
 class AuthConfig(BaseModel):
     """Authentication configuration model."""
+
     id: str
     auth_scheme: str
     is_composio_managed: bool = True
@@ -25,7 +27,9 @@ class AuthConfigService:
     def __init__(self, api_key: Optional[str] = None):
         self.client = ComposioClient.get_client(api_key)
 
-    def build_custom_auth_config(self, prefix_toolkit_slug_composio: str) -> Optional[Dict[str, str]]:
+    def build_custom_auth_config(
+        self, prefix_toolkit_slug_composio: str
+    ) -> Optional[Dict[str, str]]:
         """Build custom auth config from environment variables."""
         client_id_key = f"{prefix_toolkit_slug_composio}_client_id"
         client_secret_key = f"{prefix_toolkit_slug_composio}_client_secret"
@@ -72,12 +76,14 @@ class AuthConfigService:
 
             # Reuse existing auth config if provided
             if existing_auth_config_id:
-                logger.info(f"Returning existing auth config for {toolkit_slug}: {existing_auth_config_id}")
+                logger.info(
+                    f"Returning existing auth config for {toolkit_slug}: {existing_auth_config_id}"
+                )
                 return AuthConfig(
                     id=existing_auth_config_id,
                     auth_scheme="OAUTH2",
                     is_composio_managed=not use_custom_auth,
-                    toolkit_slug=toolkit_slug
+                    toolkit_slug=toolkit_slug,
                 )
 
             # Try to build custom auth config from environment if not provided
@@ -99,17 +105,15 @@ class AuthConfigService:
                     {
                         "type": "use_custom_auth",
                         "credentials": credentials,
-                        "auth_scheme": "OAUTH2"
-                    }
+                        "auth_scheme": "OAUTH2",
+                    },
                 )
             else:
                 response = self.client.auth_configs.create(
                     toolkit_slug,
                     {
                         "type": "use_composio_managed_auth",
-                        "tool_access_config": {
-                            "tools_for_connected_account_creation": []
-                        },
+                        "tool_access_config": {"tools_for_connected_account_creation": []},
                     },
                 )
 
@@ -118,15 +122,19 @@ class AuthConfigService:
             auth_config = AuthConfig(
                 id=auth_config_obj.id,
                 auth_scheme=auth_config_obj.auth_scheme,
-                is_composio_managed=getattr(auth_config_obj, 'is_composio_managed', not use_custom_auth),
-                toolkit_slug=toolkit_slug
+                is_composio_managed=getattr(
+                    auth_config_obj, "is_composio_managed", not use_custom_auth
+                ),
+                toolkit_slug=toolkit_slug,
             )
 
             logger.debug(f"Successfully created auth config: {auth_config.id}")
             return auth_config
 
         except Exception as e:
-            logger.error(f"Failed to create auth config for {toolkit_slug}: {e}", exc_info=True)
+            logger.opt(exception=True).error(
+                f"Failed to create auth config for {toolkit_slug}: {e}"
+            )
             raise
 
     async def get_auth_config(self, auth_config_id: str) -> Optional[AuthConfig]:
@@ -139,11 +147,11 @@ class AuthConfigService:
             return AuthConfig(
                 id=response.id,
                 auth_scheme=response.auth_scheme,
-                is_composio_managed=getattr(response, 'is_composio_managed', True),
-                toolkit_slug=getattr(response, 'toolkit_slug', '')
+                is_composio_managed=getattr(response, "is_composio_managed", True),
+                toolkit_slug=getattr(response, "toolkit_slug", ""),
             )
         except Exception as e:
-            logger.error(f"Failed to get auth config {auth_config_id}: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Failed to get auth config {auth_config_id}: {e}")
             raise
 
     async def delete_auth_config(self, auth_config_id: str) -> bool:
@@ -154,5 +162,5 @@ class AuthConfigService:
             logger.info(f"Successfully deleted auth config: {auth_config_id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to delete auth config {auth_config_id}: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Failed to delete auth config {auth_config_id}: {e}")
             raise

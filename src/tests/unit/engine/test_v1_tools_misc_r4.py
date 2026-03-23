@@ -455,8 +455,11 @@ class TestProcessAttachment:
 
         fake_content = b"file content bytes"
 
+        async def _stream():
+            yield fake_content
+
         sandbox = MagicMock()
-        sandbox.download_file_stream = MagicMock(return_value=iter([fake_content]))
+        sandbox.download_file_stream = AsyncMock(return_value=_stream())
 
         mock_http_response = MagicMock()
         mock_http_response.is_success = True
@@ -476,6 +479,7 @@ class TestProcessAttachment:
 
         assert result is not None
         assert result["name"] == "file.pdf"
+        sandbox.download_file_stream.assert_awaited_once_with("/local/path/file.pdf")
 
     @pytest.mark.asyncio
     async def test_local_path_upload_failure_returns_none(self):
@@ -484,8 +488,11 @@ class TestProcessAttachment:
         storage = MagicMock()
         storage.get_upload_signed_url = MagicMock(return_value="http://upload.example.com/url")
 
+        async def _stream():
+            yield b"content"
+
         sandbox = MagicMock()
-        sandbox.download_file_stream = MagicMock(return_value=iter([b"content"]))
+        sandbox.download_file_stream = AsyncMock(return_value=_stream())
 
         mock_http_response = MagicMock()
         mock_http_response.is_success = False
@@ -506,6 +513,7 @@ class TestProcessAttachment:
             )
 
         assert result is None
+        sandbox.download_file_stream.assert_awaited_once_with("/local/path/file.pdf")
 
 
 # ---------------------------------------------------------------------------

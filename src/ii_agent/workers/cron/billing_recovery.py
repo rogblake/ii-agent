@@ -10,7 +10,7 @@ cleanup jobs.  They close the operational gap described in credit_fix.md:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from ii_agent.billing.reservations.repository import CreditReservationRepository
 from ii_agent.billing.reservations.service import CreditReservationService
@@ -48,14 +48,12 @@ async def expire_stale_reservations() -> None:
         cutoff = datetime.now(timezone.utc)
 
         async with get_db_session_local() as db:
-            expired_count = await svc.expire_stale(
-                db, older_than=cutoff, limit=_EXPIRE_BATCH_LIMIT
-            )
+            expired_count = await svc.expire_stale(db, older_than=cutoff, limit=_EXPIRE_BATCH_LIMIT)
             await db.commit()
 
         if expired_count:
             logger.warning(
-                "Expired %d stale credit reservations older than %s",
+                "Expired {} stale credit reservations older than {}",
                 expired_count,
                 cutoff.isoformat(),
             )
@@ -63,7 +61,7 @@ async def expire_stale_reservations() -> None:
             logger.debug("No stale credit reservations to expire")
 
     except Exception:
-        logger.error("expire_stale_reservations failed", exc_info=True)
+        logger.opt(exception=True).error("expire_stale_reservations failed")
 
 
 # ---------------------------------------------------------------------------
@@ -86,12 +84,12 @@ async def retry_billing_usage_facts() -> None:
             await db.commit()
 
         if retried:
-            logger.warning("Retried %d billing usage fact(s)", retried)
+            logger.warning("Retried {} billing usage fact(s)", retried)
         else:
             logger.debug("No captured billing usage facts to retry")
 
     except Exception:
-        logger.error("retry_billing_usage_facts failed", exc_info=True)
+        logger.opt(exception=True).error("retry_billing_usage_facts failed")
 
 
 # ---------------------------------------------------------------------------
@@ -114,20 +112,14 @@ async def alert_settlement_failures() -> None:
         repo = CreditReservationRepository()
 
         async with get_db_session_local() as db:
-            failed = await repo.list_settlement_failed(
-                db, limit=_FAILED_SETTLEMENT_BATCH
-            )
+            failed = await repo.list_settlement_failed(db, limit=_FAILED_SETTLEMENT_BATCH)
             if not failed:
                 return
 
-            logger.warning(
-                "Found %d reservations in settlement_failed state",
-                len(failed),
-            )
+            logger.warning("Found {} reservations in settlement_failed state", len(failed))
             for r in failed:
                 logger.warning(
-                    "settlement_failed: reservation=%s user=%s source=%s:%s "
-                    "reserved=%.4f error=%s created=%s",
+                    "settlement_failed: reservation={} user={} source={}:{} reserved={:.4f} error={} created={}",
                     r.id,
                     r.user_id,
                     r.source_domain,
@@ -138,4 +130,4 @@ async def alert_settlement_failures() -> None:
                 )
 
     except Exception:
-        logger.error("alert_settlement_failures failed", exc_info=True)
+        logger.opt(exception=True).error("alert_settlement_failures failed")

@@ -15,7 +15,7 @@ def _load_html_asset(asset_name: str) -> str:
     try:
         return asset_path.read_text()
     except OSError as exc:
-        logger.warning("[DesignMode] Unable to read asset %s: %s", asset_path, exc)
+        logger.warning("[DesignMode] Unable to read asset {}: {}", asset_path, exc)
         return ""
 
 

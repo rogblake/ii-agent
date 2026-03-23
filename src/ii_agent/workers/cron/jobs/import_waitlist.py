@@ -116,7 +116,7 @@ async def import_waitlist(csv_path: Path) -> tuple[int, int]:
 
 async def _main_async(csv_path: Path) -> None:
     inserted, skipped = await import_waitlist(csv_path)
-    logger.info("Waitlist import finished: %s inserted, %s skipped", inserted, skipped)
+    logger.info("Waitlist import finished: {} inserted, {} skipped", inserted, skipped)
 
 
 def main(argv: Iterable[str] | None = None) -> None:

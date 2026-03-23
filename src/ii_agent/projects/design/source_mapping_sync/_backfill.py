@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional
 from ii_agent.core.logger import logger
 from ii_agent.projects.design.schemas import ElementContext, StyleChange
 from ii_agent.projects.design.source_mapping_sync._tag_utils import (
-    _extract_opening_tag_name,
     _find_matching_closing_tag_end,
     _find_tag_end,
     _normalize_whitespace_for_match,
@@ -49,9 +48,7 @@ def _extract_anchor_snippets(ctx: Optional[ElementContext]) -> List[str]:
         # contiguous substrings that likely exist as literals in source.
         if len(parts) == 1 and len(parts[0]) > 80:
             sentence_parts = [
-                p.strip()
-                for p in re.split(r"(?<=[.!?])\s+", parts[0])
-                if p and p.strip()
+                p.strip() for p in re.split(r"(?<=[.!?])\s+", parts[0]) if p and p.strip()
             ]
             if len(sentence_parts) > 1:
                 parts = sentence_parts
@@ -178,9 +175,7 @@ def _upsert_data_design_id_attribute(tag: str, design_id: str) -> Optional[str]:
 
     # If a design id already exists, only treat it as a match when it is the same id.
     # If it is a different id, do NOT overwrite (we likely matched the wrong element).
-    existing_match = re.search(
-        r"\bdata-design-id\s*=\s*(?P<q>['\"])(?P<val>.*?)(?P=q)", tag
-    )
+    existing_match = re.search(r"\bdata-design-id\s*=\s*(?P<q>['\"])(?P<val>.*?)(?P=q)", tag)
     if existing_match:
         existing_val = (existing_match.group("val") or "").strip()
         if existing_val == design_id:
@@ -215,15 +210,13 @@ async def _backfill_design_id_in_source_from_class_name(
     if isinstance(ctx.className, str) and ctx.className.strip():
         class_name = " ".join(ctx.className.split())
     elif isinstance(ctx.outerHTML, str) and ctx.outerHTML:
-        match = re.search(
-            r"\bclass\s*=\s*(?P<q>['\"])(?P<val>.*?)(?P=q)", ctx.outerHTML
-        )
+        match = re.search(r"\bclass\s*=\s*(?P<q>['\"])(?P<val>.*?)(?P=q)", ctx.outerHTML)
         if match and match.group("val").strip():
             class_name = " ".join(match.group("val").strip().split())
 
     if not class_name:
         logger.debug(
-            "[DesignMode Sync] (source-mapping) Backfill (className) skipped: missing className/outerHTML for designId=%s",
+            "[DesignMode Sync] (source-mapping) Backfill (className) skipped: missing className/outerHTML for designId={}",
             design_id,
         )
         return None
@@ -240,15 +233,13 @@ async def _backfill_design_id_in_source_from_class_name(
         ranked = sorted(candidates, key=_score_source_path)
         best_path = ranked[0]
         logger.info(
-            "[DesignMode Sync] (source-mapping) Backfill (className) exact match: designId=%s files=%d best=%s",
+            "[DesignMode Sync] (source-mapping) Backfill (className) exact match: designId={} files={} best={}",
             design_id,
             len(ranked),
             best_path,
         )
         try:
-            content, resolved_path = await _read_file_with_workspace_fallback(
-                sandbox, best_path
-            )
+            content, resolved_path = await _read_file_with_workspace_fallback(sandbox, best_path)
         except Exception:
             content = None
             resolved_path = None
@@ -288,7 +279,7 @@ async def _backfill_design_id_in_source_from_class_name(
 
     if not file_hits:
         logger.debug(
-            "[DesignMode Sync] (source-mapping) Backfill (className) failed: no token matches in /workspace for designId=%s",
+            "[DesignMode Sync] (source-mapping) Backfill (className) failed: no token matches in /workspace for designId={}",
             design_id,
         )
         return None
@@ -305,9 +296,7 @@ async def _backfill_design_id_in_source_from_class_name(
 
     for path, token_hit_count in ranked_files[:5]:
         try:
-            content, resolved_path = await _read_file_with_workspace_fallback(
-                sandbox, path
-            )
+            content, resolved_path = await _read_file_with_workspace_fallback(sandbox, path)
         except Exception:
             continue
         if not isinstance(content, str) or not content:
@@ -337,7 +326,7 @@ async def _backfill_design_id_in_source_from_class_name(
         return None
 
     logger.info(
-        "[DesignMode Sync] (source-mapping) Backfill (className) candidate: designId=%s file=%s tokens=%d anchors=%d",
+        "[DesignMode Sync] (source-mapping) Backfill (className) candidate: designId={} file={} tokens={} anchors={}",
         design_id,
         best_path,
         best_token_hits,
@@ -399,9 +388,7 @@ def _find_best_component_callsite_opening_tag(
         span_start = tag_start
         span_end = tag_end + 1
         if not tag.rstrip().endswith("/>"):
-            closing_end = _find_matching_closing_tag_end(
-                content, tag_end + 1, component_name
-            )
+            closing_end = _find_matching_closing_tag_end(content, tag_end + 1, component_name)
             if closing_end is None:
                 continue
             span_end = closing_end + 1
@@ -480,9 +467,7 @@ async def _backfill_design_id_in_source_from_component_callsite(
     if isinstance(ctx.className, str) and ctx.className.strip():
         class_name = " ".join(ctx.className.split())
     elif isinstance(ctx.outerHTML, str) and ctx.outerHTML:
-        match = re.search(
-            r"\bclass\s*=\s*(?P<q>['\"])(?P<val>.*?)(?P=q)", ctx.outerHTML
-        )
+        match = re.search(r"\bclass\s*=\s*(?P<q>['\"])(?P<val>.*?)(?P=q)", ctx.outerHTML)
         if match and match.group("val").strip():
             class_name = " ".join(match.group("val").strip().split())
 
@@ -499,8 +484,8 @@ async def _backfill_design_id_in_source_from_component_callsite(
     component_names: List[str] = []
     for def_path in definition_paths[:5]:
         try:
-            definition_content, _resolved_def_path = (
-                await _read_file_with_workspace_fallback(sandbox, def_path)
+            definition_content, _resolved_def_path = await _read_file_with_workspace_fallback(
+                sandbox, def_path
             )
         except Exception:
             continue
@@ -508,9 +493,7 @@ async def _backfill_design_id_in_source_from_component_callsite(
             continue
 
         for match in re.finditer(re.escape(class_name), definition_content):
-            inferred = _infer_component_name_before_index(
-                definition_content, match.start()
-            )
+            inferred = _infer_component_name_before_index(definition_content, match.start())
             if inferred and inferred not in component_names:
                 component_names.append(inferred)
         if component_names:
@@ -538,9 +521,7 @@ async def _backfill_design_id_in_source_from_component_callsite(
     ranked_callsite_paths = sorted(deduped, key=_score_source_path)
     for path in ranked_callsite_paths[:8]:
         try:
-            content, resolved_path = await _read_file_with_workspace_fallback(
-                sandbox, path
-            )
+            content, resolved_path = await _read_file_with_workspace_fallback(sandbox, path)
         except Exception:
             continue
         if not isinstance(content, str) or not content or not resolved_path:
@@ -563,7 +544,7 @@ async def _backfill_design_id_in_source_from_component_callsite(
                 return resolved_path, content
             updated_content = content[:tag_start] + updated_tag + content[tag_end + 1 :]
             logger.info(
-                "[DesignMode Sync] (source-mapping) Backfill (callsite) inferred component=%s file=%s designId=%s",
+                "[DesignMode Sync] (source-mapping) Backfill (callsite) inferred component={} file={} designId={}",
                 component_name,
                 resolved_path,
                 design_id,
@@ -648,7 +629,7 @@ async def _backfill_design_id_in_source_from_react_source(
     normalized_file = _normalize_react_source_file_name(raw_file)
     if not normalized_file:
         logger.debug(
-            "[DesignMode Sync] (source-mapping) Backfill skipped: missing/invalid reactSource.fileName=%r for designId=%s",
+            "[DesignMode Sync] (source-mapping) Backfill skipped: missing/invalid reactSource.fileName={!r} for designId={}",
             raw_file,
             design_id,
         )
@@ -657,7 +638,7 @@ async def _backfill_design_id_in_source_from_react_source(
     normalized_path = _normalize_workspace_file_path(normalized_file)
     if not normalized_path:
         logger.debug(
-            "[DesignMode Sync] (source-mapping) Backfill skipped: could not normalize reactSource file path %r for designId=%s",
+            "[DesignMode Sync] (source-mapping) Backfill skipped: could not normalize reactSource file path {!r} for designId={}",
             normalized_file,
             design_id,
         )
@@ -670,7 +651,7 @@ async def _backfill_design_id_in_source_from_react_source(
         line_no = None
     if not line_no:
         logger.debug(
-            "[DesignMode Sync] (source-mapping) Backfill skipped: missing reactSource.lineNumber for designId=%s",
+            "[DesignMode Sync] (source-mapping) Backfill skipped: missing reactSource.lineNumber for designId={}",
             design_id,
         )
         return None
@@ -682,12 +663,10 @@ async def _backfill_design_id_in_source_from_react_source(
         column_no = None
 
     try:
-        content, resolved_path = await _read_file_with_workspace_fallback(
-            sandbox, normalized_path
-        )
+        content, resolved_path = await _read_file_with_workspace_fallback(sandbox, normalized_path)
     except Exception:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Backfill failed: could not read reactSource file %s (from %r) for designId=%s",
+            "[DesignMode Sync] (source-mapping) Backfill failed: could not read reactSource file {} (from {!r}) for designId={}",
             normalized_path,
             raw_file,
             design_id,
@@ -702,7 +681,7 @@ async def _backfill_design_id_in_source_from_react_source(
     )
     if not bounds:
         logger.warning(
-            "[DesignMode Sync] (source-mapping) Backfill failed: could not locate JSX tag near %s:%s for designId=%s",
+            "[DesignMode Sync] (source-mapping) Backfill failed: could not locate JSX tag near {}:{} for designId={}",
             resolved_path,
             line_no,
             design_id,
@@ -737,16 +716,14 @@ async def _backfill_design_id_in_source_from_text_search(
     candidates = _parse_search_paths(search_out)
     if not candidates:
         logger.debug(
-            "[DesignMode Sync] (source-mapping) Backfill skipped: text query not found in /workspace for designId=%s",
+            "[DesignMode Sync] (source-mapping) Backfill skipped: text query not found in /workspace for designId={}",
             design_id,
         )
         return None
     best_path = sorted(candidates, key=_score_source_path)[0]
 
     try:
-        content, resolved_path = await _read_file_with_workspace_fallback(
-            sandbox, best_path
-        )
+        content, resolved_path = await _read_file_with_workspace_fallback(sandbox, best_path)
     except Exception:
         return None
 

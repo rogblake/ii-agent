@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.core.logger import logger
 from ii_agent.integrations.connectors.models import ComposioProfile
 from ii_agent.core.secrets.encryption import EncryptionManager
@@ -169,19 +169,13 @@ class ComposioService:
     ) -> Optional[ComposioProfile]:
         return await self._repo.get_by_id_and_user(db, profile_id, user_id)
 
-    async def enable_profile(
-        self, db: AsyncSession, profile_id: str, user_id: str
-    ) -> bool:
+    async def enable_profile(self, db: AsyncSession, profile_id: str, user_id: str) -> bool:
         return await self._repo.update_status(db, profile_id, user_id, "enable")
 
-    async def disable_profile(
-        self, db: AsyncSession, profile_id: str, user_id: str
-    ) -> bool:
+    async def disable_profile(self, db: AsyncSession, profile_id: str, user_id: str) -> bool:
         return await self._repo.update_status(db, profile_id, user_id, "disable")
 
-    async def delete_profile(
-        self, db: AsyncSession, profile_id: str, user_id: str
-    ) -> bool:
+    async def delete_profile(self, db: AsyncSession, profile_id: str, user_id: str) -> bool:
         return await self._repo.delete(db, profile_id, user_id)
 
     async def update_enabled_tools(
@@ -208,7 +202,7 @@ class ComposioService:
                 "headers": {"x-api-key": self._config.composio_api_key},
             }
         except Exception as e:
-            logger.error(f"Failed to decrypt MCP URL: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Failed to decrypt MCP URL: {e}")
         return mcp_configs
 
     async def get_mcp_config_for_agent(
@@ -233,9 +227,7 @@ class ComposioService:
             },
         }
 
-    async def sync_to_mcp_settings(
-        self, db: AsyncSession, profile_id: str, user_id: str
-    ):
+    async def sync_to_mcp_settings(self, db: AsyncSession, profile_id: str, user_id: str):
         """Sync Composio profile to MCP settings for agent consumption."""
         from ii_agent.settings.mcp.schemas import (
             MCPServersConfig,
@@ -253,9 +245,7 @@ class ComposioService:
 
         mcp_setting_in = MCPSettingCreate(
             mcp_config=MCPServersConfig(
-                mcpServers={
-                    server_name: RemoteMCPServer(url=mcp_url, transport="sse")
-                }
+                mcpServers={server_name: RemoteMCPServer(url=mcp_url, transport="sse")}
             ),
             metadata=ComposioMetadata(
                 tool_type="composio",
@@ -289,7 +279,9 @@ class ComposioService:
                     profile.connected_account_id
                 )
             except Exception as e:
-                logger.warning(f"Failed to delete connected account {profile.connected_account_id}: {e}")
+                logger.warning(
+                    f"Failed to delete connected account {profile.connected_account_id}: {e}"
+                )
         await self._repo.delete_by_id(db, profile.id)
         logger.info(f"Deleted pending profile for user {user_id}, toolkit: {toolkit_slug}")
         return True
@@ -483,7 +475,7 @@ class ComposioService:
                     profile.mcp_server_id, toolkits, final_allowed_tools
                 )
         except Exception as e:
-            logger.warning(f"Failed to update MCP server allowed_tools: {e}", exc_info=True)
+            logger.opt(exception=True).warning(f"Failed to update MCP server allowed_tools: {e}")
 
         return True
 

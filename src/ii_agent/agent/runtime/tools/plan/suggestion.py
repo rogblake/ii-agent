@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from ii_agent.agent.events.stream import EventStream
     from ii_agent.sessions.schemas import SessionInfo
 
+
 class PlanModificationSuggestionsTool(BaseAgentTool):
     """V1 Tool for submitting plan modification suggestions.
 
@@ -132,7 +133,7 @@ class PlanModificationSuggestionsTool(BaseAgentTool):
             )
 
         except Exception as e:
-            logger.error(f"Error submitting plan modification suggestions: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error submitting plan modification suggestions: {e}")
             return ToolResult(
                 llm_content=f"Error submitting suggestions: {str(e)}",
                 is_error=True,

@@ -57,7 +57,7 @@ async def _run_job(job: CronJobSpec) -> None:
         if inspect.isawaitable(result):
             await result
     except Exception:  # noqa: BLE001 - log and propagate
-        app_logger.exception("Cron job '%s' failed", job.name)
+        app_logger.exception("Cron job '{}' failed", job.name)
         raise
 
 
@@ -66,11 +66,9 @@ async def run_all_jobs() -> None:
     executed_jobs = 0
     for job in CRON_JOBS:
         if job.status != "active":
-            app_logger.info(
-                "Skipping cron job '%s' because status is '%s'", job.name, job.status
-            )
+            app_logger.info("Skipping cron job '{}' because status is '{}'", job.name, job.status)
             continue
-        app_logger.info("Running cron job '%s'", job.name)
+        app_logger.info("Running cron job '{}'", job.name)
         try:
             await _run_job(job)
             executed_jobs += 1
@@ -81,7 +79,7 @@ async def run_all_jobs() -> None:
         joined = ", ".join(failures)
         raise SystemExit(f"Failed cron job(s): {joined}")
 
-    app_logger.info("Completed cron job run: %d job(s)", executed_jobs)
+    app_logger.info("Completed cron job run: {} job(s)", executed_jobs)
 
 
 def install_all_jobs() -> None:

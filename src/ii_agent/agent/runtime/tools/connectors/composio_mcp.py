@@ -78,7 +78,9 @@ async def load_composio_tools_for_user(
                     logger.debug(f"Using cached actions for toolkit {profile.toolkit_slug}")
                     actions = cached_data["actions"]
                 else:
-                    from ii_agent.integrations.connectors.composio.default_toolkit_tools import get_default_tools
+                    from ii_agent.integrations.connectors.composio.default_toolkit_tools import (
+                        get_default_tools,
+                    )
 
                     # Get actions from Composio SDK
                     logger.debug(
@@ -170,13 +172,12 @@ async def load_composio_tools_for_user(
                 )
 
             except Exception as e:
-                logger.error(
-                    f"Failed to load tools for profile {profile.id} ({profile.toolkit_name}): {e}",
-                    exc_info=True,
+                logger.opt(exception=True).error(
+                    f"Failed to load tools for profile {profile.id} ({profile.toolkit_name}): {e}"
                 )
 
     except Exception as e:
-        logger.error(f"Failed to load Composio tools for user {user_id}: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Failed to load Composio tools for user {user_id}: {e}")
 
     return tools
 

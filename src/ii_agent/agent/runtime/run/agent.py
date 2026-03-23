@@ -25,6 +25,7 @@ from ii_agent.agent.runtime.utils.media import (
 if TYPE_CHECKING:
     from ii_agent.agent.runtime.agent_sessions.summary import AgentSummary
 
+
 @dataclass
 class RunInput:
     """Container for the raw input data passed to Agent.run().
@@ -54,6 +55,7 @@ class RunInput:
             or (self.audios and len(self.audios) > 0)
             or (self.files and len(self.files) > 0)
         )
+
     def input_content_string(self) -> str:
         import json
 
@@ -299,6 +301,7 @@ class RunCompletedEvent(BaseAgentRunEvent):
     metrics: Optional[Metrics] = None
     session_state: Optional[Dict[str, Any]] = None
     status: Optional[RunStatus] = None
+
 
 @dataclass
 class RunPausedEvent(BaseAgentRunEvent):
@@ -800,7 +803,7 @@ class RunOutput:
         try:
             _dict = self.to_dict()
         except Exception:
-            logger.error("Failed to convert response to json", exc_info=True)
+            logger.opt(exception=True).error("Failed to convert response to json")
             raise
 
         if indent is None:

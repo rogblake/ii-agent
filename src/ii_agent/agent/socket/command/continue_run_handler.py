@@ -15,13 +15,12 @@ from ii_agent.agent.socket.command.command_handler import (
     UserCommandType,
 )
 from ii_agent.agent.runtime.factory.converter import convert_agent_event_to_realtime
-from ii_agent.agent.runtime.run.agent import RunCompletedEvent, RunOutput
+from ii_agent.agent.runtime.run.agent import RunCompletedEvent
 from ii_agent.agent.runtime.factory.factory import AgentFactory
 from ii_agent.agent.types import AgentType
 from ii_agent.agent.runtime.factory.tools import echo_message, generate_random_number
 from ii_agent.agent.runtime.agent_sessions.store import AgentSessionStore
 from ii_agent.agent.runtime.tools.connectors.connector_tool import ConnectorTool
-from ii_agent.billing.usage.llm_invocation_repository import LLMInvocationRepository
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
@@ -248,7 +247,7 @@ class ContinueRunHandler(CommandHandler):
                 error_type="validation_error",
             )
         except Exception as e:
-            logger.error(f"Error in continue_run handler: {str(e)}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in continue_run handler: {str(e)}")
             await self._send_error_event(
                 session_info.id,
                 message=f"Failed to continue run: {str(e)}",

@@ -6,8 +6,9 @@ from sqlalchemy.exc import IntegrityError
 
 from ii_agent.agent.events.models import RealtimeEvent, EventType
 from ii_agent.agent.events.repository import EventRepository
-from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.agent.subscribers.subscriber import EventSubscriber
+from ii_agent.core.db.manager import get_db_session_local
+from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
     from ii_agent.core.container import ServiceContainer
@@ -52,17 +53,24 @@ class DatabaseSubscriber(EventSubscriber):
 
             # Special handling for file_url type results (image/video generation)
             if isinstance(tool_result, dict) and tool_result.get("type") == "file_url":
-                async with get_db_session_local() as db:
-                    file_data = await self._container.file_service.write_file_from_url(
-                        db=db,
-                        url=tool_result["url"],
-                        file_name=tool_result["name"],
-                        file_size=tool_result["size"],
-                        content_type=tool_result["mime_type"],
-                        session_id=str(event.session_id),
+                try:
+                    async with get_db_session_local() as db:
+                        file_data = await self._container.file_service.write_file_from_url(
+                            db=db,
+                            url=tool_result["url"],
+                            file_name=tool_result["name"],
+                            file_size=tool_result["size"],
+                            content_type=tool_result["mime_type"],
+                            session_id=str(event.session_id),
+                        )
+                    event.content["result"]["file_id"] = file_data.id
+                    event.content["result"]["file_storage_path"] = file_data.storage_path
+                except Exception:
+                    logger.exception(
+                        "Failed to persist tool result file for session {} and tool {}",
+                        event.session_id,
+                        tool_name or "<unknown>",
                     )
-                event.content["result"]["file_id"] = file_data.id
-                event.content["result"]["file_storage_path"] = file_data.storage_path
 
             # All tool results (including non-file results) are saved with the event
         try:

@@ -62,7 +62,14 @@ RETURNS:
         Returns:
             ToolResult with the public URL or error message
         """
-        port = tool_input["port"]
+        port = tool_input.get("port")
+
+        if port is None:
+            return ToolResult(
+                llm_content="Please provide a port number.",
+                user_display_content="Please provide a port number.",
+                is_error=True,
+            )
 
         if not self.sandbox:
             return ToolResult(

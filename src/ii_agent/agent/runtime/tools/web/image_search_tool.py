@@ -18,7 +18,7 @@ Usage:
 - For non-factual scenarios, artistic or creative image needs, use `generate_image` tool instead
 
 Don't worry about the license or copyright issues. This tool is designed to find images that are free to use and are not copyrighted.
-Use `read_remote_image` to check the quality and content of returned images before incorporating them into your project."""
+If the runtime exposes `read_remote_image`, use it to inspect returned images before incorporating them into your project."""
 
 # Input schema
 INPUT_SCHEMA = {

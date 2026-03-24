@@ -28,11 +28,21 @@ const AgentBuild = ({ className }: AgentBuildProps) => {
     const isMobile = useIsMobile()
     const windowWidth = useWindowSize()
 
+    function getDeployUrl(result: string) {
+        const urls = extractUrls(result)
+        for (const url of urls) {
+            if (url) {
+                return url
+            }
+        }
+        return ''
+    }
+
     const tab = useMemo(() => {
         // deploy
         if (
             currentActionData?.type &&
-            [TOOL.REGISTER_DEPLOYMENT].includes(currentActionData?.type)
+            [TOOL.REGISTER_PORT].includes(currentActionData?.type)
         )
             return 'deploy'
 
@@ -389,7 +399,7 @@ const AgentBuild = ({ className }: AgentBuildProps) => {
             return t('agent.action.titles.browserEnterMultipleTexts')
         if (currentActionData?.type === TOOL.READ)
             return t('agent.action.titles.readFile')
-        if (currentActionData?.type === TOOL.REGISTER_DEPLOYMENT)
+        if (currentActionData?.type === TOOL.REGISTER_PORT)
             return t('agent.action.titles.deploying')
         if (currentActionData?.type === TOOL.GITHUB)
             return t('agent.action.titles.github')
@@ -480,8 +490,10 @@ const AgentBuild = ({ className }: AgentBuildProps) => {
             case TOOL.READ_REMOTE_IMAGE:
                 browserValue = value?.tool_input?.output_path || ''
                 break
-            case TOOL.REGISTER_DEPLOYMENT:
-                browserValue = value?.tool_input?.url || ''
+            case TOOL.REGISTER_PORT:
+                browserValue =
+                    getDeployUrl(value?.result as string) ||
+                    String(value?.tool_input?.port || '')
                 break
 
             default:
@@ -608,16 +620,6 @@ const AgentBuild = ({ className }: AgentBuildProps) => {
         currentActionData?.data?.result,
         currentActionData?.data?.tool_input?.new_str
     ])
-
-    const getDeployUrl = (result: string) => {
-        const urls = extractUrls(result)
-        for (const url of urls) {
-            if (url) {
-                return url
-            }
-        }
-        return ''
-    }
 
     const headerLabel = useMemo(() => {
         if (tab === 'devtools') {

@@ -89,7 +89,6 @@ class MobileAppInitTool(MCPTool):
         try:
             if tool_input.get("database"):
                 session_id = str(self._session_id) if self._session_id else None
-                user_id = str(self._user_id) if self._user_id else None
                 database_source = tool_input.get("database_source", "default")
 
                 # Supabase database source: skip NeonDB provisioning
@@ -134,10 +133,10 @@ class MobileAppInitTool(MCPTool):
                         "If neither returns an organization ID, ask the user to provide their Supabase organization ID from https://supabase.com/dashboard.\n\n"
                         "### Step 2: Create Supabase project\n"
                         "Call SUPABASE_CREATE_A_PROJECT with ONLY these 4 required parameters:\n"
-                        "  - name: \"<project-name>\" (string, required)\n"
-                        "  - organization_id: \"<org-id-from-step-1>\" (string, required)\n"
-                        "  - region: \"us-east-1\" (string, required)\n"
-                        "  - db_pass: \"<strong-password>\" (string, required - generate a strong password with only alphanumeric characters)\n"
+                        '  - name: "<project-name>" (string, required)\n'
+                        '  - organization_id: "<org-id-from-step-1>" (string, required)\n'
+                        '  - region: "us-east-1" (string, required)\n'
+                        '  - db_pass: "<strong-password>" (string, required - generate a strong password with only alphanumeric characters)\n'
                         "DO NOT pass any other parameters (no plan, no template_url, no kps_enabled, no postgres_engine, no release_channel, no desired_instance_size). "
                         "Passing empty strings for optional URL fields will cause validation errors.\n"
                         "IMPORTANT: Save the project 'ref' (project reference ID) from the response - you need it for all subsequent Supabase API calls.\n\n"
@@ -161,7 +160,9 @@ class MobileAppInitTool(MCPTool):
                     if isinstance(result.llm_content, str):
                         result.llm_content += supabase_instructions
                     elif isinstance(result.llm_content, list):
-                        result.llm_content.append(TextContent(type="text", text=supabase_instructions))
+                        result.llm_content.append(
+                            TextContent(type="text", text=supabase_instructions)
+                        )
 
                     await self._apply_web_preview(result)
                     return result
@@ -195,10 +196,16 @@ class MobileAppInitTool(MCPTool):
                                     "project_id": db_connection.get("project_id"),
                                     "project_name": db_connection.get("project_name"),
                                     "is_new_project": db_connection.get("is_new_project"),
-                                    "current_project_count": db_connection.get("current_project_count"),
-                                    "databases_in_project": db_connection.get("databases_in_project"),
+                                    "current_project_count": db_connection.get(
+                                        "current_project_count"
+                                    ),
+                                    "databases_in_project": db_connection.get(
+                                        "databases_in_project"
+                                    ),
                                     "capacity_remaining": db_connection.get("capacity_remaining"),
-                                    "original_database_name": db_connection.get("original_database_name"),
+                                    "original_database_name": db_connection.get(
+                                        "original_database_name"
+                                    ),
                                     "time_taken_ms": db_connection.get("time_taken_ms"),
                                 },
                             )
@@ -235,13 +242,8 @@ class MobileAppInitTool(MCPTool):
                     if isinstance(result.llm_content, list) and result.llm_content:
                         first_content = result.llm_content[0]
                         if hasattr(first_content, "text"):
-                            updated_text = first_content.text.replace(
-                                "use register_deployment tool to get public URL",
-                                f"`{web_preview_url}`",
-                            )
-                            updated_text = updated_text.replace(
-                                f"Use `register_deployment` tool with port {web_port} to get the web preview URL",
-                                f"Web preview available at: `{web_preview_url}`",
+                            updated_text = (
+                                first_content.text + f"\n- **Web Preview URL:** `{web_preview_url}`"
                             )
                             result.llm_content[0] = TextContent(
                                 type="text",
@@ -290,9 +292,7 @@ class MobileAppInitTool(MCPTool):
                             [content.text for content in llm_content if hasattr(content, "text")]
                         )
                     else:
-                        user_display_content = [
-                            content.model_dump() for content in llm_content
-                        ]
+                        user_display_content = [content.model_dump() for content in llm_content]
 
                 return ToolResult(
                     llm_content=llm_content,

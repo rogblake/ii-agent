@@ -1662,7 +1662,7 @@ export function useAppEvents() {
         // File editing (also in FILE_TOOLS)
         ...FILE_TOOLS,
         // Deployment & slides
-        TOOL.REGISTER_DEPLOYMENT,
+        TOOL.REGISTER_PORT,
         TOOL.SLIDE_EDIT,
         TOOL.SLIDE_WRITE,
         TOOL.SLIDE_APPLY_PATCH,

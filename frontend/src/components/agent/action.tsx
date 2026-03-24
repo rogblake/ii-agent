@@ -90,8 +90,6 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
                 return <Icon name="edit-file" className={className} />
             case TOOL.STATIC_DEPLOY:
                 return <Icon name="deploy" className={className} />
-            case TOOL.REGISTER_DEPLOYMENT:
-                return <Icon name="deploy" className={className} />
             case TOOL.SAVE_CHECKPOINT:
                 return (
                     <Icon
@@ -324,8 +322,6 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
                 return t('agent.action.titles.editFile')
             case TOOL.STATIC_DEPLOY:
                 return t('agent.action.titles.deploying')
-            case TOOL.REGISTER_DEPLOYMENT:
-                return t('agent.action.titles.deployment')
             case TOOL.PDF_TEXT_EXTRACT:
                 return t('agent.action.titles.extractText')
             case TOOL.AUDIO_TRANSCRIBE:

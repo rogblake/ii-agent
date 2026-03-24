@@ -149,6 +149,10 @@ class AgentFactory:
         if system_prompt is None:
             workspace_path = workspace_path or "/workspace"
 
+            available_tool_names = {tool.name for tool in agent_tools}
+            if has_task_agent:
+                available_tool_names.add(TaskAgentTool.name)
+
             system_prompt = await get_system_prompt_for_agent_type(
                 agent_type=agent_type,
                 workspace_path=workspace_path,
@@ -158,6 +162,7 @@ class AgentFactory:
                 task_agent=has_task_agent,
                 metadata=metadata,
                 api_type=llm_config.api_type if llm_config else None,
+                available_tools=available_tool_names,
             )
 
         sub_agents = []

@@ -942,23 +942,23 @@ class TestDevToolAttributes:
         assert "commit_message" in required
 
 
-class TestRegisterPort:
-    """Tests for RegisterPort.execute()."""
+class TestRegisterPortTool:
+    """Tests for RegisterPortTool.execute()."""
 
     async def test_no_sandbox_returns_error(self):
-        from ii_agent.agent.runtime.tools.dev.register_port import RegisterPort
+        from ii_agent.agent.runtime.tools.sandbox.register_port import RegisterPortTool
 
-        tool = RegisterPort()
+        tool = RegisterPortTool()
         tool.sandbox = None
 
         result = await tool.execute({"port": 3000})
         assert result.is_error is True
-        assert "Sandbox" in result.llm_content
+        assert "sandbox" in result.llm_content.lower()
 
     async def test_no_port_returns_error(self):
-        from ii_agent.agent.runtime.tools.dev.register_port import RegisterPort
+        from ii_agent.agent.runtime.tools.sandbox.register_port import RegisterPortTool
 
-        tool = RegisterPort()
+        tool = RegisterPortTool()
         tool.sandbox = AsyncMock()
 
         result = await tool.execute({})
@@ -966,9 +966,9 @@ class TestRegisterPort:
         assert "port" in result.llm_content
 
     async def test_success_returns_url(self):
-        from ii_agent.agent.runtime.tools.dev.register_port import RegisterPort
+        from ii_agent.agent.runtime.tools.sandbox.register_port import RegisterPortTool
 
-        tool = RegisterPort()
+        tool = RegisterPortTool()
         tool.sandbox = AsyncMock()
         tool.sandbox.expose_port = AsyncMock(return_value="http://exposed.example.com")
 

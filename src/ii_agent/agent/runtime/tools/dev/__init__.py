@@ -1,5 +1,4 @@
 from .init_tool import FullStackInitTool
-from .register_port import RegisterPort
 from .save_checkpoint import SaveCheckpointTool
 from .database import GetDatabaseConnection
 from .add_webdev_secrets import AddWebDevSecrets
@@ -14,7 +13,6 @@ from .ask_user_select import AskUserSelectTool
 
 __all__ = [
     "FullStackInitTool",
-    "RegisterPort",
     "GetDatabaseConnection",
     "SaveCheckpointTool",
     "AddWebDevSecrets",

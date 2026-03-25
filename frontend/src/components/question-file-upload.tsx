@@ -93,6 +93,10 @@ const QuestionFileUpload = ({
                 onOpenChange={setIsComposioModalOpen}
             />
 
+            {/* Use explicit extensions instead of MIME wildcards (image/*)
+                because Chrome on macOS maps image/* to known image UTIs
+                which exclude HEIC, making .heic files invisible in the
+                native file picker. Extension-based filtering bypasses this. */}
             <input
                 ref={fileInputRef}
                 id="file-upload"
@@ -101,6 +105,7 @@ const QuestionFileUpload = ({
                 className="hidden"
                 onChange={handleFileChange}
                 disabled={isDisabled}
+                accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.ico,.heic,.heif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.json,.xml,.yaml,.yml,.toml,.md,.txt,.rtf,.py,.js,.ts,.tsx,.jsx,.html,.css,.scss,.java,.go,.rs,.rb,.php,.sh,.sql,.c,.cpp,.h,.swift,.kt,.r,.m,.log,.env,.ini,.cfg,.mp4,.mov,.avi,.webm,.mp3,.wav,.ogg,.zip,.tar,.gz,.rar,.7z,.proto,.graphql"
             />
         </>
     )

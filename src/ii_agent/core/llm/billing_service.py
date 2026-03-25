@@ -721,7 +721,13 @@ class LLMBillingService:
     @staticmethod
     def _serialize_for_token_estimation(value: Any) -> Any:
         if hasattr(value, "model_dump"):
-            return value.model_dump(mode="json", exclude_none=True)
+            try:
+                return value.model_dump(mode="json", exclude_none=True)
+            except (UnicodeDecodeError, ValueError):
+                # Binary content (e.g. image bytes) cannot be serialized as
+                # JSON text.  Return a small placeholder so the rest of the
+                # message is still counted but we don't blow up on raw bytes.
+                return {"type": getattr(value, "type", "binary"), "_binary": True}
         if hasattr(value, "to_dict"):
             return value.to_dict()
         if isinstance(value, dict):

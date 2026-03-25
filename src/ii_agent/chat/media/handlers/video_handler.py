@@ -340,22 +340,36 @@ class VideoMediaHandler(BaseMediaHandler):
         frame: VideoFrameReference,
         db_session: AsyncSession,
     ) -> str | None:
-        """Get the public URL for a video frame reference."""
-        if frame.url and frame.url.startswith(("http://", "https://")):
-            return frame.url
+        """Get the public URL for a video frame reference.
 
-        file_id = frame.file_id or frame.url
+        HEIC/HEIF frames are converted to JPEG because the video generation
+        API does not support HEIC and the LLM should never see a HEIC URL.
+        Prefer the ``file_id`` path so HEIC detection via DB metadata works.
+        """
+        # Prefer file_id — it goes through _resolve_file_to_public_url which
+        # handles HEIC conversion via DB metadata.
+        file_id = frame.file_id or (
+            frame.url if frame.url and not frame.url.startswith(("http://", "https://")) else None
+        )
         if file_id:
             url = await self._resolve_file_to_public_url(file_id)
             if url:
                 return url
 
+        if frame.url and frame.url.startswith(("http://", "https://")):
+            # Convert HEIC URLs on the fly
+            url_path = frame.url.split("?")[0].lower()
+            if url_path.endswith((".heic", ".heif")):
+                converted = await self._convert_heic_url_to_jpeg(frame.url)
+                if converted:
+                    return converted
+            return frame.url
+
         return None
 
     async def _resolve_file_to_public_url(self, file_id: str) -> str | None:
-        """Resolve a file ID to its public URL."""
+        """Resolve a file ID to its public URL, converting HEIC to JPEG."""
         from ii_agent.core.db.manager import get_db_session_local
-        from ii_agent.files.service import FileService
 
         try:
             async with get_db_session_local() as db:
@@ -372,7 +386,16 @@ class VideoMediaHandler(BaseMediaHandler):
                     return None
 
                 storage_path = file_data.storage_path
-                if storage_path.startswith("sessions/"):
+
+                # Detect HEIC by content_type or file extension
+                is_heic = (file_data.content_type or "").lower() in ("image/heic", "image/heif")
+                if not is_heic and file_data.file_name:
+                    ext = file_data.file_name.rsplit(".", 1)[-1].lower() if "." in file_data.file_name else ""
+                    is_heic = ext in ("heic", "heif")
+
+                if is_heic:
+                    public_url = await self._convert_heic_storage_to_jpeg(file_id, storage_path)
+                elif storage_path.startswith("sessions/"):
                     public_url = media_storage.get_public_url(storage_path)
                 else:
                     public_url = await self._copy_to_public_storage(
@@ -383,6 +406,56 @@ class VideoMediaHandler(BaseMediaHandler):
                 return public_url
         except Exception as e:
             logger.warning(f"[VIDEO_HANDLER] Failed to get URL for file {file_id}: {e}")
+            return None
+
+    async def _convert_heic_storage_to_jpeg(self, file_id: str, source_path: str) -> str:
+        """Read HEIC from storage, convert to JPEG, upload to public storage."""
+        import anyio
+        from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+
+        public_path = f"video_generation_frames/{file_id[:8]}.jpg"
+
+        def _do():
+            import io
+            file_obj = storage.read(source_path)
+            heic_bytes = file_obj.read()
+            file_obj.close()
+            jpeg_bytes, _ = convert_heic_to_jpeg(heic_bytes)
+            return media_storage.upload_and_get_permanent_url(
+                io.BytesIO(jpeg_bytes), public_path, "image/jpeg"
+            )
+
+        logger.info(f"[VIDEO_HANDLER] Converting HEIC frame {file_id} to JPEG")
+        return await anyio.to_thread.run_sync(_do)
+
+    async def _convert_heic_url_to_jpeg(self, heic_url: str) -> str | None:
+        """Download HEIC from URL, convert to JPEG, upload to public storage."""
+        import anyio
+        import httpx
+        import uuid as _uuid
+        from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+                resp = await client.get(heic_url)
+                resp.raise_for_status()
+
+            heic_bytes = resp.content
+
+            def _convert_and_upload():
+                import io
+                jpeg_bytes, _ = convert_heic_to_jpeg(heic_bytes)
+                fid = str(_uuid.uuid4())[:8]
+                public_path = f"video_generation_frames/{fid}.jpg"
+                return media_storage.upload_and_get_permanent_url(
+                    io.BytesIO(jpeg_bytes), public_path, "image/jpeg"
+                )
+
+            url = await anyio.to_thread.run_sync(_convert_and_upload)
+            logger.info(f"[VIDEO_HANDLER] Converted HEIC URL to JPEG: {url}")
+            return url
+        except Exception as e:
+            logger.warning(f"[VIDEO_HANDLER] HEIC URL conversion failed: {e}")
             return None
 
     async def _copy_to_public_storage(
@@ -424,6 +497,8 @@ class VideoMediaHandler(BaseMediaHandler):
                         "jpeg": "image/jpeg",
                         "gif": "image/gif",
                         "webp": "image/webp",
+                        "heic": "image/heic",
+                        "heif": "image/heif",
                     }.get(ext, "image/png")
 
                 image_data = response.content

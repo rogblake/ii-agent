@@ -167,9 +167,10 @@ def is_text_extractable(content_type: Optional[str], file_name: str) -> bool:
 
 def is_binary_file(content_type: Optional[str], file_name: str) -> bool:
     """Check if file is PDF or image (supported for BinaryContent)."""
-    if not content_type:
+    _binary_extensions = (".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".heic", ".heif")
+    if not content_type or content_type == "application/octet-stream":
         file_lower = file_name.lower()
-        return file_lower.endswith((".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp"))
+        return file_lower.endswith(_binary_extensions)
 
     # PDF
     if content_type == "application/pdf":
@@ -215,8 +216,28 @@ def compress_image_for_provider(
     """
     from PIL import Image
 
-    # Check if already under limit
-    if len(file_bytes) <= target_limit:
+    # Detect HEIC via magic bytes when MIME type doesn't indicate it
+    # (e.g. application/octet-stream or missing MIME type)
+    from ii_agent.agent.runtime.utils.heic import is_heic_format
+
+    is_heic = is_heic_format(mime_type=mime_type, image_bytes=file_bytes)
+    if is_heic and mime_type not in ("image/heic", "image/heif"):
+        mime_type = "image/heic"
+
+    # Register HEIC/HEIF support via pillow-heif plugin
+    if is_heic:
+        try:
+            from pillow_heif import register_heif_opener
+
+            register_heif_opener()
+        except ImportError:
+            raise ImageCompressionError(
+                "HEIC/HEIF support requires the pillow-heif package. "
+                "Please install it with: pip install pillow-heif"
+            )
+
+    # Check if already under limit (skip for HEIC since providers don't support it)
+    if len(file_bytes) <= target_limit and not is_heic:
         logger.debug(
             f"[IMAGE_COMPRESSION] Image already under limit "
             f"({len(file_bytes)} bytes <= {target_limit} bytes)"
@@ -229,8 +250,13 @@ def compress_image_for_provider(
     )
 
     try:
+        from PIL import ImageOps
+
         # Open the image
         img = Image.open(io.BytesIO(file_bytes))
+
+        # Apply EXIF orientation (HEIC photos from iPhones carry rotation metadata)
+        img = ImageOps.exif_transpose(img)
 
         # Convert RGBA/P to RGB (for JPEG compression)
         if img.mode in ("RGBA", "P"):
@@ -397,6 +423,19 @@ async def process_files_for_message(
                     file_bytes = file_content.read()
                     file_content.close()
                     mime_type = file_upload.content_type
+
+                # Correct generic MIME types for images detected by extension or magic bytes
+                if not mime_type or mime_type == "application/octet-stream":
+                    from ii_agent.agent.runtime.utils.heic import is_heic_format as _is_heic
+
+                    if file_bytes and _is_heic(image_bytes=file_bytes):
+                        mime_type = "image/heic"
+                    elif file_upload.file_name:
+                        import mimetypes as _mt
+
+                        guessed = _mt.guess_type(file_upload.file_name)[0]
+                        if guessed and guessed.startswith("image/"):
+                            mime_type = guessed
 
                 # Compress images if needed for provider limits
                 # Note: PDFs are not compressed, only images

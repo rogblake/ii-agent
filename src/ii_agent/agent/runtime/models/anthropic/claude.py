@@ -160,6 +160,8 @@ def _format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
         "png": "image/png",
         "gif": "image/gif",
         "webp": "image/webp",
+        "heic": "image/jpeg",
+        "heif": "image/jpeg",
     }
 
     try:
@@ -194,13 +196,17 @@ def _format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
         if not img_type:
             if using_filetype:
                 kind = filetype.guess(content_bytes)
-                if not kind:
-                    logger.error("Unable to determine image type")
-                    return None
-
-                img_type = kind.extension
+                if kind:
+                    img_type = kind.extension
             else:
                 img_type = imghdr.what(None, h=content_bytes)  # type: ignore
+
+        # Fallback: imghdr/filetype may not recognise HEIC — use magic bytes
+        if not img_type and content_bytes is not None:
+            from ii_agent.agent.runtime.utils.heic import is_heic_format
+
+            if is_heic_format(image_bytes=content_bytes):
+                img_type = "heic"
 
         if not img_type:
             logger.error("Unable to determine image type")
@@ -210,6 +216,21 @@ def _format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
         if not media_type:
             logger.error(f"Unsupported image type: {img_type}")
             return None
+
+        # Convert HEIC/HEIF to JPEG since Anthropic API doesn't support them natively
+        if img_type in ("heic", "heif"):
+            try:
+                from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+
+                # Anthropic limit: ~3.75 MB raw (5 MB base64)
+                max_size = int(5 * 1024 * 1024 * 3 / 4)
+                content_bytes, _ = convert_heic_to_jpeg(content_bytes, max_size=max_size)
+            except ImportError:
+                logger.error("pillow-heif not installed, cannot convert HEIC image")
+                return None
+            except Exception as e:
+                logger.error(f"Failed to convert HEIC to JPEG: {e}")
+                return None
 
         return {
             "type": "image",

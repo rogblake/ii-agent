@@ -402,6 +402,8 @@ class OpenAIProvider(LLMClient):
             return "image/gif"
         elif "webp" in file_lower or file_lower.endswith(".webp"):
             return "image/webp"
+        elif file_lower.endswith((".heic", ".heif")):
+            return "image/jpeg"  # HEIC is converted to JPEG before sending
 
         # Programming languages
         elif file_lower.endswith(".c"):

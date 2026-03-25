@@ -28,7 +28,7 @@ INPUT_SCHEMA = {
 
 DEFAULT_TIMEOUT = 30
 MAX_IMAGE_SIZE = 50 * 1024 * 1024  # 50MB max
-SUPPORTED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+SUPPORTED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif"}
 
 
 class ReadRemoteImageTool(BaseAgentTool):
@@ -75,11 +75,24 @@ class ReadRemoteImageTool(BaseAgentTool):
 
                 image_data = response.content
                 mime_type = magic.from_buffer(image_data, mime=True)
+
+                # Detect HEIC via magic bytes if python-magic returns generic type
+                if mime_type not in SUPPORTED_MIME_TYPES:
+                    from ii_agent.agent.runtime.utils.heic import is_heic_format
+                    if is_heic_format(image_bytes=image_data):
+                        mime_type = "image/heic"
+
                 if mime_type not in SUPPORTED_MIME_TYPES:
                     return ToolResult(
                         llm_content=f"Error: The image format {mime_type} is not supported. Supported formats: {', '.join(SUPPORTED_MIME_TYPES)}",
                         is_error=True,
                     )
+
+                # Convert HEIC to JPEG — LLM providers don't accept HEIC
+                if mime_type in ("image/heic", "image/heif"):
+                    from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+                    image_data, _ = convert_heic_to_jpeg(image_data)
+                    mime_type = "image/jpeg"
 
                 # Encode image to base64
                 base64_image = base64.b64encode(image_data).decode("utf-8")

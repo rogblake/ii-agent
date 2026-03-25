@@ -323,12 +323,12 @@ class VideoGenerationTool(BaseTool):
             end_frame_url = None
 
             if llm_start_frame and is_trusted_url(llm_start_frame):
-                start_frame_url = llm_start_frame
+                start_frame_url = await self._ensure_jpeg_url(llm_start_frame)
             elif llm_start_frame:
                 logger.warning("[VIDEO_TOOL] Rejecting untrusted start_frame URL")
 
             if llm_end_frame and is_trusted_url(llm_end_frame):
-                end_frame_url = llm_end_frame
+                end_frame_url = await self._ensure_jpeg_url(llm_end_frame)
             elif llm_end_frame:
                 logger.warning("[VIDEO_TOOL] Rejecting untrusted end_frame URL")
 
@@ -488,14 +488,36 @@ class VideoGenerationTool(BaseTool):
                 output=ErrorTextContent(value=f"Video generation failed: {str(e)}")
             )
 
-    async def _get_frame_url(self, frame: VideoFrameReference) -> Optional[str]:
-        """Get public URL for a video frame reference."""
-        try:
-            if frame.url and frame.url.startswith(("http://", "https://")):
-                return frame.url
+    async def _ensure_jpeg_url(self, url: str) -> str:
+        """If *url* points to a HEIC/HEIF file, convert to JPEG and return a
+        new public URL.  Otherwise return the original URL unchanged."""
+        url_path = url.split("?")[0].lower()
+        if url_path.endswith((".heic", ".heif")):
+            try:
+                return await self._convert_heic_url_and_upload(url)
+            except Exception as e:
+                logger.warning(f"[VIDEO_TOOL] HEIC URL conversion failed: {e}, using original")
+        return url
 
+    async def _get_frame_url(self, frame: VideoFrameReference) -> Optional[str]:
+        """Get public URL for a video frame reference.
+
+        If the frame is HEIC/HEIF, it is converted to JPEG first because
+        the video generation API does not support HEIC.  When a ``file_id``
+        is available we always prefer it so the conversion path in
+        ``_get_file_public_url`` can kick in.
+        """
+        try:
+            # Prefer file_id path — it handles HEIC conversion
             if frame.file_id:
                 return await self._get_file_public_url(frame.file_id)
+
+            if frame.url and frame.url.startswith(("http://", "https://")):
+                # Check if the URL itself points to a HEIC file
+                url_path = frame.url.split("?")[0].lower()
+                if url_path.endswith((".heic", ".heif")):
+                    return await self._convert_heic_url_and_upload(frame.url)
+                return frame.url
 
             return None
         except Exception as e:
@@ -503,13 +525,26 @@ class VideoGenerationTool(BaseTool):
             return None
 
     async def _get_file_public_url(self, file_id: str) -> Optional[str]:
-        """Get public URL for a file by its ID."""
+        """Get public URL for a file by its ID.
+
+        HEIC/HEIF files are converted to JPEG before uploading because the
+        video generation API (Veo) does not accept HEIC input.
+        """
         try:
             async with get_db_session_local() as db:
                 file_data = await self._container.file_service.get_file_by_id(db, file_id)
                 if file_data and file_data.storage_path:
                     storage_path = file_data.storage_path
-                    if storage_path.startswith("sessions/"):
+
+                    # Detect HEIC by content_type or file extension
+                    is_heic = (file_data.content_type or "").lower() in ("image/heic", "image/heif")
+                    if not is_heic and file_data.file_name:
+                        ext = file_data.file_name.rsplit(".", 1)[-1].lower() if "." in file_data.file_name else ""
+                        is_heic = ext in ("heic", "heif")
+
+                    if is_heic:
+                        url = await self._convert_heic_and_upload(file_id, storage_path)
+                    elif storage_path.startswith("sessions/"):
                         url = media_storage.get_public_url(storage_path)
                     else:
                         url = await self._copy_to_public_storage(
@@ -520,6 +555,52 @@ class VideoGenerationTool(BaseTool):
         except Exception as e:
             logger.warning(f"Failed to get public URL for file {file_id}: {e}")
         return None
+
+    async def _convert_heic_and_upload(self, file_id: str, source_path: str) -> str:
+        """Convert a HEIC file to JPEG and upload to public storage."""
+        import anyio
+        from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+
+        public_path = f"video_generation_frames/{file_id[:8]}.jpg"
+
+        def _convert_and_upload():
+            import io
+            file_obj = storage.read(source_path)
+            heic_bytes = file_obj.read()
+            file_obj.close()
+            jpeg_bytes, _ = convert_heic_to_jpeg(heic_bytes)
+            return media_storage.upload_and_get_permanent_url(
+                io.BytesIO(jpeg_bytes), public_path, "image/jpeg"
+            )
+
+        logger.info(f"[VIDEO_TOOL] Converting HEIC frame {file_id} to JPEG")
+        return await anyio.to_thread.run_sync(_convert_and_upload)
+
+    async def _convert_heic_url_and_upload(self, heic_url: str) -> str:
+        """Download a HEIC image from a URL, convert to JPEG, and upload."""
+        import anyio
+        import httpx
+        from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+
+        async def _download_convert_upload():
+            async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+                resp = await client.get(heic_url)
+                resp.raise_for_status()
+                heic_bytes = resp.content
+
+            def _convert_and_upload():
+                import io
+                jpeg_bytes, _ = convert_heic_to_jpeg(heic_bytes)
+                file_id = str(uuid.uuid4())[:8]
+                public_path = f"video_generation_frames/{file_id}.jpg"
+                return media_storage.upload_and_get_permanent_url(
+                    io.BytesIO(jpeg_bytes), public_path, "image/jpeg"
+                )
+
+            return await anyio.to_thread.run_sync(_convert_and_upload)
+
+        logger.info(f"[VIDEO_TOOL] Converting HEIC URL frame to JPEG")
+        return await _download_convert_upload()
 
     async def _copy_to_public_storage(
         self, file_id: str, source_path: str, content_type: str | None

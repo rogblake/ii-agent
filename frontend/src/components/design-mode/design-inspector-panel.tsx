@@ -3019,7 +3019,7 @@ export function DesignInspectorPanel({
                                 <input
                                     ref={fileInputRef}
                                     type="file"
-                                    accept="image/*"
+                                    accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif"
                                     className="hidden"
                                     disabled={isUploadingBackground}
                                     onChange={handleUploadChange}

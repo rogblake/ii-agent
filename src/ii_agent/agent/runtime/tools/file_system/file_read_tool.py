@@ -2,7 +2,7 @@ from ii_agent.agent.runtime.tools.mcp.base import MCPTool
 
 MAX_FILE_READ_LINES = 2000
 MAX_LINE_LENGTH = 2000
-SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
 NAME = "Read"
 DISPLAY_NAME = "Read file"
 DESCRIPTION = f"""Reads and returns the content of a specified file from the local filesystem. Supports text files, images ({", ".join(SUPPORTED_IMAGE_EXTENSIONS)}), and PDF files.

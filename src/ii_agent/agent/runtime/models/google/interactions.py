@@ -90,13 +90,44 @@ def format_function_definitions(tools: Optional[List[Any]]) -> List[Dict[str, An
     return declarations
 
 
+def _resolve_mime_type(image: Image) -> Optional[str]:
+    """Resolve MIME type from image metadata, falling back to format field."""
+    mime_type = image.mime_type
+    if not mime_type and getattr(image, "format", None):
+        mime_type = f"image/{image.format.lower()}"
+    return mime_type
+
+
 def format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
+    from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg, is_heic_format
+
+    mime_type = _resolve_mime_type(image)
+
     # Case 1: Image is a URL
     # Download the image from the URL and add it as base64 encoded data
     if image.url is not None:
+        # For HEIC URLs, download and convert before sending
+        if is_heic_format(mime_type=mime_type, url=image.url):
+            try:
+                import base64
+
+                content_bytes = image.get_content_bytes()
+                if not content_bytes:
+                    logger.error("Failed to download HEIC image from URL")
+                    return None
+                jpeg_bytes, mime_type = convert_heic_to_jpeg(content_bytes)
+                return {
+                    "type": "image",
+                    "mime_type": mime_type,
+                    "data": base64.b64encode(jpeg_bytes).decode("utf-8"),
+                }
+            except Exception as e:
+                logger.error(f"Failed to convert HEIC URL to JPEG: {e}")
+                return None
+
         image_data = {
             "type": "image",
-            "mime_type": image.mime_type,
+            "mime_type": mime_type,
             "uri": image.url,
         }
         return image_data
@@ -105,10 +136,20 @@ def format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
     elif image.content is not None and isinstance(image.content, bytes):
         import base64
 
+        content_bytes = image.content
+
+        # Convert HEIC/HEIF to JPEG
+        if is_heic_format(mime_type=mime_type, image_bytes=content_bytes):
+            try:
+                content_bytes, mime_type = convert_heic_to_jpeg(content_bytes)
+            except Exception as e:
+                logger.error(f"Failed to convert HEIC to JPEG: {e}")
+                return None
+
         image_data = {
             "type": "image",
-            "mime_type": image.mime_type,
-            "data": base64.b64encode(image.content).decode("utf-8"),
+            "mime_type": mime_type,
+            "data": base64.b64encode(content_bytes).decode("utf-8"),
         }
         return image_data
     else:

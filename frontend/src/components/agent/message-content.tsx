@@ -60,6 +60,9 @@ const MessageContent = memo(
         const [fetchedImageUrls, setFetchedImageUrls] = useState<
             Record<string, string>
         >({})
+        const [failedImages, setFailedImages] = useState<
+            Record<string, boolean>
+        >({})
         const [loadingImages, setLoadingImages] = useState<
             Record<string, boolean>
         >({})
@@ -75,13 +78,18 @@ const MessageContent = memo(
                 for (const file of message.files || []) {
                     const isImage =
                         file.file_name.match(
-                            /\.(jpeg|jpg|gif|png|webp|svg|heic|bmp)$/i
+                            /\.(jpeg|jpg|gif|png|webp|svg|heic|heif|bmp)$/i
                         ) !== null
+                    // HEIC files must always be fetched through the backend
+                    // API which converts to JPEG, because browsers can't
+                    // render HEIC and fileContents holds the raw GCS URL.
+                    const isHeic = /\.(heic|heif)$/i.test(file.file_name)
 
                     // Skip if not an image, already have content, or already fetched
                     if (
                         !isImage ||
-                        (message.fileContents &&
+                        (!isHeic &&
+                            message.fileContents &&
                             message.fileContents[file.file_name]) ||
                         fetchedImageUrls[file.id]
                     ) {
@@ -123,7 +131,11 @@ const MessageContent = memo(
                     URL.revokeObjectURL(url)
                 })
             }
-        }, [message.files, message.fileContents, sessionId, fetchedImageUrls])
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchedImageUrls
+        // is intentionally excluded: including it causes an infinite loop because
+        // setFetchedImageUrls inside the effect changes the reference each time.
+        // The guard `fetchedImageUrls[file.id]` inside the loop prevents duplicates.
+        }, [message.files, message.fileContents, sessionId])
 
         const handleCopyContent = async () => {
             try {
@@ -206,17 +218,22 @@ const MessageContent = memo(
 
                 const isImage =
                     file.file_name.match(
-                        /\.(jpeg|jpg|gif|png|webp|svg|heic|bmp)$/i
+                        /\.(jpeg|jpg|gif|png|webp|svg|heic|heif|bmp)$/i
                     ) !== null
 
-                // Get image URL from fileContents (fresh upload) or fetchedImageUrls (after reload)
-                const imageUrl =
-                    (message.fileContents &&
-                        message.fileContents[file.file_name]) ||
-                    fetchedImageUrls[file.id]
+                // Get image URL from fileContents (fresh upload) or fetchedImageUrls (after reload).
+                // For HEIC files, prefer fetchedImageUrls because the backend
+                // converts HEIC→JPEG; fileContents holds the raw GCS URL that
+                // browsers cannot render.
+                const isHeicFile = /\.(heic|heif)$/i.test(file.file_name)
+                const imageUrl = isHeicFile
+                    ? fetchedImageUrls[file.id]
+                    : (message.fileContents &&
+                          message.fileContents[file.file_name]) ||
+                      fetchedImageUrls[file.id]
                 const isLoading = loadingImages[file.id]
 
-                if (isImage && imageUrl) {
+                if (isImage && imageUrl && !failedImages[file.id]) {
                     return (
                         <div
                             key={`${message.id}-file-${fileIndex}`}
@@ -228,6 +245,7 @@ const MessageContent = memo(
                                     alt={file.file_name}
                                     className="w-full h-full object-cover"
                                     loading="lazy"
+                                    onError={() => setFailedImages((prev) => ({ ...prev, [file.id]: true }))}
                                 />
                             </div>
                         </div>
@@ -282,7 +300,8 @@ const MessageContent = memo(
             message.fileContents,
             message.id,
             fetchedImageUrls,
-            loadingImages
+            loadingImages,
+            failedImages
         ])
 
         // Render video frames (for video generation)

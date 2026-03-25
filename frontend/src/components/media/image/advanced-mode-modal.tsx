@@ -518,7 +518,7 @@ export const AdvancedModeModal = ({
                                         <label className="flex-1 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-black dark:text-white text-sm py-4">
                                             <input
                                                 type="file"
-                                                accept="image/*"
+                                                accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif"
                                                 className="hidden"
                                                 onChange={(e) =>
                                                     handleImageUpload(

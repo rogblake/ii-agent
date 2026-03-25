@@ -30,14 +30,21 @@ const ImageFileItem = ({
     onPreview
 }: ImageFileItemProps) => {
     const { t } = useTranslation()
-    const [imageUrl, setImageUrl] = useState<string | null>(fileContent || null)
-    const [isLoading, setIsLoading] = useState(!fileContent)
+    // HEIC files must always be fetched through the backend API which
+    // converts to JPEG.  The fileContent prop holds the raw GCS URL that
+    // browsers cannot render.
+    const isHeic = /\.(heic|heif)$/i.test(name)
+    const usableContent = isHeic ? null : (fileContent ?? null)
+
+    const [imageUrl, setImageUrl] = useState<string | null>(usableContent)
+    const [isLoading, setIsLoading] = useState(!usableContent)
+    const [loadError, setLoadError] = useState(false)
     const fetchedRef = useRef(false)
 
     useEffect(() => {
-        // If we already have content from props, no need to fetch
-        if (fileContent) {
-            setImageUrl(fileContent)
+        // If we already have usable content from props, no need to fetch
+        if (usableContent) {
+            setImageUrl(usableContent)
             setIsLoading(false)
             return
         }
@@ -89,7 +96,7 @@ const ImageFileItem = ({
         )
     }
 
-    if (imageUrl) {
+    if (imageUrl && !loadError) {
         return (
             <div
                 className="inline-block rounded-xl overflow-hidden max-w-[320px] cursor-pointer"
@@ -101,6 +108,7 @@ const ImageFileItem = ({
                         alt={name}
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        onError={() => setLoadError(true)}
                     />
                 </div>
             </div>

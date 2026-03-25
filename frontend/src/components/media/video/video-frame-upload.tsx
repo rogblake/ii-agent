@@ -64,7 +64,7 @@ const FrameUploadButton = ({
             <input
                 ref={inputRef}
                 type="file"
-                accept="image/*"
+                accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif"
                 onChange={handleFileChange}
                 className="hidden"
                 disabled={disabled || isUploading}
@@ -127,6 +127,7 @@ export const SingleFrameUpload = ({
 }: SingleFrameUploadProps) => {
     const inputRef = useRef<HTMLInputElement>(null)
     const [localPreview, setLocalPreview] = useState<string | null>(null)
+    const [previewError, setPreviewError] = useState(false)
 
     // Generate preview URL from File object
     useEffect(() => {
@@ -168,13 +169,13 @@ export const SingleFrameUpload = ({
             <input
                 ref={inputRef}
                 type="file"
-                accept="image/*"
+                accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif"
                 onChange={handleFileChange}
                 className="hidden"
                 disabled={disabled}
             />
 
-            {displayUrl ? (
+            {displayUrl && !previewError ? (
                 // Show uploaded frame preview
                 <div className="relative">
                     <div
@@ -187,6 +188,7 @@ export const SingleFrameUpload = ({
                             src={displayUrl}
                             alt={label}
                             className="w-full h-full object-cover"
+                            onError={() => setPreviewError(true)}
                         />
                     </div>
                     {/* Close button */}

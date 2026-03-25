@@ -34,7 +34,7 @@ from ii_agent.core.storage.locations import get_session_file_path
 
 
 # Constants for file processing
-IMAGE_CONTENT_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
+IMAGE_CONTENT_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/heic", "image/heif"}
 SEVEN_DAY_SECONDS = 7 * 24 * 3600
 
 
@@ -242,11 +242,22 @@ class FileService:
                 }
             )
 
-            if file_data.content_type in IMAGE_CONTENT_TYPES:
+            # Detect images by content_type or file extension fallback
+            is_image = file_data.content_type in IMAGE_CONTENT_TYPES
+            mime_type = file_data.content_type
+            # Fall back to extension when content_type is missing or generic
+            if not is_image and file_data.name:
+                ext = file_data.name.rsplit(".", 1)[-1].lower() if "." in file_data.name else ""
+                if ext in ("png", "jpg", "jpeg", "gif", "webp", "heic", "heif"):
+                    is_image = True
+                    if not mime_type or mime_type == "application/octet-stream":
+                        mime_type = f"image/{ext}" if ext not in ("jpg",) else "image/jpeg"
+
+            if is_image:
                 images.append(
                     {
                         "url": file_data.url,
-                        "mime_type": file_data.content_type,
+                        "mime_type": mime_type,
                     }
                 )
 
@@ -293,6 +304,14 @@ class FileService:
         if not upload_storage.is_exists(blob_name):
             raise FileUploadNotFoundError(file_id)
 
+        # Normalize content_type for HEIC/HEIF files.  Browsers often report
+        # an empty MIME type (sent as "application/octet-stream" by the frontend)
+        # for HEIC uploads, so we fix it based on the file extension.
+        if content_type in ("application/octet-stream", "", None) and file_name:
+            ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
+            if ext in ("heic", "heif"):
+                content_type = f"image/{ext}"
+
         await self._file_repo.create(
             db,
             file_id=file_id,
@@ -314,7 +333,7 @@ class FileService:
         file_upload = await self._file_repo.get_by_id_and_user(db, file_id, user_id)
         if not file_upload:
             raise FileAccessDeniedError(file_id)
-        return self._create_file_stream_response(file_upload)
+        return await self._create_file_stream_response(file_upload)
 
     async def get_public_file_stream(
         self, db: AsyncSession, session_id: str, file_id: str
@@ -323,11 +342,25 @@ class FileService:
         file_upload = await self._file_repo.get_by_session_and_id(db, session_id, file_id)
         if not file_upload:
             raise FileUploadNotFoundError(file_id)
-        return self._create_file_stream_response(file_upload)
+        return await self._create_file_stream_response(file_upload)
 
-    def _create_file_stream_response(self, file_upload: FileUpload) -> StreamingResponse:
-        """Create a streaming response for file download."""
+    async def _create_file_stream_response(self, file_upload: FileUpload) -> StreamingResponse:
+        """Create a streaming response for file download.
+
+        HEIC/HEIF files are converted to JPEG on-the-fly because browsers
+        (Chrome, Firefox) cannot render HEIC in ``<img>`` tags.
+        """
         storage_client = self._get_storage_for_path(file_upload.storage_path)
+
+        # Detect HEIC by content_type or file extension
+        content_type = file_upload.content_type or "application/octet-stream"
+        is_heic = content_type in ("image/heic", "image/heif")
+        if not is_heic and file_upload.file_name:
+            ext = file_upload.file_name.rsplit(".", 1)[-1].lower() if "." in file_upload.file_name else ""
+            is_heic = ext in ("heic", "heif")
+
+        if is_heic:
+            return await self._create_heic_converted_response(file_upload, storage_client)
 
         async def file_stream() -> AsyncIterator[bytes]:
             file_obj = await anyio.to_thread.run_sync(storage_client.read, file_upload.storage_path)
@@ -343,10 +376,55 @@ class FileService:
 
         return StreamingResponse(
             file_stream(),
-            media_type=file_upload.content_type or "application/octet-stream",
+            media_type=content_type,
             headers={
                 "Content-Disposition": f'attachment; filename="{file_upload.file_name}"',
                 "Content-Length": str(file_upload.file_size),
+            },
+        )
+
+    async def _create_heic_converted_response(
+        self, file_upload: FileUpload, storage_client: BaseStorage
+    ) -> Response:
+        """Read a HEIC file, convert to JPEG, and return as a response."""
+        from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+        from ii_agent.core.logger import logger
+        from fastapi.responses import Response
+
+        # Read the entire file (required for HEIC conversion)
+        file_obj = await anyio.to_thread.run_sync(storage_client.read, file_upload.storage_path)
+        try:
+            heic_bytes = await anyio.to_thread.run_sync(file_obj.read)
+        finally:
+            await anyio.to_thread.run_sync(file_obj.close)
+
+        try:
+            jpeg_bytes, _ = await anyio.to_thread.run_sync(
+                convert_heic_to_jpeg, heic_bytes
+            )
+        except Exception:
+            logger.warning(
+                f"HEIC conversion failed for {file_upload.file_name}, "
+                "serving original with image/heic content-type"
+            )
+            # Return raw HEIC bytes with the correct content-type so the
+            # browser doesn't get a corrupt "image/jpeg" response.
+            return Response(
+                content=heic_bytes,
+                media_type="image/heic",
+                headers={
+                    "Content-Disposition": f'attachment; filename="{file_upload.file_name}"',
+                },
+            )
+
+        base_name = file_upload.file_name.rsplit(".", 1)[0] if "." in file_upload.file_name else file_upload.file_name
+        jpeg_name = f"{base_name}.jpg"
+
+        return Response(
+            content=jpeg_bytes,
+            media_type="image/jpeg",
+            headers={
+                "Content-Disposition": f'inline; filename="{jpeg_name}"',
             },
         )
 

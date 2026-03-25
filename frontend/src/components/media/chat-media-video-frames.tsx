@@ -1,11 +1,14 @@
 import {
+    useEffect,
     useRef,
+    useState,
     type ChangeEvent,
     type MouseEvent,
     type ReactElement
 } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { chatService } from '@/services/chat.service'
 import { type ChatMediaModel } from '@/constants/media-models'
 import type { ChatMediaPreference, VideoFrameReference } from '@/typings/agent'
 import { Loader2 } from 'lucide-react'
@@ -40,6 +43,8 @@ const FrameSlot = ({
 }: FrameSlotProps) => {
     const { t } = useTranslation()
     const inputRef = useRef<HTMLInputElement>(null)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [imgError, setImgError] = useState(false)
     const label =
         type === 'start'
             ? t('media.videoFrames.startLabel')
@@ -47,6 +52,34 @@ const FrameSlot = ({
     const uploadAriaLabel = t('media.videoFrames.uploadAria', { label })
     const previewAlt = t('media.videoFrames.previewAlt', { label })
     const removeAriaLabel = t('media.videoFrames.removeAria', { label })
+
+    // For HEIC frames, fetch through the backend API which converts to JPEG.
+    // For other formats, use the URL directly.
+    useEffect(() => {
+        if (!frame) {
+            setPreviewUrl(null)
+            setImgError(false)
+            return
+        }
+        const isHeic = /\.(heic|heif)$/i.test(frame.url?.split('?')[0] ?? '')
+        if (isHeic && frame.file_id) {
+            let cancelled = false
+            let blobUrl = ''
+            chatService
+                .getFileContent({ fileId: frame.file_id })
+                .then((blob) => {
+                    if (cancelled) return
+                    blobUrl = URL.createObjectURL(blob)
+                    setPreviewUrl(blobUrl)
+                })
+                .catch(() => { if (!cancelled) setPreviewUrl(frame.url) })
+            return () => {
+                cancelled = true
+                if (blobUrl) URL.revokeObjectURL(blobUrl)
+            }
+        }
+        setPreviewUrl(frame.url)
+    }, [frame?.id, frame?.url, frame?.file_id])
 
     const handleClick = () => {
         if (!disabled && !isUploading) {
@@ -74,7 +107,7 @@ const FrameSlot = ({
             <input
                 ref={inputRef}
                 type="file"
-                accept="image/*"
+                accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif"
                 onChange={handleFileChange}
                 className="hidden"
                 disabled={disabled || isUploading}
@@ -97,12 +130,17 @@ const FrameSlot = ({
                     .join(' ')}
                 aria-label={uploadAriaLabel}
             >
-                {frame ? (
+                {frame && previewUrl && !imgError ? (
                     <img
-                        src={frame.url}
+                        src={previewUrl}
                         alt={previewAlt}
                         className="h-full w-full object-cover"
+                        onError={() => setImgError(true)}
                     />
+                ) : frame && !previewUrl ? (
+                    <div className="flex flex-col items-center gap-1 text-white/70">
+                        <Loader2 className="size-4 animate-spin" />
+                    </div>
                 ) : (
                     <div className="flex flex-col items-center gap-1">
                         <span className="text-2xl leading-none">+</span>

@@ -303,7 +303,7 @@ export function ImageEditDialog({
                     <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
+                        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif"
                         className="hidden"
                         onChange={handleFileUpload}
                     />

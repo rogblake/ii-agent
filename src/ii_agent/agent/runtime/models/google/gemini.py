@@ -117,6 +117,19 @@ def format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
     if not mime_type and image.format:
         mime_type = f"image/{image.format.lower()}"
 
+    # Convert HEIC/HEIF to JPEG since Gemini doesn't support them natively
+    from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg, is_heic_format
+
+    if is_heic_format(mime_type=mime_type, image_bytes=content_bytes):
+        try:
+            content_bytes, mime_type = convert_heic_to_jpeg(content_bytes)
+        except ImportError:
+            logger.error("pillow-heif not installed, cannot convert HEIC image")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to convert HEIC to JPEG: {e}")
+            return None
+
     return {
         "mime_type": mime_type or "image/png",
         "data": content_bytes,

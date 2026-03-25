@@ -172,12 +172,6 @@ def start_scheduler():
     Start the scheduler and add all periodic jobs.
     """
     try:
-        from ii_agent.workers.cron.billing_recovery import (
-            alert_settlement_failures,
-            expire_stale_reservations,
-            retry_shortfall_settlement_failures,
-        )
-
         # ── Run / chat cleanup ────────────────────────────────────────────
         scheduler.add_job(
             cleanup_long_running_tasks,
@@ -197,33 +191,39 @@ def start_scheduler():
             max_instances=1,
         )
 
-        # ── Billing recovery ──────────────────────────────────────────────
-        scheduler.add_job(
-            expire_stale_reservations,
-            trigger=IntervalTrigger(minutes=15),
-            id="expire_stale_reservations",
-            name="Release stale credit reservation holds",
-            replace_existing=True,
-            max_instances=1,
-        )
-
-        scheduler.add_job(
-            retry_shortfall_settlement_failures,
-            trigger=IntervalTrigger(minutes=5),
-            id="retry_shortfall_settlement_failures",
-            name="Retry replayable shortfall settlement failures",
-            replace_existing=True,
-            max_instances=1,
-        )
-
-        scheduler.add_job(
-            alert_settlement_failures,
-            trigger=IntervalTrigger(minutes=5),
-            id="alert_settlement_failures",
-            name="Log reservations stuck in settlement_failed",
-            replace_existing=True,
-            max_instances=1,
-        )
+        # ── Billing recovery (temporarily disabled) ───────────────────────
+        # from ii_agent.workers.cron.billing_recovery import (
+        #     alert_settlement_failures,
+        #     expire_stale_reservations,
+        #     retry_shortfall_settlement_failures,
+        # )
+        #
+        # scheduler.add_job(
+        #     expire_stale_reservations,
+        #     trigger=IntervalTrigger(minutes=15),
+        #     id="expire_stale_reservations",
+        #     name="Release stale credit reservation holds",
+        #     replace_existing=True,
+        #     max_instances=1,
+        # )
+        #
+        # scheduler.add_job(
+        #     retry_shortfall_settlement_failures,
+        #     trigger=IntervalTrigger(minutes=5),
+        #     id="retry_shortfall_settlement_failures",
+        #     name="Retry replayable shortfall settlement failures",
+        #     replace_existing=True,
+        #     max_instances=1,
+        # )
+        #
+        # scheduler.add_job(
+        #     alert_settlement_failures,
+        #     trigger=IntervalTrigger(minutes=5),
+        #     id="alert_settlement_failures",
+        #     name="Log reservations stuck in settlement_failed",
+        #     replace_existing=True,
+        #     max_instances=1,
+        # )
 
         # Start the scheduler
         scheduler.start()

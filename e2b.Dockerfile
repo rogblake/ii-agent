@@ -1,0 +1,174 @@
+# Build Codex SSE HTTP server
+FROM rust:1.75-slim AS codex-builder
+
+# Optimization: Use cache mount for apt-get to speed up repeated builds
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+  apt-get update && apt-get install -y \
+  git \
+  ca-certificates \
+  pkg-config \
+  libssl-dev
+
+WORKDIR /build
+RUN git clone --branch v0.0.1 https://github.com/Intelligent-Internet/codex.git
+WORKDIR /build/codex/codex-rs
+
+# Optimization: Use cargo cache mount to avoid re-downloading dependencies
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+  --mount=type=cache,target=/build/codex/codex-rs/target \
+  cargo build --release --bin sse-http-server && \
+  cp /build/codex/codex-rs/target/release/sse-http-server /sse-http-server
+
+FROM nikolaik/python-nodejs:python3.10-nodejs24-slim
+
+COPY docker/sandbox/.bashrc /root/.bashrc
+COPY docker/sandbox/.bashrc /home/user/.bashrc
+
+# Optimization: Use cache mounts for apt-get and combine into single layer
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+  apt-get update && apt-get install -y \
+  build-essential \
+  procps \
+  lsof \
+  git \
+  tmux \
+  bc \
+  net-tools \
+  ripgrep \
+  unzip \
+  libmagic1 \
+  xvfb \
+  pandoc \
+  weasyprint \
+  libpq-dev \
+  wget \
+  gosu \
+  jq \
+  libnspr4 \
+  libnss3 \
+  libatk1.0-0 \
+  libatk-bridge2.0-0 \
+  libcups2 \
+  libdrm2 \
+  libxkbcommon0 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxfixes3 \
+  libxrandr2 \
+  libgbm1 \
+  libasound2 \
+  libcairo2 \  
+&& rm -rf /var/lib/apt/lists/*
+
+# Optimization: Combine all curl installs and npm installs into fewer layers
+RUN curl -fsSL https://code-server.dev/install.sh | sh
+
+# Optimization: Use npm cache mount and install playwright package and system deps as root
+RUN --mount=type=cache,target=/root/.npm \
+  npm install -g agent-browser @intelligent-internet/codex @ast-grep/cli @anthropic-ai/claude-code
+
+RUN --mount=type=cache,target=/root/.npm \
+  npm install -g vercel
+
+RUN --mount=type=cache,target=/root/.npm \
+  npm install -g eas-cli
+
+RUN --mount=type=cache,target=/root/.npm \
+  npm install -g testflight
+
+# Create user if it doesn't exist (base image uses 'pn' user with UID/GID 1000)
+RUN if ! id -u user > /dev/null 2>&1; then \
+      useradd -d /home/user -m -s /bin/bash user; \
+    fi
+
+RUN usermod -aG sudo user
+# Fix ownership for user - give user access to everything it needs
+RUN chown -R user:user /home/user 
+# Install browser binaries as pn user so they're accessible at runtime
+USER user
+RUN curl -fsSL https://bun.sh/install | bash
+RUN agent-browser install --with-deps
+USER root
+RUN agent-browser install --with-deps
+
+ARG TYPST_VERSION=0.12.0
+RUN cd /tmp && \
+    wget -O typst.tar.xz https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz && \
+    tar -xJf typst.tar.xz && \
+    mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/typst && \
+    chmod +x /usr/local/bin/typst && \
+    typst --version
+    
+# Set environment variables
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+
+RUN mkdir -p /app/ii_agent_tools
+
+# Install the project into `/app`
+WORKDIR /app/ii_agent_tools
+
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
+
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
+
+# Copy dependency files first for better layer caching
+COPY uv.lock pyproject.toml /app/ii_agent_tools/
+
+# Optimization: Remove redundant bind mounts (files already copied above)
+# Keep cache mount for uv packages
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --locked --no-install-project --no-dev
+
+# Copy application source and obfuscated ii_server from build stage
+COPY src/ii_agent_tools /app/ii_agent_tools/src/ii_agent_tools
+
+# Optimization: Copy from cached location in codex-builder
+COPY --from=codex-builder /sse-http-server /usr/local/bin/sse-http-server
+
+COPY README.md /app/ii_agent_tools/
+
+# Optimization: Combine mkdir and touch into one layer
+RUN touch /app/.user_env /app/.user_env.sh
+
+# Copy config files for root (build time) and user (runtime)
+RUN mkdir -p /root/.codex /home/user/.codex /home/user/.claude
+COPY docker/sandbox/template.css /app/template.css
+COPY docker/sandbox/claude_template.json /root/.claude.json
+COPY docker/sandbox/claude_template.json /home/user/.claude.json
+
+# Optimization: Use cache mount for final uv sync
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --locked --no-dev
+
+  
+RUN mkdir /workspace
+WORKDIR /workspace
+
+# Create a startup script to run both services
+COPY docker/sandbox/start-services.sh /app/start-services.sh
+COPY docker/sandbox/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/start-services.sh /app/entrypoint.sh
+
+# Fix ownership for user - give user access to everything it needs
+RUN chown -R user:user /home/user /app /workspace && \
+    chmod -R 755 /app && \
+    chmod -R 755 /home/user/.claude
+
+# Set environment for user
+ENV HOME=/home/user
+ENV PATH="/home/user/.bun/bin:/app/ii_agent_tools/.venv/bin:$PATH"
+
+USER user
+
+# Install Playwright browser binaries for the Python playwright package (used by ii_server browser)
+RUN playwright install chromium
+
+WORKDIR /home/user
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["bash", "/app/start-services.sh"]

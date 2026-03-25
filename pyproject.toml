@@ -78,7 +78,6 @@ dependencies = [
   "json-repair>=0.54.3",
   "strictyaml>=1.7.0",
   "universal-pathlib>=0.2.0",
-  "ii-agent-tools",
   "sqlalchemy>=2.0.0",
   "google-cloud-secret-manager>=2.20.0",
   "composio",
@@ -99,7 +98,6 @@ gaia = [
 
 [project.scripts]
 ii-agent = "ii_agent.cli.main:main"
-ii-tool = "ii_tool.mcp.server:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -108,9 +106,6 @@ build-backend = "hatchling.build"
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["ii_agent*", "ii_tool*"]
-
-[tool.uv.sources]
-ii-agent-tools = { git = "ssh://git@github.com/Intelligent-Internet/ii-agent-tools.git", rev = "v0.0.17" }
 
 [dependency-groups]
 dev = [

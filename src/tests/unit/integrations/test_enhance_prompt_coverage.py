@@ -11,7 +11,6 @@ from ii_agent.billing.types import BillingContextValue, SubjectKind
 from ii_agent.core.config.enhance_prompt_config import EnhancePromptConfig
 from ii_agent.integrations.enhance_prompt.client import (
     _build_input_text,
-    _extract_json_payload,
     OpenAIEnhancePromptClient,
     create_enhance_prompt_client,
 )
@@ -25,27 +24,19 @@ def test_create_enhance_prompt_client_returns_none_without_api_key():
 
 @pytest.mark.asyncio
 async def test_create_input_text_without_context():
-    assert _build_input_text("Summarize", None) == "Prompt:\nSummarize"
+    assert (
+        _build_input_text("Summarize", None)
+        == "Enhance this request into a detailed prompt: Summarize"
+    )
 
 
 @pytest.mark.asyncio
 async def test_create_input_text_with_context():
     assert (
         _build_input_text("Summarize", "for engineers")
-        == "Prompt:\nSummarize\n\nContext:\nfor engineers"
+        == "Enhance this request into a detailed prompt: Summarize\n\n"
+        "Additional context - for engineers"
     )
-
-
-@pytest.mark.asyncio
-async def test_extract_json_payload_parses_wrapped_json():
-    payload = _extract_json_payload('prefix text {"enhanced_prompt":"x","reasoning":"y"} suffix')
-    assert payload == {"enhanced_prompt": "x", "reasoning": "y"}
-
-
-@pytest.mark.asyncio
-async def test_extract_json_payload_fails_without_json():
-    with pytest.raises(ValueError):
-        _extract_json_payload("not json at all")
 
 
 @pytest.mark.asyncio
@@ -139,9 +130,7 @@ async def test_openai_client_uses_billed_execution_when_context_is_bound(monkeyp
 
         async def send_once(self, **kwargs):
             self.send_once_kwargs = kwargs
-            return SimpleNamespace(
-                content='{"enhanced_prompt":"hello, please","reasoning":"added tone"}'
-            )
+            return SimpleNamespace(content="hello, please")
 
         def extract_text_content(self, parts):
             return "".join(parts)
@@ -157,10 +146,81 @@ async def test_openai_client_uses_billed_execution_when_context_is_bound(monkeyp
     ).enhance("hello")
 
     assert result.enhanced_prompt == "hello, please"
-    assert result.reasoning == "added tone"
+    assert result.reasoning is None
     billing_context = execution_service.send_once_kwargs["billing_context"]
     assert billing_context.scope.subject.kind == SubjectKind.USER
     assert billing_context.scope.subject.id == "user-1"
     assert billing_context.scope.billing_context == BillingContextValue.ENHANCE_PROMPT
     assert billing_context.requested_output_token_cap == 4096
     assert execution_service.send_once_kwargs["usage_key"] == "enhance_prompt:user-1:req-1"
+
+
+@pytest.mark.asyncio
+async def test_openai_client_returns_plain_text_output_directly(monkeypatch):
+    client_module = importlib.import_module("ii_agent.integrations.enhance_prompt.client")
+
+    class FakeExecutionService:
+        def create_client(self, llm_config):
+            self.llm_config = llm_config
+            return "client"
+
+        def new_message(self, **kwargs):
+            return kwargs
+
+        async def send_once(self, **kwargs):
+            return SimpleNamespace(
+                content=(
+                    "I can help you create a Netflix-style clone. "
+                    "Which of these do you mean by clone?"
+                )
+            )
+
+        def extract_text_content(self, parts):
+            return "".join(parts)
+
+    monkeypatch.setattr(client_module, "get_or_generate_request_id", lambda: "req-2")
+    client = OpenAIEnhancePromptClient(EnhancePromptConfig(openai_api_key="test-key"))
+
+    result = await client.bind_execution_context(
+        db=object(),
+        llm_execution_service=FakeExecutionService(),
+        user_id="user-2",
+    ).enhance("Clone netflix")
+
+    assert result.original_prompt == "Clone netflix"
+    assert result.enhanced_prompt == (
+        "I can help you create a Netflix-style clone. Which of these do you mean by clone?"
+    )
+    assert result.reasoning is None
+
+
+@pytest.mark.asyncio
+async def test_openai_client_falls_back_when_model_returns_empty_text(monkeypatch):
+    client_module = importlib.import_module("ii_agent.integrations.enhance_prompt.client")
+
+    class FakeExecutionService:
+        def create_client(self, llm_config):
+            self.llm_config = llm_config
+            return "client"
+
+        def new_message(self, **kwargs):
+            return kwargs
+
+        async def send_once(self, **kwargs):
+            return SimpleNamespace(content="   ")
+
+        def extract_text_content(self, parts):
+            return "".join(parts)
+
+    monkeypatch.setattr(client_module, "get_or_generate_request_id", lambda: "req-3")
+    client = OpenAIEnhancePromptClient(EnhancePromptConfig(openai_api_key="test-key"))
+
+    result = await client.bind_execution_context(
+        db=object(),
+        llm_execution_service=FakeExecutionService(),
+        user_id="user-3",
+    ).enhance("Clone netflix")
+
+    assert result.original_prompt == "Clone netflix"
+    assert result.enhanced_prompt == "Clone netflix"
+    assert result.reasoning is None

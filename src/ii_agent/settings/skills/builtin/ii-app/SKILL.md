@@ -12,6 +12,7 @@ Use this skill for local app lifecycle actions that should go through the bundle
 - `ii-app web view-log` to inspect web server output
 - `ii-app web screenshot` to open the cached preview URL in `agent-browser`, save a screenshot, and print the file path
 - `ii-app web status` to save server log output and a screenshot snapshot to disk, then print the status file path
+- `ii-app web checkpoint` to run `bun run build:local`, clean transient build artifacts, and create a git checkpoint commit
 - `ii-app web list-templates` to inspect bundled web template IDs
 - `ii-app mobile init <project_name>` to scaffold an Expo app and write a mobile cache
 - `ii-app mobile restart` to restart the Expo dev server and refresh tunnel/LAN URLs
@@ -43,6 +44,7 @@ Default cache locations:
 "<skill-root>/bin/ii-app" web view-log --workspace <dir>
 "<skill-root>/bin/ii-app" web screenshot --workspace <dir>
 "<skill-root>/bin/ii-app" web status --workspace <dir>
+"<skill-root>/bin/ii-app" web checkpoint --workspace <dir> --project-directory <dir>
 "<skill-root>/bin/ii-app" mobile init <project_name> --workspace <dir>
 "<skill-root>/bin/ii-app" mobile restart --workspace <dir>
 "<skill-root>/bin/ii-app" mobile view-log --workspace <dir>

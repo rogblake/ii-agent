@@ -1,20 +1,20 @@
-from fastmcp.exceptions import ToolError
-from google.genai._interactions.types.image_content import ImageContent
-from ii_agent.agent.runtime.tools.base import TextContent
+import json
+import shlex
 from typing import TYPE_CHECKING, Any
 
 from ii_agent.projects.databases.repository import ProjectDatabaseRepository
 from ii_agent.projects.databases.models import DatabaseSourceEnum
 from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.agent.runtime.tools.mcp.base import MCPTool
-from ii_agent.agent.runtime.tools.base import ToolResult
+from ii_agent.agent.runtime.tools.base import TextContent, ToolResult
+from ii_agent.agent.runtime.tools.sandbox.base import BaseSandboxTool
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
     from ii_agent.agent.runtime.agents.agent import IIAgent
     from ii_agent.agent.runtime.tools.function import FunctionCall
 
-DEFAULT_TIMEOUT = 120
+# Template installation plus a cold Next.js boot can take several minutes in E2B.
+DEFAULT_TIMEOUT = 300
 
 # Name
 NAME = "fullstack_project_init"
@@ -113,8 +113,41 @@ INPUT_SCHEMA = {
     "required": ["project_name", "framework"],
 }
 
+SUPABASE_INSTRUCTIONS = (
+    "\n\n## Supabase Database Setup Required\n"
+    "The user chose Supabase as the database provider. You MUST build the entire website/app using Supabase for ALL database operations, authentication, and backend services.\n\n"
+    "### Step 1: Get organization ID\n"
+    "Call SUPABASE_LIST_ALL_ORGANIZATIONS to get the list of organizations. Extract the `id` from the organization you want to use.\n"
+    "If SUPABASE_LIST_ALL_ORGANIZATIONS is not available, call SUPABASE_LIST_ALL_PROJECTS instead and extract the `organization_id` field from any existing project.\n"
+    "If neither returns an organization ID, ask the user to provide their Supabase organization ID from https://supabase.com/dashboard.\n\n"
+    "### Step 2: Create Supabase project\n"
+    "Call SUPABASE_CREATE_A_PROJECT with ONLY these 4 required parameters:\n"
+    '  - name: "<project-name>" (string, required)\n'
+    '  - organization_id: "<org-id-from-step-1>" (string, required)\n'
+    '  - region: "us-east-1" (string, required)\n'
+    '  - db_pass: "<strong-password>" (string, required - generate a strong password with only alphanumeric characters)\n'
+    "DO NOT pass any other parameters (no plan, no template_url, no kps_enabled, no postgres_engine, no release_channel, no desired_instance_size). "
+    "Passing empty strings for optional URL fields will cause validation errors.\n"
+    "IMPORTANT: Save the project 'ref' (project reference ID) from the response - you need it for all subsequent Supabase API calls.\n\n"
+    "### Step 3: Get API keys\n"
+    "Use SUPABASE_GET_PROJECT_API_KEYS with ref=<project-ref> (required) to retrieve the project API keys (anon key, service role key).\n\n"
+    "### Step 4: Configure environment variables\n"
+    "Save the Supabase URL and keys as environment variables in .env:\n"
+    "   - NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co\n"
+    "   - NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>\n"
+    "   - SUPABASE_SERVICE_ROLE_KEY=<service-role-key> (for server-side operations)\n\n"
+    "### Step 5: Install and set up Supabase client\n"
+    "Install @supabase/supabase-js and create a Supabase client utility (e.g. lib/supabase.ts).\n\n"
+    "### Step 6: Design and create database schema\n"
+    "Use SUPABASE_BETA_RUN_SQL_QUERY with ref=<project-ref> to create all required tables, indexes, and RLS policies. "
+    "Design the schema based on the app requirements.\n\n"
+    "### Step 7: Build with Supabase throughout\n"
+    "Use the Supabase client for ALL data operations: queries, inserts, updates, deletes, real-time subscriptions, and auth. "
+    "Do NOT use direct Postgres connections or any other database. Every data interaction must go through Supabase.\n"
+)
 
-class FullStackInitTool(MCPTool):
+
+class FullStackInitTool(BaseSandboxTool):
     name = NAME
     display_name = DISPLAY_NAME
     description = DESCRIPTION
@@ -138,9 +171,10 @@ class FullStackInitTool(MCPTool):
 
     async def execute(self, tool_input: dict[str, Any]) -> ToolResult:
         try:
+            database_url = None
+
             if tool_input.get("database"):
                 session_id = str(self._session_id) if self._session_id else None
-                user_id = str(self._user_id) if self._user_id else None
                 database_source = tool_input.get("database_source", "default")
 
                 # Supabase database source: skip NeonDB provisioning
@@ -168,109 +202,65 @@ class FullStackInitTool(MCPTool):
                                 metadata={"database_source": "supabase"},
                             )
 
-                    # Don't pass database_connection to the MCP tool
-                    # The agent will use Supabase Composio tools after init
-                    tool_input["database"] = False
-                    tool_input.pop("database_source", None)
+                    # Run init without database_url, append Supabase instructions after
+                    result = await self._run_cli(tool_input)
 
-                    result = await self._execute(tool_input)
-
-                    # Append Supabase setup instructions to the result
-                    supabase_instructions = (
-                        "\n\n## Supabase Database Setup Required\n"
-                        "The user chose Supabase as the database provider. You MUST build the entire website/app using Supabase for ALL database operations, authentication, and backend services.\n\n"
-                        "### Step 1: Get organization ID\n"
-                        "Call SUPABASE_LIST_ALL_ORGANIZATIONS to get the list of organizations. Extract the `id` from the organization you want to use.\n"
-                        "If SUPABASE_LIST_ALL_ORGANIZATIONS is not available, call SUPABASE_LIST_ALL_PROJECTS instead and extract the `organization_id` field from any existing project.\n"
-                        "If neither returns an organization ID, ask the user to provide their Supabase organization ID from https://supabase.com/dashboard.\n\n"
-                        "### Step 2: Create Supabase project\n"
-                        "Call SUPABASE_CREATE_A_PROJECT with ONLY these 4 required parameters:\n"
-                        "  - name: \"<project-name>\" (string, required)\n"
-                        "  - organization_id: \"<org-id-from-step-1>\" (string, required)\n"
-                        "  - region: \"us-east-1\" (string, required)\n"
-                        "  - db_pass: \"<strong-password>\" (string, required - generate a strong password with only alphanumeric characters)\n"
-                        "DO NOT pass any other parameters (no plan, no template_url, no kps_enabled, no postgres_engine, no release_channel, no desired_instance_size). "
-                        "Passing empty strings for optional URL fields will cause validation errors.\n"
-                        "IMPORTANT: Save the project 'ref' (project reference ID) from the response - you need it for all subsequent Supabase API calls.\n\n"
-                        "### Step 3: Get API keys\n"
-                        "Use SUPABASE_GET_PROJECT_API_KEYS with ref=<project-ref> (required) to retrieve the project API keys (anon key, service role key).\n\n"
-                        "### Step 4: Configure environment variables\n"
-                        "Save the Supabase URL and keys as environment variables in .env:\n"
-                        "   - NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co\n"
-                        "   - NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>\n"
-                        "   - SUPABASE_SERVICE_ROLE_KEY=<service-role-key> (for server-side operations)\n\n"
-                        "### Step 5: Install and set up Supabase client\n"
-                        "Install @supabase/supabase-js and create a Supabase client utility (e.g. lib/supabase.ts).\n\n"
-                        "### Step 6: Design and create database schema\n"
-                        "Use SUPABASE_BETA_RUN_SQL_QUERY with ref=<project-ref> to create all required tables, indexes, and RLS policies. "
-                        "Design the schema based on the app requirements.\n\n"
-                        "### Step 7: Build with Supabase throughout\n"
-                        "Use the Supabase client for ALL data operations: queries, inserts, updates, deletes, real-time subscriptions, and auth. "
-                        "Do NOT use direct Postgres connections or any other database. Every data interaction must go through Supabase.\n"
-                    )
-
+                    # Append Supabase setup instructions
                     if isinstance(result.llm_content, str):
-                        result.llm_content += supabase_instructions
+                        result.llm_content += SUPABASE_INSTRUCTIONS
                     elif isinstance(result.llm_content, list):
-                        result.llm_content.append(TextContent(type="text", text=supabase_instructions))
+                        result.llm_content.append(
+                            TextContent(type="text", text=SUPABASE_INSTRUCTIONS)
+                        )
 
                     return result
 
                 # Default database source: NeonDB provisioning
-                # Check if a database already exists for this session
-                if session_id:
-                    _db_repo = ProjectDatabaseRepository()
-                    async with get_db_session_local() as db:
-                        existing_db_record = await _db_repo.get_active_by_session_id(
-                            db, session_id=session_id
-                        )
-                    if existing_db_record:
-                        # Use existing database connection
-                        tool_input["database_connection"] = existing_db_record.connection_string
-
-                    else:
-                        # Create new database connection
-                        db_connection = await self.dependencies.tool_client.database_connection(
-                            "postgres", session_id
-                        )
-                        tool_input["database_connection"] = db_connection.get("connection_string")
-
-                        # Store in ProjectDatabases table
-                        async with get_db_session_local() as db:
-                            await _db_repo.create(
-                                db,
-                                session_id=session_id,
-                                source=DatabaseSourceEnum.NEONDB.value,
-                                connection_string=db_connection.get("connection_string", ""),
-                                host=db_connection.get("host"),
-                                database_name=db_connection.get("database_name"),
-                                role_name=db_connection.get("role_name"),
-                                branch_name=db_connection.get("branch_name"),
-                                metadata={
-                                    "project_id": db_connection.get("project_id"),
-                                    "project_name": db_connection.get("project_name"),
-                                    "is_new_project": db_connection.get("is_new_project"),
-                                    "current_project_count": db_connection.get("current_project_count"),
-                                    "databases_in_project": db_connection.get("databases_in_project"),
-                                    "capacity_remaining": db_connection.get("capacity_remaining"),
-                                    "original_database_name": db_connection.get(
-                                        "original_database_name"
-                                    ),
-                                    "time_taken_ms": db_connection.get("time_taken_ms"),
-                                },
-                            )
-
-                else:
-                    # session_id is required for database operations
+                if not session_id:
                     return ToolResult(
                         llm_content="Cannot initialize database: no session_id available. A session must be created before initializing a project with database.",
                         user_display_content="Cannot initialize database: no session_id available.",
                         is_error=True,
                     )
 
-            # Remove database_source before passing to MCP (not recognized by the internal tool)
-            tool_input.pop("database_source", None)
-            return await self._execute(tool_input)
+                _db_repo = ProjectDatabaseRepository()
+                async with get_db_session_local() as db:
+                    existing_db_record = await _db_repo.get_active_by_session_id(
+                        db, session_id=session_id
+                    )
+                if existing_db_record:
+                    database_url = existing_db_record.connection_string
+                else:
+                    db_connection = await self.dependencies.tool_client.database_connection(
+                        "postgres", session_id
+                    )
+                    database_url = db_connection.get("connection_string")
+
+                    async with get_db_session_local() as db:
+                        await _db_repo.create(
+                            db,
+                            session_id=session_id,
+                            source=DatabaseSourceEnum.NEONDB.value,
+                            connection_string=db_connection.get("connection_string", ""),
+                            host=db_connection.get("host"),
+                            database_name=db_connection.get("database_name"),
+                            role_name=db_connection.get("role_name"),
+                            branch_name=db_connection.get("branch_name"),
+                            metadata={
+                                "project_id": db_connection.get("project_id"),
+                                "project_name": db_connection.get("project_name"),
+                                "is_new_project": db_connection.get("is_new_project"),
+                                "current_project_count": db_connection.get("current_project_count"),
+                                "databases_in_project": db_connection.get("databases_in_project"),
+                                "capacity_remaining": db_connection.get("capacity_remaining"),
+                                "original_database_name": db_connection.get(
+                                    "original_database_name"
+                                ),
+                                "time_taken_ms": db_connection.get("time_taken_ms"),
+                            },
+                        )
+
+            return await self._run_cli(tool_input, database_url=database_url)
         except Exception as e:
             logger.exception("Failed to initialize project")
             return ToolResult(
@@ -279,69 +269,41 @@ class FullStackInitTool(MCPTool):
                 is_error=True,
             )
 
-    # TODO: Remove this later when original mcp is deleted, add internal v1 tool for backward compatibility
-    async def _execute(self, tool_input: dict[str, Any]) -> ToolResult:
-        try:
-            remote_input = dict(tool_input)
-            if self._host_url and not remote_input.get("host_url"):
-                remote_input["host_url"] = self._host_url
+    async def _run_cli(
+        self,
+        tool_input: dict[str, Any],
+        database_url: str | None = None,
+    ) -> ToolResult:
+        """Build and execute the ii-app web init CLI command."""
+        framework = tool_input.get("framework", "nextjs-shadcn")
+        project_name = tool_input["project_name"]
 
-            async with self.mcp_client:
-                mcp_results = await self.mcp_client.call_tool(
-                    self.name,
-                    remote_input,
-                    timeout=DEFAULT_TIMEOUT,
-                )
+        cmd_parts = [
+            "ii-app",
+            "web",
+            "init",
+            framework,
+            "--project-name",
+            project_name,
+            "--workspace",
+            "/workspace",
+            "--json",
+        ]
 
-                llm_content : list[ImageContent | TextContent] = []
-                has_image_content = False
-                for mcp_result in mcp_results.content:
-                    if mcp_result.type == "text":
-                        llm_content.append(TextContent(type="text", text=mcp_result.text))
-                    elif mcp_result.type == "image":
-                        llm_content.append(
-                            ImageContent(
-                                type="image",
-                                data=mcp_result.data,
-                                mime_type=mcp_result.mimeType,
-                            )
-                        )
-                        has_image_content = True
-                    else:
-                        raise ValueError(f"Unknown result type: {mcp_result.type}")
+        if self._host_url:
+            cmd_parts.extend(["--host-url", self._host_url])
 
-                user_display_content = None
-                is_error = False
-                # Logic for our internal tools
-                if mcp_results.structured_content is not None:
-                    user_display_content = mcp_results.structured_content.get(
-                        "user_display_content"
-                    )
-                    is_error = mcp_results.structured_content.get("is_error")
-                # For external tools (like MCP) or internal tools that don't have a user_display_content
-                if not user_display_content:
-                    if not has_image_content:
-                        user_display_content = "\n".join([content.text for content in llm_content])
-                    else:
-                        user_display_content = [content.model_dump() for content in llm_content]
+        if database_url:
+            cmd_parts.extend(["--database-url", database_url])
 
-                return ToolResult(
-                    llm_content=llm_content,
-                    user_display_content=user_display_content,
-                    is_error=is_error,
-                )
-        except ToolError as e:
-            return ToolResult(
-                llm_content=f"Error while calling tool {self.name} with input {tool_input}: {str(e)}\n\nPlease analyze the error message to determine if it's due to incorrect input parameters or an internal tool issue. If the error is due to incorrect input, retry with the correct parameters. Otherwise, try an alternative approach and inform the user about the issue.",
-                user_display_content=f"Error while calling tool {self.name} with input {tool_input}: {str(e)}",
-                is_error=True,
-            )
-        except Exception as e:
-            return ToolResult(
-                llm_content=f"Error while calling tool {self.name} with input {tool_input}: {str(e)}\n\nPlease analyze the error message to determine if it's due to incorrect input parameters or an internal tool issue. If the error is due to incorrect input, retry with the correct parameters. Otherwise, try an alternative approach and inform the user about the issue.",
-                user_display_content=f"Error while calling tool {self.name} with input {tool_input}: {str(e)}",
-                is_error=True,
-            )
+        cmd = " ".join(shlex.quote(p) for p in cmd_parts)
+        output = await self.sandbox.run_command(cmd, timeout=DEFAULT_TIMEOUT)
+        result = json.loads(output)
+
+        return ToolResult(
+            llm_content=[TextContent(type="text", text=output)],
+            user_display_content=result,
+        )
 
     async def on_tool_end(self, agent: "IIAgent", fc: "FunctionCall") -> None:
         if fc.error:

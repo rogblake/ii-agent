@@ -497,7 +497,7 @@ const MessageContent = memo(
                                 agentType={agentType}
                             />
                         )}
-                        {message.action.type === TOOL.ADD_WEBDEV_SECRETS && (
+                        {message.action.type === TOOL.ADD_USER_ENV && (
                             <SecretsInput
                                 secrets={
                                    message.action.data.tool_input?.secrets || []

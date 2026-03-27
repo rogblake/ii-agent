@@ -90,9 +90,12 @@ from ii_agent.integrations.connectors.dependencies import (
     get_connector_service,
 )
 from ii_agent.projects.dependencies import (
+    get_database_service,
     get_deployment_orchestration_service,
     get_project_repository,
     get_project_service,
+    get_sandbox_env_sync_service,
+    get_secret_service,
 )
 from ii_agent.projects.design.dependencies import (
     get_project_design_repository,
@@ -148,9 +151,12 @@ if TYPE_CHECKING:
     from ii_agent.projects.deployment_orchestration_service import (
         DeploymentOrchestrationService,
     )
+    from ii_agent.projects.databases.service import DatabaseService
     from ii_agent.projects.deployments.service import DeploymentsService
+    from ii_agent.projects.secrets.service import SecretService
     from ii_agent.projects.service import ProjectService
     from ii_agent.agent.sandboxes.service import SandboxService
+    from ii_agent.agent.sandboxes.env_sync_service import SandboxEnvSyncService
     from ii_agent.sessions.service import SessionService
     from ii_agent.sessions.fork_service import SessionForkService
     from ii_agent.agent.application.validation_service import SessionValidationService
@@ -192,6 +198,9 @@ class ServiceContainer:
     plan_service: PlanService
     sandbox_service: SandboxService
     project_service: ProjectService
+    secret_service: SecretService
+    database_service: DatabaseService
+    sandbox_env_sync_service: SandboxEnvSyncService
     deployments_service: DeploymentsService
     deployment_orchestration_service: DeploymentOrchestrationService
     billing_service: BillingService
@@ -283,6 +292,9 @@ class ServiceContainer:
             billing_customer_svc,
         )
         project_svc = get_project_service(project_repo, session_repo)
+        secret_svc = get_secret_service(project_repo)
+        database_svc = get_database_service(project_repo)
+        sandbox_env_sync_svc = get_sandbox_env_sync_service(session_repo, sandbox_repo)
         deployments_svc = get_deployments_service(project_repo, deployments_repo)
         media_template_svc = get_media_template_service(media_template_repo)
         # ── Design services ──────────────────────────────────────────────
@@ -339,6 +351,9 @@ class ServiceContainer:
             plan_service=plan_svc,
             sandbox_service=sandbox_svc,
             project_service=project_svc,
+            secret_service=secret_svc,
+            database_service=database_svc,
+            sandbox_env_sync_service=sandbox_env_sync_svc,
             deployments_service=deployments_svc,
             deployment_orchestration_service=deployment_orch_svc,
             billing_service=billing_svc,

@@ -1,3 +1,20 @@
+# Build ii-app CLI
+FROM rust:1.86-slim AS ii-app-builder
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+  apt-get update && apt-get install -y \
+  pkg-config \
+  libssl-dev
+
+WORKDIR /build/ii-app-cli
+COPY src/ii_agent/settings/skills/builtin/ii-app/scripts/ii-app-cli/ .
+
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+  --mount=type=cache,target=/build/ii-app-cli/target \
+  cargo build --release && \
+  cp /build/ii-app-cli/target/release/ii-app /ii-app
+
 # Build Codex SSE HTTP server
 FROM rust:1.75-slim AS codex-builder
 
@@ -105,10 +122,10 @@ RUN cd /tmp && \
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 
-RUN mkdir -p /app/ii_agent_tools
+RUN mkdir -p /app/ii_sandbox
 
 # Install the project into `/app`
-WORKDIR /app/ii_agent_tools
+WORKDIR /app/ii_sandbox
 
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
@@ -116,21 +133,24 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
-# Copy dependency files first for better layer caching
-COPY uv.lock pyproject.toml /app/ii_agent_tools/
+# Copy lightweight sandbox pyproject (ii_server + ii_agent_tools only)
+COPY docker/sandbox/pyproject.toml /app/ii_sandbox/
 
-# Optimization: Remove redundant bind mounts (files already copied above)
-# Keep cache mount for uv packages
+# Install dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-  uv sync --locked --no-install-project --no-dev
+  uv sync --no-install-project
 
-# Copy application source and obfuscated ii_server from build stage
-COPY src/ii_agent_tools /app/ii_agent_tools/src/ii_agent_tools
+# Copy application source
+COPY src/ii_server /app/ii_sandbox/src/ii_server
+COPY src/ii_agent_tools /app/ii_sandbox/src/ii_agent_tools
 
 # Optimization: Copy from cached location in codex-builder
 COPY --from=codex-builder /sse-http-server /usr/local/bin/sse-http-server
 
-COPY README.md /app/ii_agent_tools/
+# Copy ii-app CLI binary and assets
+COPY --from=ii-app-builder /ii-app /usr/local/bin/ii-app
+COPY src/ii_agent/settings/skills/builtin/ii-app/assets /usr/local/share/ii-app/assets
+ENV II_APP_SKILL_ROOT=/usr/local/share/ii-app
 
 # Optimization: Combine mkdir and touch into one layer
 RUN touch /app/.user_env /app/.user_env.sh
@@ -141,9 +161,9 @@ COPY docker/sandbox/template.css /app/template.css
 COPY docker/sandbox/claude_template.json /root/.claude.json
 COPY docker/sandbox/claude_template.json /home/user/.claude.json
 
-# Optimization: Use cache mount for final uv sync
+# Install the project itself
 RUN --mount=type=cache,target=/root/.cache/uv \
-  uv sync --locked --no-dev
+  uv sync
 
   
 RUN mkdir /workspace
@@ -161,11 +181,11 @@ RUN chown -R user:user /home/user /app /workspace && \
 
 # Set environment for user
 ENV HOME=/home/user
-ENV PATH="/home/user/.bun/bin:/app/ii_agent_tools/.venv/bin:$PATH"
+ENV PATH="/home/user/.bun/bin:/app/ii_sandbox/.venv/bin:$PATH"
 
 USER user
 
-# Install Playwright browser binaries for the Python playwright package (used by ii_server browser)
+# Install Playwright browser binaries
 RUN playwright install chromium
 
 WORKDIR /home/user

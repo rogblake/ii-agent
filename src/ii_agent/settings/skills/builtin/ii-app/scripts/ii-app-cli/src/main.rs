@@ -23,8 +23,17 @@ const STATUS_DIR_NAME: &str = "status";
 const PORT_PLACEHOLDER: &str = "{PORT}";
 const DEFAULT_EXPO_WEB_PORT: u16 = 8081;
 const DEFAULT_STRIPE_TIMEOUT_SECONDS: u64 = 60;
+const DEFAULT_WEB_READY_TIMEOUT_SECONDS: u64 = 120;
 const EXPO_STARTUP_ATTEMPTS: usize = 20;
 const EXPO_POLL_INTERVAL: Duration = Duration::from_millis(1500);
+const DEFAULT_CHECKPOINT_COMMIT_MESSAGE: &str = "Checkpoint";
+const CHECKPOINT_GIT_USER_EMAIL: &str = "bot@example.com";
+const CHECKPOINT_GIT_USER_NAME: &str = "II Agent";
+const DEFAULT_RUNTIME_HOME: &str = "/home/user";
+const DEFAULT_BUN_INSTALL_DIR: &str = "/home/user/.bun";
+const DEFAULT_BUN_BIN_DIR: &str = "/home/user/.bun/bin";
+const DEFAULT_VENV_BIN_DIR: &str = "/app/ii_sandbox/.venv/bin";
+const DEFAULT_SYSTEM_PATH: &str = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
 
 #[derive(Parser)]
 #[command(
@@ -59,6 +68,7 @@ enum WebCommands {
     ViewLog(WebViewLogArgs),
     Screenshot(WebScreenshotArgs),
     Status(WebStatusArgs),
+    Checkpoint(WebCheckpointArgs),
 }
 
 #[derive(Args)]
@@ -174,6 +184,18 @@ struct WebStatusArgs {
     screenshot_format: String,
     #[arg(long)]
     screenshot_quality: Option<u8>,
+    #[arg(long)]
+    json: bool,
+}
+
+#[derive(Args)]
+struct WebCheckpointArgs {
+    #[arg(long, default_value = ".")]
+    workspace: PathBuf,
+    #[arg(long)]
+    project_directory: PathBuf,
+    #[arg(long, default_value = DEFAULT_CHECKPOINT_COMMIT_MESSAGE)]
+    commit_message: String,
     #[arg(long)]
     json: bool,
 }
@@ -363,6 +385,13 @@ struct StripeRegisterWebhookOutput {
     env_file_updated: String,
 }
 
+#[derive(Serialize)]
+struct CheckpointOutput {
+    project_directory: String,
+    revision: String,
+    commit_message: String,
+}
+
 #[derive(Deserialize)]
 struct StripeWebhookApiResponse {
     id: String,
@@ -510,6 +539,7 @@ fn run_web(args: WebArgs) -> Result<()> {
         WebCommands::ViewLog(args) => cmd_web_view_log(args),
         WebCommands::Screenshot(args) => cmd_web_screenshot(args),
         WebCommands::Status(args) => cmd_web_status(args),
+        WebCommands::Checkpoint(args) => cmd_web_checkpoint(args),
     }
 }
 
@@ -603,7 +633,7 @@ fn cmd_web_init(args: WebInitArgs) -> Result<()> {
     if !args.skip_install {
         for step in spec.install_steps {
             let run_dir = join_suffix(&project_dir, step.run_dir_suffix);
-            run_shell_command(step.command, &run_dir)?;
+            run_shell_command_maybe_quiet(step.command, &run_dir, args.json)?;
         }
     }
 
@@ -611,10 +641,26 @@ fn cmd_web_init(args: WebInitArgs) -> Result<()> {
         instantiate_web_servers(spec, &project_name, &project_dir, args.host_url.as_deref());
 
     if !args.skip_start {
-        for server in &mut servers {
-            start_web_server(server, env_file.as_deref(), args.host_url.as_deref())?;
-            wait_for_port(server.port, Duration::from_secs(10))
+        let startup_result = (|| -> Result<()> {
+            for server in &mut servers {
+                start_web_server(server, env_file.as_deref(), args.host_url.as_deref())?;
+                wait_for_port(
+                    server.port,
+                    Duration::from_secs(DEFAULT_WEB_READY_TIMEOUT_SECONDS),
+                )
                 .with_context(|| format!("server {} did not become ready", server.session))?;
+            }
+            Ok(())
+        })();
+
+        if let Err(err) = startup_result {
+            let cleanup_ports: Vec<u16> = servers.iter().map(|server| server.port).collect();
+            let cleanup_result =
+                run_failed_startup_cleanup(&skill_root, &project_dir, &cache_path, &cleanup_ports);
+            bail!(
+                "{}",
+                format_failure_with_cleanup(err.to_string(), cleanup_result)
+            );
         }
     }
 
@@ -852,7 +898,60 @@ fn cmd_web_status(args: WebStatusArgs) -> Result<()> {
     Ok(())
 }
 
+fn cmd_web_checkpoint(args: WebCheckpointArgs) -> Result<()> {
+    let workspace = resolve_path(&args.workspace)?;
+    let project_dir = resolve_existing_directory(&args.project_directory, &workspace)?;
+
+    run_runtime_bash_capture("bun run build:local", &project_dir, "bun run build:local")?;
+    cleanup_checkpoint_artifacts(&project_dir)?;
+    ensure_checkpoint_git_identity(&project_dir)?;
+
+    if !project_dir.join(".git").is_dir() {
+        run_runtime_command_capture(
+            Command::new("git").arg("init").current_dir(&project_dir),
+            "git init",
+        )?;
+    }
+
+    run_runtime_command_capture(
+        Command::new("git")
+            .args(["add", "-A"])
+            .current_dir(&project_dir),
+        "git add",
+    )?;
+    run_runtime_command_capture(
+        Command::new("git")
+            .args(["commit", "-m", &args.commit_message])
+            .current_dir(&project_dir),
+        "git commit",
+    )?;
+    let revision = run_runtime_command_capture(
+        Command::new("git")
+            .args(["rev-parse", "HEAD"])
+            .current_dir(&project_dir),
+        "git rev-parse",
+    )?
+    .trim()
+    .to_string();
+
+    let payload = CheckpointOutput {
+        project_directory: project_dir.to_string_lossy().to_string(),
+        revision,
+        commit_message: args.commit_message,
+    };
+
+    if args.json {
+        print_json(&payload)?;
+        return Ok(());
+    }
+
+    println!("Checkpoint created at {}", payload.revision);
+    println!("Project: {}", payload.project_directory);
+    Ok(())
+}
+
 fn cmd_mobile_init(args: MobileInitArgs) -> Result<()> {
+    let skill_root = discover_skill_root()?;
     let workspace = resolve_path(&args.workspace)?;
     fs::create_dir_all(&workspace)
         .with_context(|| format!("failed to create workspace {}", workspace.display()))?;
@@ -878,13 +977,14 @@ fn cmd_mobile_init(args: MobileInitArgs) -> Result<()> {
         );
     }
 
-    run_shell_command(
+    run_shell_command_maybe_quiet(
         &build_mobile_create_command(&args.project_name, &args.template, args.example.as_deref())?,
         &workspace,
+        args.json,
     )?;
 
     if !args.skip_install {
-        install_mobile_dependencies(&project_dir, !args.no_tailwind)?;
+        install_mobile_dependencies(&project_dir, !args.no_tailwind, args.json)?;
     }
 
     let session = mobile_session_name(&args.project_name);
@@ -903,17 +1003,40 @@ fn cmd_mobile_init(args: MobileInitArgs) -> Result<()> {
     };
 
     if !args.skip_start {
-        let result = start_expo_server(&session, &project_dir)?;
-        if !result.success {
-            let message = result
-                .error
-                .unwrap_or_else(|| "Expo startup failed".to_string());
-            bail!("{message}");
+        let cleanup_ports = vec![mobile_config.web_port];
+        let result = start_expo_server(&session, &project_dir);
+        match result {
+            Ok(result) if result.success => {
+                mobile_config.tunnel_url = result.tunnel_url;
+                mobile_config.qr_code_value = result.qr_code_value;
+                mobile_config.web_url = result.web_url;
+                mobile_config.startup_mode = result.startup_mode;
+            }
+            Ok(result) => {
+                let message = result
+                    .error
+                    .unwrap_or_else(|| "Expo startup failed".to_string());
+                let cleanup_result = run_failed_startup_cleanup(
+                    &skill_root,
+                    &project_dir,
+                    &cache_path,
+                    &cleanup_ports,
+                );
+                bail!("{}", format_failure_with_cleanup(message, cleanup_result));
+            }
+            Err(err) => {
+                let cleanup_result = run_failed_startup_cleanup(
+                    &skill_root,
+                    &project_dir,
+                    &cache_path,
+                    &cleanup_ports,
+                );
+                bail!(
+                    "{}",
+                    format_failure_with_cleanup(err.to_string(), cleanup_result)
+                );
+            }
         }
-        mobile_config.tunnel_url = result.tunnel_url;
-        mobile_config.qr_code_value = result.qr_code_value;
-        mobile_config.web_url = result.web_url;
-        mobile_config.startup_mode = result.startup_mode;
     }
 
     save_json_file(
@@ -1109,8 +1232,11 @@ fn restart_web_server(
 
     server.deployment_url = deployment_url(server.port, host_url);
     send_command_to_session(&server.session, &server.run_dir, env_file, &command)?;
-    wait_for_port(server.port, Duration::from_secs(10))
-        .with_context(|| format!("server {} did not become ready", server.session))?;
+    wait_for_port(
+        server.port,
+        Duration::from_secs(DEFAULT_WEB_READY_TIMEOUT_SECONDS),
+    )
+    .with_context(|| format!("server {} did not become ready", server.session))?;
     let session_output = capture_session_output(&server.session, 120)?;
 
     Ok(RestartServerResult {
@@ -1166,14 +1292,19 @@ fn build_mobile_create_command(
     ))
 }
 
-fn install_mobile_dependencies(project_dir: &Path, with_tailwind: bool) -> Result<()> {
-    run_shell_command("bun install", project_dir)?;
-    run_shell_command(
+fn install_mobile_dependencies(project_dir: &Path, with_tailwind: bool, quiet: bool) -> Result<()> {
+    run_shell_command_maybe_quiet("bun install", project_dir, quiet)?;
+    run_shell_command_maybe_quiet(
         "bunx expo install expo-splash-screen expo-status-bar expo-system-ui",
         project_dir,
+        quiet,
     )?;
-    run_shell_command("bun add -d @expo/ngrok", project_dir)?;
-    run_shell_command("bunx expo install react-dom react-native-web", project_dir)?;
+    run_shell_command_maybe_quiet("bun add -d @expo/ngrok", project_dir, quiet)?;
+    run_shell_command_maybe_quiet(
+        "bunx expo install react-dom react-native-web",
+        project_dir,
+        quiet,
+    )?;
 
     if with_tailwind {
         let tailwind_deps = concat!(
@@ -1182,7 +1313,7 @@ fn install_mobile_dependencies(project_dir: &Path, with_tailwind: bool) -> Resul
             "react-native-css@0.0.0-nightly.5ce6396 ",
             "@tailwindcss/postcss tailwind-merge clsx"
         );
-        run_shell_command(tailwind_deps, project_dir)?;
+        run_shell_command_maybe_quiet(tailwind_deps, project_dir, quiet)?;
     }
 
     Ok(())
@@ -1378,13 +1509,14 @@ fn send_command_to_session(
     tmux(&["send-keys", "-t", session, "clear", "C-m"])?;
 
     let run_dir_q = shell_quote(run_dir);
+    let runtime_exports = runtime_shell_exports();
     let wrapped = if let Some(env_file) = env_file {
         let env_file_q = shell_quote(env_file.to_string_lossy().as_ref());
         format!(
-            "cd {run_dir_q} && if [ -f {env_file_q} ]; then set -a; . {env_file_q}; set +a; fi; {command}"
+            "export {runtime_exports}; cd {run_dir_q} && if [ -f {env_file_q} ]; then set -a; . {env_file_q}; set +a; fi; {command}"
         )
     } else {
-        format!("cd {run_dir_q} && {command}")
+        format!("export {runtime_exports}; cd {run_dir_q} && {command}")
     };
 
     tmux(&["send-keys", "-t", session, &wrapped, "C-m"])?;
@@ -1453,7 +1585,9 @@ fn tmux(args: &[&str]) -> Result<()> {
 }
 
 fn run_shell_command(command: &str, run_dir: &Path) -> Result<()> {
-    let status = Command::new("bash")
+    let mut shell = Command::new("bash");
+    apply_runtime_shell_env(&mut shell);
+    let status = shell
         .arg("-lc")
         .arg(command)
         .current_dir(run_dir)
@@ -1466,6 +1600,42 @@ fn run_shell_command(command: &str, run_dir: &Path) -> Result<()> {
     if !status.success() {
         bail!("command `{command}` failed in {}", run_dir.display());
     }
+    Ok(())
+}
+
+fn run_shell_command_maybe_quiet(command: &str, run_dir: &Path, quiet: bool) -> Result<()> {
+    if quiet {
+        return run_shell_command_quiet(command, run_dir);
+    }
+    run_shell_command(command, run_dir)
+}
+
+fn run_shell_command_quiet(command: &str, run_dir: &Path) -> Result<()> {
+    let mut shell = Command::new("bash");
+    apply_runtime_shell_env(&mut shell);
+    let output = shell
+        .arg("-lc")
+        .arg(command)
+        .current_dir(run_dir)
+        .stdin(Stdio::inherit())
+        .output()
+        .with_context(|| format!("failed to start command `{command}`"))?;
+
+    if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let details = match (stdout.is_empty(), stderr.is_empty()) {
+            (false, false) => format!("stdout:\n{stdout}\n\nstderr:\n{stderr}"),
+            (false, true) => format!("stdout:\n{stdout}"),
+            (true, false) => format!("stderr:\n{stderr}"),
+            (true, true) => "no output".to_string(),
+        };
+        bail!(
+            "command `{command}` failed in {}: {details}",
+            run_dir.display()
+        );
+    }
+
     Ok(())
 }
 
@@ -1487,6 +1657,87 @@ fn run_command_capture(command: &mut Command, description: &str) -> Result<Strin
     }
 
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn run_runtime_command_capture(command: &mut Command, description: &str) -> Result<String> {
+    apply_runtime_shell_env(command);
+    run_command_capture(command, description)
+}
+
+fn run_runtime_bash_capture(command: &str, run_dir: &Path, description: &str) -> Result<String> {
+    let mut shell = Command::new("bash");
+    apply_runtime_shell_env(&mut shell);
+    shell.arg("-lc").arg(command).current_dir(run_dir);
+    run_command_capture(&mut shell, description)
+}
+
+fn run_failed_startup_cleanup(
+    skill_root: &Path,
+    project_dir: &Path,
+    cache_path: &Path,
+    ports: &[u16],
+) -> Result<()> {
+    let script_path = skill_root.join("scripts").join("cleanup_failed_startup.sh");
+    if !script_path.is_file() {
+        bail!("cleanup script not found: {}", script_path.display());
+    }
+
+    let mut command = Command::new("bash");
+    command
+        .arg(&script_path)
+        .arg("--project-dir")
+        .arg(project_dir)
+        .arg("--cache-path")
+        .arg(cache_path);
+    for port in ports {
+        command.arg("--port").arg(port.to_string());
+    }
+
+    run_command_capture(&mut command, "cleanup_failed_startup.sh")?;
+    Ok(())
+}
+
+fn format_failure_with_cleanup(message: String, cleanup_result: Result<()>) -> String {
+    match cleanup_result {
+        Ok(()) => message,
+        Err(err) => format!("{message}\n\nStartup cleanup failed: {err}"),
+    }
+}
+
+fn cleanup_checkpoint_artifacts(project_dir: &Path) -> Result<()> {
+    let next_build = project_dir.join(".next-build");
+    if next_build.is_dir() {
+        fs::remove_dir_all(&next_build)
+            .with_context(|| format!("failed to remove {}", next_build.display()))?;
+    } else if next_build.exists() {
+        fs::remove_file(&next_build)
+            .with_context(|| format!("failed to remove {}", next_build.display()))?;
+    }
+    Ok(())
+}
+
+fn ensure_checkpoint_git_identity(project_dir: &Path) -> Result<()> {
+    for (args, label) in [
+        (
+            vec![
+                "config",
+                "--global",
+                "user.email",
+                CHECKPOINT_GIT_USER_EMAIL,
+            ],
+            "git config --global user.email",
+        ),
+        (
+            vec!["config", "--global", "user.name", CHECKPOINT_GIT_USER_NAME],
+            "git config --global user.name",
+        ),
+    ] {
+        run_runtime_command_capture(
+            Command::new("git").args(args).current_dir(project_dir),
+            label,
+        )?;
+    }
+    Ok(())
 }
 
 fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
@@ -2055,6 +2306,36 @@ fn unix_timestamp_seconds() -> Result<u64> {
 
 fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\"'\"'"))
+}
+
+fn build_runtime_path() -> String {
+    let existing = env::var("PATH").unwrap_or_else(|_| DEFAULT_SYSTEM_PATH.to_string());
+    let mut parts = vec![
+        DEFAULT_BUN_BIN_DIR.to_string(),
+        DEFAULT_VENV_BIN_DIR.to_string(),
+    ];
+    for part in existing.split(':') {
+        if !part.is_empty() && !parts.iter().any(|existing_part| existing_part == part) {
+            parts.push(part.to_string());
+        }
+    }
+    parts.join(":")
+}
+
+fn runtime_shell_exports() -> String {
+    [
+        format!("HOME={}", shell_quote(DEFAULT_RUNTIME_HOME)),
+        format!("BUN_INSTALL={}", shell_quote(DEFAULT_BUN_INSTALL_DIR)),
+        format!("PATH={}", shell_quote(&build_runtime_path())),
+    ]
+    .join(" ")
+}
+
+fn apply_runtime_shell_env(command: &mut Command) {
+    command
+        .env("HOME", DEFAULT_RUNTIME_HOME)
+        .env("BUN_INSTALL", DEFAULT_BUN_INSTALL_DIR)
+        .env("PATH", build_runtime_path());
 }
 
 fn print_json<T: Serialize>(value: &T) -> Result<()> {

@@ -11,6 +11,9 @@ dist/
 wheels/
 *.egg-info
 
+# Rust build output
+target/
+
 # Virtual environments
 .venv
 

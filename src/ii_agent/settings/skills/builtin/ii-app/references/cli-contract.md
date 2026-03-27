@@ -59,7 +59,11 @@ Operational rules:
 - `ii-app web restart` reads the web cache, recreates or reuses tmux sessions, and updates ports if a `{PORT}` placeholder is present.
 - `ii-app web screenshot` opens the cached `preview_url` with `agent-browser`, saves an image under `<workspace>/.ii-app/shots/` by default, and prints the saved path.
 - `ii-app web status` captures tmux output into `<workspace>/.ii-app/status/`, saves a JSON summary path, and adds a screenshot beside it when the cached URL is previewable.
+- `ii-app web checkpoint` resolves a project directory from `--workspace`, runs `bun run build:local`, deletes `.next-build`, ensures git identity, initializes git when needed, commits all changes, and prints the new revision.
 - `ii-app mobile init` fails if the mobile project directory already exists.
+- `ii-app web init` removes partial startup state on startup failure: bound ports, cache file, and the generated project directory. It preserves tmux sessions for debugging.
+- `ii-app mobile init` writes the mobile cache only after successful Expo startup.
+- `ii-app mobile init` removes partial startup state on startup failure: bound port, cache file, and the generated project directory. It preserves the tmux session for debugging.
 - `ii-app mobile restart` reads the mobile cache and refreshes tunnel or LAN URLs after restarting Expo.
 - `ii-app stripe register-webhook` calls Stripe's webhook endpoint API, writes `STRIPE_WEBHOOK_SECRET` into `<project_directory>/.env`, and prints the updated env file path.
 - `view-log` captures the tmux pane output for the default cached session when `--session` is omitted.

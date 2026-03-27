@@ -1,7 +1,7 @@
 from .init_tool import FullStackInitTool
 from .save_checkpoint import SaveCheckpointTool
 from .database import GetDatabaseConnection
-from .add_webdev_secrets import AddWebDevSecrets
+from .add_user_env import AddUserEnvTool
 from .server_status import GetServerStatusTool
 from .stripe_webhook_register import StripeWebhookRegisterTool
 from .ask_user_env import AskUserEnvTool
@@ -15,7 +15,7 @@ __all__ = [
     "FullStackInitTool",
     "GetDatabaseConnection",
     "SaveCheckpointTool",
-    "AddWebDevSecrets",
+    "AddUserEnvTool",
     "GetServerStatusTool",
     "StripeWebhookRegisterTool",
     "AskUserEnvTool",

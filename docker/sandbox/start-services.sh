@@ -8,7 +8,7 @@ fi
 
 # Set up environment
 export HOME=/home/user
-export PATH="/home/user/.bun/bin:/app/ii_agent/.venv/bin:$PATH"
+export PATH="/home/user/.bun/bin:/app/ii_sandbox/.venv/bin:$PATH"
 
 
 # Create workspace directory if it doesn't exist
@@ -17,7 +17,7 @@ cd /workspace
 
 # Start the sandbox server in the background
 echo "Starting sandbox server..."
-tmux new-session -d -s sandbox-server-system-never-kill -c /workspace 'WORKSPACE_DIR=/workspace xvfb-run python -m ii_tool.mcp.server'
+tmux new-session -d -s sandbox-server-system-never-kill -c /workspace 'WORKSPACE_DIR=/workspace xvfb-run python -m ii_server.mcp.server'
 
 # Start code-server in the background
 echo "Starting code-server on port 9000..."
@@ -36,7 +36,7 @@ sleep 3
 
 # Check if processes are running
 echo "Checking if services are running..."
-if pgrep -f "mcp.server" >/dev/null; then
+if pgrep -f "ii_server.mcp.server" >/dev/null; then
   echo "✓ Sandbox server is running"
 else
   echo "✗ Sandbox server failed to start"

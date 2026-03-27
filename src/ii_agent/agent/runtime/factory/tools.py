@@ -10,7 +10,7 @@ from ii_agent.agent.runtime.tools.dev import (
     FullStackInitTool,
     GetDatabaseConnection,
     SaveCheckpointTool,
-    AddWebDevSecrets,
+    AddUserEnvTool,
     AskUserEnvTool,
     RestartServerTool,
     GetServerStatusTool,
@@ -51,7 +51,6 @@ from ii_agent.agent.runtime.tools.web import (
 )
 
 TOOL_CONFIRM_MAP = {
-    AskUserEnvTool.name: True
     # StrReplaceEditorTool.name: True,
     # ApplyPatchTool.name: True,
     # SaveCheckpointTool.name: True,
@@ -92,7 +91,7 @@ TOOL_CLASS_MAP = {
     GetDatabaseConnection.name: GetDatabaseConnection,
     SaveCheckpointTool.name: SaveCheckpointTool,
     RestartServerTool.name: RestartServerTool,
-    AddWebDevSecrets.name: AddWebDevSecrets,
+    AddUserEnvTool.name: AddUserEnvTool,
     AskUserEnvTool.name: AskUserEnvTool,
     GetServerStatusTool.name: GetServerStatusTool,
     MobileAppInitTool.name: MobileAppInitTool,
@@ -189,7 +188,7 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
                 # Dev tools
                 FullStackInitTool.name,
                 RestartServerTool.name,
-                AddWebDevSecrets.name,
+                AddUserEnvTool.name,
                 AskUserEnvTool.name,
                 GetServerStatusTool.name,
                 SaveCheckpointTool.name,

@@ -11,7 +11,6 @@ from typing import List
 
 from pydantic import BaseModel
 from .terminal_utils import capture_pane_ansi_code
-from ii_server.core.tool_server_config import get_tool_server_config
 
 # This is a marker that indicates the end of the command output
 _DEFAULT_TIMEOUT = 60
@@ -71,9 +70,7 @@ class SessionState(Enum):
 
 
 def _prepend_env_source(command: str) -> str:
-    """Ensure command sources user env only when deployment config exists."""
-    if not get_tool_server_config().get_deployment_config():
-        return command
+    """Ensure command sources user env file."""
     if _ENV_SOURCE_CMD in command:
         return command
     return f"{_ENV_SOURCE_CMD} && {command}"

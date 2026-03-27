@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import TYPE_CHECKING, Any
 
 from ii_agent.agent.runtime.tools.base import TextContent, ToolResult
-from ii_agent.agent.runtime.tools.mcp.base import MCPTool
+from ii_agent.agent.runtime.tools.sandbox.base import BaseSandboxTool
 
 if TYPE_CHECKING:
     from ii_agent.agent.runtime.agents.agent import IIAgent
@@ -22,8 +23,10 @@ Returns refreshed tunnel/QR details and exposes web preview URL when possible.
 """
 INPUT_SCHEMA = {"type": "object", "properties": {}, "required": []}
 
+DEFAULT_TIMEOUT = 180
 
-class RestartMobileServerTool(MCPTool):
+
+class RestartMobileServerTool(BaseSandboxTool):
     """Tool for restarting Expo mobile app server."""
 
     name = NAME
@@ -36,27 +39,29 @@ class RestartMobileServerTool(MCPTool):
         await super().on_tool_start(agent, fc)
 
     async def execute(self, tool_input: dict[str, Any]) -> ToolResult:
-        result = await super().execute(tool_input)
+        try:
+            output = await self.sandbox.run_command(
+                "ii-app mobile restart --workspace /workspace --json",
+                timeout=DEFAULT_TIMEOUT,
+            )
+            result = json.loads(output)
 
-        if not result.is_error and isinstance(result.user_display_content, dict):
-            web_port = result.user_display_content.get("web_port", 8081)
+            # Expose web preview URL if available
+            web_port = result.get("web_port", 8081)
             try:
-                if hasattr(self, "sandbox") and self.sandbox:
-                    web_preview_url = await self.sandbox.expose_port(web_port)
-                    result.user_display_content["web_preview_url"] = web_preview_url
-
-                    if isinstance(result.llm_content, list) and result.llm_content:
-                        first_content = result.llm_content[0]
-                        if hasattr(first_content, "text"):
-                            updated_text = (
-                                first_content.text
-                                + f"\n- **Web Preview URL:** `{web_preview_url}`"
-                            )
-                            result.llm_content[0] = TextContent(
-                                type="text",
-                                text=updated_text,
-                            )
-            except Exception as port_error:  # noqa: BLE001
+                web_preview_url = await self.sandbox.expose_port(web_port)
+                result["web_preview_url"] = web_preview_url
+            except Exception as port_error:
                 logger.warning("Failed to expose port %s: %s", web_port, port_error)
 
-        return result
+            return ToolResult(
+                llm_content=[TextContent(type="text", text=json.dumps(result))],
+                user_display_content=result,
+            )
+        except Exception as e:
+            logger.exception("Failed to restart mobile server")
+            return ToolResult(
+                llm_content=f"Failed to restart mobile server: {e}",
+                user_display_content=f"Failed to restart mobile server: {e}",
+                is_error=True,
+            )

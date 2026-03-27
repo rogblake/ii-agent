@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from typing import Protocol
 
 from openai import AsyncOpenAI
@@ -11,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.billing.types import BillingContextValue, BillingScope
 from ii_agent.chat.types import MessageRole, TextContent
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
 from ii_agent.core.config.enhance_prompt_config import EnhancePromptConfig
+from ii_agent.core.config.llm_config import APITypes, LLMConfig
 from ii_agent.core.llm.execution_service import LLMBillingContext, LLMExecutionService
 from ii_agent.core.logger import logger
 from ii_agent.core.request_context import get_or_generate_request_id
@@ -35,13 +34,6 @@ class EnhancePromptClient(Protocol):
         context: str | None = None,
     ) -> EnhancePromptResult:
         """Enhance the supplied prompt."""
-
-
-class _EnhancePromptPayload(BaseModel):
-    """Structured model output expected from the LLM."""
-
-    enhanced_prompt: str
-    reasoning: str | None = None
 
 
 class OpenAIEnhancePromptClient:
@@ -73,13 +65,16 @@ class OpenAIEnhancePromptClient:
         context: str | None = None,
     ) -> EnhancePromptResult:
         """Enhance a prompt while preserving user intent."""
-        raw_output = await self._run_prompt_enhancement(prompt, context)
-        payload = _EnhancePromptPayload.model_validate(_extract_json_payload(raw_output))
+        enhanced_prompt = (await self._run_prompt_enhancement(prompt, context)).strip()
+        if not enhanced_prompt:
+            logger.warning(
+                "Enhance prompt provider returned empty output; falling back to original prompt."
+            )
+            enhanced_prompt = prompt
 
         return EnhancePromptResult(
             original_prompt=prompt,
-            enhanced_prompt=payload.enhanced_prompt,
-            reasoning=payload.reasoning,
+            enhanced_prompt=enhanced_prompt,
         )
 
     async def _run_prompt_enhancement(self, prompt: str, context: str | None) -> str:
@@ -146,30 +141,15 @@ def create_enhance_prompt_client(
 def _build_input_text(prompt: str, context: str | None) -> str:
     """Build the user input sent to the provider."""
     if context:
-        return f"Prompt:\n{prompt}\n\nContext:\n{context}"
-    return f"Prompt:\n{prompt}"
-
-
-def _extract_json_payload(output_text: str) -> dict[str, object]:
-    """Parse the first JSON object from the model output."""
-    raw = output_text.strip()
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        start = raw.find("{")
-        end = raw.rfind("}")
-        if start == -1 or end == -1 or end < start:
-            logger.error("Enhance prompt response did not contain valid JSON")
-            raise
-        return json.loads(raw[start : end + 1])
+        return (
+            f"Enhance this request into a detailed prompt: {prompt}\n\n"
+            f"Additional context - {context}"
+        )
+    return f"Enhance this request into a detailed prompt: {prompt}"
 
 
 _ENHANCE_PROMPT_SYSTEM_PROMPT = (
-    "You improve prompts for downstream AI assistants. "
-    "Preserve the user's intent, add useful specificity, and use supplied "
-    "context when present. Return JSON with keys "
-    "`enhanced_prompt` and `reasoning`. "
-    "`reasoning` must be a short explanation, not chain-of-thought."
+    "Return only the enhanced prompt text. Do not add explanations, labels, or quotes."
 )
 
 

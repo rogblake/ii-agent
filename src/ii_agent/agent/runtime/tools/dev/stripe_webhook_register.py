@@ -1,4 +1,16 @@
-from ii_agent.agent.runtime.tools.mcp.base import MCPTool
+import json
+import logging
+import shlex
+from typing import TYPE_CHECKING, Any
+
+from ii_agent.agent.runtime.tools.base import TextContent, ToolResult
+from ii_agent.agent.runtime.tools.sandbox.base import BaseSandboxTool
+
+if TYPE_CHECKING:
+    from ii_agent.agent.runtime.agents.agent import IIAgent
+    from ii_agent.agent.runtime.tools.function import FunctionCall
+
+logger = logging.getLogger(__name__)
 
 NAME = "stripe_webhook_register"
 DISPLAY_NAME = "Register Stripe Webhook"
@@ -17,17 +29,6 @@ Returns:
 Notes:
 - Uses Idempotency-Key to avoid creating duplicate webhook endpoints if tool is re-run.
 """
-DEFAULT_EVENTS = [
-    "checkout.session.completed",
-    "checkout.session.expired",
-    "customer.subscription.created",
-    "customer.subscription.updated",
-    "customer.subscription.deleted",
-    "invoice.payment_succeeded",
-    "invoice.payment_failed",
-    "payment_intent.succeeded",
-    "payment_intent.payment_failed",
-]
 INPUT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -46,7 +47,7 @@ INPUT_SCHEMA = {
         "events": {
             "type": "array",
             "items": {"type": "string"},
-            "description": f"Specific Stripe event types to subscribe to. Defaults to common payment events: {DEFAULT_EVENTS[:3]}...",
+            "description": "Specific Stripe event types to subscribe to. Defaults to common payment events.",
         },
         "description": {
             "type": "string",
@@ -56,10 +57,48 @@ INPUT_SCHEMA = {
     "required": ["stripe_secret_key", "endpoint_url", "project_directory"],
 }
 
+DEFAULT_TIMEOUT = 120
 
-class StripeWebhookRegisterTool(MCPTool):
+
+class StripeWebhookRegisterTool(BaseSandboxTool):
     name = NAME
     display_name = DISPLAY_NAME
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = False
+
+    async def on_tool_start(self, agent: "IIAgent", fc: "FunctionCall") -> None:
+        await super().on_tool_start(agent, fc)
+
+    async def execute(self, tool_input: dict[str, Any]) -> ToolResult:
+        try:
+            cmd_parts = [
+                "ii-app", "stripe", "register-webhook",
+                "--stripe-secret-key", tool_input["stripe_secret_key"],
+                "--endpoint-url", tool_input["endpoint_url"],
+                "--project-directory", tool_input["project_directory"],
+                "--json",
+            ]
+
+            events = tool_input.get("events")
+            if events:
+                cmd_parts.extend(["--event", ",".join(events)])
+
+            description = tool_input.get("description")
+            if description:
+                cmd_parts.extend(["--description", description])
+
+            cmd = " ".join(shlex.quote(p) for p in cmd_parts)
+            output = await self.sandbox.run_command(cmd, timeout=DEFAULT_TIMEOUT)
+            result = json.loads(output)
+            return ToolResult(
+                llm_content=[TextContent(type="text", text=output)],
+                user_display_content=result,
+            )
+        except Exception as e:
+            logger.exception("Failed to register Stripe webhook")
+            return ToolResult(
+                llm_content=f"Failed to register Stripe webhook: {e}",
+                user_display_content=f"Failed to register Stripe webhook: {e}",
+                is_error=True,
+            )

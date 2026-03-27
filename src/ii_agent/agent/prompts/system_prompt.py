@@ -182,6 +182,7 @@ Runtime Tools
         "mobile_app_init",
         "ask_user_select",
         "ask_user_env",
+        "add_user_env",
         "restart_fullstack_servers",
         "get_server_status",
         "restart_mobile_server",
@@ -249,6 +250,10 @@ def _build_web_app_overlay(available_tools: Collection[str] | None) -> str:
     if "ask_user_env" in _normalize_available_tools(available_tools):
         lines.append(
             "- Use `ask_user_env` for secrets and credentials instead of hardcoding values."
+        )
+    if "add_user_env" in _normalize_available_tools(available_tools):
+        lines.append(
+            "- Use `add_user_env` when the env values are already known and should be saved directly to the project."
         )
     if _has_any_tool(
         available_tools,

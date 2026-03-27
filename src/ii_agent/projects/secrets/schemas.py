@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class ProjectSecretsRequest(BaseModel):
-    """Payload for replacing secrets on a project."""
+    """Payload for adding or updating secrets on a project."""
 
     secrets: Dict[str, Any]
 

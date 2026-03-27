@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.projects.dependencies import (
+    DatabaseServiceDep,
     ProjectServiceDep,
     SecretServiceDep,
     SandboxEnvSyncServiceDep,
@@ -44,21 +45,31 @@ async def set_session_project_secrets(
     payload: ProjectSecretsRequest,
     current_user: CurrentUser,
     secret_service: SecretServiceDep,
+    database_service: DatabaseServiceDep,
     sandbox_env_sync: SandboxEnvSyncServiceDep,
     db: DBSession,
 ) -> ProjectSecretsResponse:
-    """Replace the secrets JSON for the session's project with the provided payload."""
+    """Add or update secrets for the session's project."""
 
-    project = await secret_service.replace_session_project_secrets(
+    session_uuid = uuid.UUID(session_id)
+    database_url = payload.secrets.get("DATABASE_URL")
+    if isinstance(database_url, str) and database_url:
+        await database_service.upsert_database_from_url(
+            db,
+            session_id=session_id,
+            connection_string=database_url,
+        )
+
+    project = await secret_service.add_secrets(
         db,
-        session_id=session_id,
+        session_id=session_uuid,
         user_id=str(current_user.id),
         secrets=payload.secrets,
     )
-    # Sync .env and .user_env.sh files in the sandbox
+
     await sandbox_env_sync.sync_env_files(
         db,
-        session_id=uuid.UUID(session_id),
+        session_id=session_uuid,
         secrets=payload.secrets,
         project_path=project.project_path,
         database_url=extract_db_url(project.database_json),

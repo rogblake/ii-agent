@@ -7,13 +7,16 @@ via constructor injection instead of module-level globals.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from ii_agent.core.container import ServiceContainer
 from ii_agent.agent.runtime.tools.clients import _get_client
 
 if TYPE_CHECKING:
     from ii_agent.agent.events.service import EventService
+    from ii_agent.agent.sandboxes.env_sync_service import SandboxEnvSyncService
+    from ii_agent.projects.databases.service import DatabaseService
+    from ii_agent.projects.secrets.service import SecretService
     from ii_agent.projects.service import ProjectService
     from ii_agent.sessions.service import SessionService
     from ii_agent.agent.runtime.tools.clients import IIToolClient
@@ -41,6 +44,18 @@ class ToolDependencies:
     @property
     def project_service(self) -> ProjectService:
         return self.container.project_service
+
+    @property
+    def secret_service(self) -> SecretService:
+        return self.container.secret_service
+
+    @property
+    def database_service(self) -> DatabaseService:
+        return self.container.database_service
+
+    @property
+    def sandbox_env_sync_service(self) -> SandboxEnvSyncService:
+        return self.container.sandbox_env_sync_service
 
     @classmethod
     def create_default(cls) -> ToolDependencies:

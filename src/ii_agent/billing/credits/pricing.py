@@ -210,7 +210,7 @@ class ModelPricing(BaseModel):
                 )
 
         # Provider-based defaults
-        logger.error(
+        logger.warning(
             "BILLING_PRICING_FALLBACK: No exact or prefix pricing match for model '{}' (provider={}) — using provider default. Add this model to the pricing table to ensure correct billing.",
             model_id,
             provider,

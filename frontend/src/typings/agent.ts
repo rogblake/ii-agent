@@ -238,7 +238,7 @@ export enum TOOL {
     STR_REPLACE_BASED_EDIT = 'str_replace_based_edit_tool',
     CLAUDE_CODE = 'mcp_claude_code',
     GITHUB = 'github',
-    ADD_WEBDEV_SECRETS = 'add_webdev_secrets',
+    ADD_USER_ENV = 'add_user_env',
     STRIPE_WEBHOOK_REGISTER = 'stripe_webhook_register',
     ASK_USER_ENV = 'ask_user_env',
     ASK_USER_SELECT = 'ask_user_select',

@@ -1,10 +1,9 @@
 from typing import TYPE_CHECKING, Any
-from ii_agent.agent.runtime.tools.mcp.base import MCPTool
-from ii_agent.agent.runtime.tools.base import ToolResult
-from ii_agent.projects.exceptions import ProjectNotFoundError
-from ii_agent.projects.databases.models import DatabaseSourceEnum
+
+from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult
 from ii_agent.core.db.manager import get_db_session_local
 from ii_agent.core.logger import logger
+from ii_agent.projects.exceptions import ProjectNotFoundError
 
 if TYPE_CHECKING:
     from ii_agent.agent.runtime.agents.agent import IIAgent
@@ -16,8 +15,9 @@ DESCRIPTION = """Requests environment variables or secrets from the user via a U
 
 Usage:
 - Call this tool when the project needs API keys, tokens, or other secrets that the user must provide.
-- The agent loop will pause and display a secrets input form to the user.
-- Once the user provides the secrets, they will be saved to the project and written to environment files.
+- The agent loop pauses before execution and the frontend shows a secrets input form.
+- The frontend saves the secrets and syncs env files before resuming the run.
+- After resume, this tool returns a success acknowledgement only.
 
 Each requested key should include:
 - `key`: The environment variable name (e.g., OPENAI_API_KEY)
@@ -57,132 +57,92 @@ INPUT_SCHEMA = {
 }
 
 
-class AskUserEnvTool(MCPTool):
+class AskUserEnvTool(BaseAgentTool):
     name = NAME
     display_name = DISPLAY_NAME
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = True
+    requires_confirmation = True
+    requires_sandbox = False
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._agent: "IIAgent" = None
+    def __init__(self) -> None:
+        self._agent: "IIAgent | None" = None
 
     async def on_tool_start(self, agent: "IIAgent", fc: "FunctionCall") -> None:
-        await super().on_tool_start(agent, fc)
         self._agent = agent
 
     async def execute(self, tool_input: dict[str, Any]) -> ToolResult:
-        """Execute the tool, checking for project existence first."""
-        # Check if project is initialized
-        if self._agent:
-            session_id = getattr(self._agent, "session_id", None)
-            user_id = getattr(self._agent, "user_id", None)
-            if session_id:
-                try:
-                    async with get_db_session_local() as db:
-                        project = await self.dependencies.project_service.get_session_project(
-                            db, session_id=str(session_id), user_id=str(user_id)
-                        )
-                    if not project:
-                        return ToolResult(
-                            llm_content="Project is not inited, you must init a project first before you can call this tool, ask the user for env again",
-                            user_display_content="Project is not initialized",
-                            is_error=True,
-                        )
-                except ProjectNotFoundError:
-                    return ToolResult(
-                        llm_content="Project is not inited, you must init a project first before you can call this tool, ask the user for env again",
-                        user_display_content="Project is not initialized",
-                        is_error=True,
-                    )
-                except Exception as exc:
-                    logger.warning("AskUserEnvTool: Failed to check project: {}", exc)
+        project_dir = tool_input.get("project_directory", "")
+        requested_keys = tool_input.get("requested_keys", [])
+        message = tool_input.get("message")
 
-        # Call parent execute
-        return await super().execute(tool_input)
+        keys_list = [
+            item.get("key")
+            for item in requested_keys
+            if isinstance(item, dict) and isinstance(item.get("key"), str) and item.get("key")
+        ]
 
-    async def on_tool_end(self, agent: "IIAgent", fc: "FunctionCall") -> None:
-        if fc.error:
-            return
+        session_id = getattr(self._agent, "session_id", None)
+        user_id = getattr(self._agent, "user_id", None)
 
-        tool_result = fc.result
-        if not isinstance(tool_result, ToolResult):
-            return
-        if tool_result.is_error:
-            return
-
-        user_display = tool_result.user_display_content
-        if not isinstance(user_display, dict):
-            return
-
-        secrets = user_display.get("secrets")
-        secrets_payload = secrets if isinstance(secrets, dict) else None
-        if secrets_payload and secrets_payload:
-            user_display["secrets"] = {key: "***" for key in secrets_payload.keys()}
-        elif "secrets" in user_display:
-            user_display["secrets"] = "***"
-        tool_result.user_display_content = user_display
-
-        if not secrets_payload:
-            return
-
-        session_id = getattr(agent, "session_id", None)
         if not session_id:
-            return
-
-        user_id = getattr(agent, "user_id", None)
-        if not user_id:
-            async with get_db_session_local() as db:
-                user_id = await self.dependencies.session_service.get_session_user_id(
-                    db, str(session_id)
-                )
-            if not user_id:
-                logger.warning("AskUserEnvTool: Session {} not found", session_id)
-                return
+            return ToolResult(
+                llm_content="No active session found for ask_user_env.",
+                user_display_content="No active session found.",
+                is_error=True,
+            )
 
         try:
-            # Check if DATABASE_URL is in the secrets and sync to ProjectDatabases table
-            database_url = secrets_payload.get("DATABASE_URL")
-            if database_url and isinstance(database_url, str):
-                from ii_agent.projects.databases.service import DatabaseService
-                from ii_agent.projects.repository import ProjectRepository
-                from ii_agent.core.config.settings import get_settings
-
-                _db_service = DatabaseService(
-                    project_repo=ProjectRepository(),
-                    config=get_settings(),
-                )
-                async with get_db_session_local() as db:
-                    await _db_service.upsert_database_from_url(
+            async with get_db_session_local() as db:
+                if not user_id:
+                    user_id = await self.dependencies.session_service.get_session_user_id(
                         db,
-                        session_id=str(session_id),
-                        connection_string=database_url,
-                        source=DatabaseSourceEnum.USER.value,
+                        str(session_id),
+                    )
+                if not user_id:
+                    return ToolResult(
+                        llm_content="Project owner could not be resolved for this session.",
+                        user_display_content="Session user not found.",
+                        is_error=True,
                     )
 
-            # Save secrets to project
-            async with get_db_session_local() as db:
                 project = await self.dependencies.project_service.get_session_project(
-                    db, session_id=str(session_id), user_id=str(user_id)
-                )
-                existing_secrets = project.secrets_json or {}
-                if not isinstance(existing_secrets, dict):
-                    existing_secrets = {}
-                existing_secrets.update(secrets_payload)
-                project.secrets_json = existing_secrets
-                await self.dependencies.project_service.update_session_project_secrets(
                     db,
-                    project_id=project.id,
-                    secrets=existing_secrets,
+                    session_id=str(session_id),
+                    user_id=str(user_id),
                 )
-
-            logger.info(
-                "AskUserEnvTool: Saved {} secrets for session {}", len(secrets_payload), session_id
-            )
         except ProjectNotFoundError:
-            logger.warning("AskUserEnvTool: Project not found for session {}", session_id)
-            return
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("AskUserEnvTool: Failed to save/sync secrets: {}", exc)
-            return
+            return ToolResult(
+                llm_content=(
+                    "Project is not initialized; initialize a project before asking for "
+                    "environment variables."
+                ),
+                user_display_content="Project is not initialized",
+                is_error=True,
+            )
+        except Exception as exc:
+            logger.warning(
+                f"AskUserEnvTool: Failed to resolve project for session {session_id}: {exc}"
+            )
+            return ToolResult(
+                llm_content=f"Failed to verify project before saving env vars: {exc}",
+                user_display_content=f"Failed to verify project before saving env vars: {exc}",
+                is_error=True,
+            )
+
+        project_path = project_dir or project.project_path
+        key_list_display = ", ".join(keys_list) if keys_list else "requested environment variables"
+
+        return ToolResult(
+            llm_content=(
+                f"Environment variables were saved for `{project_path}`. "
+                f"Saved keys: {key_list_display}."
+            ),
+            user_display_content={
+                "project_directory": project_path,
+                "keys": keys_list,
+                "message": message,
+            },
+            is_error=False,
+        )

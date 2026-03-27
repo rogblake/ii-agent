@@ -941,6 +941,55 @@ class TestDevToolAttributes:
         assert "project_directory" in required
         assert "commit_message" in required
 
+    async def test_save_checkpoint_executes_ii_app_cli(self):
+        from ii_agent.agent.runtime.tools.dev.save_checkpoint import SaveCheckpointTool
+
+        tool = SaveCheckpointTool()
+        tool.sandbox = SimpleNamespace(
+            run_command=AsyncMock(
+                return_value=json.dumps(
+                    {
+                        "project_directory": "/workspace/my-app",
+                        "revision": "abc123",
+                        "commit_message": "Checkpoint",
+                    }
+                )
+            )
+        )
+
+        result = await tool.execute(
+            {
+                "project_directory": "my-app",
+                "commit_message": "Checkpoint",
+            }
+        )
+
+        assert result.is_error is not True
+        assert result.user_display_content["revision"] == "abc123"
+        tool.sandbox.run_command.assert_awaited_once()
+        command = tool.sandbox.run_command.await_args.args[0]
+        assert "ii-app web checkpoint" in command
+        assert "--workspace /workspace" in command
+        assert "--project-directory my-app" in command
+        assert "--commit-message Checkpoint" in command
+        assert tool.sandbox.run_command.await_args.kwargs["timeout"] == 1800
+
+    async def test_save_checkpoint_returns_error_on_cli_failure(self):
+        from ii_agent.agent.runtime.tools.dev.save_checkpoint import SaveCheckpointTool
+
+        tool = SaveCheckpointTool()
+        tool.sandbox = SimpleNamespace(run_command=AsyncMock(side_effect=Exception("boom")))
+
+        result = await tool.execute(
+            {
+                "project_directory": "my-app",
+                "commit_message": "Checkpoint",
+            }
+        )
+
+        assert result.is_error is True
+        assert "boom" in result.llm_content
+
 
 class TestRegisterPortTool:
     """Tests for RegisterPortTool.execute()."""

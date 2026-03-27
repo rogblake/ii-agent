@@ -801,7 +801,7 @@ const Action = ({ workspaceInfo, type, value, onClick }: ActionProps) => {
         type === TOOL.DISPLAY_IMAGE ||
         type === TOOL.TODO_READ ||
         type === TOOL.TODO_WRITE ||
-        type === TOOL.ADD_WEBDEV_SECRETS ||
+        type === TOOL.ADD_USER_ENV ||
         type === TOOL.ASK_USER_ENV
     )
         return null

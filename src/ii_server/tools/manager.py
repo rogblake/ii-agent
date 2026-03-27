@@ -1,14 +1,4 @@
-from ii_server.browser.browser import Browser
 from ii_server.core.workspace import WorkspaceManager
-from ii_server.interfaces.sandbox import SandboxInterface
-from ii_server.tools.dev import (
-    FullStackInitTool,
-    GetServerStatusTool,
-    StripeWebhookRegisterTool,
-)
-from ii_server.tools.dev.mobile_app_init import MobileAppInitToolInternal
-from ii_server.tools.dev.restart_mobile_server import RestartMobileServerToolInternal
-from ii_server.tools.dev.restart_server import RestartServerTool
 from ii_server.tools.file_system import (
     ASTGrepTool,
     ApplyPatchTool,
@@ -29,14 +19,13 @@ from ii_server.tools.shell import (
 )
 
 
-def get_common_tools(sandbox: SandboxInterface):
+def get_common_tools():
     return []
 
 
 def get_sandbox_tools(workspace_path: str):
     terminal_manager = TmuxSessionManager()
     workspace_manager = WorkspaceManager(workspace_path)
-    browser = Browser()
 
     return [
         ShellInit(terminal_manager, workspace_manager),
@@ -52,10 +41,4 @@ def get_sandbox_tools(workspace_path: str):
         StrReplaceEditorTool(workspace_manager),
         ASTGrepTool(workspace_manager),
         GrepTool(workspace_manager),
-        FullStackInitTool(terminal_manager, workspace_manager),
-        MobileAppInitToolInternal(terminal_manager, workspace_manager),
-        RestartMobileServerToolInternal(terminal_manager, workspace_manager),
-        RestartServerTool(terminal_manager, workspace_manager),
-        GetServerStatusTool(terminal_manager, browser),
-        StripeWebhookRegisterTool(workspace_manager),
     ]

@@ -4,11 +4,13 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.agent.events.models import AgentUIEvent, EventType, RealtimeEvent
 from ii_agent.agent.events.repository import EventRepository
+from ii_agent.projects.models import Project
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.wishlist.models import SessionWishlist
@@ -163,13 +165,44 @@ async def test_session_repository_filters_pagination_and_projections(
         [session_chat.id, session_deleted.id, other_user_session.id],
         user.id,
     )
-    by_ids = await repo.get_non_deleted_by_ids(
-        db_session, [session_chat.id, session_deleted.id]
-    )
+    by_ids = await repo.get_non_deleted_by_ids(db_session, [session_chat.id, session_deleted.id])
     assert [s.id for s in by_ids_user] == [session_chat.id]
     assert [s.id for s in by_ids] == [session_chat.id]
     assert await repo.get_user_id(db_session, "missing-session-id") is None
     assert await repo.get_non_deleted_by_ids(db_session, []) == []
+
+
+async def test_session_repository_get_by_id_and_user_eager_loads_project(
+    db_session: AsyncSession,
+    user_factory,
+) -> None:
+    repo = SessionRepository()
+    user = await user_factory()
+
+    session = Session(
+        id=str(uuid.uuid4()),
+        user_id=user.id,
+        name="Project Session",
+        status="active",
+        api_version="v1",
+    )
+    project = Project(
+        id=str(uuid.uuid4()),
+        user_id=user.id,
+        session_id=session.id,
+        name="Preview Project",
+        project_path="/workspace/preview-app",
+    )
+    db_session.add_all([session, project])
+    await db_session.flush()
+
+    loaded = await repo.get_by_id_and_user(db_session, session.id, user.id)
+
+    assert loaded is not None
+    assert "project" not in sa_inspect(loaded).unloaded
+    assert loaded.project is not None
+    assert loaded.project.id == project.id
+    assert loaded.project.project_path == "/workspace/preview-app"
 
 
 async def test_session_repository_get_by_workspace_query(
@@ -284,19 +317,14 @@ async def test_mcp_setting_repository_list_filters_and_delete(
         mcp_metadata={},
         is_active=False,
     )
-    db_session.add_all(
-        [active_no_metadata, inactive_with_metadata, inactive_empty_metadata]
-    )
+    db_session.add_all([active_no_metadata, inactive_with_metadata, inactive_empty_metadata])
     await db_session.flush()
 
-    assert (
-        await repo.get_by_id_and_user(db_session, active_no_metadata.id, user.id)
-    ) is not None
+    assert (await repo.get_by_id_and_user(db_session, active_no_metadata.id, user.id)) is not None
     assert len(await repo.list_by_user(db_session, user.id)) == 3
     assert len(await repo.list_active_by_user(db_session, user.id)) == 1
     assert (
-        await repo.get_by_user_and_tool_type(db_session, user.id, "codex")
-        == inactive_with_metadata
+        await repo.get_by_user_and_tool_type(db_session, user.id, "codex") == inactive_with_metadata
     )
     assert await repo.get_by_user_and_tool_type(db_session, user.id, "claude") is None
     no_metadata = await repo.list_by_user(db_session, user.id, no_metadata=True)
@@ -306,6 +334,4 @@ async def test_mcp_setting_repository_list_filters_and_delete(
     }
 
     await repo.delete(db_session, inactive_with_metadata)
-    assert (
-        await repo.get_by_id_and_user(db_session, inactive_with_metadata.id, user.id)
-    ) is None
+    assert (await repo.get_by_id_and_user(db_session, inactive_with_metadata.id, user.id)) is None

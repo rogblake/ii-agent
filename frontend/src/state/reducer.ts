@@ -13,6 +13,7 @@ import { userReducer } from './slice/user'
 import { favoritesReducer } from './slice/favorites'
 import { pinsReducer } from './slice/pins'
 import { sessionStateReducer } from './slice/session-state'
+import { fileExplorerReducer } from './slice/file-explorer'
 import { userApi } from './api/user.api'
 import { sessionApi } from './api/session.api'
 import { connectorApi } from './api/connector.api'
@@ -38,6 +39,7 @@ export default combineReducers({
     favorites: favoritesReducer,
     pins: pinsReducer,
     sessionState: sessionStateReducer,
+    fileExplorer: fileExplorerReducer,
     [userApi.reducerPath]: userApi.reducer,
     [sessionApi.reducerPath]: sessionApi.reducer,
     [connectorApi.reducerPath]: connectorApi.reducer,

@@ -116,7 +116,11 @@ export enum AgentEvent {
     APPLE_APP_SETUP_STATUS = 'apple_app_setup_status',
     APPLE_APPS_LIST = 'apple_apps_list',
     APPLE_AUTH_CHECK_RESULT = 'apple_auth_check_result',
-    EXPO_TOKEN_SAVED = 'expo_token_saved'
+    EXPO_TOKEN_SAVED = 'expo_token_saved',
+    // File explorer events
+    FILE_TREE = 'file_tree',
+    FILE_CONTENT = 'file_content',
+    FILE_TREE_UPDATE = 'file_tree_update'
 }
 
 export enum TOOL {

@@ -172,7 +172,7 @@ async def _finalize_storybook_billing(
             reservation = await reservation_repo.get_by_id(db_session, reservation_id)
             if reservation is None:
                 logger.warning(
-                    "Storybook %s references missing billing reservation %s",
+                    "Storybook {} references missing billing reservation {}",
                     storybook_id,
                     reservation_id,
                 )

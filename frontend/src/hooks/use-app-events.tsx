@@ -53,6 +53,14 @@ import {
     setVscodeUrl,
     setWorkspaceInfo
 } from '@/state/slice/workspace'
+import {
+    markFilesChanged,
+    setFileTree,
+    setTreeError,
+    setFileContent,
+    setFileLoading,
+    updateCachedContents
+} from '@/state/slice/file-explorer'
 import { useAppDispatch, useAppSelector } from '@/state/store'
 import {
     ActionStep,
@@ -1576,6 +1584,91 @@ export function useAppEvents() {
                     }
                     break
                 }
+
+                case AgentEvent.FILE_TREE: {
+                    const tree = data.content.tree as Record<string, unknown> | null
+                    const rootPath = data.content.root_path as string | undefined
+                    const contents = data.content.contents as Record<string, { content: string; language: string }> | undefined
+                    const error = data.content.error as string | undefined
+                    if (error && !tree) {
+                        dispatch(setTreeError(error))
+                        if (!ignoreClickAction) {
+                            toast.error(error)
+                        }
+                    } else {
+                        dispatch(setFileTree({ tree: tree as any, rootPath, contents }))
+                    }
+                    break
+                }
+
+                case AgentEvent.FILE_CONTENT: {
+                    const filePath = data.content.path as string
+                    const content = data.content.content as string | undefined
+                    const language = data.content.language as string | undefined
+                    const fileKind = data.content.file_kind as
+                        | 'text'
+                        | 'image'
+                        | 'binary'
+                        | undefined
+                    const mimeType = data.content.mime_type as string | undefined
+                    const message = data.content.message as string | undefined
+                    const tooBig = Boolean(data.content.too_big)
+                    const error = data.content.error as string | undefined
+                    if (!error && filePath) {
+                        dispatch(
+                            setFileContent({
+                                path: filePath,
+                                content,
+                                language: language || 'plaintext',
+                                fileKind,
+                                mimeType,
+                                message,
+                                tooBig
+                            })
+                        )
+                    } else {
+                        dispatch(setFileLoading(false))
+                    }
+                    break
+                }
+
+                case AgentEvent.FILE_TREE_UPDATE: {
+                    const tree = data.content.tree as Record<string, unknown> | null
+                    const rootPath = data.content.root_path as string | undefined
+                    const contents = data.content.contents as Record<string, { content: string; language: string }> | undefined
+                    const updatedContents = data.content.updated_contents as Record<string, { content: string; language: string }> | undefined
+                    const changes = data.content.changes as
+                        | Array<{ path?: string; type?: string }>
+                        | undefined
+                    if (tree) {
+                        dispatch(
+                            setFileTree({
+                                tree: tree as any,
+                                rootPath,
+                                contents
+                            })
+                        )
+                    }
+                    if (updatedContents && Object.keys(updatedContents).length > 0) {
+                        dispatch(updateCachedContents(updatedContents))
+                    }
+                    if (changes && changes.length > 0) {
+                        dispatch(
+                            markFilesChanged(
+                                changes
+                                    .filter((change) => change.type === 'write')
+                                    .map((change) => change.path)
+                                    .filter(
+                                        (path): path is string =>
+                                            typeof path === 'string' &&
+                                            path.length > 0
+                                    )
+                            )
+                        )
+                    }
+                    break
+                }
+
             }
         },
         [

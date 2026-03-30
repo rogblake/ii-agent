@@ -37,9 +37,13 @@ class SocketIOManager:
     def set_container(self, container: ServiceContainer) -> None:
         """Set the service container. Must be called before init()."""
         self._container = container
-        self.command_factory = CommandHandlerFactory(sio=self.sio, container=container)
+        self.command_factory = CommandHandlerFactory(
+            sio=self.sio,
+            container=container,
+        )
 
     async def shutdown(self):
+        await self._container.workspace_explorer_service.shutdown()
         await self.sio.shutdown()
 
     async def init(self):
@@ -126,12 +130,11 @@ class SocketIOManager:
                 await self._emit_error(sid, "Access denied")
                 return
 
-            content = data.get("content", {})
+            content = data.get("content") or {}
 
             try:
                 logger.debug("Processing message")
                 handler = self.command_factory.get_handler_by_string(message_type)
-
                 if handler:
                     await handler.handle(content, session)
                 else:

@@ -44,9 +44,22 @@ export const extractUrls = (markdown: string) => {
 
 export const isImageFile = (fileName: string): boolean => {
     const ext = fileName.split('.').pop()?.toLowerCase() || ''
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'svg'].includes(
-        ext
-    )
+    return [
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'webp',
+        'bmp',
+        'heic',
+        'heif',
+        'svg',
+        'avif',
+        'apng',
+        'tif',
+        'tiff',
+        'ico'
+    ].includes(ext)
 }
 
 export const formatDuration = (milliseconds: number): string => {

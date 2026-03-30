@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call
 
 import pytest
 
@@ -18,6 +18,7 @@ from ii_agent.agent.sandboxes.exceptions import (
     SandboxOperationError,
 )
 from ii_agent.agent.sandboxes.schemas import SandboxStatus
+from ii_agent.agent.sandboxes.schemas import FileTreeNode
 
 
 def _manager() -> E2BSandboxManager:
@@ -62,9 +63,7 @@ async def test_run_command_success_and_error(monkeypatch):
     assert output == "ok"
 
     manager.sandbox = SimpleNamespace(
-        commands=SimpleNamespace(
-            run=AsyncMock(return_value=_FakeCommandResult(1, "", "boom"))
-        ),
+        commands=SimpleNamespace(run=AsyncMock(return_value=_FakeCommandResult(1, "", "boom"))),
     )
     with pytest.raises(SandboxOperationError):
         await manager.run_command("false")
@@ -89,9 +88,7 @@ async def test_run_python_code_success_and_error(monkeypatch):
 
     manager.sandbox = SimpleNamespace(
         run_code=AsyncMock(
-            return_value=_FakeExecution(
-                error=SimpleNamespace(name="RuntimeError", value="bad")
-            )
+            return_value=_FakeExecution(error=SimpleNamespace(name="RuntimeError", value="bad"))
         ),
     )
     with pytest.raises(SandboxOperationError):
@@ -123,6 +120,174 @@ async def test_download_file_type_conversion_and_unsupported():
     )
     with pytest.raises(SandboxOperationError):
         await manager.download_file("/tmp/a", format="text")
+
+
+@pytest.mark.asyncio
+async def test_read_file_content_returns_image_metadata_for_raster_file():
+    manager = _manager()
+    manager._ensure_sandbox_connection = AsyncMock()
+    manager.sandbox = SimpleNamespace(
+        files=SimpleNamespace(
+            list=AsyncMock(
+                return_value=[SimpleNamespace(name="photo.avif", size=2048, type=None, mode=0)]
+            ),
+            read=AsyncMock(),
+        ),
+    )
+
+    result = await manager.read_file_content("/workspace/photo.avif")
+
+    assert result.file_kind == "image"
+    assert result.mime_type == "image/avif"
+    assert result.content is None
+    manager.sandbox.files.read.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_read_file_content_returns_large_file_fallback():
+    manager = _manager()
+    manager._ensure_sandbox_connection = AsyncMock()
+    manager.sandbox = SimpleNamespace(
+        files=SimpleNamespace(
+            list=AsyncMock(
+                return_value=[SimpleNamespace(name="archive.zip", size=999999, type=None, mode=0)]
+            ),
+            read=AsyncMock(),
+        ),
+    )
+
+    result = await manager.read_file_content("/workspace/archive.zip")
+
+    assert result.file_kind == "binary"
+    assert result.too_big is True
+    assert result.message == "File too big. Open VS Code to view."
+    manager.sandbox.files.read.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_read_file_content_reads_svg_as_text():
+    manager = _manager()
+    manager._ensure_sandbox_connection = AsyncMock()
+    manager.sandbox = SimpleNamespace(
+        files=SimpleNamespace(
+            list=AsyncMock(
+                return_value=[SimpleNamespace(name="diagram.svg", size=128, type=None, mode=0)]
+            ),
+            read=AsyncMock(return_value="<svg />"),
+        ),
+    )
+
+    result = await manager.read_file_content("/workspace/diagram.svg")
+
+    assert result.file_kind == "text"
+    assert result.language == "xml"
+    assert result.mime_type == "image/svg+xml"
+    assert result.content == "<svg />"
+
+
+@pytest.mark.asyncio
+async def test_list_files_with_contents_prefetches_one_nested_layer_by_default():
+    manager = _manager()
+    manager._ensure_sandbox_connection = AsyncMock()
+    manager.list_files_recursive = AsyncMock(
+        return_value=FileTreeNode(
+            name="workspace",
+            path="/workspace",
+            type="directory",
+            children=[
+                FileTreeNode(
+                    name="root.py",
+                    path="/workspace/root.py",
+                    type="file",
+                    size=20,
+                ),
+                FileTreeNode(
+                    name="src",
+                    path="/workspace/src",
+                    type="directory",
+                    children=[
+                        FileTreeNode(
+                            name="nested.py",
+                            path="/workspace/src/nested.py",
+                            type="file",
+                            size=24,
+                        )
+                    ],
+                ),
+            ],
+        )
+    )
+    manager.sandbox = SimpleNamespace(
+        files=SimpleNamespace(
+            read=AsyncMock(
+                side_effect=lambda path, format="text": {
+                    "/workspace/root.py": "print('root')",
+                    "/workspace/src/nested.py": "print('nested')",
+                }[path]
+            )
+        )
+    )
+
+    tree, contents = await manager.list_files_with_contents(
+        "/workspace",
+        inline_content_max_depth=2,
+    )
+
+    assert tree.path == "/workspace"
+    assert contents == {
+        "/workspace/root.py": {
+            "content": "print('root')",
+            "language": "python",
+        },
+        "/workspace/src/nested.py": {
+            "content": "print('nested')",
+            "language": "python",
+        },
+    }
+    assert manager.sandbox.files.read.await_args_list == [
+        call("/workspace/root.py", format="text"),
+        call("/workspace/src/nested.py", format="text"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_list_files_with_contents_can_prefetch_nested_files_without_depth_limit():
+    manager = _manager()
+    manager._ensure_sandbox_connection = AsyncMock()
+    manager.list_files_recursive = AsyncMock(
+        return_value=FileTreeNode(
+            name="workspace",
+            path="/workspace",
+            type="directory",
+            children=[
+                FileTreeNode(
+                    name="src",
+                    path="/workspace/src",
+                    type="directory",
+                    children=[
+                        FileTreeNode(
+                            name="nested.py",
+                            path="/workspace/src/nested.py",
+                            type="file",
+                            size=24,
+                        )
+                    ],
+                )
+            ],
+        )
+    )
+    manager.sandbox = SimpleNamespace(
+        files=SimpleNamespace(read=AsyncMock(return_value="print('nested')"))
+    )
+
+    _, contents = await manager.list_files_with_contents("/workspace")
+
+    assert contents == {
+        "/workspace/src/nested.py": {
+            "content": "print('nested')",
+            "language": "python",
+        }
+    }
 
 
 @pytest.mark.asyncio

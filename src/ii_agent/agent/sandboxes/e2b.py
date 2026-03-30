@@ -23,7 +23,18 @@ from ii_agent.agent.sandboxes.schemas import (
     SandboxStatus,
     SandboxFileInfo,
     FileUpload,
+    FileTreeNode,
+    FileContentResponse,
+    EXCLUDED_DIRS,
+    MAX_FILE_CONTENT_SIZE,
+    INLINE_CONTENT_MAX_SIZE,
+    INLINE_CONTENT_TOTAL_MAX,
+    detect_language,
+    guess_mime_type,
+    is_binary_file_path,
+    is_image_file_path,
 )
+import stat as _stat_mod
 from ii_agent.agent.sandboxes.base import SandboxManager
 from ii_agent.agent.sandboxes.exceptions import (
     SandboxAuthenticationError,
@@ -42,6 +53,25 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _is_dir_entry(entry) -> bool:
+    """Check whether a filesystem entry from E2B is a directory.
+
+    Handles:
+    - FileType enum (value="dir", name="DIR")
+    - type=None with mode bits fallback (S_IFDIR)
+    """
+    raw_type = entry.type
+    if raw_type is not None:
+        type_val = raw_type.value if hasattr(raw_type, "value") else str(raw_type)
+        if type_val.lower() in ("dir", "directory", "file_type_directory"):
+            return True
+    if hasattr(entry, "mode") and entry.mode is not None:
+        if _stat_mod.S_ISDIR(entry.mode):
+            return True
+    return False
+
 
 # Default timeout constants
 TIMEOUT_BUFFER_SECONDS = 3600  # 10 min buffer before hard timeout
@@ -160,7 +190,9 @@ class E2BSandboxManager(SandboxManager):
         )
 
     @classmethod
-    async def from_sandbox_record(cls, sandbox_record: AgentSandbox) -> Optional["E2BSandboxManager"]:
+    async def from_sandbox_record(
+        cls, sandbox_record: AgentSandbox
+    ) -> Optional["E2BSandboxManager"]:
         """Create an E2BSandboxManager from an existing database record.
 
         This is a read-only operation that connects to the E2B sandbox
@@ -550,7 +582,9 @@ class E2BSandboxManager(SandboxManager):
             raise SandboxOperationError("run_python_code", f"Unexpected result: {result}")
 
         if result.error:
-            raise SandboxOperationError("run_python_code", f"Execution failed:{result.error.name} {result.error.value}")
+            raise SandboxOperationError(
+                "run_python_code", f"Execution failed:{result.error.name} {result.error.value}"
+            )
 
         return result.results[0].text or ""
 
@@ -662,6 +696,229 @@ class E2BSandboxManager(SandboxManager):
         await self._ensure_sandbox_connection()
         return await self.sandbox.files.exists(file_path)
 
+    @e2b_exception_handler
+    async def list_files_recursive(
+        self,
+        path: str,
+        max_depth: int = 10,
+        _current_depth: int = 0,
+    ) -> FileTreeNode:
+        """Recursively list all files/dirs under path, returning a tree structure.
+
+        Excludes common non-essential directories (node_modules, .git, etc.).
+        """
+        import os
+
+        await self._ensure_sandbox_connection()
+
+        basename = os.path.basename(path.rstrip("/")) or path
+        entries = await self.sandbox.files.list(path)
+
+        children: list[FileTreeNode] = []
+        for entry in entries:
+            entry_name = entry.name
+            entry_path = f"{path.rstrip('/')}/{entry_name}"
+
+            is_dir = _is_dir_entry(entry)
+
+            if is_dir:
+                if entry_name in EXCLUDED_DIRS:
+                    continue
+                if _current_depth < max_depth:
+                    try:
+                        subtree = await self.list_files_recursive(
+                            entry_path,
+                            max_depth=max_depth,
+                            _current_depth=_current_depth + 1,
+                        )
+                        children.append(subtree)
+                    except Exception:
+                        # If we can't read a subdirectory, include it as empty
+                        children.append(
+                            FileTreeNode(
+                                name=entry_name,
+                                path=entry_path,
+                                type="directory",
+                                children=[],
+                            )
+                        )
+                else:
+                    children.append(
+                        FileTreeNode(
+                            name=entry_name,
+                            path=entry_path,
+                            type="directory",
+                            children=[],
+                        )
+                    )
+            else:
+                children.append(
+                    FileTreeNode(
+                        name=entry_name,
+                        path=entry_path,
+                        type="file",
+                        size=entry.size if hasattr(entry, "size") else None,
+                    )
+                )
+
+        # Sort: directories first, then files, alphabetical within each group
+        children.sort(key=lambda n: (0 if n.type == "directory" else 1, n.name.lower()))
+
+        return FileTreeNode(
+            name=basename,
+            path=path,
+            type="directory",
+            children=children,
+        )
+
+    @e2b_exception_handler
+    async def list_files_with_contents(
+        self,
+        path: str,
+        max_depth: int = 10,
+        inline_content_max_depth: int | None = None,
+    ) -> tuple[FileTreeNode, dict[str, dict[str, str]]]:
+        """Return the recursive file tree and pre-read contents of small text files.
+
+        When ``inline_content_max_depth`` is set, only files at or above that
+        depth are eagerly inlined. The tree root itself is depth 0.
+
+        Returns:
+            (tree, contents) where contents is {file_path: {"content": str, "language": str}}
+        """
+
+        contents: dict[str, dict[str, str]] = {}
+        total_bytes = 0
+
+        async def _collect(node: FileTreeNode, *, current_depth: int) -> None:
+            nonlocal total_bytes
+            if node.type == "directory" and node.children:
+                for child in node.children:
+                    await _collect(child, current_depth=current_depth + 1)
+            elif node.type == "file":
+                if (
+                    inline_content_max_depth is not None
+                    and current_depth > inline_content_max_depth
+                ):
+                    return
+                # Skip binary files
+                if is_binary_file_path(node.path):
+                    return
+                # Skip files that are too large or would exceed total budget
+                # Treat unknown sizes conservatively to avoid inlining huge files.
+                file_size = node.size if node.size is not None else INLINE_CONTENT_MAX_SIZE + 1
+                if file_size > INLINE_CONTENT_MAX_SIZE:
+                    return
+                if total_bytes + file_size > INLINE_CONTENT_TOTAL_MAX:
+                    return
+                # Try to read file content
+                try:
+                    raw = await self.sandbox.files.read(node.path, format="text")
+                    text = raw if isinstance(raw, str) else raw.decode("utf-8", errors="replace")
+                    total_bytes += len(text.encode("utf-8"))
+                    contents[node.path] = {
+                        "content": text,
+                        "language": detect_language(node.path),
+                    }
+                except Exception:
+                    pass  # Skip files that can't be read
+
+        tree = await self.list_files_recursive(path, max_depth=max_depth)
+        await _collect(tree, current_depth=0)
+        return tree, contents
+
+    @e2b_exception_handler
+    async def read_file_content(
+        self,
+        file_path: str,
+        *,
+        skip_metadata_check: bool = False,
+    ) -> FileContentResponse:
+        """Read file content with language detection.
+
+        Returns FileContentResponse with content and detected language.
+        Raises SandboxOperationError if file is too large or path is a directory.
+
+        Args:
+            file_path: Absolute path inside the sandbox.
+            skip_metadata_check: When True, skip the extra directory listing
+                used to validate size and type.  Useful for watcher-driven reads
+                where the caller already knows the path is a regular file.
+        """
+        await self._ensure_sandbox_connection()
+
+        mime_type = guess_mime_type(file_path)
+        entry_size: int | None = None
+
+        if not skip_metadata_check:
+            import os
+
+            parent = os.path.dirname(file_path)
+            basename = os.path.basename(file_path)
+
+            try:
+                entries = await self.sandbox.files.list(parent)
+                for entry in entries:
+                    if entry.name == basename:
+                        if _is_dir_entry(entry):
+                            raise SandboxOperationError(
+                                "read_file_content",
+                                f"path '{file_path}' is a directory",
+                            )
+                        if hasattr(entry, "size") and entry.size:
+                            entry_size = int(entry.size)
+                        break
+            except SandboxOperationError:
+                raise
+            except Exception:
+                pass  # If we can't check, try reading anyway
+
+        if is_image_file_path(file_path, include_svg=False):
+            return FileContentResponse(
+                path=file_path,
+                file_kind="image",
+                mime_type=mime_type or "application/octet-stream",
+            )
+
+        if entry_size is not None and entry_size > MAX_FILE_CONTENT_SIZE:
+            return FileContentResponse(
+                path=file_path,
+                file_kind="binary",
+                mime_type=mime_type,
+                message="File too big. Open VS Code to view.",
+                too_big=True,
+            )
+
+        if is_binary_file_path(file_path):
+            return FileContentResponse(
+                path=file_path,
+                file_kind="binary",
+                mime_type=mime_type,
+                message="Binary preview is not supported here. Open VS Code to view.",
+            )
+
+        content = await self.sandbox.files.read(file_path, format="text")
+        if isinstance(content, bytes):
+            content = content.decode("utf-8", errors="replace")
+
+        # Guard against unexpectedly large content even when metadata check is skipped.
+        if len(content) > MAX_FILE_CONTENT_SIZE:
+            return FileContentResponse(
+                path=file_path,
+                file_kind="binary",
+                mime_type=mime_type,
+                message="File too big. Open VS Code to view.",
+                too_big=True,
+            )
+
+        language = detect_language(file_path)
+        return FileContentResponse(
+            path=file_path,
+            content=content,
+            language=language,
+            mime_type=mime_type,
+        )
+
     async def expose_port(self, port: int) -> str:
         await self._ensure_sandbox_connection()
         host = self.sandbox.get_host(port)
@@ -706,6 +963,7 @@ class E2BSandboxManager(SandboxManager):
             )
         from ii_agent.core.db.manager import get_db_session_local
         from ii_agent.settings.mcp.schemas import ClaudeCodeMetadata, CodexMetadata
+
         # Query active MCP settings for user
         async with get_db_session_local() as db_session:
             mcp_settings = await self._mcp_setting_service.list_mcp_settings(
@@ -713,7 +971,9 @@ class E2BSandboxManager(SandboxManager):
             )
 
         # Get combined configuration using the new method
-        combined_config = mcp_settings.get_combined_active_config() if mcp_settings.settings else None
+        combined_config = (
+            mcp_settings.get_combined_active_config() if mcp_settings.settings else None
+        )
 
         # Convert to dict for registration
         config_dict = combined_config.model_dump(exclude_none=True) if combined_config else {}
@@ -779,19 +1039,22 @@ class E2BSandboxManager(SandboxManager):
             from ii_agent.core.db.manager import get_db_session_local
 
             async with get_db_session_local() as db_session:
-                composio_mcp_servers = await self._composio_service.get_user_composio_mcp_configs(db_session, user_id)
+                composio_mcp_servers = await self._composio_service.get_user_composio_mcp_configs(
+                    db_session, user_id
+                )
 
             if not composio_mcp_servers:
                 logger.debug(f"No Composio profiles found for user {user_id}")
                 return None
 
-            logger.info(f"Found {len(composio_mcp_servers)} Composio MCP servers for user {user_id}")
+            logger.info(
+                f"Found {len(composio_mcp_servers)} Composio MCP servers for user {user_id}"
+            )
             return composio_mcp_servers
 
         except Exception as e:
             logger.error(
-                f"Failed to get Composio MCP servers for user {user_id}: {e}",
-                exc_info=True
+                f"Failed to get Composio MCP servers for user {user_id}: {e}", exc_info=True
             )
             # Don't fail the entire sandbox setup if Composio fetch fails
             return None

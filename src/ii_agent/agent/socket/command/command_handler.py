@@ -47,6 +47,8 @@ class UserCommandType(str, Enum):
     SLIDE_DECK_SYNC_STATE = "slide_deck_sync_state"
     DESIGN_GET_STATE = "design_get_state"
     DESIGN_SAVE_STATE = "design_save_state"
+    FILE_TREE = "file_tree"
+    FILE_CONTENT = "file_content"
 
 
 class CommandHandler(ABC):

@@ -65,6 +65,9 @@ class EventType(str, enum.Enum):
     APPLE_APPS_LIST = "apple_apps_list"
     APPLE_AUTH_CHECK_RESULT = "apple_auth_check_result"
     EXPO_TOKEN_SAVED = "expo_token_saved"
+    FILE_TREE = "file_tree"
+    FILE_CONTENT = "file_content"
+    FILE_TREE_UPDATE = "file_tree_update"
 
     @staticmethod
     def is_allowed_when_aborted(event_type: "EventType") -> bool:
@@ -101,15 +104,8 @@ class AgentUIEvent(Base):
 
     __tablename__ = "agent_events"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(_uuid.uuid4())
-    )
-    session_id: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("sessions.id", ondelete="CASCADE")
-    )
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(_uuid.uuid4()))
+    session_id: Mapped[str] = mapped_column(String, ForeignKey("sessions.id", ondelete="CASCADE"))
     run_id: Mapped[Optional[_uuid.UUID]] = mapped_column(
         UUID,
         ForeignKey("agent_run_tasks.id", ondelete="CASCADE"),
@@ -119,8 +115,7 @@ class AgentUIEvent(Base):
     content: Mapped[dict] = mapped_column(JSONB)
     source: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
 
     # Relationships

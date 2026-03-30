@@ -17,8 +17,6 @@ import { sessionService } from '@/services/session.service'
 import {
     selectActiveTab,
     selectSelectedBuildStep,
-    selectVscodeUrl,
-    selectIsSandboxIframeAwake,
     selectIsMobileChatVisible,
     selectPreviewUrl,
     selectMobileWebPreviewUrl,
@@ -45,8 +43,6 @@ import AgentResult from '@/components/agent/agent-result'
 import PiPPreview from '@/components/agent/pip-preview'
 import AgentPopoverDone from '@/components/agent/agent-popover-done'
 import { useSocketIOContext } from '@/contexts/websocket-context'
-import AwakeMeUpScreen from '@/components/agent/awake-me-up-screen'
-import { isE2bLink } from '@/lib/utils'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import Sidebar from '@/components/sidebar'
 import AgentTabMobile, {
@@ -70,13 +66,9 @@ function AgentPageContent() {
     useSessionEnter()
 
     const activeTab = useAppSelector(selectActiveTab)
-    const vscodeUrl = useAppSelector(selectVscodeUrl)
     const selectedBuildStep = useAppSelector(selectSelectedBuildStep)
-    const isSandboxIframeAwake = useAppSelector(selectIsSandboxIframeAwake)
     const [sessionData, setSessionData] = useState<ISession>()
     const [sessionError, setSessionError] = useState<string | null>(null)
-    const [iframeKey, setIframeKey] = useState(0)
-    const [isAwakeLoading, setIsAwakeLoading] = useState(false)
     const [mobileChatTab, setMobileChatTab] = useState<MobileChatOption>('chat')
     const { socket } = useSocketIOContext()
     const isRunning = useAppSelector(selectIsLoading)
@@ -134,40 +126,21 @@ function AgentPageContent() {
         previousResultUrlRef.current = previewUrl ?? ''
     }, [dispatch, isMobile, previewUrl, isMobileChatVisible])
 
-    const handleAwakeClick = useCallback(() => {
-        setIsAwakeLoading(true)
-        if (socket?.connected) {
-            socket.emit('chat_message', {
-                type: 'awake_sandbox',
-                session_uuid: sessionId
-            })
-        }
-    }, [socket])
-
-    // Single sandbox_status request for both CODE and RESULT tabs.
+    // Single sandbox_status request for PROJECT and RESULT tabs.
     // AgentResult's duplicate effect is removed — both tabs need the same
     // status + vscode_url info from one response.
     useEffect(() => {
         if (
-            (activeTab === TAB.CODE || activeTab === TAB.RESULT) &&
+            (activeTab === TAB.PROJECT || activeTab === TAB.RESULT) &&
             wsConnectionState === WebSocketConnectionState.CONNECTED &&
             socket
         ) {
-            if (activeTab === TAB.CODE) {
-                setIframeKey((prev) => prev + 1)
-            }
             socket.emit('chat_message', {
                 type: 'sandbox_status',
                 session_uuid: sessionId
             })
         }
     }, [activeTab, sessionId, socket, wsConnectionState])
-
-    useEffect(() => {
-        if (isSandboxIframeAwake) {
-            setIsAwakeLoading(false)
-        }
-    }, [isSandboxIframeAwake])
 
     useEffect(() => {
         dispatch(setQuestionMode(QUESTION_MODE.AGENT))
@@ -226,12 +199,6 @@ function AgentPageContent() {
             }
         }
     }, [sessionId, dispatch])
-
-    useEffect(() => {
-        if (isSandboxIframeAwake) {
-            setIframeKey((prev) => prev + 1)
-        }
-    }, [isSandboxIframeAwake])
 
     const isThinkingView = useMemo(() => {
         return (
@@ -357,27 +324,6 @@ function AgentPageContent() {
                                             </div>
                                         </div>
                                     )}
-
-                                    <div
-                                        className={`h-full ${activeTab === TAB.CODE ? '' : 'hidden'}`}
-                                    >
-                                        {vscodeUrl &&
-                                            isE2bLink(vscodeUrl) &&
-                                            !isSandboxIframeAwake &&
-                                            !isRunning &&
-                                            !isShareMode ? (
-                                            <AwakeMeUpScreen
-                                                isLoading={isAwakeLoading}
-                                                onAwakeClick={handleAwakeClick}
-                                            />
-                                        ) : vscodeUrl ? (
-                                            <iframe
-                                                key={iframeKey}
-                                                src={vscodeUrl}
-                                                className="w-full h-full"
-                                            />
-                                        ) : null}
-                                    </div>
 
                                     <div
                                         className={`h-full relative ${activeTab === TAB.RESULT ? '' : 'hidden'}`}

@@ -114,6 +114,9 @@ export {
 // Export session state slice
 export * from './slice/session-state'
 
+// Export file explorer slice
+export * from './slice/file-explorer'
+
 // Export RTK Query API
 export {
     userApi,

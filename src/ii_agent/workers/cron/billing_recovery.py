@@ -102,10 +102,9 @@ async def retry_shortfall_settlement_failures() -> None:
                     )
                 except Exception:
                     unresolved += 1
-                    logger.error(
-                        "Automatic shortfall settlement retry failed for reservation %s",
+                    logger.opt(exception=True).error(
+                        "Automatic shortfall settlement retry failed for reservation {}",
                         reservation.id,
-                        exc_info=True,
                     )
                     continue
 
@@ -120,7 +119,7 @@ async def retry_shortfall_settlement_failures() -> None:
 
                 unresolved += 1
                 logger.warning(
-                    "Automatic shortfall settlement retry for reservation %s remained in status %s",
+                    "Automatic shortfall settlement retry for reservation {} remained in status {}",
                     reservation.id,
                     status,
                 )
@@ -133,14 +132,14 @@ async def retry_shortfall_settlement_failures() -> None:
                     cleared_users += 1
 
         logger.info(
-            "Shortfall settlement retry completed: replayed=%d unresolved=%d cleared_users=%d",
+            "Shortfall settlement retry completed: replayed={} unresolved={} cleared_users={}",
             replayed,
             unresolved,
             cleared_users,
         )
 
     except Exception:
-        logger.error("retry_shortfall_settlement_failures failed", exc_info=True)
+        logger.opt(exception=True).error("retry_shortfall_settlement_failures failed")
 
 
 # ---------------------------------------------------------------------------

@@ -43,6 +43,14 @@ class DatabaseSubscriber(EventSubscriber):
             # Skip streaming delta events - final content saved via completed events
             return
 
+        if event.type in (
+            EventType.FILE_TREE,
+            EventType.FILE_CONTENT,
+            EventType.FILE_TREE_UPDATE,
+        ):
+            # Skip file explorer events - they contain large file contents and fire frequently
+            return
+
         if not event.session_id:
             return
 

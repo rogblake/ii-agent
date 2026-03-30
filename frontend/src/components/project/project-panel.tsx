@@ -15,6 +15,7 @@ import ProjectDatabase from './project-database'
 import ProjectDeployment from './project-deployment'
 import ProjectIntegrations from './project-integrations'
 import ProjectSecret from './project-secret'
+import { CodeExplorer } from '@/components/agent/code-explorer'
 import { setPublished, useAppDispatch } from '@/state'
 
 const RECORD_PAGE_SIZE = 10
@@ -44,7 +45,7 @@ const ProjectPanel = ({
 }: ProjectPanelProps) => {
     const { t } = useTranslation()
     const dispatch = useAppDispatch()
-    const [activeTab, setActiveTab] = useState<ProjectTab>('database')
+    const [activeTab, setActiveTab] = useState<ProjectTab>('code')
     const [project, setProject] = useState<ProjectDetails | null>(null)
     const [isLoadingProject, setIsLoadingProject] = useState(false)
 
@@ -63,7 +64,7 @@ const ProjectPanel = ({
     const [isLoadingSecrets, setIsLoadingSecrets] = useState(false)
 
     const resetState = useCallback(() => {
-        setActiveTab('database')
+        setActiveTab('code')
         setProject(null)
         setTables(null)
         setSelectedTable('')
@@ -447,6 +448,10 @@ const ProjectPanel = ({
         }
 
         switch (activeTab) {
+            case 'code':
+                return (
+                    <CodeExplorer className="h-[calc(100vh-280px)] overflow-hidden rounded-lg border border-border bg-background" />
+                )
             case 'database':
                 return (
                     <div className="relative">

@@ -47,7 +47,10 @@ from ii_agent.agent.socket.command.design_save_state_handler import DesignSaveSt
 from ii_agent.agent.socket.command.design_sync_handler import DesignSyncHandler
 from ii_agent.agent.socket.command.design_sync_state_handler import DesignSyncStateHandler
 from ii_agent.agent.socket.command.slide_deck_sync_state_handler import SlideDeckSyncStateHandler
+from ii_agent.agent.socket.command.file_tree_handler import FileTreeHandler
+from ii_agent.agent.socket.command.file_content_handler import FileContentHandler
 from ii_agent.agent.subscribers.database_subscriber import DatabaseSubscriber
+from ii_agent.agent.subscribers.file_watcher_subscriber import FileWatcherSubscriber
 from ii_agent.agent.subscribers.metrics_subscriber import MetricsSubscriber
 from ii_agent.agent.subscribers.socketio_subscriber import SocketIOSubscriber
 
@@ -81,17 +84,15 @@ class CommandHandlerFactory:
         await event_stream.subscribe(SocketIOSubscriber(self._sio))
         await event_stream.subscribe(DatabaseSubscriber(self._container))
         await event_stream.subscribe(MetricsSubscriber())
+        await event_stream.subscribe(FileWatcherSubscriber(self._container))
+        self._container.workspace_explorer_service.bind_event_stream(event_stream)
 
         # Create query handler first as it's used by other handlers
-        query_handler = UserQueryHandler(
-            event_stream=event_stream, container=self._container
-        )
+        query_handler = UserQueryHandler(event_stream=event_stream, container=self._container)
 
         self._handlers = {
             UserCommandType.QUERY: query_handler,
-            UserCommandType.PLAN: PlanHandler(
-                event_stream=event_stream, container=self._container
-            ),
+            UserCommandType.PLAN: PlanHandler(event_stream=event_stream, container=self._container),
             UserCommandType.SANDBOX_STATUS: SandboxStatusHandler(
                 event_stream=event_stream, container=self._container
             ),
@@ -101,9 +102,7 @@ class CommandHandlerFactory:
             UserCommandType.WORKSPACE_INFO: WorkspaceInfoHandler(
                 event_stream=event_stream, container=self._container
             ),
-            UserCommandType.PING: PingHandler(
-                event_stream=event_stream, container=self._container
-            ),
+            UserCommandType.PING: PingHandler(event_stream=event_stream, container=self._container),
             UserCommandType.CANCEL: CancelHandler(
                 event_stream=event_stream, container=self._container
             ),
@@ -170,6 +169,14 @@ class CommandHandlerFactory:
                 container=self._container,
             ),
             UserCommandType.DESIGN_SAVE_STATE: DesignSaveStateHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.FILE_TREE: FileTreeHandler(
+                event_stream=event_stream,
+                container=self._container,
+            ),
+            UserCommandType.FILE_CONTENT: FileContentHandler(
                 event_stream=event_stream,
                 container=self._container,
             ),

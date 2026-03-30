@@ -12,6 +12,7 @@ def include_routers(app: FastAPI) -> None:
     # Import concrete router objects to avoid package/submodule name collisions.
     from ii_agent.auth.router import router as auth_router
     from ii_agent.auth.users.router import router as users_router
+    from ii_agent.agent.sandboxes.router import router as sandbox_files_router
     from ii_agent.billing.router import router as billing_router
     from ii_agent.billing.credits.router import router as credits_router
     from ii_agent.chat.api.router import router as chat_router
@@ -38,6 +39,7 @@ def include_routers(app: FastAPI) -> None:
 
     app.include_router(auth_router)
     app.include_router(users_router)
+    app.include_router(sandbox_files_router)
     app.include_router(sessions_router)
     app.include_router(credits_router)
     app.include_router(llm_settings_router)

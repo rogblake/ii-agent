@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -62,6 +61,7 @@ class FakeSio:
     def on(self, name):
         def _dec(fn):
             return fn
+
         return _dec
 
 
@@ -82,6 +82,8 @@ def _mock_container() -> MagicMock:
     container.session_service = MagicMock()
     container.session_service.find_session_by_id_info = AsyncMock()
     container.session_service.get_or_create_session = AsyncMock()
+    container.workspace_explorer_service = MagicMock()
+    container.workspace_explorer_service.shutdown = AsyncMock()
     return container
 
 
@@ -110,9 +112,7 @@ class TestSocketIOManagerInstantiation:
         manager = SocketIOManager(sio=sio)
         container = _mock_container()
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory:
+        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -131,7 +131,12 @@ class TestSocketIOManagerShutdown:
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
+        container = MagicMock()
+        container.workspace_explorer_service = MagicMock()
+        container.workspace_explorer_service.shutdown = AsyncMock()
+        manager._container = container
         await manager.shutdown()
+        container.workspace_explorer_service.shutdown.assert_awaited_once()
         assert sio.shutdown_called is True
 
 
@@ -223,9 +228,7 @@ class TestLeaveCurrentSession:
         manager = SocketIOManager(sio=sio)
         await sio.enter_room("sid-1", "sess-abc")
 
-        with patch(
-            "ii_agent.agent.socket.socketio.session_store"
-        ) as mock_store:
+        with patch("ii_agent.agent.socket.socketio.session_store") as mock_store:
             mock_store.remove_sid_from_session = AsyncMock()
             await manager._leave_current_session("sid-1", "sess-abc")
             mock_store.remove_sid_from_session.assert_called_once_with("sess-abc", "sid-1")
@@ -240,9 +243,7 @@ class TestLeaveCurrentSession:
         sio.leave_room = AsyncMock(side_effect=RuntimeError("leave failed"))
         manager = SocketIOManager(sio=sio)
 
-        with patch(
-            "ii_agent.agent.socket.socketio.session_store"
-        ) as mock_store:
+        with patch("ii_agent.agent.socket.socketio.session_store") as mock_store:
             mock_store.remove_sid_from_session = AsyncMock()
             # Should not raise
             await manager._leave_current_session("sid-1", "sess-xyz")
@@ -261,9 +262,7 @@ class TestRequireSession:
         manager = SocketIOManager(sio=FakeSio())
         container = _mock_container()
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory:
+        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -277,9 +276,7 @@ class TestRequireSession:
         manager = SocketIOManager(sio=FakeSio())
         container = _mock_container()
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory:
+        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -297,11 +294,12 @@ class TestRequireSession:
         fake_session = _fake_session_info()
         container.session_service.find_session_by_id_info = AsyncMock(return_value=fake_session)
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory, patch(
-            "ii_agent.agent.socket.socketio.get_db_session_local",
-            return_value=_fake_db_cm(),
+        with (
+            patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory,
+            patch(
+                "ii_agent.agent.socket.socketio.get_db_session_local",
+                return_value=_fake_db_cm(),
+            ),
         ):
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
@@ -339,9 +337,7 @@ class TestConnect:
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
 
-        with patch(
-            "ii_agent.agent.socket.socketio.jwt_handler"
-        ) as mock_jwt:
+        with patch("ii_agent.agent.socket.socketio.jwt_handler") as mock_jwt:
             mock_jwt.verify_access_token = MagicMock(return_value={"user_id": "u-1"})
             result = await manager.connect("sid-1", {}, {"token": "valid-jwt"})
 
@@ -355,9 +351,7 @@ class TestConnect:
 
         manager = SocketIOManager(sio=FakeSio())
 
-        with patch(
-            "ii_agent.agent.socket.socketio.jwt_handler"
-        ) as mock_jwt:
+        with patch("ii_agent.agent.socket.socketio.jwt_handler") as mock_jwt:
             mock_jwt.verify_access_token = MagicMock(return_value=None)
             result = await manager.connect("sid-1", {}, {"token": "bad-jwt"})
 
@@ -369,9 +363,7 @@ class TestConnect:
 
         manager = SocketIOManager(sio=FakeSio())
 
-        with patch(
-            "ii_agent.agent.socket.socketio.jwt_handler"
-        ) as mock_jwt:
+        with patch("ii_agent.agent.socket.socketio.jwt_handler") as mock_jwt:
             mock_jwt.verify_access_token = MagicMock(side_effect=Exception("verify failed"))
             result = await manager.connect("sid-1", {}, {"token": "erring-jwt"})
 
@@ -385,9 +377,7 @@ class TestConnect:
         manager = SocketIOManager(sio=sio)
         sess_uuid = str(uuid.uuid4())
 
-        with patch(
-            "ii_agent.agent.socket.socketio.jwt_handler"
-        ) as mock_jwt:
+        with patch("ii_agent.agent.socket.socketio.jwt_handler") as mock_jwt:
             mock_jwt.verify_access_token = MagicMock(return_value={"user_id": "u-1"})
             await manager.connect("sid-1", {}, {"token": "jwt", "session_uuid": sess_uuid})
 
@@ -449,9 +439,7 @@ class TestJoinSession:
         manager = SocketIOManager(sio=sio)
         container = _mock_container()
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory:
+        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -467,9 +455,7 @@ class TestJoinSession:
         manager = SocketIOManager(sio=sio)
         container = _mock_container()
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory:
+        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -485,9 +471,7 @@ class TestJoinSession:
         manager = SocketIOManager(sio=sio)
         container = _mock_container()
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory:
+        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -511,14 +495,14 @@ class TestJoinSession:
         fake_session.id = session_id
         container.session_service.get_or_create_session = AsyncMock(return_value=fake_session)
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory, patch(
-            "ii_agent.agent.socket.socketio.get_db_session_local",
-            return_value=_fake_db_cm(),
-        ), patch(
-            "ii_agent.agent.socket.socketio.session_store"
-        ) as mock_store:
+        with (
+            patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory,
+            patch(
+                "ii_agent.agent.socket.socketio.get_db_session_local",
+                return_value=_fake_db_cm(),
+            ),
+            patch("ii_agent.agent.socket.socketio.session_store") as mock_store,
+        ):
             mock_factory.return_value = MagicMock()
             mock_store.add_sid_to_session = AsyncMock()
             manager.set_container(container)
@@ -542,11 +526,12 @@ class TestJoinSession:
         fake_session.id = session_id
         container.session_service.get_or_create_session = AsyncMock(return_value=fake_session)
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory, patch(
-            "ii_agent.agent.socket.socketio.get_db_session_local",
-            return_value=_fake_db_cm(),
+        with (
+            patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory,
+            patch(
+                "ii_agent.agent.socket.socketio.get_db_session_local",
+                return_value=_fake_db_cm(),
+            ),
         ):
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
@@ -606,18 +591,13 @@ class TestChatMessage:
         manager = SocketIOManager(sio=sio)
         container = _mock_container()
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory:
+        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
         # No session stored for sid-1 → sio.get_session returns None
         await manager.chat_message("sid-1", {"type": "query"})
-        assert any(
-            payload.get("content", {}).get("message", "")
-            for _, payload, _ in sio.emitted
-        )
+        assert any(payload.get("content", {}).get("message", "") for _, payload, _ in sio.emitted)
 
     @pytest.mark.asyncio
     async def test_emits_error_when_session_not_found_in_db(self):
@@ -628,19 +608,18 @@ class TestChatMessage:
         container = _mock_container()
         container.session_service.find_session_by_id_info = AsyncMock(return_value=None)
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory, patch(
-            "ii_agent.agent.socket.socketio.get_db_session_local",
-            return_value=_fake_db_cm(),
+        with (
+            patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory,
+            patch(
+                "ii_agent.agent.socket.socketio.get_db_session_local",
+                return_value=_fake_db_cm(),
+            ),
         ):
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
         await sio.save_session("sid-1", {"user_id": "u1"})
-        await manager.chat_message(
-            "sid-1", {"type": "query", "session_uuid": str(uuid.uuid4())}
-        )
+        await manager.chat_message("sid-1", {"type": "query", "session_uuid": str(uuid.uuid4())})
         assert any(
             "chat session" in payload.get("content", {}).get("message", "").lower()
             or payload.get("content", {}).get("message", "") != ""
@@ -660,19 +639,18 @@ class TestChatMessage:
         fake_session.id = session_id
         container.session_service.find_session_by_id_info = AsyncMock(return_value=fake_session)
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory"
-        ) as mock_factory, patch(
-            "ii_agent.agent.socket.socketio.get_db_session_local",
-            return_value=_fake_db_cm(),
+        with (
+            patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory,
+            patch(
+                "ii_agent.agent.socket.socketio.get_db_session_local",
+                return_value=_fake_db_cm(),
+            ),
         ):
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
         await sio.save_session("sid-1", {"user_id": "u1"})
-        await manager.chat_message(
-            "sid-1", {"type": "query", "session_uuid": str(session_id)}
-        )
+        await manager.chat_message("sid-1", {"type": "query", "session_uuid": str(session_id)})
         assert any(
             "access denied" in payload.get("content", {}).get("message", "").lower()
             or "access" in payload.get("content", {}).get("message", "").lower()
@@ -697,12 +675,15 @@ class TestChatMessage:
         mock_factory_inst.get_handler_by_string = MagicMock(return_value=mock_handler)
         mock_factory_inst.initialize = AsyncMock()
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory",
-            return_value=mock_factory_inst,
-        ), patch(
-            "ii_agent.agent.socket.socketio.get_db_session_local",
-            return_value=_fake_db_cm(),
+        with (
+            patch(
+                "ii_agent.agent.socket.socketio.CommandHandlerFactory",
+                return_value=mock_factory_inst,
+            ),
+            patch(
+                "ii_agent.agent.socket.socketio.get_db_session_local",
+                return_value=_fake_db_cm(),
+            ),
         ):
             manager.set_container(container)
 
@@ -730,12 +711,15 @@ class TestChatMessage:
         mock_factory_inst.get_handler_by_string = MagicMock(return_value=None)
         mock_factory_inst.initialize = AsyncMock()
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory",
-            return_value=mock_factory_inst,
-        ), patch(
-            "ii_agent.agent.socket.socketio.get_db_session_local",
-            return_value=_fake_db_cm(),
+        with (
+            patch(
+                "ii_agent.agent.socket.socketio.CommandHandlerFactory",
+                return_value=mock_factory_inst,
+            ),
+            patch(
+                "ii_agent.agent.socket.socketio.get_db_session_local",
+                return_value=_fake_db_cm(),
+            ),
         ):
             manager.set_container(container)
 
@@ -765,12 +749,15 @@ class TestChatMessage:
         mock_factory_inst.get_handler_by_string = MagicMock(return_value=mock_handler)
         mock_factory_inst.initialize = AsyncMock()
 
-        with patch(
-            "ii_agent.agent.socket.socketio.CommandHandlerFactory",
-            return_value=mock_factory_inst,
-        ), patch(
-            "ii_agent.agent.socket.socketio.get_db_session_local",
-            return_value=_fake_db_cm(),
+        with (
+            patch(
+                "ii_agent.agent.socket.socketio.CommandHandlerFactory",
+                return_value=mock_factory_inst,
+            ),
+            patch(
+                "ii_agent.agent.socket.socketio.get_db_session_local",
+                return_value=_fake_db_cm(),
+            ),
         ):
             manager.set_container(container)
 

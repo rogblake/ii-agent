@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Icon } from '../ui/icon'
 
 export type ProjectTab =
+    | 'code'
     | 'database'
     | 'domain'
     | 'integrations'
@@ -29,11 +30,18 @@ const ProjectHeader = ({
     onTabChange
 }: ProjectHeaderProps = {}) => {
     const { t } = useTranslation()
-    const [internalTab, setInternalTab] = useState<ProjectTab>('domain')
+    const [internalTab, setInternalTab] = useState<ProjectTab>('code')
 
     const activeTab = controlledTab ?? internalTab
     const setActiveTab = onTabChange ?? setInternalTab
     const tabs: TabConfig[] = [
+        {
+            id: 'code',
+            labelKey: 'project.header.tabs.code.label',
+            icon: 'code',
+            titleKey: 'project.header.tabs.code.title',
+            descriptionKey: 'project.header.tabs.code.description'
+        },
         {
             id: 'database',
             labelKey: 'project.header.tabs.database.label',

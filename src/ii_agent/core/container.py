@@ -77,6 +77,7 @@ from ii_agent.agent.sandboxes.dependencies import (
     get_sandbox_repository,
     get_sandbox_service,
 )
+from ii_agent.agent.sandboxes.workspace_explorer_service import WorkspaceExplorerService
 from ii_agent.files.dependencies import (
     get_file_repository,
     get_file_service,
@@ -157,6 +158,7 @@ if TYPE_CHECKING:
     from ii_agent.projects.service import ProjectService
     from ii_agent.agent.sandboxes.service import SandboxService
     from ii_agent.agent.sandboxes.env_sync_service import SandboxEnvSyncService
+    from ii_agent.agent.sandboxes.workspace_explorer_service import WorkspaceExplorerService
     from ii_agent.sessions.service import SessionService
     from ii_agent.sessions.fork_service import SessionForkService
     from ii_agent.agent.application.validation_service import SessionValidationService
@@ -197,6 +199,7 @@ class ServiceContainer:
     execution_service: ExecutionService
     plan_service: PlanService
     sandbox_service: SandboxService
+    workspace_explorer_service: WorkspaceExplorerService
     project_service: ProjectService
     secret_service: SecretService
     database_service: DatabaseService
@@ -285,6 +288,10 @@ class ServiceContainer:
         llm_setting_svc = get_llm_setting_service(llm_setting_repo, session_repo)
         composio_svc = get_composio_service(mcp_setting_svc, composio_repo)
         sandbox_svc = get_sandbox_service(sandbox_repo, mcp_setting_svc, composio_svc)
+        workspace_explorer_svc = WorkspaceExplorerService(
+            sandbox_service=sandbox_svc,
+            session_service=session_svc,
+        )
         billing_customer_svc = get_billing_customer_service(billing_customer_repo)
         billing_svc = get_billing_service(
             stripe_config,
@@ -350,6 +357,7 @@ class ServiceContainer:
             execution_service=execution_svc,
             plan_service=plan_svc,
             sandbox_service=sandbox_svc,
+            workspace_explorer_service=workspace_explorer_svc,
             project_service=project_svc,
             secret_service=secret_svc,
             database_service=database_svc,

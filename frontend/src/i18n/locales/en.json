@@ -2574,6 +2574,11 @@
         "newProject": "New Project",
         "header": {
             "tabs": {
+                "code": {
+                    "label": "Code",
+                    "title": "Code Explorer",
+                    "description": "Browse and view the source code of your project"
+                },
                 "database": {
                     "label": "Database",
                     "title": "Database",

@@ -13,7 +13,8 @@ import {
     setSelectedBuildStep,
     setRunStatus,
     setCouncilPreference,
-    resetCouncilMode
+    resetCouncilMode,
+    resetFileExplorer
 } from '@/state'
 import { BUILD_MODE, BUILD_STEP } from '@/typings/agent'
 
@@ -34,6 +35,9 @@ export function useSessionEnter() {
             currentSessionId && currentSessionId !== previousSessionId
 
         if (isEnteringSession) {
+            // Reset file explorer state for new session
+            dispatch(resetFileExplorer())
+
             // Try to restore cached session state
             const state = store.getState()
             const cachedState = selectSessionState(currentSessionId)(state)
@@ -75,7 +79,9 @@ export function useSessionEnter() {
 
                 // Restore council preference
                 if (cachedState.councilPreference) {
-                    dispatch(setCouncilPreference(cachedState.councilPreference))
+                    dispatch(
+                        setCouncilPreference(cachedState.councilPreference)
+                    )
                 } else {
                     dispatch(resetCouncilMode())
                 }

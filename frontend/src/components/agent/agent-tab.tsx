@@ -58,11 +58,6 @@ const AgentTabs = ({ sessionId, projectId, agentType }: AgentTabsProps) => {
                 labelKey: 'agentTab.tabs.build',
                 hidden: false
             },
-            {
-                id: TAB.CODE,
-                labelKey: 'agentTab.tabs.code',
-                hidden: isShareMode
-            },
             { id: TAB.RESULT, labelKey: 'agentTab.tabs.result', hidden: false }
         ]
 

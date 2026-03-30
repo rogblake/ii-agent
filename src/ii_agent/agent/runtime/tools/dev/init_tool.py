@@ -167,7 +167,7 @@ class FullStackInitTool(BaseSandboxTool):
             else:
                 logger.warning("Host url not supported for this provider")
         except Exception as exc:
-            logger.warning("Failed to derive sandbox host_url: %s", exc)
+            logger.warning("Failed to derive sandbox host_url: {}", exc)
 
     async def execute(self, tool_input: dict[str, Any]) -> ToolResult:
         try:
@@ -392,7 +392,7 @@ class FullStackInitTool(BaseSandboxTool):
                     }
                 return None
         except Exception as exc:  # pragma: no cover - defensive
-            logger.error(f"Failed to persist project metadata: {exc}")
+            logger.error("Failed to persist project metadata: {}", exc)
             return None
 
     async def _save_database_url_to_secrets(
@@ -425,6 +425,6 @@ class FullStackInitTool(BaseSandboxTool):
                     project_id=project.id,
                     secrets=existing_secrets,
                 )
-            logger.info(f"Saved DATABASE_URL to project secrets for session {session_id}")
+            logger.info("Saved DATABASE_URL to project secrets for session {}", session_id)
         except Exception as exc:
-            logger.error(f"Failed to save DATABASE_URL to project secrets: {exc}")
+            logger.error("Failed to save DATABASE_URL to project secrets: {}", exc)

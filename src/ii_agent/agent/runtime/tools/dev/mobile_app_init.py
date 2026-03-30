@@ -131,7 +131,7 @@ class MobileAppInitTool(BaseSandboxTool):
                                 text=updated_text,
                             )
             except Exception as port_error:  # noqa: BLE001
-                logger.warning("Failed to expose port %s: %s", web_port, port_error)
+                logger.warning("Failed to expose port {}: {}", web_port, port_error)
 
     async def on_tool_end(self, agent: "IIAgent", fc: "FunctionCall") -> None:
         if fc.error:
@@ -205,5 +205,5 @@ class MobileAppInitTool(BaseSandboxTool):
                     }
                 return None
         except Exception as exc:  # noqa: BLE001
-            logger.error(f"Failed to persist mobile app project metadata: {exc}")
+            logger.error("Failed to persist mobile app project metadata: {}", exc)
             return None

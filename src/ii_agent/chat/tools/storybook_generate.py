@@ -622,7 +622,7 @@ class StorybookGenerationTool(BaseTool):
                     db, session.user_id
                 )
                 if not user_api_key:
-                    raise RuntimeError("No active API key found for user")
+                    logger.warning("No active API key found for user")
 
             storybook_name = title or style.get("title") or f"Storybook {uuid.uuid4().hex[:8]}"
             style_with_model = {

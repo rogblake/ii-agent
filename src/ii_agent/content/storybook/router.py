@@ -279,7 +279,7 @@ async def regenerate_page_image(
 
     user_api_key = await user_service.get_active_api_key(db, str(current_user.id))
     if not user_api_key:
-        raise ValidationError("No active API key found for user")
+        logger.warning("No active API key found for user")
 
     async def generate_image_wrapper(
         prompt: str,

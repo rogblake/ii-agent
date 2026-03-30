@@ -506,12 +506,7 @@ async def _generate_storybook_page_async(
 
         user_api_key = await container.user_service.get_active_api_key(db_session, session.user_id)
         if not user_api_key:
-            await _fail_storybook(
-                storybook_id,
-                "No active API key found for user.",
-                failure_payload,
-            )
-            return {"status": "failed", "error": "api_key_missing"}
+            logger.warning("No active API key found for user.")
 
     voice_enabled = bool(style_json.get("voice_enabled", False))
 

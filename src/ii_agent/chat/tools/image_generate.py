@@ -145,7 +145,7 @@ class ImageGenerationTool(BaseTool):
                     db, session.user_id
                 )
                 if not user_api_key:
-                    raise RuntimeError("No active API key found for user")
+                    logger.warning("No active API key found for user")
 
             # Collect all file IDs from all sources
             all_file_ids: list[str] = []

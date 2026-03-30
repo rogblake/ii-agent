@@ -1,6 +1,6 @@
 import Lottie from 'lottie-react'
 import clsx from 'clsx'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router'
 import { useTheme } from 'next-themes'
 

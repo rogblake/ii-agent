@@ -34,7 +34,6 @@ case "$MODE" in
         ;;
     worker)
         echo "Starting Celery worker..."
-        export II_AGENT_CELERY_WORKER=1
         celery_args=(
             celery
             -A "$CELERY_APP"

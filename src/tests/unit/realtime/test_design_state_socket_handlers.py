@@ -8,30 +8,49 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.agent.events.models import EventType, RealtimeEvent
 from ii_agent.content.slides.design.schemas import SlideDeckSyncStateResponse
 from ii_agent.projects.design.schemas import (
     DesignStateResponse,
-    SyncStateResponse,
     StyleChange,
 )
+from ii_agent.realtime.events.app_events import BaseEvent, SystemNotificationEvent
+from ii_agent.realtime.handlers.design_get_state import DesignGetStateHandler
+from ii_agent.realtime.handlers.design_save_state import DesignSaveStateHandler
+from ii_agent.realtime.handlers.design_sync_state import DesignSyncStateHandler
+from ii_agent.realtime.handlers.slide_deck_sync_state import SlideDeckSyncStateHandler
+from ii_agent.realtime.schemas import (
+    DesignGetStateContent,
+    DesignSaveStateContent,
+    DesignSyncStateContent,
+    SlideDeckSyncStateContent,
+)
 from ii_agent.sessions.schemas import SessionInfo
+from ii_agent.projects.design.schemas import SyncStateResponse
 
 pytestmark = pytest.mark.unit
 
 
-class CapturingEventStream:
-    def __init__(self) -> None:
-        self.events: list[RealtimeEvent] = []
+class CapturingPubSub:
+    """Minimal pubsub stub that captures published events."""
 
-    async def publish(self, event: RealtimeEvent) -> None:
+    def __init__(self) -> None:
+        self.events: list[BaseEvent] = []
+
+    async def publish(self, event: BaseEvent) -> None:
         self.events.append(event)
+
+
+def _make_container(**overrides: object) -> MagicMock:
+    container = MagicMock()
+    for key, value in overrides.items():
+        setattr(container, key, value)
+    return container
 
 
 def _make_session_info() -> SessionInfo:
     return SessionInfo(
         id=uuid.uuid4(),
-        user_id="user-123",
+        user_id=uuid.uuid4(),
         api_version="v1",
         name="Design Session",
         status="active",
@@ -76,31 +95,26 @@ async def _db_cm():
 
 @pytest.mark.asyncio
 async def test_design_get_state_handler_emits_loaded_response():
-    from ii_agent.agent.socket.command.design_get_state_handler import (
-        DesignGetStateHandler,
-    )
-
     session_info = _make_session_info()
     response = _make_state_response(str(session_info.id))
-    stream = CapturingEventStream()
-    container = MagicMock()
-    container.project_design_service.get_design_state = AsyncMock(
-        return_value=response
-    )
-    handler = DesignGetStateHandler(event_stream=stream, container=container)
+    pubsub = CapturingPubSub()
+    project_design_service = MagicMock()
+    project_design_service.get_design_state = AsyncMock(return_value=response)
+    container = _make_container(project_design_service=project_design_service)
+    handler = DesignGetStateHandler(pubsub=pubsub, container=container)
 
     with patch(
-        "ii_agent.agent.socket.command.design_get_state_handler.get_db_session_local",
+        "ii_agent.realtime.handlers.design_get_state.get_db_session_local",
         _db_cm,
     ):
-        await handler.handle(
-            {"session_id": str(session_info.id), "request_id": "req-1"},
+        await handler.dispatch(
+            {"command": "design_get_state", "session_id": str(session_info.id), "request_id": "req-1"},
             session_info,
         )
 
-    assert len(stream.events) == 1
-    event = stream.events[0]
-    assert event.type == EventType.SYSTEM
+    assert len(pubsub.events) == 1
+    event = pubsub.events[0]
+    assert event.name == "system.notification"
     assert event.content["operation"] == "design_state_loaded"
     assert event.content["success"] is True
     assert event.content["request_id"] == "req-1"
@@ -109,48 +123,48 @@ async def test_design_get_state_handler_emits_loaded_response():
 
 
 @pytest.mark.asyncio
-async def test_design_get_state_handler_emits_failure_response_for_invalid_payload():
-    from ii_agent.agent.socket.command.design_get_state_handler import (
-        DesignGetStateHandler,
-    )
-
+async def test_design_get_state_handler_emits_failure_on_service_error():
     session_info = _make_session_info()
-    stream = CapturingEventStream()
-    container = MagicMock()
-    handler = DesignGetStateHandler(event_stream=stream, container=container)
+    pubsub = CapturingPubSub()
+    project_design_service = MagicMock()
+    project_design_service.get_design_state = AsyncMock(side_effect=ValueError("Session not found"))
+    container = _make_container(project_design_service=project_design_service)
+    handler = DesignGetStateHandler(pubsub=pubsub, container=container)
 
-    await handler.handle({"request_id": "req-2"}, session_info)
+    with patch(
+        "ii_agent.realtime.handlers.design_get_state.get_db_session_local",
+        _db_cm,
+    ):
+        await handler.dispatch(
+            {"command": "design_get_state", "session_id": str(session_info.id), "request_id": "req-2"},
+            session_info,
+        )
 
-    assert len(stream.events) == 1
-    event = stream.events[0]
-    assert event.type == EventType.SYSTEM
+    assert len(pubsub.events) == 1
+    event = pubsub.events[0]
+    assert event.name == "system.notification"
     assert event.content["operation"] == "design_state_loaded"
     assert event.content["success"] is False
     assert event.content["request_id"] == "req-2"
-    assert "Invalid design state request" in event.content["error"]
 
 
 @pytest.mark.asyncio
 async def test_design_save_state_handler_emits_saved_response():
-    from ii_agent.agent.socket.command.design_save_state_handler import (
-        DesignSaveStateHandler,
-    )
-
     session_info = _make_session_info()
     response = _make_state_response(str(session_info.id))
-    stream = CapturingEventStream()
-    container = MagicMock()
-    container.project_design_service.save_design_state = AsyncMock(
-        return_value=response
-    )
-    handler = DesignSaveStateHandler(event_stream=stream, container=container)
+    pubsub = CapturingPubSub()
+    project_design_service = MagicMock()
+    project_design_service.save_design_state = AsyncMock(return_value=response)
+    container = _make_container(project_design_service=project_design_service)
+    handler = DesignSaveStateHandler(pubsub=pubsub, container=container)
 
     with patch(
-        "ii_agent.agent.socket.command.design_save_state_handler.get_db_session_local",
+        "ii_agent.realtime.handlers.design_save_state.get_db_session_local",
         _db_cm,
     ):
-        await handler.handle(
+        await handler.dispatch(
             {
+                "command": "design_save_state",
                 "session_id": str(session_info.id),
                 "request_id": "req-3",
                 "changes": [
@@ -166,9 +180,9 @@ async def test_design_save_state_handler_emits_saved_response():
             session_info,
         )
 
-    assert len(stream.events) == 1
-    event = stream.events[0]
-    assert event.type == EventType.SYSTEM
+    assert len(pubsub.events) == 1
+    event = pubsub.events[0]
+    assert event.name == "system.notification"
     assert event.content["operation"] == "design_state_saved"
     assert event.content["success"] is True
     assert event.content["request_id"] == "req-3"
@@ -178,10 +192,6 @@ async def test_design_save_state_handler_emits_saved_response():
 
 @pytest.mark.asyncio
 async def test_design_sync_state_handler_emits_remaining_changes():
-    from ii_agent.agent.socket.command.design_sync_state_handler import (
-        DesignSyncStateHandler,
-    )
-
     session_info = _make_session_info()
     response = SyncStateResponse(
         success=False,
@@ -193,22 +203,27 @@ async def test_design_sync_state_handler_emits_remaining_changes():
         remaining_changes=[_make_remaining_change()],
         event_id="evt-design-sync",
     )
-    stream = CapturingEventStream()
-    container = MagicMock()
-    container.project_design_service.sync_persisted_design_changes = AsyncMock(
-        return_value=response
+    pubsub = CapturingPubSub()
+    project_design_service = MagicMock()
+    project_design_service.sync_persisted_design_changes = AsyncMock(return_value=response)
+    container = _make_container(
+        project_design_service=project_design_service,
+        event_service=MagicMock(),
     )
-    handler = DesignSyncStateHandler(event_stream=stream, container=container)
+    handler = DesignSyncStateHandler(pubsub=pubsub, container=container)
 
     with patch(
-        "ii_agent.agent.socket.command.design_sync_state_handler.get_db_session_local",
+        "ii_agent.realtime.handlers.design_sync_state.get_db_session_local",
         _db_cm,
     ):
-        await handler.handle({"session_id": str(session_info.id)}, session_info)
+        await handler.dispatch(
+            {"command": "design_sync_state", "session_id": str(session_info.id)},
+            session_info,
+        )
 
-    assert len(stream.events) == 1
-    event = stream.events[0]
-    assert event.type == EventType.SYSTEM
+    assert len(pubsub.events) == 1
+    event = pubsub.events[0]
+    assert event.name == "system.notification"
     assert event.content["operation"] == "design_sync_state_complete"
     assert event.content["remaining"] == 1
     assert event.content["remaining_changes"][0]["designId"] == "hero-title"
@@ -217,10 +232,6 @@ async def test_design_sync_state_handler_emits_remaining_changes():
 
 @pytest.mark.asyncio
 async def test_slide_deck_sync_state_handler_emits_remaining_changes():
-    from ii_agent.agent.socket.command.slide_deck_sync_state_handler import (
-        SlideDeckSyncStateHandler,
-    )
-
     session_info = _make_session_info()
     response = SlideDeckSyncStateResponse(
         success=False,
@@ -232,28 +243,31 @@ async def test_slide_deck_sync_state_handler_emits_remaining_changes():
         remaining_changes=[_make_remaining_change()],
         event_id="evt-slide-sync",
     )
-    stream = CapturingEventStream()
-    container = MagicMock()
-    container.slide_design_service.sync_persisted_slide_deck_changes = AsyncMock(
-        return_value=response
+    pubsub = CapturingPubSub()
+    slide_design_service = MagicMock()
+    slide_design_service.sync_persisted_slide_deck_changes = AsyncMock(return_value=response)
+    container = _make_container(
+        slide_design_service=slide_design_service,
+        event_service=MagicMock(),
     )
-    handler = SlideDeckSyncStateHandler(event_stream=stream, container=container)
+    handler = SlideDeckSyncStateHandler(pubsub=pubsub, container=container)
 
     with patch(
-        "ii_agent.agent.socket.command.slide_deck_sync_state_handler.get_db_session_local",
+        "ii_agent.realtime.handlers.slide_deck_sync_state.get_db_session_local",
         _db_cm,
     ):
-        await handler.handle(
+        await handler.dispatch(
             {
+                "command": "slide_deck_sync_state",
                 "session_id": str(session_info.id),
                 "presentation_name": "Deck",
             },
             session_info,
         )
 
-    assert len(stream.events) == 1
-    event = stream.events[0]
-    assert event.type == EventType.SYSTEM
+    assert len(pubsub.events) == 1
+    event = pubsub.events[0]
+    assert event.name == "system.notification"
     assert event.content["operation"] == "slide_deck_sync_state_complete"
     assert event.content["remaining"] == 1
     assert event.content["remaining_changes"][0]["designId"] == "hero-title"

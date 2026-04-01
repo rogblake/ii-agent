@@ -15,6 +15,7 @@ pytestmark = pytest.mark.unit
 # composio/cache_service.py - ComposioCacheService
 # ===========================================================================
 
+
 class TestComposioCacheServiceGetAllToolkits:
     @pytest.mark.asyncio
     async def test_returns_none_when_cache_miss(self):
@@ -124,7 +125,9 @@ class TestComposioCacheServiceSetToolkitDetails:
         ):
             await ComposioCacheService.set_toolkit_details("gmail", {"slug": "gmail"})
             args, kwargs = mock_set.call_args
-            assert "composio:toolkit:gmail" in args or "composio:toolkit:gmail" == kwargs.get("key", args[0] if args else "")
+            assert "composio:toolkit:gmail" in args or "composio:toolkit:gmail" == kwargs.get(
+                "key", args[0] if args else ""
+            )
 
 
 class TestComposioCacheServiceGetToolkitActions:
@@ -233,6 +236,7 @@ class TestComposioCacheServiceInvalidateToolkit:
         from ii_agent.integrations.connectors.composio.cache_service import ComposioCacheService
 
         evicted_keys = []
+
         async def mock_evict(key):
             evicted_keys.append(key)
 
@@ -263,6 +267,7 @@ class TestComposioCacheServiceInvalidateAll:
         from ii_agent.integrations.connectors.composio.cache_service import ComposioCacheService
 
         evicted_keys = []
+
         async def mock_evict(key):
             evicted_keys.append(key)
 
@@ -304,6 +309,7 @@ class TestComposioCacheServiceGetActionDisplayName:
 # ===========================================================================
 # composio/toolkit_service.py - ToolkitService helpers
 # ===========================================================================
+
 
 class TestToDict:
     def test_dict_returned_as_is(self):
@@ -420,6 +426,7 @@ class TestSlugifyToDisplayName:
 class TestExtractToolkitInfo:
     def _make_service(self):
         from ii_agent.integrations.connectors.composio.toolkit_service import ToolkitService
+
         svc = ToolkitService.__new__(ToolkitService)
         svc.client = MagicMock()
         return svc
@@ -438,8 +445,15 @@ class TestExtractToolkitInfo:
 
     def test_returns_toolkit_info_for_known_app(self):
         from ii_agent.integrations.connectors.composio.toolkit_service import ToolkitInfo
+
         svc = self._make_service()
-        item = {"no_auth": False, "key": "gmail", "name": "Gmail", "meta": {}, "auth_schemes": ["OAUTH2"]}
+        item = {
+            "no_auth": False,
+            "key": "gmail",
+            "name": "Gmail",
+            "meta": {},
+            "auth_schemes": ["OAUTH2"],
+        }
         result = svc._extract_toolkit_info(item)
         assert result is not None
         assert isinstance(result, ToolkitInfo)
@@ -514,7 +528,9 @@ class TestSearchToolkits:
     async def test_returns_empty_when_no_match(self):
         from ii_agent.integrations.connectors.composio.toolkit_service import ToolkitService
 
-        toolkits = [{"slug": "slack", "name": "Slack", "description": "Messaging", "categories_info": []}]
+        toolkits = [
+            {"slug": "slack", "name": "Slack", "description": "Messaging", "categories_info": []}
+        ]
         mock_response = {"success": True, "toolkits": toolkits}
 
         svc = ToolkitService.__new__(ToolkitService)
@@ -547,6 +563,7 @@ class TestSearchToolkits:
 class TestMatchesSearch:
     def _make_service(self):
         from ii_agent.integrations.connectors.composio.toolkit_service import ToolkitService
+
         svc = ToolkitService.__new__(ToolkitService)
         svc.client = MagicMock()
         return svc
@@ -566,7 +583,7 @@ class TestMatchesSearch:
         toolkit = {
             "name": "App",
             "description": None,
-            "categories_info": [{"name": "productivity"}]
+            "categories_info": [{"name": "productivity"}],
         }
         assert svc._matches_search(toolkit, "productivity") is True
 
@@ -584,12 +601,14 @@ class TestMatchesSearch:
 class TestParseAuthConfigField:
     def _make_service(self):
         from ii_agent.integrations.connectors.composio.toolkit_service import ToolkitService
+
         svc = ToolkitService.__new__(ToolkitService)
         svc.client = MagicMock()
         return svc
 
     def test_parses_field_from_dict(self):
         from ii_agent.integrations.connectors.composio.toolkit_service import AuthConfigField
+
         svc = self._make_service()
 
         field_data = {
@@ -634,6 +653,7 @@ class TestGetToolkitBySlug:
 # ===========================================================================
 # connectors/router.py - Helper functions
 # ===========================================================================
+
 
 class TestCreateStateToken:
     def test_creates_token_with_user_id(self):
@@ -714,6 +734,7 @@ class TestVerifyStateToken:
 # ===========================================================================
 # composio/router.py - HTTP endpoint logic
 # ===========================================================================
+
 
 class TestComposioRouterListToolkits:
     @pytest.mark.asyncio

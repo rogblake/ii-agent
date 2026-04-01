@@ -26,19 +26,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.agent.runtime.models.google.gemini import (
+from ii_agent.agents.models.google.gemini import (
     Gemini,
     _normalize_function_definition,
     format_function_definitions,
     format_image_for_message,
     prepare_response_schema,
 )
-from ii_agent.agent.runtime.models.message import Message, File
-from ii_agent.agent.runtime.models.metrics import Metrics
-from ii_agent.agent.runtime.models.response import ModelResponse
-from ii_agent.agent.runtime.exceptions import ModelProviderError
-from ii_agent.agent.runtime.media import Image
-from ii_agent.agent.types import Provider
+from ii_agent.agents.models.message import Message, File
+from ii_agent.agents.models.metrics import Metrics
+from ii_agent.agents.models.response import ModelResponse
+from ii_agent.agents.exceptions import ModelProviderError
+from ii_agent.files.media import Image
+from ii_agent.agents.types import Provider
 
 # Real SDK types used for building response mocks
 from google.genai.types import Content, Part
@@ -47,6 +47,7 @@ from google.genai.types import Content, Part
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_gemini(**kwargs) -> Gemini:
     g = Gemini(**kwargs)
@@ -128,6 +129,7 @@ def _make_function_call_content(name: str, args: dict, role: str = "model") -> C
 # 1. Gemini class defaults
 # ---------------------------------------------------------------------------
 
+
 class TestGeminiDefaults:
     def test_default_id(self):
         assert Gemini().id == "gemini-2.0-flash-001"
@@ -185,6 +187,7 @@ class TestGeminiDefaults:
 # 2. _normalize_function_definition
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeFunctionDefinition:
     def test_none_returns_none(self):
         assert _normalize_function_definition(None) is None
@@ -216,12 +219,14 @@ class TestNormalizeFunctionDefinition:
     def test_unrecognised_returns_none(self):
         class Opaque:
             pass
+
         assert _normalize_function_definition(Opaque()) is None
 
 
 # ---------------------------------------------------------------------------
 # 3. format_function_definitions
 # ---------------------------------------------------------------------------
+
 
 class TestFormatFunctionDefinitions:
     def test_empty_list_returns_tool_object(self):
@@ -261,6 +266,7 @@ class TestFormatFunctionDefinitions:
 # 4. format_image_for_message
 # ---------------------------------------------------------------------------
 
+
 class TestFormatImageForMessage:
     def test_image_with_bytes_content(self):
         img = MagicMock(spec=Image)
@@ -299,6 +305,7 @@ class TestFormatImageForMessage:
 # 5. prepare_response_schema
 # ---------------------------------------------------------------------------
 
+
 class TestPrepareResponseSchema:
     def test_returns_json_schema(self):
         class MyModel(BaseModel):
@@ -313,6 +320,7 @@ class TestPrepareResponseSchema:
 # ---------------------------------------------------------------------------
 # 6. get_request_params
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiGetRequestParams:
     def test_temperature_in_config(self):
@@ -375,6 +383,7 @@ class TestGeminiGetRequestParams:
 # ---------------------------------------------------------------------------
 # 7. _format_messages
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiFormatMessages:
     def test_system_message_extracted(self):
@@ -491,6 +500,7 @@ class TestGeminiFormatMessages:
     def test_assistant_with_thought_signature(self):
         g = _make_gemini()
         import base64
+
         sig_bytes = b"signature_bytes"
         sig_b64 = base64.b64encode(sig_bytes).decode("ascii")
         tool_calls = [
@@ -518,6 +528,7 @@ class TestGeminiFormatMessages:
 # ---------------------------------------------------------------------------
 # 8. format_function_call_results
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiFormatFunctionCallResults:
     def test_appends_combined_tool_message(self):
@@ -553,6 +564,7 @@ class TestGeminiFormatFunctionCallResults:
 # ---------------------------------------------------------------------------
 # 9. _parse_provider_response
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiParseProviderResponse:
     def test_text_content_parsed(self):
@@ -613,6 +625,7 @@ class TestGeminiParseProviderResponse:
 # 10. _get_metrics
 # ---------------------------------------------------------------------------
 
+
 class TestGeminiGetMetrics:
     def test_input_tokens_set(self):
         g = _make_gemini()
@@ -657,6 +670,7 @@ class TestGeminiGetMetrics:
 # 11. __deepcopy__
 # ---------------------------------------------------------------------------
 
+
 class TestGeminiDeepcopy:
     def test_client_set_to_none(self):
         g = Gemini(api_key="key123", temperature=0.5)
@@ -682,10 +696,12 @@ class TestGeminiDeepcopy:
 # 12. ainvoke error handling
 # ---------------------------------------------------------------------------
 
+
 class TestGeminiAinvokeErrors:
     @pytest.mark.asyncio
     async def test_client_error_raises_model_provider_error(self):
         from google.genai.errors import ClientError
+
         g = _make_gemini(api_key="key")
         err = MagicMock(spec=ClientError)
         err.__class__ = ClientError
@@ -701,9 +717,7 @@ class TestGeminiAinvokeErrors:
     @pytest.mark.asyncio
     async def test_generic_exception_raises_model_provider_error(self):
         g = _make_gemini(api_key="key")
-        g.client.aio.models.generate_content = AsyncMock(
-            side_effect=Exception("unexpected")
-        )
+        g.client.aio.models.generate_content = AsyncMock(side_effect=Exception("unexpected"))
         msgs = [Message(role="user", content="hello")]
         assistant = Message(role="assistant", content="")
         with pytest.raises(ModelProviderError):
@@ -712,6 +726,7 @@ class TestGeminiAinvokeErrors:
     @pytest.mark.asyncio
     async def test_httpx_timeout_raises_model_provider_error(self):
         import httpx
+
         g = _make_gemini(api_key="key")
         g.client.aio.models.generate_content = AsyncMock(
             side_effect=httpx.TimeoutException("timed out")
@@ -727,9 +742,7 @@ class TestGeminiAinvokeErrors:
         # (only ainvoke_stream has the "client has been closed" special case)
         g = _make_gemini(api_key="key")
         g.client.aio.models.generate_content = AsyncMock(
-            side_effect=RuntimeError(
-                "Cannot send a request, as the client has been closed"
-            )
+            side_effect=RuntimeError("Cannot send a request, as the client has been closed")
         )
         msgs = [Message(role="user", content="hello")]
         assistant = Message(role="assistant", content="")
@@ -739,6 +752,7 @@ class TestGeminiAinvokeErrors:
     @pytest.mark.asyncio
     async def test_httpcore_read_error_raises_model_provider_error(self):
         import httpcore
+
         g = _make_gemini(api_key="key")
         g.client.aio.models.generate_content = AsyncMock(
             side_effect=httpcore.ReadError("read error")
@@ -752,6 +766,7 @@ class TestGeminiAinvokeErrors:
 # ---------------------------------------------------------------------------
 # 13. _parse_provider_response_delta
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiParseProviderResponseDelta:
     def _make_chunk(self, content: Optional[Content] = None, usage=None):
@@ -818,6 +833,7 @@ class TestGeminiParseProviderResponseDelta:
 # ---------------------------------------------------------------------------
 # 14. ainvoke happy path
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiAinvokeHappyPath:
     @pytest.mark.asyncio

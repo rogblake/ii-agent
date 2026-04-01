@@ -17,7 +17,7 @@ from ii_agent.settings.mcp.schemas import (
 )
 
 
-router = APIRouter(prefix="/user-settings/mcp", tags=["User MCP Settings Management"])
+router = APIRouter(prefix="/mcp", tags=["User MCP Settings Management"])
 
 
 @router.get("/codex", response_model=Optional[MCPSettingInfo])

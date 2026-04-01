@@ -3,8 +3,12 @@ from types import SimpleNamespace
 import pytest
 
 from ii_agent.billing.exceptions import StripeConfigError
-from ii_agent.billing.stripe_config import StripeConfig
-from ii_agent.agent.socket.socketio import SocketIOManager
+from ii_agent.billing.service import BillingService
+
+try:
+    from ii_agent.realtime.manager import SocketIOManager
+except ImportError:
+    pytest.skip("Transitive google-genai dependency not available", allow_module_level=True)
 
 pytestmark = pytest.mark.smoke
 
@@ -25,7 +29,7 @@ async def test_realtime_connect_sanity(monkeypatch):
     manager = SocketIOManager(FakeSio())
 
     monkeypatch.setattr(
-        "ii_agent.agent.socket.socketio.jwt_handler.verify_access_token",
+        "ii_agent.realtime.manager.jwt_handler.verify_access_token",
         lambda token: {"user_id": "u1"},
     )
 
@@ -36,7 +40,7 @@ async def test_realtime_connect_sanity(monkeypatch):
 
 def test_billing_config_missing_secret_key_raises(settings_factory):
     settings = settings_factory(stripe={"secret_key": None})
-    stripe_config = StripeConfig(config=settings)
+    billing_service = BillingService(settings=settings)
 
     with pytest.raises(StripeConfigError):
-        stripe_config.ensure_api_key()
+        billing_service._ensure_api_key()

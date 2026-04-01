@@ -8,7 +8,9 @@ pytestmark = pytest.mark.integration
 def test_deployment_context_utility_flow(settings_factory):
     service = DeploymentOrchestrationService(config=settings_factory())
 
-    project_path = service.resolve_project_path("./frontend", type("Session", (), {"workspace_dir": "/workspace/s1"}))
+    project_path = service.resolve_project_path(
+        "./frontend", type("Session", (), {"workspace_dir": "/workspace/s1"})
+    )
     project_name = service.resolve_project_name("My App", project_path, cloud_run=False)
     service_name, suffix = service.generate_service_name(project_name, "session-1", prefix="ii")
 

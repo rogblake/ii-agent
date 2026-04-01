@@ -274,42 +274,32 @@ class TestPromptBuilder:
     def test_build_settings_constraint_empty_when_no_settings(self):
         from ii_agent.chat.media.utils.prompt_builder import PromptBuilder
 
-        result = PromptBuilder.build_settings_constraint(
-            aspect_ratio=None, resolution=None
-        )
+        result = PromptBuilder.build_settings_constraint(aspect_ratio=None, resolution=None)
         assert result == ""
 
     def test_build_settings_constraint_includes_aspect_ratio(self):
         from ii_agent.chat.media.utils.prompt_builder import PromptBuilder
 
-        result = PromptBuilder.build_settings_constraint(
-            aspect_ratio="16:9", resolution=None
-        )
+        result = PromptBuilder.build_settings_constraint(aspect_ratio="16:9", resolution=None)
         assert "16:9" in result
 
     def test_build_settings_constraint_includes_resolution(self):
         from ii_agent.chat.media.utils.prompt_builder import PromptBuilder
 
-        result = PromptBuilder.build_settings_constraint(
-            aspect_ratio=None, resolution="1024x1024"
-        )
+        result = PromptBuilder.build_settings_constraint(aspect_ratio=None, resolution="1024x1024")
         assert "1024x1024" in result
 
     def test_build_settings_constraint_with_both(self):
         from ii_agent.chat.media.utils.prompt_builder import PromptBuilder
 
-        result = PromptBuilder.build_settings_constraint(
-            aspect_ratio="4:3", resolution="2048x2048"
-        )
+        result = PromptBuilder.build_settings_constraint(aspect_ratio="4:3", resolution="2048x2048")
         assert "4:3" in result
         assert "2048x2048" in result
 
     def test_build_mini_tool_hint_includes_id_and_name(self):
         from ii_agent.chat.media.utils.prompt_builder import PromptBuilder
 
-        result = PromptBuilder.build_mini_tool_hint(
-            mini_tool_id="my-id", mini_tool_name="My Name"
-        )
+        result = PromptBuilder.build_mini_tool_hint(mini_tool_id="my-id", mini_tool_name="My Name")
         assert "my-id" in result
         assert "My Name" in result
 

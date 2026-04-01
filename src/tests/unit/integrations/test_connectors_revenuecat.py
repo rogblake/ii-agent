@@ -109,9 +109,7 @@ async def test_handle_callback_falls_back_to_default_redirect_uri():
     with (
         patch(
             "ii_agent.integrations.connectors.revenuecat.get_settings",
-            return_value=_settings(
-                revenuecat_redirect_uri="https://app.local/default-callback"
-            ),
+            return_value=_settings(revenuecat_redirect_uri="https://app.local/default-callback"),
         ),
         patch.object(
             connector,

@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Icon } from '../ui/icon'
 import { Sheet, SheetClose, SheetContent, SheetHeader } from '../ui/sheet'
-import { PROVIDER_MODELS, PROVIDERS_NAME } from '@/constants/models'
+import { PROVIDER_MODELS, PROVIDERS_NAME, getProviderKey } from '@/constants/models'
 import {
     Select,
     SelectContent,
@@ -41,7 +41,7 @@ const FormSchema = z.object({
     model: z
         .object({
             model: z.string(),
-            api_type: z.string()
+            api_type: z.string().optional()
         })
         .optional(),
     custom_model_name: z.string().optional(),
@@ -151,16 +151,17 @@ const AddEditModel = ({
                 const config = await settingsService.getModelById(
                     editingModel?.id
                 )
-                setSelectedProvider(config?.api_type)
+                const providerKey = getProviderKey(config)
+                setSelectedProvider(providerKey)
                 setEditModelData(config)
                 let modelObj: { model: string; api_type: string } | undefined =
                     PROVIDER_MODELS[
-                        config?.api_type as keyof typeof PROVIDER_MODELS
+                        providerKey as keyof typeof PROVIDER_MODELS
                     ]?.find((m) => m.model === config?.model)
                 if (!modelObj) {
                     modelObj = {
                         model: 'custom',
-                        api_type: config.api_type
+                        api_type: providerKey
                     }
                     form.setValue('custom_model_name', config.model)
                 }

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 
-import { PROVIDERS_NAME } from '@/constants/models'
+import { PROVIDERS_NAME, getProviderKey } from '@/constants/models'
 import {
     selectAvailableModels,
     selectSelectedModel,
@@ -94,6 +94,7 @@ const ModelSetting = ({ className }: ModelSettingProps) => {
             </p>
             {availableModels?.map((model) => {
                 const isActive = selectedModel === model?.id
+                const providerKey = getProviderKey(model)
 
                 return (
                     <div
@@ -107,17 +108,17 @@ const ModelSetting = ({ className }: ModelSettingProps) => {
                             <div
                                 className={`rounded-full size-[46px] flex items-center justify-center`}
                             >
-                                {PROVIDERS_NAME[model?.api_type] && (
+                                {PROVIDERS_NAME[providerKey] && (
                                     <img
-                                        src={`/images/${model?.api_type}.svg`}
-                                        alt={model?.api_type}
+                                        src={`/images/${providerKey}.svg`}
+                                        alt={providerKey}
                                         className="size-[46px] object-contain"
                                     />
                                 )}
                             </div>
                             <div>
                                 <p className="text-base font-semibold dark:text-white">
-                                    {PROVIDERS_NAME[model?.api_type]}
+                                    {PROVIDERS_NAME[providerKey]}
                                 </p>
                                 <p className="mt-1 dark:text-white text-sm">
                                     {model?.model}

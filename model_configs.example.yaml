@@ -1,0 +1,89 @@
+# II-Agent LLM Model Configurations
+# Copy this file to model_configs.yaml and fill in your API keys.
+# Set LLM_CONFIGS_FILE=model_configs.yaml in .env to use this file.
+#
+# Each top-level key is a model identifier used throughout the system.
+# The "default" key is required — it's the fallback model for all agent runs.
+#
+# Supported api_type values: openai, anthropic, gemini, custom
+
+# ─── Default Model (required) ────────────────────────────────────
+# Pick ONE provider as default. Uncomment the block you want to use.
+
+# Option A: OpenAI
+# default:
+#   model: gpt-4o
+#   api_key: sk-proj-...
+#   api_type: openai
+
+# Option B: Anthropic (direct API)
+# default:
+#   model: claude-sonnet-4-20250514
+#   api_key: sk-ant-...
+#   api_type: anthropic
+
+# Option C: Google Gemini
+# default:
+#   model: gemini-2.5-flash
+#   api_key: AIza...
+#   api_type: gemini
+
+# ─── Additional Models (optional) ────────────────────────────────
+# Add as many models as you like. The key format is typically:
+#   provider/model-name  (e.g., openai/gpt-4o, gemini/gemini-2.5-pro)
+
+# openai/gpt-4o:
+#   model: gpt-4o
+#   api_key: sk-proj-...
+#   api_type: openai
+#   max_retries: 10
+#   max_message_chars: 30000
+#   temperature: 0.0
+#   thinking_tokens: 0
+
+# gemini/gemini-2.5-flash:
+#   model: gemini-2.5-flash
+#   api_key: AIza...
+#   api_type: gemini
+#   max_retries: 3
+#   max_message_chars: 30000
+#   temperature: 0.0
+#   thinking_tokens: 0
+
+# ─── Anthropic via Vertex AI (requires GOOGLE_APPLICATION_CREDENTIALS) ──
+# vertex/claude-sonnet-4-20250514:
+#   model: claude-sonnet-4-20250514
+#   api_type: anthropic
+#   vertex_region: us-east5
+#   vertex_project_id: your-gcp-project-id
+#   max_retries: 3
+#   max_message_chars: 30000
+#   temperature: 0.0
+#   thinking_tokens: 10000
+
+# ─── Custom / Self-hosted ────────────────────────────────────────
+# my-local-model:
+#   model: my-model
+#   api_key: lm-studio-key
+#   base_url: http://localhost:1234/v1
+#   api_type: custom
+#   max_retries: 3
+#   temperature: 0.7
+
+# ─── All Available Fields ────────────────────────────────────────
+# model:                  (required) Model identifier for the API
+# api_key:                (optional) API key — omit for Vertex AI service account auth
+# api_type:               (required) openai | anthropic | gemini | custom
+# base_url:               (optional) Custom API endpoint
+# application_model_name: (optional) Display name override
+# max_retries:            (default: 10) Max retry attempts
+# max_message_chars:      (default: 30000) Max chars per message
+# temperature:            (default: 0.0) Sampling temperature
+# thinking_tokens:        (default: 16000) Extended thinking budget
+# vertex_region:          (optional) GCP region for Vertex AI
+# vertex_project_id:      (optional) GCP project for Vertex AI
+# azure_endpoint:         (optional) Azure OpenAI endpoint
+# azure_api_version:      (optional) Azure API version
+# cot_model:              (default: false) Chain-of-thought model flag
+# is_default:             (default: false) Mark as default model
+# display_name:           (optional) Human-readable display name

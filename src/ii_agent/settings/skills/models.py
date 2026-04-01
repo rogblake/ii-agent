@@ -7,7 +7,7 @@ Models migrated from core/db/models.py:
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Boolean, Text, ForeignKey, Index, UniqueConstraint, text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from datetime import datetime, timezone
 from typing import Optional, List, TYPE_CHECKING
 from enum import Enum
@@ -17,7 +17,7 @@ from ii_agent.core.db.base import Base, TimestampColumn
 
 # Forward references for relationships
 if TYPE_CHECKING:
-    from ii_agent.auth.users.models import User
+    from ii_agent.users.models import User
 
 
 class SkillSource(str, Enum):
@@ -41,11 +41,9 @@ class Skill(Base):
 
     __tablename__ = "skills"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-
     # NULL = builtin/shared, UUID = user-specific
-    user_id: Mapped[Optional[str]] = mapped_column(
-        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
 
     # Core identity (from SKILL.md frontmatter)

@@ -55,6 +55,7 @@ export enum RunStatus {
     PAUSED = 'paused',
     ABORTING = 'aborting',
     ABORTED = 'aborted',
+    CANCELLED = 'cancelled',
     FAILED = 'failed',
     ERROR = 'error',
     SYSTEM_INTERRUPTED = 'system_interrupted'
@@ -65,6 +66,7 @@ const TERMINAL_STATUSES: ReadonlySet<string> = new Set([
     RunStatus.FAILED,
     RunStatus.ERROR,
     RunStatus.ABORTED,
+    RunStatus.CANCELLED,
     RunStatus.SYSTEM_INTERRUPTED
 ])
 
@@ -77,50 +79,116 @@ export type Source = {
     url: string
 }
 
+export enum ErrorCode {
+    // Validation
+    VALIDATION_ERROR = 'validation_error',
+    UNSUPPORTED_API_VERSION = 'unsupported_api_version',
+    // Auth
+    AUTH_ERROR = 'auth_error',
+    SESSION_EXPIRED = 'session_expired',
+    SESSION_ERROR = 'session_error',
+    // Throttle
+    RATE_LIMIT = 'rate_limit',
+    // Resource
+    RUN_NOT_FOUND = 'run_not_found',
+    SESSION_NOT_FOUND = 'session_not_found',
+    PROJECT_NOT_FOUND = 'project_not_found',
+    MISSING_PROJECT_PATH = 'missing_project_path',
+    MISSING_CREDENTIALS = 'missing_credentials',
+    // Deployment
+    DEPLOY_FAILED = 'deploy_failed',
+    DEPLOY_LINK_FAILED = 'deploy_link_failed',
+    SANDBOX_CONNECTION_FAILED = 'sandbox_connection_failed',
+    SOURCE_DOWNLOAD_FAILED = 'source_download_failed',
+    // Billing
+    INSUFFICIENT_CREDITS = 'insufficient_credits',
+    // Execution
+    EXECUTION_ERROR = 'execution_error',
+    UNEXPECTED_ERROR = 'unexpected_error',
+    INTERNAL_ERROR = 'internal_error',
+    CONCURRENT_OPERATION = 'concurrent_operation',
+    DUPLICATE_TASK = 'duplicate_task',
+    // Sandbox
+    SANDBOX_ERROR = 'sandbox_error',
+    // Integration: Apple
+    NAME_TAKEN = 'name_taken',
+    BUNDLE_ID_TAKEN = 'bundle_id_taken',
+    BUNDLE_ERROR = 'bundle_error',
+    CERTIFICATE_ERROR = 'certificate_error',
+    // Integration: Other
+    ENHANCE_PROMPT_ERROR = 'enhance_prompt_error',
+    // Fork
+    INVALID_FORK_SESSION = 'invalid_fork_session',
+    UNKNOWN_FORK_TYPE = 'unknown_fork_type',
+    // Design mode
+    DESIGN_SYNC_STATE_ERROR = 'design_sync_state_error',
+    SLIDE_DECK_SYNC_STATE_ERROR = 'slide_deck_sync_state_error',
+}
+
 export enum AgentEvent {
-    AGENT_INITIALIZED = 'agent_initialized',
-    USER_MESSAGE = 'user_message',
-    CONNECTION_ESTABLISHED = 'connection_established',
-    WORKSPACE_INFO = 'workspace_info',
-    PROCESSING = 'processing',
-    AGENT_THINKING_START = 'agent_thinking_start',
-    AGENT_THINKING = 'agent_thinking',
-    AGENT_THINKING_DELTA = 'agent_thinking_delta',
-    TOOL_CALL = 'tool_call',
-    TOOL_RESULT = 'tool_result',
-    TOOL_CONFIRMATION = 'tool_confirmation',
-    AGENT_RESPONSE = 'agent_response',
-    AGENT_RESPONSE_DELTA = 'agent_response_delta',
-    COMPLETE = 'complete',
-    ERROR = 'error',
-    SYSTEM = 'system',
-    PONG = 'pong',
-    UPLOAD_SUCCESS = 'upload_success',
-    BROWSER_USE = 'browser_use',
-    FILE_EDIT = 'file_edit',
-    AGENT_RESPONSE_INTERRUPTED = 'agent_response_interrupted',
-    AGENT_CONTINUE = 'agent_continue',
-    STATUS_UPDATE = 'status_update',
-    SANDBOX_STATUS = 'sandbox_status',
-    SUB_AGENT_COMPLETE = 'sub_agent_complete',
-    MODEL_COMPACT = 'model_compact',
-    PLAN_GENERATED = 'plan_generated',
-    MILESTONE_UPDATE = 'milestone_update',
-    PLAN_MODIFICATION_OPTIONS = 'plan_modification_options',
-    WAITING_FOR_USER_INPUT = 'waiting_for_user_input',
-    TESTFLIGHT_LOG = 'testflight_log',
-    // Apple authentication events
-    APPLE_AUTH_STATUS = 'apple_auth_status',
-    APPLE_2FA_REQUIRED = 'apple_2fa_required',
-    APPLE_TEAM_SELECTION = 'apple_team_selection',
-    APPLE_APP_SETUP_STATUS = 'apple_app_setup_status',
-    APPLE_APPS_LIST = 'apple_apps_list',
-    APPLE_AUTH_CHECK_RESULT = 'apple_auth_check_result',
-    EXPO_TOKEN_SAVED = 'expo_token_saved',
-    // File explorer events
-    FILE_TREE = 'file_tree',
-    FILE_CONTENT = 'file_content',
-    FILE_TREE_UPDATE = 'file_tree_update'
+    // Agent events — values are the canonical dotted names from BE BaseEvent.name
+    AGENT_INITIALIZED = 'agent.initialized',
+    PROCESSING = 'agent.processing',
+    AGENT_REASONING_START = 'agent.reasoning.start',
+    AGENT_REASONING = 'agent.reasoning',
+    AGENT_REASONING_DELTA = 'agent.reasoning.delta',
+    TOOL_CALL = 'agent.tool.call',
+    TOOL_RESULT = 'agent.tool.result',
+    TOOL_CONFIRMATION = 'agent.tool.confirmation',
+    AGENT_RESPONSE = 'agent.response',
+    AGENT_RESPONSE_DELTA = 'agent.response.delta',
+    AGENT_RESPONSE_INTERRUPTED = 'agent.response.interrupted',
+    COMPLETE = 'agent.complete',
+    STREAM_COMPLETE = 'agent.stream.complete',
+    SUB_AGENT_COMPLETE = 'agent.sub_agent.complete',
+    MODEL_COMPACT = 'agent.model.compact',
+    AGENT_CONTINUE = 'agent.continue',
+    PROMPT_GENERATED = 'agent.prompt.generated',
+    STATUS_UPDATE = 'agent.status.update',
+
+    // Session events
+    USER_MESSAGE = 'session.user_message',
+
+    // Connection events
+    CONNECTION_ESTABLISHED = 'connection.established',
+    WORKSPACE_INFO = 'connection.workspace_info',
+
+    // Sandbox events
+    SANDBOX_STATUS = 'sandbox.status_changed',
+
+    // Billing / metrics events
+    METRICS_UPDATE = 'billing.metrics.updated',
+
+    // Plan events
+    PLAN_GENERATED = 'plan.milestone.generated',
+    MILESTONE_UPDATE = 'plan.milestone.updated',
+    PLAN_MODIFICATION_OPTIONS = 'plan.modification.options',
+    WAITING_FOR_USER_INPUT = 'plan.input.awaited',
+
+    // File events
+    UPLOAD_SUCCESS = 'file.uploaded',
+    FILE_EDIT = 'file.edited',
+    FILE_TREE = 'file.tree.listed',
+    FILE_CONTENT = 'file.content.read',
+    FILE_TREE_UPDATE = 'file.tree.updated',
+
+    // Media events
+    BROWSER_USE = 'media.browser_screenshot',
+
+    // System events
+    ERROR = 'system.error',
+    PONG = 'system.pong',
+    SYSTEM = 'system.notification',
+
+    // Integration events
+    APPLE_AUTH_STATUS = 'integration.apple.auth.status',
+    APPLE_2FA_REQUIRED = 'integration.apple.auth.2fa_required',
+    APPLE_TEAM_SELECTION = 'integration.apple.auth.team_selection',
+    APPLE_APP_SETUP_STATUS = 'integration.apple.app.setup_status',
+    APPLE_APPS_LIST = 'integration.apple.app.list',
+    APPLE_AUTH_CHECK_RESULT = 'integration.apple.auth.check_result',
+    EXPO_TOKEN_SAVED = 'integration.expo.token_saved',
+    TESTFLIGHT_LOG = 'integration.testflight.log'
 }
 
 export enum TOOL {
@@ -254,13 +322,13 @@ export enum TOOL {
 export type Plan = {
     id: string
     content: string
-    status: 'pending' | 'in_progress' | 'completed'
+    status: 'pending' | 'in_progress' | 'completed' | 'failed'
 }
 
 export type Milestone = {
     id: string
     content: string
-    status: 'pending' | 'in_progress' | 'completed'
+    status: 'pending' | 'in_progress' | 'completed' | 'failed'
     details?: string
     dependencies?: string[]
 }
@@ -487,12 +555,16 @@ export interface ISession {
 
 export interface IEvent {
     id: string
-    type: AgentEvent
+    name: AgentEvent
     content: Record<string, unknown>
-    timestamp: string
-    workspace_dir: string
     run_id?: string
     session_id?: string
+    run_status?: string | null
+    timestamp?: string
+    created_at?: string
+    /** Raw event name stored in DB — kept for backward compatibility. */
+    event_type?: string
+    event_group?: string
 }
 
 export interface ToolSettings {
@@ -665,6 +737,247 @@ export interface IMCPTool {
     url: string
     config: Record<string, unknown>
     isRequireKey?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Command types — must match BE CommandType (StrEnum) in realtime/schemas.py
+// ---------------------------------------------------------------------------
+
+export enum CommandType {
+    QUERY = 'query',
+    PLAN = 'plan',
+    INIT_AGENT = 'init_agent',
+    ENHANCE_PROMPT = 'enhance_prompt',
+    START_FORK = 'start_fork',
+    CONTINUE_RUN = 'continue_run',
+    PUBLISH_PROJECT = 'publish',
+    PUBLISH_CLOUD_RUN = 'publish_cloud_run',
+    SAVE_ENV = 'save_env',
+    SUBMIT_TESTFLIGHT = 'submit_testflight',
+    PING = 'ping',
+    CANCEL = 'cancel',
+    SANDBOX_STATUS = 'sandbox_status',
+    AWAKE_SANDBOX = 'awake_sandbox',
+    WORKSPACE_INFO = 'workspace_info',
+    APPLE_AUTH_LOGIN = 'apple_auth_login',
+    APPLE_AUTH_2FA = 'apple_auth_2fa',
+    APPLE_AUTH_SELECT_TEAM = 'apple_auth_select_team',
+    APPLE_APP_SETUP = 'apple_app_setup',
+    APPLE_LIST_APPS = 'apple_list_apps',
+    APPLE_CHECK_AUTH = 'apple_check_auth',
+    SAVE_EXPO_TOKEN = 'save_expo_token',
+
+    // Design mode
+    DESIGN_GET_STATE = 'design_get_state',
+    DESIGN_SAVE_STATE = 'design_save_state',
+    DESIGN_SYNC_STATE = 'design_sync_state',
+    SLIDE_DECK_SYNC_STATE = 'slide_deck_sync_state'
+}
+
+// ---------------------------------------------------------------------------
+// Per-command content payloads — discriminated by `command` field
+// Each matches the BE Pydantic content model
+// ---------------------------------------------------------------------------
+
+interface QueryContent {
+    command: CommandType.QUERY
+    model_id?: string
+    provider?: string
+    source?: 'user' | 'system'
+    agent_type?: string
+    tool_args?: Record<string, unknown>
+    thinking_tokens?: number
+    metadata?: Record<string, unknown>
+    text?: string
+    resume?: boolean
+    files?: string[]
+    github_repository?: Record<string, string>
+    build_mode?: 'build' | 'plan' | 'design' | 'help' | 'modify_plan' | 'modify_plan_suggestions'
+    milestone_ids?: string[]
+    plan_context?: Record<string, unknown>
+}
+
+interface PlanContent {
+    command: CommandType.PLAN
+    model_id?: string
+    provider?: string
+    source?: 'user' | 'system'
+    agent_type?: string
+    tool_args?: Record<string, unknown>
+    thinking_tokens?: number
+    metadata?: Record<string, unknown>
+    text?: string
+    resume?: boolean
+    files?: string[]
+    github_repository?: Record<string, string>
+    build_mode?: 'build' | 'plan' | 'design' | 'help' | 'modify_plan' | 'modify_plan_suggestions'
+    milestone_ids?: string[]
+    plan_context?: Record<string, unknown>
+}
+
+interface InitAgentPayload {
+    command: CommandType.INIT_AGENT
+    model_name?: string
+    tool_args?: Record<string, unknown>
+    source?: 'user' | 'system'
+    thinking_tokens?: number
+    agent_type?: string
+    metadata?: Record<string, unknown>
+}
+
+interface ContinueRunPayload {
+    command: CommandType.CONTINUE_RUN
+    run_id: string
+    confirmed: boolean
+    user_input?: Record<string, string>
+}
+
+interface PublishProjectPayload {
+    command: CommandType.PUBLISH_PROJECT
+    project_path?: string
+    project_name?: string
+    vercel_api_key?: string
+    credentials?: Record<string, unknown>
+    token?: string
+    env_vars?: Record<string, string>
+}
+
+interface CloudRunPublishPayload {
+    command: CommandType.PUBLISH_CLOUD_RUN
+    project_path?: string
+    project_name?: string
+    env_vars?: Record<string, string>
+    credentials?: Record<string, unknown>
+}
+
+interface StartForkPayload {
+    command: CommandType.START_FORK
+    model_id?: string
+    source?: 'user' | 'system'
+    agent_type?: string
+    tool_args?: Record<string, unknown>
+    thinking_tokens?: number
+    metadata?: Record<string, unknown>
+}
+
+interface SaveEnvPayload {
+    command: CommandType.SAVE_ENV
+    tool_call_id: string
+    tool_name: string
+    secrets?: Array<Record<string, unknown>> | Record<string, string>
+    project_directory?: string
+    tool_args?: Record<string, unknown>
+}
+
+interface SubmitTestflightPayload {
+    command: CommandType.SUBMIT_TESTFLIGHT
+    expo_token?: string
+    bundle_identifier?: string
+    asc_app_id?: string
+    app_specific_password?: string
+    [key: string]: unknown
+}
+
+interface AppleAuthLoginPayload {
+    command: CommandType.APPLE_AUTH_LOGIN
+    apple_id: string
+    password: string
+}
+
+interface AppleAuth2FAPayload {
+    command: CommandType.APPLE_AUTH_2FA
+    code: string
+}
+
+interface AppleAuthSelectTeamPayload {
+    command: CommandType.APPLE_AUTH_SELECT_TEAM
+    team_id: string
+}
+
+interface AppleAppSetupPayload {
+    command: CommandType.APPLE_APP_SETUP
+    bundle_identifier: string
+    app_name: string
+    password?: string
+}
+
+interface SaveExpoTokenPayload {
+    command: CommandType.SAVE_EXPO_TOKEN
+    expo_token: string
+}
+
+interface EnhancePromptPayload {
+    command: CommandType.ENHANCE_PROMPT
+    text?: string
+    files?: string[]
+}
+
+interface DesignGetStatePayload {
+    command: CommandType.DESIGN_GET_STATE
+    session_id: string
+    request_id?: string
+}
+
+interface DesignSaveStatePayload {
+    command: CommandType.DESIGN_SAVE_STATE
+    session_id: string
+    changes: unknown[]
+    redo_changes?: unknown[]
+    request_id?: string
+}
+
+interface DesignSyncStatePayload {
+    command: CommandType.DESIGN_SYNC_STATE
+    session_id: string
+    request_id?: string
+}
+
+interface SlideDeckSyncStatePayload {
+    command: CommandType.SLIDE_DECK_SYNC_STATE
+    session_id: string
+    presentation_name: string
+}
+
+interface EmptyCommandPayload<T extends CommandType> {
+    command: T
+    [key: string]: unknown
+}
+
+export type CommandPayload =
+    | QueryContent
+    | PlanContent
+    | InitAgentPayload
+    | ContinueRunPayload
+    | PublishProjectPayload
+    | CloudRunPublishPayload
+    | StartForkPayload
+    | SaveEnvPayload
+    | SubmitTestflightPayload
+    | AppleAuthLoginPayload
+    | AppleAuth2FAPayload
+    | AppleAuthSelectTeamPayload
+    | AppleAppSetupPayload
+    | SaveExpoTokenPayload
+    | EnhancePromptPayload
+    | EmptyCommandPayload<CommandType.PING>
+    | EmptyCommandPayload<CommandType.CANCEL>
+    | EmptyCommandPayload<CommandType.SANDBOX_STATUS>
+    | EmptyCommandPayload<CommandType.AWAKE_SANDBOX>
+    | EmptyCommandPayload<CommandType.WORKSPACE_INFO>
+    | EmptyCommandPayload<CommandType.APPLE_LIST_APPS>
+    | EmptyCommandPayload<CommandType.APPLE_CHECK_AUTH>
+    | DesignGetStatePayload
+    | DesignSaveStatePayload
+    | DesignSyncStatePayload
+    | SlideDeckSyncStatePayload
+
+/**
+ * Envelope for every ``chat_message`` Socket.IO event.
+ * FE sends ``session_uuid`` + ``content`` with ``command`` inside content.
+ */
+export interface ChatMessagePayload {
+    session_uuid: string
+    content: CommandPayload
 }
 
 export enum AGENT_TYPE {

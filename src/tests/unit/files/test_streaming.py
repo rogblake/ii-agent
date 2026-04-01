@@ -1,4 +1,6 @@
+import io
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -22,12 +24,11 @@ class FakeSessionRepo:
 
 
 @pytest.mark.asyncio
-async def test_get_file_stream_denies_non_owner(settings_factory, in_memory_storage):
+async def test_get_file_stream_denies_non_owner(settings_factory):
     service = FileService(
         file_repo=FakeFileRepo(file_record=None),
         session_repo=FakeSessionRepo(),
-        file_store=in_memory_storage,
-        media_store=None,
+        storage=MagicMock(),
         config=settings_factory(),
     )
 
@@ -36,12 +37,11 @@ async def test_get_file_stream_denies_non_owner(settings_factory, in_memory_stor
 
 
 @pytest.mark.asyncio
-async def test_get_public_file_stream_requires_file(settings_factory, in_memory_storage):
+async def test_get_public_file_stream_requires_file(settings_factory):
     service = FileService(
         file_repo=FakeFileRepo(file_record=None),
         session_repo=FakeSessionRepo(),
-        file_store=in_memory_storage,
-        media_store=None,
+        storage=MagicMock(),
         config=settings_factory(),
     )
 
@@ -50,9 +50,8 @@ async def test_get_public_file_stream_requires_file(settings_factory, in_memory_
 
 
 @pytest.mark.asyncio
-async def test_get_file_stream_returns_streaming_response(settings_factory, in_memory_storage):
+async def test_get_file_stream_returns_streaming_response(settings_factory):
     path = "users/u1/uploads/f1-file.txt"
-    in_memory_storage.write(b"hello world", path)
     file_record = SimpleNamespace(
         id="f1",
         file_name="file.txt",
@@ -61,11 +60,13 @@ async def test_get_file_stream_returns_streaming_response(settings_factory, in_m
         storage_path=path,
     )
 
+    storage_mock = MagicMock()
+    storage_mock.read = AsyncMock(return_value=io.BytesIO(b"hello world"))
+
     service = FileService(
         file_repo=FakeFileRepo(file_record=file_record),
         session_repo=FakeSessionRepo(),
-        file_store=in_memory_storage,
-        media_store=None,
+        storage=storage_mock,
         config=settings_factory(),
     )
 

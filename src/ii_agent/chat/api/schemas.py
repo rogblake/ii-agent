@@ -5,7 +5,7 @@ from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from ii_agent.billing.usage.models import TokenUsage
+from ii_agent.billing.schemas import TokenUsage
 from ii_agent.chat.types import (
     CouncilPreferences,
     MediaPreferences,
@@ -171,7 +171,7 @@ class ModelsListResponse(BaseModel):
 class SessionMetadata(BaseModel):
     """Chat session metadata."""
 
-    session_id: str = Field(..., description="Unique session identifier")
+    session_id: UUID = Field(..., description="Unique session identifier")
     name: str | None = Field(None, description="Session name")
     title_pending: bool = Field(
         False,

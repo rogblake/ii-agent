@@ -4,80 +4,55 @@ from __future__ import annotations
 
 import logging
 
-from ii_agent.core.config.settings import get_settings
-
-from .health import health_router
 import socketio
 from fastapi import FastAPI
 
+from ii_agent.core.config.settings import get_settings
+from ii_agent.core.redis import get_session_manager
+
+from .health import health_router
+from .lifespan import create_lifespan
+
 logger = logging.getLogger(__name__)
 
-# Module-level Socket.IO instance (set during app creation)
-sio: socketio.AsyncServer | None = None
+PROD_ENV = {"production", "prod"}
 
 
-def create_lifespan():
-    """Return the application lifespan context manager factory."""
-    from .lifespan import create_lifespan as _create_lifespan
-
-    return _create_lifespan()
-
-
-def create_app():
+def create_app() -> socketio.ASGIApp:
     """Create and configure the FastAPI application with Socket.IO integration."""
-    from .middleware import configure_exception_handlers, configure_middleware
+    from .middleware import configure_middleware
     from .routers import include_routers
 
     settings = get_settings()
-    docs_enabled = settings.environment != "production"
+    docs_enabled = settings.environment not in PROD_ENV
 
-    app = FastAPI(
-        title="Agent Socket.IO API",
-        lifespan=create_lifespan(),
-        docs_url="/docs" if docs_enabled else None,
-        redoc_url="/redoc" if docs_enabled else None,
-        openapi_url="/openapi.json" if docs_enabled else None,
-    )
-
-    configure_middleware(app, settings)
-    configure_exception_handlers(app)
-
-    app.state.workspace = settings.workspace_path
-    include_routers(app)
-
-    global sio
-    try:
-        from ii_agent.agent.socket.socketio import SocketIOManager
-    except Exception as exc:  # pragma: no cover - defensive bootstrap fallback
-        sio = None
-        app.state.sio = None
-        logger.warning(
-            "Socket.IO manager unavailable during app creation: %s",
-            exc,
-            exc_info=True,
-        )
-        return app
-
-    from ii_agent.core.redis import session_manager
-
+    # Socket.IO server — must exist before lifespan (wraps the ASGI app)
     sio = socketio.AsyncServer(
         async_mode="asgi",
         cors_allowed_origins="*",
         ping_timeout=300,
         ping_interval=30,
         max_http_buffer_size=10 * 1024 * 1024,
-        client_manager=session_manager,
+        client_manager=get_session_manager(),
     )
 
-    sio_manager = SocketIOManager(sio)
-    app.state.sio_manager = sio_manager
+    app = FastAPI(
+        title="Agent Socket.IO API",
+        lifespan=create_lifespan(sio),
+        docs_url="/docs" if docs_enabled else None,
+        redoc_url="/redoc" if docs_enabled else None,
+        openapi_url="/openapi.json" if docs_enabled else None,
+    )
+
+    configure_middleware(app, settings)
+    include_routers(app)
+
     app.state.sio = sio
+
     return socketio.ASGIApp(sio, app)
 
 
 __all__ = [
     "create_app",
-    "create_lifespan",
     "health_router",
-    "sio",
 ]

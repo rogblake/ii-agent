@@ -1,4 +1,5 @@
 """Unit tests for chat tools: storybook_generate, image_generate, code_interpreter."""
+
 from __future__ import annotations
 
 import json
@@ -126,7 +127,10 @@ class TestStorybookGenerationToolInit:
 class TestGetContentSceneCap:
     def _make_tool_with_page_count(self, page_count_value=None):
         """Create tool with explicit page_count on the tool (not from prefs)."""
-        from ii_agent.chat.tools.storybook_generate import StorybookGenerationTool, MAX_CONTENT_SCENES
+        from ii_agent.chat.tools.storybook_generate import (
+            StorybookGenerationTool,
+            MAX_CONTENT_SCENES,
+        )
 
         tool = StorybookGenerationTool(
             session_id="sess-001",
@@ -238,7 +242,10 @@ class TestResolveTextPosition:
         assert result == "bottom"
 
     def test_invalid_position_falls_back_to_default(self):
-        from ii_agent.chat.tools.storybook_generate import StorybookGenerationTool, DEFAULT_TEXT_POSITION
+        from ii_agent.chat.tools.storybook_generate import (
+            StorybookGenerationTool,
+            DEFAULT_TEXT_POSITION,
+        )
 
         tool = StorybookGenerationTool(
             session_id="sess-001",
@@ -317,9 +324,7 @@ class TestEnhancePromptWithStyle:
 
     def test_includes_style_when_provided(self):
         tool = self._make_tool()
-        result = tool._enhance_prompt_with_style(
-            "a forest scene", "watercolor art style"
-        )
+        result = tool._enhance_prompt_with_style("a forest scene", "watercolor art style")
         assert "watercolor art style" in result
 
     def test_includes_borderless_note(self):
@@ -329,9 +334,7 @@ class TestEnhancePromptWithStyle:
 
     def test_reference_type_style_only_adds_note(self):
         tool = self._make_tool()
-        result = tool._enhance_prompt_with_style(
-            "prompt", "", reference_type="style_only"
-        )
+        result = tool._enhance_prompt_with_style("prompt", "", reference_type="style_only")
         assert "style" in result.lower()
 
     def test_composition_rule_appended(self):

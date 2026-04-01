@@ -35,15 +35,6 @@ def configure_middleware(app: FastAPI, settings: Settings) -> None:
 
     app.middleware("http")(request_tracing_middleware)
     app.middleware("http")(exception_logging_middleware)
-    app.add_middleware(GZipMiddleware)
 
-    @app.middleware("http")
-    async def normalize_mcp_path(request: Request, call_next):
-        if request.scope.get("path") == "/mcp":
-            request.scope["path"] = "/mcp/"
-        return await call_next(request)
-
-
-def configure_exception_handlers(app: FastAPI) -> None:
-    """Register application exception handlers."""
     app.exception_handler(IIAgentError)(ii_agent_error_handler)
+    app.add_middleware(GZipMiddleware)

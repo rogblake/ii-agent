@@ -6,12 +6,14 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.auth.models import WaitlistEntry
-from ii_agent.auth.users.repository import APIKeyRepository, UserRepository
-from ii_agent.auth.users.waitlist_repository import WaitlistRepository
-from ii_agent.billing.credits.balance_repository import CreditBalanceRepository
-from ii_agent.billing.repository import BillingTransactionRepository
-from ii_agent.billing.usage.repository import MetricsRepository
+from ii_agent.users.models import WaitlistEntry
+from ii_agent.users.repository import APIKeyRepository, UserRepository
+from ii_agent.users.waitlist_repository import WaitlistRepository
+from ii_agent.credits.repository import CreditBalanceRepository
+try:
+    from ii_agent.billing.repository import BillingTransactionRepository
+except ImportError:
+    BillingTransactionRepository = None  # type: ignore[misc, assignment]
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -122,7 +124,9 @@ async def test_user_repository_optional_branches_and_not_found_paths(
     assert user.first_name == "Final Name"
 
     # Credit operations now go through CreditBalanceRepository
-    regular_credit_update = await balance_repo.add_credits(db_session, user.id, Decimal("3.0"), is_bonus=False)
+    regular_credit_update = await balance_repo.add_credits(
+        db_session, user.id, Decimal("3.0"), is_bonus=False
+    )
     # Returns (old_credits, old_bonus, new_credits, new_bonus)
     assert tuple(float(v) for v in regular_credit_update) == (5.0, 2.0, 8.0, 2.0)
 
@@ -150,6 +154,7 @@ async def test_user_repository_uniqueness_conflict_rolls_back_savepoint(
     assert still_present.id == created.id
 
 
+@pytest.mark.skipif(BillingTransactionRepository is None, reason="BillingTransactionRepository removed")
 async def test_billing_transaction_repository_create_lookup_and_conflict(
     db_session: AsyncSession,
     user_factory,
@@ -178,23 +183,6 @@ async def test_billing_transaction_repository_create_lookup_and_conflict(
                 status="paid",
             )
 
-
-async def test_metrics_repository_create_get_and_unique_session_constraint(
-    db_session: AsyncSession,
-    session_factory,
-) -> None:
-    session = await session_factory()
-    repo = MetricsRepository()
-
-    created = await repo.create(db_session, session.id, 1.25)
-    fetched = await repo.get_by_session_id(db_session, session.id)
-    assert fetched is not None
-    assert fetched.id == created.id
-    assert fetched.credits == 1.25
-
-    with pytest.raises(IntegrityError):
-        async with db_session.begin_nested():
-            await repo.create(db_session, session.id, 2.0)
 
 
 async def test_waitlist_repository_case_insensitive_lookup(

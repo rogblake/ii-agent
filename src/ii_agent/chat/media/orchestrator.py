@@ -35,10 +35,12 @@ def _ensure_handlers_registered() -> None:
     from .handlers import infographic_handler  # noqa: F401
     from .handlers import poster_handler  # noqa: F401
     from .handlers import storybook_handler  # noqa: F401
+
     _handlers_loaded = True
 
+
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +54,12 @@ class MediaContext:
     LLM message parts, and configuration.
     """
 
-    tool_name: str                                  # Primary tool name, e.g., "generate_image"
-    tools: List[BaseTool]                           # All tool instances for this media type
+    tool_name: str  # Primary tool name, e.g., "generate_image"
+    tools: List[BaseTool]  # All tool instances for this media type
     llm_message_parts: List[BinaryContent | TextContent]  # Reference images with labels
-    tool_hint: str                                  # Prompt context to append to user message
-    should_clear_context: bool                      # Whether to clear conversation context
-    system_prompt_addition: str = ""                 # Additional system prompt (e.g., video director prompt)
+    tool_hint: str  # Prompt context to append to user message
+    should_clear_context: bool  # Whether to clear conversation context
+    system_prompt_addition: str = ""  # Additional system prompt (e.g., video director prompt)
 
 
 class MediaOrchestrator:
@@ -94,7 +96,7 @@ class MediaOrchestrator:
         *,
         session_id: str,
         media_type: str = "image",
-        container: ServiceContainer,
+        container: ApplicationContainer,
     ) -> List[BaseTool]:
         """
         Prepare default media generation tools for chat mode without full context.
@@ -117,6 +119,7 @@ class MediaOrchestrator:
         handler_class = get_handler(media_type)
         if not handler_class:
             from .registry import list_handlers
+
             logger.error(f"[MEDIA] No handler registered for media type: {media_type}")
             logger.error(f"[MEDIA] Available handlers: {list_handlers()}")
             raise ValueError(f"No handler registered for media type: {media_type}")
@@ -152,7 +155,7 @@ class MediaOrchestrator:
         session_id: str,
         media_preferences: MediaPreferences,
         chat_request: ChatMessageRequest,
-        container: ServiceContainer,
+        container: ApplicationContainer,
     ) -> MediaContext:
         """
         Prepare media generation context (messages, tools, metadata).
@@ -176,6 +179,7 @@ class MediaOrchestrator:
         handler_class = get_handler(media_preferences.type)
         if not handler_class:
             from .registry import list_handlers
+
             logger.error(f"[MEDIA] No handler registered for media type: {media_preferences.type}")
             logger.error(f"[MEDIA] Available handlers: {list_handlers()}")
             raise ValueError(f"No handler registered for media type: {media_preferences.type}")
@@ -215,7 +219,7 @@ class MediaOrchestrator:
 
         # 6. Build system prompt addition if handler supports it
         system_prompt_addition = ""
-        if hasattr(handler, 'build_system_prompt_addition'):
+        if hasattr(handler, "build_system_prompt_addition"):
             system_prompt_addition = handler.build_system_prompt_addition(media_preferences)
 
         return MediaContext(

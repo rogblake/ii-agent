@@ -15,6 +15,7 @@ from .conftest import make_element_context, make_style_change
 # _extract_class_attr_from_outer_html
 # ---------------------------------------------------------------------------
 
+
 class TestExtractClassAttrFromOuterHtml:
     def test_extracts_class(self):
         html = '<div class="foo bar">text</div>'
@@ -37,6 +38,7 @@ class TestExtractClassAttrFromOuterHtml:
 # ---------------------------------------------------------------------------
 # _extract_literal_class_attr_from_tag
 # ---------------------------------------------------------------------------
+
 
 class TestExtractLiteralClassAttrFromTag:
     def test_class_name(self):
@@ -64,6 +66,7 @@ class TestExtractLiteralClassAttrFromTag:
 # ---------------------------------------------------------------------------
 # _verify_design_mode_target_matches_context
 # ---------------------------------------------------------------------------
+
 
 class TestVerifyDesignModeTargetMatchesContext:
     def test_no_context_ok(self):

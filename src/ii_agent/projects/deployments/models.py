@@ -3,14 +3,15 @@ from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import BigInteger, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ii_agent.core.db.base import Base, TimestampColumn
+from ii_agent.projects.deployments.types import DeploymentProvider, DeploymentStatus
 
 if TYPE_CHECKING:
     from ii_agent.projects.models import Project
-    from ii_agent.auth.users.models import User
+    from ii_agent.users.models import User
 
 
 class ProjectDeployment(Base):
@@ -27,31 +28,30 @@ class ProjectDeployment(Base):
 
     __tablename__ = "project_deployments"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id: Mapped[str] = mapped_column(
-        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
 
     # === Existing fields (kept for backward compatibility) ===
     environment: Mapped[str] = mapped_column(String, nullable=False)
-    deployment_status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
+    deployment_status: Mapped[DeploymentStatus] = mapped_column(String, nullable=False, default=DeploymentStatus.PENDING)
     deployment_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     started_at: Mapped[Optional[datetime]] = mapped_column(TimestampColumn, nullable=True)
     deployed_at: Mapped[Optional[datetime]] = mapped_column(TimestampColumn, nullable=True)
     finished_at: Mapped[Optional[datetime]] = mapped_column(TimestampColumn, nullable=True)
     deploy_duration_ms: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    deployed_by_user_id: Mapped[Optional[str]] = mapped_column(
-        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    deployed_by_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
     # === New fields for enhanced tracking ===
 
     # Deployment identification
-    provider: Mapped[str] = mapped_column(
+    provider: Mapped[DeploymentProvider] = mapped_column(
         String(50),
         nullable=False,
-        default="cloud_run",
+        default=DeploymentProvider.CLOUD_RUN,
         comment="Deployment platform: cloud_run, vercel",
     )
     version: Mapped[int] = mapped_column(

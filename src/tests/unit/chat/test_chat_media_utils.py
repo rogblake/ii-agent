@@ -73,9 +73,7 @@ class TestBuildReferenceGuidanceSingleType:
 
     def test_starting_index_offset_applied(self):
         refs = [_FakeMediaReference("subject")]
-        text, index_map, next_idx = PromptBuilder.build_reference_guidance(
-            refs, starting_index=3
-        )
+        text, index_map, next_idx = PromptBuilder.build_reference_guidance(refs, starting_index=3)
         assert index_map["subject"] == [3]
         assert "Image #3" in text
         assert next_idx == 4

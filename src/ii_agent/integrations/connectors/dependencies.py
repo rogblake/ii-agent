@@ -4,9 +4,12 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from ii_agent.core.config.settings import get_settings
+from ii_agent.core.dependencies import ContainerDep
 from ii_agent.integrations.connectors.repository import ConnectorRepository
 from ii_agent.integrations.connectors.service import ConnectorService
+
+
+# ==================== Repository Dependencies ====================
 
 
 def get_connector_repository() -> ConnectorRepository:
@@ -17,22 +20,11 @@ def get_connector_repository() -> ConnectorRepository:
 ConnectorRepositoryDep = Annotated[ConnectorRepository, Depends(get_connector_repository)]
 
 
-def get_connector_service(
-    connector_repo: ConnectorRepositoryDep,
-) -> ConnectorService:
-    """Provide ConnectorService instance with explicit config."""
-    return ConnectorService(
-        connector_repo=connector_repo,
-        config=get_settings(),
-    )
+# ==================== Service Dependencies ====================
 
 
-ConnectorServiceDep = Annotated[ConnectorService, Depends(get_connector_service)]
+def _get_connector_service(container: ContainerDep) -> ConnectorService:
+    return container.connector_service
 
 
-__all__ = [
-    "get_connector_repository",
-    "get_connector_service",
-    "ConnectorRepositoryDep",
-    "ConnectorServiceDep",
-]
+ConnectorServiceDep = Annotated[ConnectorService, Depends(_get_connector_service)]

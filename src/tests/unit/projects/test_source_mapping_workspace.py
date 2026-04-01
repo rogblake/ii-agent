@@ -94,9 +94,7 @@ class TestNormalizeWorkspaceFilePath:
         assert result == "/workspace/src/App.tsx"
 
     def test_nested_path(self):
-        result = _normalize_workspace_file_path(
-            "/workspace/my-app/src/components/Button.tsx"
-        )
+        result = _normalize_workspace_file_path("/workspace/my-app/src/components/Button.tsx")
         assert result == "/workspace/my-app/src/components/Button.tsx"
 
 
@@ -170,9 +168,7 @@ class TestNormalizeReactSourceFileName:
         assert result == "src/components/Button.tsx"
 
     def test_home_path_salvages_src_suffix(self):
-        result = _normalize_react_source_file_name(
-            "home/user/project/src/App.tsx"
-        )
+        result = _normalize_react_source_file_name("home/user/project/src/App.tsx")
         assert result == "src/App.tsx"
 
     def test_host_path_without_src_returns_none(self):
@@ -217,9 +213,7 @@ class TestWorkspaceRelativePath:
         assert result is None
 
     def test_nested_path(self):
-        result = _workspace_relative_path(
-            "/workspace/my-app/src/components/Button.tsx"
-        )
+        result = _workspace_relative_path("/workspace/my-app/src/components/Button.tsx")
         assert result == "my-app/src/components/Button.tsx"
 
 
@@ -332,18 +326,12 @@ class TestParseSearchPaths:
         assert "/workspace/lib/utils.ts" in result
 
     def test_deduplicates_paths(self):
-        output = (
-            "/workspace/src/App.tsx:10: content\n"
-            "/workspace/src/App.tsx:20: more content\n"
-        )
+        output = "/workspace/src/App.tsx:10: content\n/workspace/src/App.tsx:20: more content\n"
         result = _parse_search_paths(output)
         assert result.count("/workspace/src/App.tsx") == 1
 
     def test_preserves_order(self):
-        output = (
-            "/workspace/b.tsx:1: x\n"
-            "/workspace/a.tsx:1: y\n"
-        )
+        output = "/workspace/b.tsx:1: x\n/workspace/a.tsx:1: y\n"
         result = _parse_search_paths(output)
         assert result[0] == "/workspace/b.tsx"
         assert result[1] == "/workspace/a.tsx"
@@ -395,9 +383,7 @@ class TestGetWorkspaceTopLevelDirs:
     @pytest.mark.asyncio
     async def test_filters_out_node_modules(self):
         sandbox = MagicMock()
-        sandbox.run_command = AsyncMock(
-            return_value="/workspace/my-app\n/workspace/node_modules\n"
-        )
+        sandbox.run_command = AsyncMock(return_value="/workspace/my-app\n/workspace/node_modules\n")
         result = await _get_workspace_top_level_dirs(sandbox)
         assert "/workspace/my-app" in result
         assert "/workspace/node_modules" not in result
@@ -405,9 +391,7 @@ class TestGetWorkspaceTopLevelDirs:
     @pytest.mark.asyncio
     async def test_filters_out_git(self):
         sandbox = MagicMock()
-        sandbox.run_command = AsyncMock(
-            return_value="/workspace/my-app\n/workspace/.git\n"
-        )
+        sandbox.run_command = AsyncMock(return_value="/workspace/my-app\n/workspace/.git\n")
         result = await _get_workspace_top_level_dirs(sandbox)
         assert "/workspace/.git" not in result
 
@@ -426,9 +410,7 @@ class TestGetWorkspaceTopLevelDirs:
     @pytest.mark.asyncio
     async def test_filters_out_non_workspace_paths(self):
         sandbox = MagicMock()
-        sandbox.run_command = AsyncMock(
-            return_value="/workspace/my-app\n/home/other\n"
-        )
+        sandbox.run_command = AsyncMock(return_value="/workspace/my-app\n/home/other\n")
         result = await _get_workspace_top_level_dirs(sandbox)
         assert "/home/other" not in result
 
@@ -473,9 +455,7 @@ class TestReadFileWithWorkspaceFallback:
     async def test_returns_content_on_direct_read(self):
         sandbox = MagicMock()
         sandbox.read_file = AsyncMock(return_value="file content")
-        content, path = await _read_file_with_workspace_fallback(
-            sandbox, "/workspace/src/App.tsx"
-        )
+        content, path = await _read_file_with_workspace_fallback(sandbox, "/workspace/src/App.tsx")
         assert content == "file content"
         assert path == "/workspace/src/App.tsx"
 
@@ -483,9 +463,7 @@ class TestReadFileWithWorkspaceFallback:
     async def test_decodes_bytes_content(self):
         sandbox = MagicMock()
         sandbox.read_file = AsyncMock(return_value=b"bytes content")
-        content, path = await _read_file_with_workspace_fallback(
-            sandbox, "/workspace/src/App.tsx"
-        )
+        content, path = await _read_file_with_workspace_fallback(sandbox, "/workspace/src/App.tsx")
         assert content == "bytes content"
 
     @pytest.mark.asyncio
@@ -505,9 +483,7 @@ class TestReadFileWithWorkspaceFallback:
         sandbox.read_file = mock_read_file
         sandbox.run_command = AsyncMock(return_value="/workspace/my-project\n")
 
-        content, path = await _read_file_with_workspace_fallback(
-            sandbox, "/workspace/src/App.tsx"
-        )
+        content, path = await _read_file_with_workspace_fallback(sandbox, "/workspace/src/App.tsx")
         assert content == "subproject content"
         assert path == "/workspace/my-project/src/App.tsx"
 
@@ -518,9 +494,7 @@ class TestReadFileWithWorkspaceFallback:
         sandbox.run_command = AsyncMock(return_value="")  # No subdirs, no find result
 
         with pytest.raises((FileNotFoundError, Exception)):
-            await _read_file_with_workspace_fallback(
-                sandbox, "/workspace/src/App.tsx"
-            )
+            await _read_file_with_workspace_fallback(sandbox, "/workspace/src/App.tsx")
 
     @pytest.mark.asyncio
     async def test_find_fallback_used_when_subdir_fails(self):
@@ -539,9 +513,7 @@ class TestReadFileWithWorkspaceFallback:
             ]
         )
 
-        content, path = await _read_file_with_workspace_fallback(
-            sandbox, "/workspace/src/App.tsx"
-        )
+        content, path = await _read_file_with_workspace_fallback(sandbox, "/workspace/src/App.tsx")
         assert content == "found content"
 
 
@@ -556,9 +528,7 @@ class TestSearchWorkspaceForFixedString:
     @pytest.mark.asyncio
     async def test_returns_command_output(self):
         sandbox = MagicMock()
-        sandbox.run_command = AsyncMock(
-            return_value="/workspace/src/App.tsx:5: some match"
-        )
+        sandbox.run_command = AsyncMock(return_value="/workspace/src/App.tsx:5: some match")
         result = await _search_workspace_for_fixed_string(sandbox, "some match")
         assert "/workspace/src/App.tsx" in result
 

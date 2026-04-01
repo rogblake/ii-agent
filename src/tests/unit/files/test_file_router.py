@@ -16,11 +16,7 @@ from ii_agent.auth.dependencies import get_current_user
 from ii_agent.core.dependencies import _db_session_dependency
 from ii_agent.core.exceptions import IIAgentError, ValidationError
 from ii_agent.core.middleware import ii_agent_error_handler
-from ii_agent.files.dependencies import (
-    get_avatar_storage,
-    get_file_service,
-    get_file_upload_storage,
-)
+from ii_agent.files.dependencies import _get_file_service as get_file_service
 from ii_agent.files.exceptions import FileAccessDeniedError, FileUploadNotFoundError
 from ii_agent.files.router import router
 from ii_agent.sessions.dependencies import get_session_repository
@@ -90,11 +86,6 @@ def _make_session_repo(*, session=None) -> MagicMock:
     return repo
 
 
-def _make_storage() -> MagicMock:
-    storage = MagicMock()
-    return storage
-
-
 def _build_app(
     file_service: MagicMock,
     session_repo: MagicMock | None = None,
@@ -116,8 +107,7 @@ def _build_app(
     app.dependency_overrides[_db_session_dependency] = lambda: AsyncMock()
     app.dependency_overrides[get_file_service] = lambda: file_service
     app.dependency_overrides[get_session_repository] = lambda: _session_repo
-    app.dependency_overrides[get_file_upload_storage] = lambda: _make_storage()
-    app.dependency_overrides[get_avatar_storage] = lambda: _make_storage()
+
     app.dependency_overrides[get_settings] = lambda: _settings
 
     return app
@@ -138,6 +128,7 @@ def test_generate_upload_url_success():
     svc = _make_file_service(upload_url_result=upload_result)
 
     from ii_agent.files.schemas import GenerateUploadUrlResponse
+
     upload_result2 = GenerateUploadUrlResponse(
         id=_FILE_ID,
         upload_url="https://upload.example.com/signed",
@@ -164,6 +155,7 @@ def test_generate_upload_url_success():
 def test_generate_upload_url_calls_service_with_correct_params():
     """Assert: service is called with all required params."""
     from ii_agent.files.schemas import GenerateUploadUrlResponse
+
     result = GenerateUploadUrlResponse(id=_FILE_ID, upload_url="https://upload.local")
     svc = _make_file_service()
     svc.generate_upload_url = AsyncMock(return_value=result)
@@ -197,6 +189,7 @@ def test_upload_complete_with_session_success():
     session_repo = _make_session_repo(session=session)
 
     from ii_agent.files.schemas import UploadCompleteResponse
+
     result = UploadCompleteResponse(file_url="https://files.example.com/test.pdf")
     svc = _make_file_service(complete_result=result)
 
@@ -244,6 +237,7 @@ def test_upload_complete_session_not_owned_by_user():
 def test_upload_complete_without_session():
     """Arrange: no session_id; Act: POST upload-complete; Assert: 200 without session check."""
     from ii_agent.files.schemas import UploadCompleteResponse
+
     result = UploadCompleteResponse(file_url="https://files.example.com/test.pdf")
     svc = _make_file_service(complete_result=result)
     session_repo = _make_session_repo()
@@ -321,8 +315,7 @@ def test_download_public_file_success():
     app.dependency_overrides[_db_session_dependency] = lambda: AsyncMock()
     app.dependency_overrides[get_file_service] = lambda: svc
     app.dependency_overrides[get_session_repository] = lambda: session_repo
-    app.dependency_overrides[get_file_upload_storage] = lambda: _make_storage()
-    app.dependency_overrides[get_avatar_storage] = lambda: _make_storage()
+
 
     client = TestClient(app)
     resp = client.get(f"/public/chat/{_SESSION_ID}/files/{_FILE_ID}")
@@ -341,8 +334,7 @@ def test_download_public_file_session_not_found():
     app.dependency_overrides[_db_session_dependency] = lambda: AsyncMock()
     app.dependency_overrides[get_file_service] = lambda: svc
     app.dependency_overrides[get_session_repository] = lambda: session_repo
-    app.dependency_overrides[get_file_upload_storage] = lambda: _make_storage()
-    app.dependency_overrides[get_avatar_storage] = lambda: _make_storage()
+
 
     client = TestClient(app, raise_server_exceptions=False)
     resp = client.get(f"/public/chat/{_SESSION_ID}/files/{_FILE_ID}")
@@ -358,6 +350,7 @@ def test_download_public_file_session_not_found():
 def test_generate_download_urls_success():
     """Arrange: valid paths; Act: POST download-urls; Assert: signed URLs returned."""
     from ii_agent.files.schemas import GenerateDownloadUrlsResponse
+
     result = GenerateDownloadUrlsResponse(
         signed_urls=["https://signed.example.com/file1", None],
         missing_paths=[],
@@ -432,6 +425,7 @@ def test_list_user_media_library_success():
 def test_list_user_media_library_with_pagination():
     """Arrange: pagination params; Assert: service called with limit and offset."""
     from ii_agent.files.schemas import MediaLibraryResponse
+
     result = MediaLibraryResponse(items=[], total=0, limit=5, offset=10, has_more=False)
     svc = _make_file_service(media_library_result=result)
 
@@ -448,6 +442,7 @@ def test_list_user_media_library_with_pagination():
 def test_list_user_media_library_empty():
     """Arrange: no media; Assert: empty items list."""
     from ii_agent.files.schemas import MediaLibraryResponse
+
     result = MediaLibraryResponse(items=[], total=0, limit=12, offset=0, has_more=False)
     svc = _make_file_service(media_library_result=result)
 

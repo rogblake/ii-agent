@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -19,7 +20,7 @@ class SlideSyncChange(BaseModel):
 
 class SlideSyncBatchRequest(BaseModel):
     """Request to sync design changes to a single slide."""
-    session_id: str
+    session_id: UUID
     presentation_name: str
     slide_number: int
     changes: List[SlideSyncChange] = Field(default_factory=list)
@@ -44,7 +45,7 @@ class SlideDeckSyncChange(BaseModel):
 
 class SlideDeckSyncBatchRequest(BaseModel):
     """Request to sync design changes across multiple slides."""
-    session_id: str
+    session_id: UUID
     presentation_name: str
     changes: List[SlideDeckSyncChange] = Field(default_factory=list)
 
@@ -59,7 +60,7 @@ class SlideDeckSyncBatchResponse(BaseModel):
 
 class SlideDeckSyncStateRequest(BaseModel):
     """Request body for syncing persisted slide design-mode changes."""
-    session_id: str
+    session_id: UUID
     presentation_name: str
 
 

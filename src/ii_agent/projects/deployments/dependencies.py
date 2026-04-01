@@ -1,11 +1,18 @@
+"""FastAPI dependencies for deployments domain.
+
+Thin accessors that pull services from :class:`ApplicationContainer`.
+"""
+
 from typing import Annotated
 
 from fastapi import Depends
 
-from ii_agent.core.config.settings import get_settings
-from ii_agent.projects.dependencies import ProjectRepositoryDep
+from ii_agent.core.dependencies import ContainerDep
 from ii_agent.projects.deployments.repository import DeploymentsRepository
 from ii_agent.projects.deployments.service import DeploymentsService
+
+
+# ==================== Repository Dependencies ====================
 
 
 def get_deployments_repository() -> DeploymentsRepository:
@@ -16,16 +23,18 @@ def get_deployments_repository() -> DeploymentsRepository:
 DeploymentsRepositoryDep = Annotated[DeploymentsRepository, Depends(get_deployments_repository)]
 
 
-def get_deployments_service(
-    project_repo: ProjectRepositoryDep,
-    deployments_repo: DeploymentsRepositoryDep,
-) -> DeploymentsService:
-    """Provide DeploymentsService instance with explicit repo injection."""
-    return DeploymentsService(
-        project_repo=project_repo,
-        deployments_repo=deployments_repo,
-        config=get_settings(),
-    )
+# ==================== Service Dependencies (container-backed) =============
 
 
-DeploymentsServiceDep = Annotated[DeploymentsService, Depends(get_deployments_service)]
+def _get_deployments_service(container: ContainerDep) -> DeploymentsService:
+    return container.deployments_service
+
+
+DeploymentsServiceDep = Annotated[DeploymentsService, Depends(_get_deployments_service)]
+
+
+__all__ = [
+    "get_deployments_repository",
+    "DeploymentsRepositoryDep",
+    "DeploymentsServiceDep",
+]

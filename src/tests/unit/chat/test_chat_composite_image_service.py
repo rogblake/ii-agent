@@ -369,9 +369,7 @@ class TestRenderViaToolServer:
 
     async def test_http_error_wrapped_in_runtime_error(self):
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(
-            side_effect=httpx.HTTPError("Connection refused")
-        )
+        mock_client.post = AsyncMock(side_effect=httpx.HTTPError("Connection refused"))
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 

@@ -24,10 +24,11 @@ from ii_agent.integrations.connectors.google_drive import GoogleDriveConnector
 from ii_agent.integrations.connectors.revenuecat import RevenueCatConnector
 from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.core.storage.dependencies import StorageDep
+from ii_agent.core.storage.path_resolver import path_resolver
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(prefix="/connectors", tags=["Connectors"])
 router.include_router(composio_router)
 
 
@@ -157,7 +158,7 @@ def _verify_state_token(state: str, expected_user_id: str) -> dict:
 
 
 # Google Drive Endpoints
-@router.get("/connectors/google-drive/auth-url", response_model=ConnectorAuthUrlResponse)
+@router.get("/google-drive/auth-url", response_model=ConnectorAuthUrlResponse)
 async def get_google_drive_auth_url(
     db: DBSession,
     current_user: CurrentUser,
@@ -174,7 +175,7 @@ async def get_google_drive_auth_url(
         raise ConnectorConfigError(str(e)) from e
 
 
-@router.post("/connectors/google-drive/callback")
+@router.post("/google-drive/callback")
 async def google_drive_callback(
     request: ConnectorCallbackRequest,
     db: DBSession,
@@ -190,7 +191,7 @@ async def google_drive_callback(
     return {"success": True, "message": "Google Drive connected successfully"}
 
 
-@router.get("/connectors/google-drive/status", response_model=ConnectorStatusResponse)
+@router.get("/google-drive/status", response_model=ConnectorStatusResponse)
 async def get_google_drive_status(
     db: DBSession,
     current_user: CurrentUser,
@@ -208,7 +209,7 @@ async def get_google_drive_status(
 
 
 @router.get(
-    "/connectors/google-drive/picker-config",
+    "/google-drive/picker-config",
     response_model=GoogleDrivePickerConfigResponse,
 )
 async def get_google_drive_picker_config(
@@ -226,7 +227,7 @@ async def get_google_drive_picker_config(
     return GoogleDrivePickerConfigResponse(**picker_config)
 
 
-@router.post("/connectors/google-drive/files")
+@router.post("/google-drive/files")
 async def download_google_drive_files(
     request: GoogleDriveFilePickRequest,
     db: DBSession,
@@ -245,7 +246,7 @@ async def download_google_drive_files(
     from googleapiclient.http import MediaIoBaseDownload
     from sqlalchemy import select
 
-    from ii_agent.files import FileUpload
+    from ii_agent.files import FileAsset
 
     connector = ConnectorFactory.create(ConnectorTypeEnum.GOOGLE_DRIVE, db)
 
@@ -363,11 +364,12 @@ async def download_google_drive_files(
                 while not done:
                     status, done = downloader.next_chunk()
 
-                storage_path = f"users/{current_user.id}/google-drive/{file_id}/{file_metadata['name']}"
+                ext = file_metadata['name'].rsplit('.', 1)[-1] if '.' in file_metadata['name'] else 'bin'
+                storage_path = path_resolver.user_upload(current_user.id, file_id, ext)
                 fh.seek(0)
-                storage.write(fh, storage_path, file_metadata.get("mimeType"))
+                await storage.write(storage_path, fh, file_metadata.get("mimeType"))
 
-                file_upload = FileUpload(
+                file_upload = FileAsset(
                     user_id=current_user.id,
                     file_name=file_metadata["name"],
                     file_size=int(file_metadata.get("size", 0)),
@@ -401,7 +403,7 @@ async def download_google_drive_files(
         else:
             file_upload_id = folder_info["file_uploads"][0]
             result = await db.execute(
-                select(FileUpload).where(FileUpload.id == file_upload_id)
+                select(FileAsset).where(FileAsset.id == file_upload_id)
             )
             file_upload = result.scalar_one()
 
@@ -411,7 +413,7 @@ async def download_google_drive_files(
                     "name": file_upload.file_name,
                     "size": file_upload.file_size,
                     "mime_type": file_upload.content_type,
-                    "file_url": storage.get_download_signed_url(
+                    "file_url": await storage.signed_download_url(
                         file_upload.storage_path
                     ),
                     "is_folder": False,
@@ -423,7 +425,7 @@ async def download_google_drive_files(
     return {"success": True, "files": downloaded_files}
 
 
-@router.delete("/connectors/google-drive")
+@router.delete("/google-drive")
 async def disconnect_google_drive(
     db: DBSession,
     current_user: CurrentUser,
@@ -439,7 +441,7 @@ async def disconnect_google_drive(
 
 
 # GitHub Endpoints
-@router.get("/connectors/github/auth-url", response_model=ConnectorAuthUrlResponse)
+@router.get("/github/auth-url", response_model=ConnectorAuthUrlResponse)
 async def get_github_auth_url(
     db: DBSession,
     current_user: CurrentUser,
@@ -465,7 +467,7 @@ async def get_github_auth_url(
         raise ConnectorConfigError(str(e)) from e
 
 
-@router.post("/connectors/github/callback")
+@router.post("/github/callback")
 async def github_callback(
     request: ConnectorCallbackRequest,
     db: DBSession,
@@ -490,7 +492,7 @@ async def github_callback(
     return {"success": True, "message": "GitHub connected successfully"}
 
 
-@router.get("/connectors/github/status", response_model=ConnectorStatusResponse)
+@router.get("/github/status", response_model=ConnectorStatusResponse)
 async def get_github_status(
     db: DBSession,
     current_user: CurrentUser,
@@ -507,7 +509,7 @@ async def get_github_status(
     )
 
 
-@router.delete("/connectors/github")
+@router.delete("/github")
 async def disconnect_github(
     db: DBSession,
     current_user: CurrentUser,
@@ -522,7 +524,7 @@ async def disconnect_github(
     return {"success": True, "message": "GitHub disconnected successfully"}
 
 
-@router.get("/connectors/github/app-config", response_model=GitHubAppConfigResponse)
+@router.get("/github/app-config", response_model=GitHubAppConfigResponse)
 async def get_github_app_config(
     db: DBSession,
 ) -> GitHubAppConfigResponse:
@@ -537,7 +539,7 @@ async def get_github_app_config(
     return GitHubAppConfigResponse(**app_config)
 
 
-@router.get("/connectors/github/repositories", response_model=GitHubRepositoriesResponse)
+@router.get("/github/repositories", response_model=GitHubRepositoriesResponse)
 async def get_github_repositories(
     db: DBSession,
     current_user: CurrentUser,
@@ -571,7 +573,7 @@ async def get_github_repositories(
 
 
 # RevenueCat Endpoints
-@router.get("/connectors/revenuecat/auth-url", response_model=ConnectorAuthUrlResponse)
+@router.get("/revenuecat/auth-url", response_model=ConnectorAuthUrlResponse)
 async def get_revenuecat_auth_url(
     db: DBSession,
     current_user: CurrentUser,
@@ -601,7 +603,7 @@ async def get_revenuecat_auth_url(
         raise ConnectorConfigError(str(e)) from e
 
 
-@router.post("/connectors/revenuecat/callback")
+@router.post("/revenuecat/callback")
 async def revenuecat_callback(
     request: ConnectorCallbackRequest,
     db: DBSession,
@@ -627,7 +629,7 @@ async def revenuecat_callback(
     return {"success": True, "message": "RevenueCat connected successfully"}
 
 
-@router.get("/connectors/revenuecat/status", response_model=ConnectorStatusResponse)
+@router.get("/revenuecat/status", response_model=ConnectorStatusResponse)
 async def get_revenuecat_status(
     db: DBSession,
     current_user: CurrentUser,
@@ -644,7 +646,7 @@ async def get_revenuecat_status(
     )
 
 
-@router.delete("/connectors/revenuecat")
+@router.delete("/revenuecat")
 async def disconnect_revenuecat(
     db: DBSession,
     current_user: CurrentUser,

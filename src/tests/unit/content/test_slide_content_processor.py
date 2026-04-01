@@ -190,30 +190,22 @@ class TestGenerateStoragePathFromContent:
     def test_path_includes_content_hash(self):
         proc = _make_processor()
         content_hash = "deadbeef1234567890abcdef12345678"
-        result = proc._generate_storage_path_from_content(
-            content_hash, Path("/tmp/image.png")
-        )
+        result = proc._generate_storage_path_from_content(content_hash, Path("/tmp/image.png"))
         assert content_hash in result
 
     def test_path_includes_file_extension(self):
         proc = _make_processor()
-        result = proc._generate_storage_path_from_content(
-            "hash123", Path("/tmp/photo.jpg")
-        )
+        result = proc._generate_storage_path_from_content("hash123", Path("/tmp/photo.jpg"))
         assert result.endswith(".jpg")
 
     def test_png_extension_preserved(self):
         proc = _make_processor()
-        result = proc._generate_storage_path_from_content(
-            "hash123", Path("/tmp/image.png")
-        )
+        result = proc._generate_storage_path_from_content("hash123", Path("/tmp/image.png"))
         assert result.endswith(".png")
 
     def test_svg_extension_preserved(self):
         proc = _make_processor()
-        result = proc._generate_storage_path_from_content(
-            "hash123", Path("/tmp/icon.svg")
-        )
+        result = proc._generate_storage_path_from_content("hash123", Path("/tmp/icon.svg"))
         assert result.endswith(".svg")
 
     def test_no_extension_produces_no_dot_suffix(self):
@@ -251,9 +243,7 @@ class TestGenerateStoragePathFromContent:
 
     def test_uppercase_extension_preserved(self):
         proc = _make_processor()
-        result = proc._generate_storage_path_from_content(
-            "hash123", Path("/tmp/IMAGE.PNG")
-        )
+        result = proc._generate_storage_path_from_content("hash123", Path("/tmp/IMAGE.PNG"))
         assert result.endswith(".PNG")
 
 

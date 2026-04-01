@@ -46,6 +46,8 @@ import {
 import {
     AGENT_TYPE,
     BUILD_MODE,
+    ChatMessagePayload,
+    CommandType,
     Milestone,
     TAB,
     WebSocketConnectionState
@@ -105,12 +107,13 @@ export function useQuestionHandlers() {
                 unknown
             >
             const { _commandType, ...queryContent } = pendingQueryObj
+            const cmd = (_commandType as string) || CommandType.QUERY
             sendMessage({
-                type: (_commandType as string) || 'query',
+                session_uuid: activeSessionId,
                 content: {
-                    ...queryContent,
-                    session_uuid: activeSessionId // Attach session_uuid now that we have it
-                }
+                    command: cmd as CommandType,
+                    ...queryContent
+                } as ChatMessagePayload['content']
             })
             dispatch(setPendingQuery(null))
         }
@@ -347,11 +350,14 @@ export function useQuestionHandlers() {
         }
 
         // Determine command type based on build mode
-        const commandType = buildModeValue === 'build' ? 'query' : 'plan'
+        const commandType =
+            buildModeValue === 'build'
+                ? CommandType.QUERY
+                : CommandType.PLAN
 
         if (isCreatingNewSession) {
             // New session: Join session first, then wait for session_id event
-            // The pending query will be sent automatically in use-app-events.tsx when session_id is received
+            // The pending query will be sent automatically when session_id is received
             console.log(
                 'New session: storing pending query and joining session'
             )
@@ -364,7 +370,6 @@ export function useQuestionHandlers() {
             console.log('Existing session: sending query immediately')
 
             // Move the session to the top of the list
-            // Determine session type by checking which list contains the session
             if (sessionId) {
                 const isInChats = chats.some((s) => s.id === sessionId)
                 const isInProjects = projects.some((s) => s.id === sessionId)
@@ -384,7 +389,6 @@ export function useQuestionHandlers() {
                         })
                     )
                 } else {
-                    // Session not found in either list, try both
                     dispatch(
                         moveSessionToTop({
                             sessionId,
@@ -401,8 +405,9 @@ export function useQuestionHandlers() {
             }
 
             sendMessage({
-                type: commandType,
+                session_uuid: sessionId || '',
                 content: {
+                    command: commandType,
                     ...queryContent
                 }
             })
@@ -464,8 +469,11 @@ export function useQuestionHandlers() {
         dispatch(clearCurrentMessageFileIds())
 
         sendMessage({
-            type: 'query',
-            content: queryContent
+            session_uuid: sessionId || '',
+            content: {
+                command: CommandType.QUERY,
+                ...queryContent
+            }
         })
     }
 
@@ -525,8 +533,11 @@ export function useQuestionHandlers() {
         dispatch(clearCurrentMessageFileIds())
 
         sendMessage({
-            type: 'query',
-            content: queryContent
+            session_uuid: sessionId || '',
+            content: {
+                command: CommandType.QUERY,
+                ...queryContent
+            }
         })
     }
 
@@ -565,8 +576,11 @@ export function useQuestionHandlers() {
         }
 
         sendMessage({
-            type: 'plan',
-            content: queryContent
+            session_uuid: sessionId || '',
+            content: {
+                command: CommandType.PLAN,
+                ...queryContent
+            }
         })
     }
 
@@ -621,8 +635,11 @@ export function useQuestionHandlers() {
         }
 
         sendMessage({
-            type: 'plan',
-            content: queryContent
+            session_uuid: sessionId || '',
+            content: {
+                command: CommandType.PLAN,
+                ...queryContent
+            }
         })
     }
 

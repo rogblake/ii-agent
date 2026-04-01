@@ -5,12 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 
 import pytest
 
-from ii_agent.agent.runtime.tools.e2b import E2BTools
+from ii_agent.agents.tools.e2b import E2BTools
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_sandbox() -> MagicMock:
     sandbox = AsyncMock()
@@ -29,6 +30,7 @@ def make_e2b_tools(sandbox=None) -> E2BTools:
 # ---------------------------------------------------------------------------
 # __init__ tests
 # ---------------------------------------------------------------------------
+
 
 class TestE2BToolsInit:
     def test_init_sets_sandbox(self):
@@ -68,6 +70,7 @@ class TestE2BToolsInit:
 # create() classmethod tests
 # ---------------------------------------------------------------------------
 
+
 class TestE2BToolsCreate:
     @pytest.mark.asyncio
     async def test_create_raises_when_no_api_key(self):
@@ -79,7 +82,7 @@ class TestE2BToolsCreate:
     async def test_create_uses_env_api_key(self):
         mock_sandbox = make_sandbox()
         with patch.dict("os.environ", {"E2B_API_KEY": "env-api-key"}):
-            with patch("ii_agent.agent.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
+            with patch("ii_agent.agents.tools.e2b.AsyncSandbox") as MockSandbox:
                 MockSandbox.create = AsyncMock(return_value=mock_sandbox)
                 tools = await E2BTools.create()
                 MockSandbox.create.assert_awaited_once()
@@ -88,16 +91,14 @@ class TestE2BToolsCreate:
     @pytest.mark.asyncio
     async def test_create_with_explicit_api_key(self):
         mock_sandbox = make_sandbox()
-        with patch("ii_agent.agent.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
+        with patch("ii_agent.agents.tools.e2b.AsyncSandbox") as MockSandbox:
             MockSandbox.create = AsyncMock(return_value=mock_sandbox)
             tools = await E2BTools.create(api_key="explicit-key", timeout=120)
-            MockSandbox.create.assert_awaited_once_with(
-                api_key="explicit-key", timeout=120
-            )
+            MockSandbox.create.assert_awaited_once_with(api_key="explicit-key", timeout=120)
 
     @pytest.mark.asyncio
     async def test_create_propagates_sandbox_error(self):
-        with patch("ii_agent.agent.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
+        with patch("ii_agent.agents.tools.e2b.AsyncSandbox") as MockSandbox:
             MockSandbox.create = AsyncMock(side_effect=RuntimeError("sandbox unavailable"))
             with pytest.raises(RuntimeError, match="sandbox unavailable"):
                 await E2BTools.create(api_key="key")
@@ -105,7 +106,7 @@ class TestE2BToolsCreate:
     @pytest.mark.asyncio
     async def test_create_with_sandbox_options(self):
         mock_sandbox = make_sandbox()
-        with patch("ii_agent.agent.runtime.tools.e2b.AsyncSandbox") as MockSandbox:
+        with patch("ii_agent.agents.tools.e2b.AsyncSandbox") as MockSandbox:
             MockSandbox.create = AsyncMock(return_value=mock_sandbox)
             await E2BTools.create(api_key="key", sandbox_options={"template": "custom"})
             call_kwargs = MockSandbox.create.call_args[1]
@@ -115,6 +116,7 @@ class TestE2BToolsCreate:
 # ---------------------------------------------------------------------------
 # close() tests
 # ---------------------------------------------------------------------------
+
 
 class TestClose:
     @pytest.mark.asyncio
@@ -135,6 +137,7 @@ class TestClose:
 # ---------------------------------------------------------------------------
 # upload_file tests
 # ---------------------------------------------------------------------------
+
 
 class TestUploadFile:
     @pytest.mark.asyncio
@@ -160,7 +163,9 @@ class TestUploadFile:
         tools = E2BTools(sandbox=sandbox)
 
         with patch("builtins.open", mock_open(read_data=b"content")):
-            result = await tools.upload_file("/local/test.txt", sandbox_path="/custom/path/test.txt")
+            result = await tools.upload_file(
+                "/local/test.txt", sandbox_path="/custom/path/test.txt"
+            )
 
         sandbox.files.write.assert_awaited_once_with("/custom/path/test.txt", b"content")
         assert result == "/custom/path/test.txt"
@@ -179,6 +184,7 @@ class TestUploadFile:
 # ---------------------------------------------------------------------------
 # download_file_from_sandbox tests
 # ---------------------------------------------------------------------------
+
 
 class TestDownloadFileFromSandbox:
     @pytest.mark.asyncio
@@ -206,6 +212,7 @@ class TestDownloadFileFromSandbox:
 # ---------------------------------------------------------------------------
 # run_command tests
 # ---------------------------------------------------------------------------
+
 
 class TestRunCommand:
     @pytest.mark.asyncio
@@ -282,6 +289,7 @@ class TestRunCommand:
 # stream_command tests
 # ---------------------------------------------------------------------------
 
+
 class TestStreamCommand:
     @pytest.mark.asyncio
     async def test_stream_command_returns_outputs(self):
@@ -294,7 +302,9 @@ class TestStreamCommand:
     @pytest.mark.asyncio
     async def test_stream_command_handles_exception(self):
         tools = make_e2b_tools()
-        with patch.object(tools, "run_command", new_callable=AsyncMock, side_effect=RuntimeError("boom")):
+        with patch.object(
+            tools, "run_command", new_callable=AsyncMock, side_effect=RuntimeError("boom")
+        ):
             result = await tools.stream_command("cmd")
             assert "error" in result.lower()
 
@@ -302,6 +312,7 @@ class TestStreamCommand:
 # ---------------------------------------------------------------------------
 # run_background_command tests
 # ---------------------------------------------------------------------------
+
 
 class TestRunBackgroundCommand:
     @pytest.mark.asyncio
@@ -328,6 +339,7 @@ class TestRunBackgroundCommand:
 # ---------------------------------------------------------------------------
 # list_files tests
 # ---------------------------------------------------------------------------
+
 
 class TestListFiles:
     @pytest.mark.asyncio
@@ -382,6 +394,7 @@ class TestListFiles:
 # read_file_content tests
 # ---------------------------------------------------------------------------
 
+
 class TestReadFileContent:
     @pytest.mark.asyncio
     async def test_read_file_content_string_returned_as_is(self):
@@ -425,6 +438,7 @@ class TestReadFileContent:
 # write_file_content tests
 # ---------------------------------------------------------------------------
 
+
 class TestWriteFileContent:
     @pytest.mark.asyncio
     async def test_write_file_content_returns_path(self):
@@ -452,6 +466,7 @@ class TestWriteFileContent:
 # get_public_url tests
 # ---------------------------------------------------------------------------
 
+
 class TestGetPublicUrl:
     @pytest.mark.asyncio
     async def test_get_public_url_returns_http_url(self):
@@ -476,6 +491,7 @@ class TestGetPublicUrl:
 # ---------------------------------------------------------------------------
 # run_server tests
 # ---------------------------------------------------------------------------
+
 
 class TestRunServer:
     @pytest.mark.asyncio

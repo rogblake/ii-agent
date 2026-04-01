@@ -14,10 +14,11 @@ from ii_agent.auth.dependencies import get_current_user
 from ii_agent.core.dependencies import _db_session_dependency
 from ii_agent.core.exceptions import IIAgentError
 from ii_agent.core.middleware import ii_agent_error_handler
-from ii_agent.agent.dependencies import get_agent_run_service
-from ii_agent.files.dependencies import get_file_service
-from ii_agent.sessions.dependencies import get_session_fork_service, get_session_service
+from ii_agent.sessions.dependencies import _get_run_task_service
+from ii_agent.files.dependencies import _get_file_service as get_file_service
+from ii_agent.sessions.dependencies import _get_session_fork_service as get_session_fork_service, _get_session_service as get_session_service
 from ii_agent.sessions.router import router
+from ii_agent.sessions.schemas import SessionEventDetail, SessionInfo
 
 pytestmark = pytest.mark.unit
 
@@ -33,25 +34,27 @@ def _make_user(user_id: str = _USER_ID) -> SimpleNamespace:
     return SimpleNamespace(id=user_id, email="test@example.com", is_active=True)
 
 
-def _make_session_data(session_id: str = _SESSION_ID) -> dict:
-    return {
-        "id": uuid.UUID(session_id),
-        "user_id": _USER_ID,
-        "name": "Test Session",
-        "status": "active",
-        "workspace_dir": "/workspace",
-        "is_public": False,
-        "created_at": "2026-01-01T00:00:00",
-        "updated_at": None,
-        "last_message_at": None,
-        "agent_type": "chat",
-        "api_version": None,
-        "sandbox_id": None,
-        "public_url": None,
-        "token_usage": None,
-        "settings": None,
-        "project_id": None,
-    }
+def _make_session_data(session_id: str = _SESSION_ID, **kwargs) -> SessionInfo:
+    defaults = dict(
+        id=uuid.UUID(session_id),
+        user_id=_USER_ID,
+        name="Test Session",
+        status="active",
+        workspace_dir="/workspace",
+        is_public=False,
+        created_at="2026-01-01T00:00:00",
+        updated_at=None,
+        last_message_at=None,
+        agent_type="chat",
+        api_version=None,
+        sandbox_id=None,
+        public_url=None,
+        token_usage=None,
+        settings=None,
+        project_id=None,
+    )
+    defaults.update(kwargs)
+    return SessionInfo(**defaults)
 
 
 def _make_session_service(
@@ -71,9 +74,7 @@ def _make_session_service(
     svc.get_user_sessions = AsyncMock(return_value=(sessions_list or [], total))
     svc.get_session_events_with_details = AsyncMock(return_value=events or [])
     svc.get_public_session_details = AsyncMock(return_value=public_session_data)
-    svc.bulk_soft_delete_sessions = AsyncMock(
-        return_value=bulk_delete_result or ([], [])
-    )
+    svc.bulk_soft_delete_sessions = AsyncMock(return_value=bulk_delete_result or ([], []))
     svc.set_session_public = AsyncMock(return_value=set_public_result)
     svc.soft_delete_session = AsyncMock(return_value=None)
     svc.update_session_name = AsyncMock(return_value=None)
@@ -81,14 +82,12 @@ def _make_session_service(
 
     # second call for get_session_details in update_session
     if updated_session_data is not None:
-        svc.get_session_details = AsyncMock(
-            side_effect=[session_data, updated_session_data]
-        )
+        svc.get_session_details = AsyncMock(side_effect=[session_data, updated_session_data])
 
     return svc
 
 
-def _make_agent_run_service(*, last_task=None) -> MagicMock:
+def _make_run_task_service(*, last_task=None) -> MagicMock:
     svc = MagicMock()
     svc.get_last_by_session_id = AsyncMock(return_value=last_task)
     return svc
@@ -102,6 +101,7 @@ def _make_file_service(*, files: list | None = None) -> MagicMock:
 
 def _make_fork_service(*, fork_result: dict | None = None) -> MagicMock:
     from ii_agent.sessions.schemas import ForkSessionResponse, SandboxMode
+
     svc = MagicMock()
     result = fork_result or ForkSessionResponse(
         session_id=str(uuid.uuid4()),
@@ -117,7 +117,7 @@ def _make_fork_service(*, fork_result: dict | None = None) -> MagicMock:
 
 def _build_app(
     session_service: MagicMock,
-    agent_run_service: MagicMock | None = None,
+    run_task_service: MagicMock | None = None,
     file_service: MagicMock | None = None,
     fork_service: MagicMock | None = None,
     user: SimpleNamespace | None = None,
@@ -127,14 +127,14 @@ def _build_app(
     app.add_exception_handler(IIAgentError, ii_agent_error_handler)
 
     _user = user or _make_user()
-    _agent_run_svc = agent_run_service or _make_agent_run_service()
+    _run_task_svc = run_task_service or _make_run_task_service()
     _file_svc = file_service or _make_file_service()
     _fork_svc = fork_service or _make_fork_service()
 
     app.dependency_overrides[get_current_user] = lambda: _user
     app.dependency_overrides[_db_session_dependency] = lambda: AsyncMock()
     app.dependency_overrides[get_session_service] = lambda: session_service
-    app.dependency_overrides[get_agent_run_service] = lambda: _agent_run_svc
+    app.dependency_overrides[_get_run_task_service] = lambda: _run_task_svc
     app.dependency_overrides[get_file_service] = lambda: _file_svc
     app.dependency_overrides[get_session_fork_service] = lambda: _fork_svc
 
@@ -279,17 +279,17 @@ def test_list_sessions_public_only_filter():
 # ---------------------------------------------------------------------------
 
 
-def _make_event_data(session_id: str = _SESSION_ID) -> dict:
-    """Build a valid EventInfo dict matching the schema."""
-    return {
-        "id": str(uuid.uuid4()),
-        "session_id": session_id,
-        "created_at": "2026-01-01T00:00:00",
-        "type": "message",
-        "content": {},
-        "workspace_dir": "/workspace",
-        "run_id": None,
-    }
+def _make_event_data(session_id: str = _SESSION_ID) -> SessionEventDetail:
+    """Build a SessionEventDetail matching what the service returns."""
+    return SessionEventDetail(
+        id=uuid.uuid4(),
+        session_id=uuid.UUID(session_id),
+        created_at="2026-01-01T00:00:00",
+        type="message",
+        content={},
+        workspace_dir="/workspace",
+        run_id=None,
+    )
 
 
 def test_get_session_events_returns_events_and_run_status():
@@ -298,9 +298,9 @@ def test_get_session_events_returns_events_and_run_status():
     events_raw = [_make_event_data()]
     last_task = SimpleNamespace(status="completed")
     svc = _make_session_service(session_data=session_data, events=events_raw)
-    agent_svc = _make_agent_run_service(last_task=last_task)
+    agent_svc = _make_run_task_service(last_task=last_task)
 
-    app = _build_app(svc, agent_run_service=agent_svc)
+    app = _build_app(svc, run_task_service=agent_svc)
     client = TestClient(app)
     resp = client.get(f"/sessions/{_SESSION_ID}/events")
 
@@ -325,10 +325,10 @@ def test_get_session_events_run_status_failure_handled():
     """Arrange: agent service raises; Assert: events returned with run_status=None."""
     session_data = _make_session_data()
     svc = _make_session_service(session_data=session_data, events=[])
-    agent_svc = _make_agent_run_service()
+    agent_svc = _make_run_task_service()
     agent_svc.get_last_by_session_id = AsyncMock(side_effect=Exception("DB error"))
 
-    app = _build_app(svc, agent_run_service=agent_svc)
+    app = _build_app(svc, run_task_service=agent_svc)
     client = TestClient(app)
     resp = client.get(f"/sessions/{_SESSION_ID}/events")
 
@@ -463,8 +463,7 @@ def test_unpublish_session_not_found():
 
 def test_get_public_session_no_auth():
     """Arrange: public session exists; Act: GET public; Assert: 200 without auth."""
-    public_data = _make_session_data()
-    public_data["is_public"] = True
+    public_data = _make_session_data(is_public=True)
     svc = _make_session_service(public_session_data=public_data)
 
     # Build app without CurrentUser override (public endpoint)
@@ -473,7 +472,7 @@ def test_get_public_session_no_auth():
     app.add_exception_handler(IIAgentError, ii_agent_error_handler)
     app.dependency_overrides[_db_session_dependency] = lambda: AsyncMock()
     app.dependency_overrides[get_session_service] = lambda: svc
-    app.dependency_overrides[get_agent_run_service] = lambda: _make_agent_run_service()
+    app.dependency_overrides[_get_run_task_service] = lambda: _make_run_task_service()
 
     client = TestClient(app)
     resp = client.get(f"/sessions/{_SESSION_ID}/public")
@@ -492,7 +491,7 @@ def test_get_public_session_not_found():
     app.add_exception_handler(IIAgentError, ii_agent_error_handler)
     app.dependency_overrides[_db_session_dependency] = lambda: AsyncMock()
     app.dependency_overrides[get_session_service] = lambda: svc
-    app.dependency_overrides[get_agent_run_service] = lambda: _make_agent_run_service()
+    app.dependency_overrides[_get_run_task_service] = lambda: _make_run_task_service()
 
     client = TestClient(app, raise_server_exceptions=False)
     resp = client.get(f"/sessions/{_SESSION_ID}/public")
@@ -510,14 +509,14 @@ def test_get_public_session_events_success():
     public_data = _make_session_data()
     events_raw = [_make_event_data()]
     svc = _make_session_service(public_session_data=public_data, events=events_raw)
-    agent_svc = _make_agent_run_service(last_task=SimpleNamespace(status="completed"))
+    agent_svc = _make_run_task_service(last_task=SimpleNamespace(status="completed"))
 
     app = FastAPI()
     app.include_router(router)
     app.add_exception_handler(IIAgentError, ii_agent_error_handler)
     app.dependency_overrides[_db_session_dependency] = lambda: AsyncMock()
     app.dependency_overrides[get_session_service] = lambda: svc
-    app.dependency_overrides[get_agent_run_service] = lambda: agent_svc
+    app.dependency_overrides[_get_run_task_service] = lambda: agent_svc
 
     client = TestClient(app)
     resp = client.get(f"/sessions/{_SESSION_ID}/public/events")
@@ -584,8 +583,7 @@ def test_fork_session_success():
 def test_update_session_name_success():
     """Arrange: valid session; Act: PATCH with name; Assert: updated session returned."""
     original = _make_session_data()
-    updated = _make_session_data()
-    updated["name"] = "Updated Name"
+    updated = _make_session_data(name="Updated Name")
     svc = _make_session_service(session_data=original, updated_session_data=updated)
 
     app = _build_app(svc)

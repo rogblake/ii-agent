@@ -1,5 +1,6 @@
 """Repository layer for connectors domain - data access only."""
 
+import uuid
 from typing import List, Optional
 
 from sqlalchemy import select
@@ -14,7 +15,7 @@ class ConnectorRepository(BaseRepository[Connector]):
 
     model = Connector
 
-    async def get_by_user(self, db: AsyncSession, user_id: str) -> List[Connector]:
+    async def get_by_user(self, db: AsyncSession, user_id: uuid.UUID) -> List[Connector]:
         """Get all connectors for a user."""
         result = await db.execute(
             select(Connector).where(Connector.user_id == user_id)
@@ -22,7 +23,7 @@ class ConnectorRepository(BaseRepository[Connector]):
         return list(result.scalars().all())
 
     async def get_by_user_and_type(
-        self, db: AsyncSession, user_id: str, connector_type: str
+        self, db: AsyncSession, user_id: uuid.UUID, connector_type: str
     ) -> Optional[Connector]:
         """Get a connector by user ID and type."""
         result = await db.execute(

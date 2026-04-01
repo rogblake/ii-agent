@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import Any, Dict, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
@@ -11,9 +12,9 @@ class SessionProjectResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
-    id: str
-    user_id: str
-    session_id: Optional[str]
+    id: UUID
+    user_id: UUID
+    session_id: Optional[UUID]
     name: Optional[str]
     description: Optional[str]
     status: str
@@ -24,7 +25,6 @@ class SessionProjectResponse(BaseModel):
     database: Optional[Dict[str, Any]] = Field(default=None, validation_alias="database_json")
     storage: Optional[Dict[str, Any]] = Field(default=None, validation_alias="storage_json")
     secrets: Optional[Dict[str, Any]] = Field(default=None, validation_alias="secrets_json")
-    current_production_deployment_id: Optional[str]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 

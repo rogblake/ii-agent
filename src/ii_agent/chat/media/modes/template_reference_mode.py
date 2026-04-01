@@ -8,7 +8,7 @@ from ii_agent.chat.types import MediaPreferences
 from ii_agent.content.media.repository import MediaTemplateRepository
 from ii_agent.content.media.service import MediaTemplateService
 from ii_agent.core.config.settings import get_settings
-from ii_agent.core.storage.client import media_storage
+from ii_agent.core.storage.client import get_storage
 from .base import BaseModeStrategy
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class TemplateReferenceModeStrategy(BaseModeStrategy):
             template = await MediaTemplateService(
                 config=get_settings(),
                 repo=MediaTemplateRepository(),
-                media_storage=media_storage,
+                media_storage=get_storage(),
             ).get_media_template_by_id(db_session, media_preferences.template_id)
             if template:
                 self._template_preview_url = template.preview

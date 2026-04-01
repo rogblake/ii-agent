@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
-from ii_agent.settings.llm.service import LLMSettingService
+from ii_agent.settings.llm.service import ModelSettingService
 
 pytestmark = pytest.mark.integration
 
@@ -24,7 +24,7 @@ class SessionRepo:
 async def test_settings_resolution_user_then_system_fallback(settings_factory, monkeypatch):
     system_cfg = LLMConfig(model="gpt-4o", api_type=APITypes.OPENAI)
 
-    service = LLMSettingService(
+    service = ModelSettingService(
         repo=LLMRepo(),
         config=settings_factory(llm_configs={"system-model": system_cfg}),
         session_repo=SessionRepo(llm_setting_id="system-model"),

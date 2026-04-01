@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Query
 from fastapi.responses import HTMLResponse
 
@@ -16,7 +18,7 @@ from ii_agent.projects.design.schemas import (
     IframeAIPlanResponse,
 )
 
-router = APIRouter(prefix="/projects/design", tags=["Project Design Mode"])
+router = APIRouter(prefix="/design", tags=["Project Design Mode"])
 
 _HTML_HEADERS = {
     "Cache-Control": "no-store",
@@ -30,13 +32,13 @@ async def proxy_design_mode(
     current_user: CurrentUser,
     db: DBSession,
     service: ProjectDesignServiceDep,
-    session_id: str = Query(..., description="Session ID"),
+    session_id: uuid.UUID = Query(..., description="Session ID"),
     url: str = Query(..., description="Sandbox URL to proxy"),
 ) -> HTMLResponse:
     html = await service.get_proxy_html(
         db,
         session_id=session_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         url=url,
     )
     return HTMLResponse(
@@ -57,7 +59,7 @@ async def ai_change(
 ) -> AIChangeResponse:
     return await service.ai_design_change(
         db,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         request=request,
     )
 
@@ -71,14 +73,14 @@ async def ai_iframe_plan(
 ) -> IframeAIPlanResponse:
     return await service.ai_iframe_plan(
         db,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         request=request,
     )
 
 
 @router.get("/state", response_model=DesignStateResponse)
 async def get_design_state(
-    session_id: str,
+    session_id: uuid.UUID,
     current_user: CurrentUser,
     db: DBSession,
     service: ProjectDesignServiceDep,
@@ -86,7 +88,7 @@ async def get_design_state(
     return await service.get_design_state(
         db,
         session_id=session_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
     )
 
 
@@ -100,7 +102,7 @@ async def save_design_state(
     return await service.save_design_state(
         db,
         request=request,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
     )
 
 

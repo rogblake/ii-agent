@@ -7,7 +7,7 @@ import {
     selectActiveSessionId,
     useAppSelector
 } from '@/state'
-import { PresentationListResponse } from '@/typings/agent'
+import { CommandType, PresentationListResponse } from '@/typings/agent'
 import { useSocketIOContext } from '@/contexts/websocket-context'
 import { sessionService } from '@/services/session.service'
 import { slideService } from '@/services/slide.service'
@@ -100,7 +100,7 @@ const SlidesResult = ({
         message: '',
         percent: 0
     })
-    const { socket } = useSocketIOContext()
+    const { socket, sendMessage } = useSocketIOContext()
 
     const activeSessionId = useAppSelector(selectActiveSessionId)
 
@@ -269,9 +269,9 @@ const SlidesResult = ({
     const handleRefresh = () => {
         fetchSlides()
         if (socket?.connected) {
-            socket.emit('chat_message', {
-                type: 'sandbox_status',
-                session_uuid: activeSessionId
+            sendMessage({
+                session_uuid: activeSessionId || '',
+                content: { command: CommandType.SANDBOX_STATUS }
             })
         }
     }

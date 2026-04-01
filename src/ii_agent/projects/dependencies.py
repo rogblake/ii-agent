@@ -1,18 +1,23 @@
-"""FastAPI dependencies for projects domain."""
+"""FastAPI dependencies for projects domain.
 
-from typing import Annotated
+Thin accessors that pull services from :class:`ApplicationContainer`
+or instantiate per-request repositories/services that are not yet
+container-managed.
+"""
+
+from __future__ import annotations
+
+from typing import Annotated, Any
 
 from fastapi import Depends
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.agent.sandboxes.dependencies import SandboxRepositoryDep
+from ii_agent.core.dependencies import ContainerDep
 from ii_agent.projects.repository import ProjectRepository
 from ii_agent.projects.service import ProjectService
 from ii_agent.projects.deployment_orchestration_service import DeploymentOrchestrationService
 from ii_agent.projects.databases.service import DatabaseService
 from ii_agent.projects.secrets.service import SecretService
-from ii_agent.agent.sandboxes.env_sync_service import SandboxEnvSyncService
-from ii_agent.sessions.dependencies import SessionRepositoryDep
 
 
 # ==================== Repository Dependencies ====================
@@ -26,74 +31,83 @@ def get_project_repository() -> ProjectRepository:
 ProjectRepositoryDep = Annotated[ProjectRepository, Depends(get_project_repository)]
 
 
-# ==================== Service Dependencies ====================
+# ==================== Service Dependencies (container-backed) =============
 
 
-def get_project_service(
-    project_repo: ProjectRepositoryDep,
-    session_repo: SessionRepositoryDep,
-) -> ProjectService:
-    """Provide ProjectService instance with explicit repo injection."""
-    return ProjectService(
-        project_repo=project_repo,
-        session_repo=session_repo,
-        config=get_settings(),
-    )
+def _get_project_service(container: ContainerDep) -> ProjectService:
+    return container.project_service
+
+
+ProjectServiceDep = Annotated[ProjectService, Depends(_get_project_service)]
+
+
+def _get_deployment_orchestration_service(
+    container: ContainerDep,
+) -> DeploymentOrchestrationService:
+    return container.deployment_orchestration_service
+
+
+DeploymentOrchestrationServiceDep = Annotated[
+    DeploymentOrchestrationService, Depends(_get_deployment_orchestration_service)
+]
+
+
+# ==================== Domain-specific services (factory) ==================
+# These are not yet container-managed; instantiated per request.
 
 
 def get_secret_service(
     project_repo: ProjectRepositoryDep,
 ) -> SecretService:
-    """Provide SecretService instance with explicit repo injection."""
+    """Provide SecretService instance."""
     return SecretService(project_repo=project_repo, config=get_settings())
+
+
+SecretServiceDep = Annotated[SecretService, Depends(get_secret_service)]
 
 
 def get_database_service(
     project_repo: ProjectRepositoryDep,
 ) -> DatabaseService:
-    """Provide DatabaseService instance with explicit repo injection."""
+    """Provide DatabaseService instance."""
     return DatabaseService(project_repo=project_repo, config=get_settings())
 
 
-def get_sandbox_env_sync_service(
-    session_repo: SessionRepositoryDep,
-    sandbox_repo: SandboxRepositoryDep,
-) -> SandboxEnvSyncService:
-    """Provide SandboxEnvSyncService instance with explicit repo injection."""
-    return SandboxEnvSyncService(
-        session_repo=session_repo,
-        sandbox_repo=sandbox_repo,
-        config=get_settings(),
-    )
-
-
-ProjectServiceDep = Annotated[ProjectService, Depends(get_project_service)]
-SecretServiceDep = Annotated[SecretService, Depends(get_secret_service)]
 DatabaseServiceDep = Annotated[DatabaseService, Depends(get_database_service)]
-SandboxEnvSyncServiceDep = Annotated[SandboxEnvSyncService, Depends(get_sandbox_env_sync_service)]
 
 
-def get_deployment_orchestration_service() -> DeploymentOrchestrationService:
-    """Provide DeploymentOrchestrationService instance."""
-    return DeploymentOrchestrationService(config=get_settings())
+# ── Sandbox env sync (placeholder until service is implemented) ──────────
 
 
-DeploymentOrchestrationServiceDep = Annotated[
-    DeploymentOrchestrationService, Depends(get_deployment_orchestration_service)
+class _SandboxEnvSyncServiceStub:
+    """Placeholder for the sandbox environment sync service.
+
+    The real ``SandboxEnvSyncService`` has not been implemented yet.
+    This stub satisfies the DI graph so the secrets router can load.
+    """
+
+    async def sync_env_files(self, db: Any, **kwargs: Any) -> None:  # noqa: ANN401, ARG002
+        """No-op until real implementation exists."""
+
+
+def _get_sandbox_env_sync_service() -> _SandboxEnvSyncServiceStub:
+    return _SandboxEnvSyncServiceStub()
+
+
+SandboxEnvSyncServiceDep = Annotated[
+    _SandboxEnvSyncServiceStub, Depends(_get_sandbox_env_sync_service)
 ]
 
 
 __all__ = [
+    # Repository
     "get_project_repository",
-    "get_project_service",
-    "get_secret_service",
-    "get_database_service",
-    "get_sandbox_env_sync_service",
-    "get_deployment_orchestration_service",
     "ProjectRepositoryDep",
+    # Container-backed services
     "ProjectServiceDep",
+    "DeploymentOrchestrationServiceDep",
+    # Factory services
     "SecretServiceDep",
     "DatabaseServiceDep",
     "SandboxEnvSyncServiceDep",
-    "DeploymentOrchestrationServiceDep",
 ]

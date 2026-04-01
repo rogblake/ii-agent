@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from enum import Enum
+from enum import StrEnum
 import uuid
 
 from sqlalchemy import Index, String, Text, UniqueConstraint, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ii_agent.core.db.base import Base, TimestampColumn
 
 
-class AppleAuthStateEnum(str, Enum):
-    """Enum for Apple authentication states."""
+class AppleAuthState(StrEnum):
+    """Apple authentication states."""
 
     PENDING_LOGIN = "pending_login"
     PENDING_2FA = "pending_2fa"
@@ -22,25 +22,23 @@ class AppleAuthStateEnum(str, Enum):
     AUTHENTICATED = "authenticated"
     EXPIRED = "expired"
 
+# Backward compat alias
+AppleAuthStateEnum = AppleAuthState
+
 
 class AppleCredential(Base):
     """Apple Developer credentials and session data for TestFlight deployment."""
 
     __tablename__ = "apple_credentials"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4()),
-    )
-    user_id: Mapped[str] = mapped_column(
-        String,
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
     )
     apple_id: Mapped[str] = mapped_column(String)
-    auth_state: Mapped[str] = mapped_column(
+    auth_state: Mapped[AppleAuthState] = mapped_column(
         String,
-        default=AppleAuthStateEnum.PENDING_LOGIN.value,
+        default=AppleAuthState.PENDING_LOGIN,
     )
 
     encrypted_session_data: Mapped[str | None] = mapped_column(Text, nullable=True)

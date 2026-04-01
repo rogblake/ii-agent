@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from ii_agent.core.config.settings import Settings
-from ii_agent.core.db.manager import get_db_session_local
+from ii_agent.core.db import get_db_session_local
 
 if TYPE_CHECKING:
     from ii_agent.projects.deployments.service import DeploymentsService

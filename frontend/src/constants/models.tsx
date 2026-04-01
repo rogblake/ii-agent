@@ -99,3 +99,29 @@ export const PROVIDERS_NAME: { [key: string]: string } = {
     azure: 'Azure',
     custom: 'Custom'
 }
+
+/**
+ * Maps BE provider display name (e.g. "Anthropic", "Google") to
+ * the FE key used for logos and PROVIDERS_NAME lookup.
+ */
+const PROVIDER_TO_KEY: Record<string, string> = {
+    anthropic: 'anthropic',
+    openai: 'openai',
+    google: 'gemini',
+    gemini: 'gemini',
+    vertex: 'vertex',
+    azure: 'azure',
+    custom: 'custom',
+}
+
+/** Resolve the FE provider key from a model's provider or api_type field. */
+export function getProviderKey(model: { provider?: string; api_type?: string }): string {
+    if (model.provider) {
+        const key = PROVIDER_TO_KEY[model.provider.toLowerCase()]
+        if (key) return key
+    }
+    if (model.api_type) {
+        return model.api_type
+    }
+    return 'custom'
+}

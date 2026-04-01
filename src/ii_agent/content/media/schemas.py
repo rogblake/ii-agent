@@ -8,6 +8,7 @@ Consolidated from:
 
 from typing import List, Literal, Optional
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -84,7 +85,7 @@ class ReferenceImageRequest(BaseModel):
 
     prompt: str
     type: Literal["subject", "scene", "style"]
-    session_id: str | None = None
+    session_id: UUID | None = None
     aspect_ratio: Literal["1:1", "16:9", "9:16", "4:3", "3:4"] = "1:1"
     model_name: str | None = None
     provider: str | None = None
@@ -95,7 +96,7 @@ class ReferenceImageResponse(BaseModel):
 
     success: bool
     url: str | None = None
-    file_id: str | None = None
+    file_id: UUID | None = None
     error: str | None = None
 
 

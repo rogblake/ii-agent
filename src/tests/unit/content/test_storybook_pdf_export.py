@@ -21,6 +21,7 @@ from ii_agent.content.storybook.schemas import StorybookDetail, StorybookPageInf
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _now():
     return datetime.now(timezone.utc)
 
@@ -64,6 +65,7 @@ def _storybook(pages=None) -> StorybookDetail:
 # StorybookPDFExporter instantiation
 # ---------------------------------------------------------------------------
 
+
 class TestStorybookPDFExporterInit:
     def test_can_instantiate(self):
         exporter = StorybookPDFExporter()
@@ -73,6 +75,7 @@ class TestStorybookPDFExporterInit:
 # ---------------------------------------------------------------------------
 # download_storybook_as_pdf – guard clauses
 # ---------------------------------------------------------------------------
+
 
 class TestDownloadStorybookAsPdf:
     @pytest.mark.asyncio
@@ -111,6 +114,7 @@ class TestDownloadStorybookAsPdf:
 
         # Minimal real PDF bytes (1-page PDF created in memory)
         from pypdf import PdfWriter
+
         buf = io.BytesIO()
         w = PdfWriter()
         w.add_blank_page(width=595, height=842)
@@ -138,14 +142,16 @@ class TestDownloadStorybookAsPdf:
         mock_playwright.__aenter__ = AsyncMock(return_value=mock_playwright)
         mock_playwright.__aexit__ = AsyncMock(return_value=None)
 
-        with patch(
-            "ii_agent.content.storybook.pdf_export.prepare_pages_for_export",
-            return_value=[(1, "<html/>", 1280, 720)],
-        ), patch(
-            "ii_agent.content.storybook.pdf_export.compress_pdf_images"
-        ) as mock_compress, patch(
-            "playwright.async_api.async_playwright",
-            return_value=mock_playwright,
+        with (
+            patch(
+                "ii_agent.content.storybook.pdf_export.prepare_pages_for_export",
+                return_value=[(1, "<html/>", 1280, 720)],
+            ),
+            patch("ii_agent.content.storybook.pdf_export.compress_pdf_images") as mock_compress,
+            patch(
+                "playwright.async_api.async_playwright",
+                return_value=mock_playwright,
+            ),
         ):
             mock_compress.return_value = None
             result = await exporter.download_storybook_as_pdf(sb)
@@ -157,6 +163,7 @@ class TestDownloadStorybookAsPdf:
 # ---------------------------------------------------------------------------
 # download_storybook_as_pdf_with_progress – guard clauses
 # ---------------------------------------------------------------------------
+
 
 class TestDownloadStorybookAsPdfWithProgress:
     @pytest.mark.asyncio
@@ -199,6 +206,7 @@ class TestDownloadStorybookAsPdfWithProgress:
         sb = _storybook()
 
         from pypdf import PdfWriter
+
         buf = io.BytesIO()
         w = PdfWriter()
         w.add_blank_page(width=595, height=842)
@@ -226,14 +234,16 @@ class TestDownloadStorybookAsPdfWithProgress:
         mock_playwright.__aenter__ = AsyncMock(return_value=mock_playwright)
         mock_playwright.__aexit__ = AsyncMock(return_value=None)
 
-        with patch(
-            "ii_agent.content.storybook.pdf_export.prepare_pages_for_export",
-            return_value=[(1, "<html/>", 1280, 720)],
-        ), patch(
-            "ii_agent.content.storybook.pdf_export.compress_pdf_images"
-        ), patch(
-            "playwright.async_api.async_playwright",
-            return_value=mock_playwright,
+        with (
+            patch(
+                "ii_agent.content.storybook.pdf_export.prepare_pages_for_export",
+                return_value=[(1, "<html/>", 1280, 720)],
+            ),
+            patch("ii_agent.content.storybook.pdf_export.compress_pdf_images"),
+            patch(
+                "playwright.async_api.async_playwright",
+                return_value=mock_playwright,
+            ),
         ):
             events = []
             async for event in exporter.download_storybook_as_pdf_with_progress(sb):
@@ -249,6 +259,7 @@ class TestDownloadStorybookAsPdfWithProgress:
         sb = _storybook()
 
         from pypdf import PdfWriter
+
         buf = io.BytesIO()
         w = PdfWriter()
         w.add_blank_page(width=595, height=842)
@@ -276,14 +287,16 @@ class TestDownloadStorybookAsPdfWithProgress:
         mock_playwright.__aenter__ = AsyncMock(return_value=mock_playwright)
         mock_playwright.__aexit__ = AsyncMock(return_value=None)
 
-        with patch(
-            "ii_agent.content.storybook.pdf_export.prepare_pages_for_export",
-            return_value=[(1, "<html/>", 1280, 720)],
-        ), patch(
-            "ii_agent.content.storybook.pdf_export.compress_pdf_images"
-        ), patch(
-            "playwright.async_api.async_playwright",
-            return_value=mock_playwright,
+        with (
+            patch(
+                "ii_agent.content.storybook.pdf_export.prepare_pages_for_export",
+                return_value=[(1, "<html/>", 1280, 720)],
+            ),
+            patch("ii_agent.content.storybook.pdf_export.compress_pdf_images"),
+            patch(
+                "playwright.async_api.async_playwright",
+                return_value=mock_playwright,
+            ),
         ):
             events = []
             async for event in exporter.download_storybook_as_pdf_with_progress(sb):
@@ -300,6 +313,7 @@ class TestDownloadStorybookAsPdfWithProgress:
 # ---------------------------------------------------------------------------
 # download_storybook_page_as_pdf – guard clauses
 # ---------------------------------------------------------------------------
+
 
 class TestDownloadStorybookPageAsPdf:
     @pytest.mark.asyncio
@@ -336,9 +350,11 @@ class TestDownloadStorybookPageAsPdf:
 # compress_pdf_images – pure logic paths
 # ---------------------------------------------------------------------------
 
+
 class TestCompressPdfImages:
     def test_runs_without_error_on_empty_writer(self):
         from pypdf import PdfWriter
+
         writer = PdfWriter()
         writer.add_blank_page(width=200, height=200)
         # Should not raise even if no XObject resources
@@ -346,6 +362,7 @@ class TestCompressPdfImages:
 
     def test_does_not_crash_on_page_without_resources(self):
         from pypdf import PdfWriter
+
         writer = PdfWriter()
         writer.add_blank_page(width=100, height=100)
         # No /Resources in a blank page's object tree typically

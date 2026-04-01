@@ -13,7 +13,6 @@ from ii_agent.sessions.exceptions import SessionNotFoundError, SessionValidation
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.core.config.settings import Settings
-from ii_agent.core.storage.locations import get_conversation_agent_state_path
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +34,8 @@ class SessionForkService:
     async def fork_session(
         self,
         db: AsyncSession,
-        parent_session_id: str,
-        user_id: str,
+        parent_session_id: uuid.UUID,
+        user_id: uuid.UUID,
         request: "ForkSessionRequest",
     ) -> "ForkSessionResponse":
         """Fork a session to create a new session with inherited context.
@@ -59,9 +58,7 @@ class SessionForkService:
         )
 
         # 1. Get and validate parent session
-        parent = await self._session_repo.get_by_id_and_user(
-            db, parent_session_id, user_id
-        )
+        parent = await self._session_repo.get_by_id_and_user(db, parent_session_id, user_id)
         if not parent:
             raise SessionNotFoundError(
                 f"Parent session {parent_session_id} not found or access denied"
@@ -79,19 +76,10 @@ class SessionForkService:
         # 3. Determine target agent type
         target_agent_type = get_target_agent_type(request.fork_type)
 
-        # 4. Handle sandbox mode
-        sandbox_id: Optional[str] = None
-        if request.sandbox_mode == SandboxMode.SHARE:
-            sandbox = await self._sandbox_repo.get_by_session_id(
-                db, parent_session_id
-            )
-            if sandbox:
-                sandbox_id = str(sandbox.id)
-
-        # 5. Inherit LLM settings if not provided
-        llm_setting_id = request.llm_setting_id
-        if llm_setting_id is None and parent.llm_setting_id:
-            llm_setting_id = str(parent.llm_setting_id)
+        # 4. Inherit LLM settings if not provided
+        model_setting_id = request.model_setting_id
+        if model_setting_id is None and parent.model_setting_id:
+            model_setting_id = parent.model_setting_id
 
         # 6. Build fork metadata and create session
         new_session_uuid = uuid.uuid4()
@@ -111,19 +99,17 @@ class SessionForkService:
         }
 
         new_session = Session(
-            id=str(new_session_uuid),
+            id=new_session_uuid,
             user_id=user_id,
             name=new_name,
             status="active",
             agent_type=target_agent_type,
             parent_session_id=parent_session_id,
-            sandbox_id=sandbox_id,
-            llm_setting_id=llm_setting_id,
+            model_setting_id=model_setting_id,
             session_metadata=session_metadata,
             api_version="v1",
-            agent_state_path=get_conversation_agent_state_path(str(new_session_uuid)),
         )
-        await self._session_repo.create(db, new_session)
+        await self._session_repo.save(db, new_session)
 
         logger.info(
             f"Created forked session {new_session.id} from parent {parent_session_id} "
@@ -131,11 +117,10 @@ class SessionForkService:
         )
 
         return ForkSessionResponse(
-            session_id=str(new_session.id),
+            session_id=new_session.id,
             parent_session_id=parent_session_id,
             name=new_name,
             agent_type=target_agent_type,
-            sandbox_id=sandbox_id,
             sandbox_mode=request.sandbox_mode,
-            llm_setting_id=llm_setting_id,
+            model_setting_id=model_setting_id,
         )

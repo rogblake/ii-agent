@@ -1,4 +1,4 @@
-"""Deep unit tests for ii_agent.auth.users.service covering remaining branches."""
+"""Deep unit tests for ii_agent.users.service covering remaining branches."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from ii_agent.auth.users.exceptions import UserDisabledException, WaitlistDeniedException
-from ii_agent.auth.users.service import VALID_LANGUAGES, UserService
+from ii_agent.users.exceptions import UserDisabledException, WaitlistDeniedException
+from ii_agent.users.service import VALID_LANGUAGES, UserService
 from ii_agent.core.exceptions import ValidationError
 
 
@@ -81,6 +81,7 @@ class FakeCreditService:
 
     async def ensure_balance_exists(self, db, user_id, **kwargs):
         from decimal import Decimal
+
         credits = Decimal(str(kwargs.get("credits", 0)))
         bonus = Decimal(str(kwargs.get("bonus_credits", 0)))
         self.ensured.append((user_id, credits, bonus))
@@ -206,7 +207,7 @@ class TestCreateApiKey:
     async def test_creates_and_returns_key(self):
         svc = _make_service()
         with __import__("unittest.mock", fromlist=["patch"]).patch(
-            "ii_agent.auth.users.service.UserService.create_api_key",
+            "ii_agent.users.service.UserService.create_api_key",
             new_callable=AsyncMock,
         ) as mock_create:
             mock_create.return_value = SimpleNamespace(id="k1", api_key="pfx_abc")
@@ -345,18 +346,14 @@ class TestFindOrCreateOAuthUser:
     @pytest.mark.asyncio
     async def test_creates_with_bonus_credits(self):
         svc = _make_service()
-        user = await svc.find_or_create_oauth_user(
-            None, email="bonus@x.com", bonus_credits=50.0
-        )
+        user = await svc.find_or_create_oauth_user(None, email="bonus@x.com", bonus_credits=50.0)
         # bonus_credits is now stored in credit_balances, not on the user row
         assert user.email == "bonus@x.com"
 
     @pytest.mark.asyncio
     async def test_creates_with_login_provider(self):
         svc = _make_service()
-        user = await svc.find_or_create_oauth_user(
-            None, email="gh@x.com", login_provider="github"
-        )
+        user = await svc.find_or_create_oauth_user(None, email="gh@x.com", login_provider="github")
         assert user.login_provider == "github"
 
 

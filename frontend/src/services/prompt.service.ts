@@ -16,7 +16,7 @@ class PromptService {
         payload: EnhancePromptPayload
     ): Promise<EnhancePromptResponse> {
         const response = await axiosInstance.post<EnhancePromptResponse>(
-            `/enhance-prompt`,
+            `/v1/enhance-prompt`,
             payload
         )
         return response.data

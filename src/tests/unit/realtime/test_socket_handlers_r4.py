@@ -21,7 +21,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.agent.events.models import EventType, RealtimeEvent
+from ii_agent.realtime.events import ApplicationEvent, ErrorCode, EventGroup, SystemEvent
 from ii_agent.sessions.schemas import SessionInfo
 
 pytestmark = pytest.mark.unit
@@ -33,7 +33,7 @@ pytestmark = pytest.mark.unit
 
 def _make_session_info(
     session_id: uuid.UUID | None = None,
-    user_id: str = "user-abc-123",
+    user_id: str = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     api_version: str = "v1",
     agent_type: str = "general",
 ) -> SessionInfo:
@@ -51,22 +51,128 @@ def _make_session_info(
 
 
 class CapturingEventStream:
-    """Captures all published events for assertion."""
+    """Captures all published events for assertion.
+
+    Works with ``ApplicationEvent`` (has ``.name``).
+    """
 
     def __init__(self):
-        self.events: list[RealtimeEvent] = []
+        self.events: list = []
 
-    async def publish(self, event: RealtimeEvent) -> None:
+    async def publish(self, event) -> None:
         self.events.append(event)
 
-    def last_event(self) -> RealtimeEvent | None:
+    def last_event(self):
         return self.events[-1] if self.events else None
 
-    def events_of_type(self, event_type: EventType) -> list[RealtimeEvent]:
-        return [e for e in self.events if e.type == event_type]
+    def events_of_name(self, event_name: str) -> list:
+        """Match events by ``name``."""
+        result = []
+        for e in self.events:
+            if getattr(e, "name", None) == event_name:
+                result.append(e)
+        return result
+
+
+def _base_kwargs(**overrides):
+    return {
+        "session_service": MagicMock(),
+        "llm_setting_service": MagicMock(),
+        "file_service": MagicMock(),
+        "event_service": MagicMock(),
+        "run_task_service": MagicMock(),
+        **overrides,
+    }
+
+
+def _mock_services(**overrides) -> dict:
+    """Return a flat dict of all services needed by any handler.
+
+    Includes the 5 base services plus handler-specific extra services.
+    Use ``**_mock_services()`` when constructing handlers that need extra services.
+    """
+    config = MagicMock()
+    config.workspace_path = "/workspace"
+    config.use_container_workspace = False
+    config.mcp = MagicMock()
+    config.mcp.port = 3000
+
+    session_service = MagicMock()
+    session_service.validate_and_prepare_session = AsyncMock()
+
+    sandbox_service = MagicMock()
+    sandbox_service.resolve_sandbox_for_session = AsyncMock(return_value=None)
+
+    project_service = MagicMock()
+    project_service.get_session_project_or_none = AsyncMock(return_value=None)
+
+    deployments_service = MagicMock()
+    deployments_service.update_deployment_metadata = AsyncMock()
+
+    run_task_service = MagicMock()
+    run_task_service.get_running_task = AsyncMock(return_value=None)
+    run_task_service.create_task = AsyncMock()
+    run_task_service.update_task_status = AsyncMock()
+
+    event_service = MagicMock()
+    event_service.save_event = AsyncMock()
+
+    file_service = MagicMock()
+    file_service.prepare_agent_files = AsyncMock(return_value=([], []))
+
+    deployment_orchestration_service = MagicMock()
+    deployment_orchestration_service.create_deployment_context = AsyncMock(return_value=None)
+    deployment_orchestration_service.update_deployment_status = AsyncMock()
+    deployment_orchestration_service.finalize_successful_deployment = AsyncMock()
+    deployment_orchestration_service.append_success_marker = MagicMock(
+        side_effect=lambda x: x + " ##SUCCESS##"
+    )
+    deployment_orchestration_service.command_succeeded = MagicMock(return_value=True)
+    deployment_orchestration_service.shell_quote = MagicMock(side_effect=lambda x: f"'{x}'")
+    deployment_orchestration_service.cleanup_output = MagicMock(side_effect=lambda x: x)
+    deployment_orchestration_service.cleanup_output_for_display = MagicMock(side_effect=lambda x: x)
+    deployment_orchestration_service.extract_deployment_url = MagicMock(
+        return_value="https://app.vercel.app"
+    )
+
+    llm_setting_service = MagicMock()
+    llm_setting_service.get_llm_settings = AsyncMock(return_value=MagicMock())
+
+    plan_service = MagicMock()
+    plan_service.has_existing_plan = AsyncMock(return_value=False)
+    plan_service.get_plan_data = AsyncMock(return_value=None)
+    plan_service.fail_task = AsyncMock()
+
+    execution_service = MagicMock()
+    execution_service.create_task_with_lock = AsyncMock(return_value=None)
+
+    agent_service = MagicMock()
+    agent_service.create_plan_agent_v1 = AsyncMock()
+    agent_service.create_plan_suggestions_agent_v1 = AsyncMock()
+
+    services = {
+        # Base 5
+        "session_service": session_service,
+        "llm_setting_service": llm_setting_service,
+        "file_service": file_service,
+        "event_service": event_service,
+        "run_task_service": run_task_service,
+        # Extra services
+        "config": config,
+        "sandbox_service": sandbox_service,
+        "project_service": project_service,
+        "deployments_service": deployments_service,
+        "deployment_orchestration_service": deployment_orchestration_service,
+        "plan_service": plan_service,
+        "execution_service": execution_service,
+        "agent_service": agent_service,
+    }
+    services.update(overrides)
+    return services
 
 
 def _mock_container(**overrides) -> MagicMock:
+    """Kept for CommandHandlerFactory tests which still take container=."""
     container = MagicMock()
     container.config = MagicMock()
     container.config.workspace_path = "/workspace"
@@ -80,10 +186,10 @@ def _mock_container(**overrides) -> MagicMock:
     container.project_service.get_session_project_or_none = AsyncMock(return_value=None)
     container.deployments_service = MagicMock()
     container.deployments_service.update_deployment_metadata = AsyncMock()
-    container.agent_run_service = MagicMock()
-    container.agent_run_service.get_running_task = AsyncMock(return_value=None)
-    container.agent_run_service.create_task = AsyncMock()
-    container.agent_run_service.update_task_status = AsyncMock()
+    container.run_task_service = MagicMock()
+    container.run_task_service.get_running_task = AsyncMock(return_value=None)
+    container.run_task_service.create_task = AsyncMock()
+    container.run_task_service.update_task_status = AsyncMock()
     container.event_service = MagicMock()
     container.event_service.save_event = AsyncMock()
     container.file_service = MagicMock()
@@ -108,8 +214,7 @@ def _mock_container(**overrides) -> MagicMock:
     container.deployment_orchestration_service.extract_deployment_url = MagicMock(
         return_value="https://app.vercel.app"
     )
-    container.session_validation_service = MagicMock()
-    container.session_validation_service.validate_and_prepare_session = AsyncMock()
+    container.session_service.validate_and_prepare_session = AsyncMock()
     container.llm_setting_service = MagicMock()
     container.llm_setting_service.get_llm_settings = AsyncMock(return_value=MagicMock())
     container.plan_service = MagicMock()
@@ -142,79 +247,80 @@ async def _noop_db_cm():
 class TestCommandHandlerBase:
     """Tests for the abstract CommandHandler base class via a concrete stub."""
 
-    def _make_handler(self, stream=None, container=None):
-        from ii_agent.agent.socket.command.command_handler import (
-            CommandHandler,
-            UserCommandType,
+    def _make_handler(self, stream=None):
+        from ii_agent.realtime.handlers.base import (
+            BaseCommandHandler,
+            CommandType,
         )
 
-        class _Stub(CommandHandler):
+        class _Stub(BaseCommandHandler):
             def get_command_type(self):
-                return UserCommandType.PING
+                return CommandType.PING
 
             async def handle(self, content, session_info):
                 pass
 
-        return _Stub(
-            event_stream=stream or CapturingEventStream(),
-            container=container or _mock_container(),
-        )
+        pubsub = stream or CapturingEventStream()
+        return _Stub(pubsub=pubsub, container=MagicMock())
 
     @pytest.mark.asyncio
     async def test_send_event_publishes_to_stream(self):
         stream = CapturingEventStream()
         handler = self._make_handler(stream=stream)
         session_id = uuid.uuid4()
-        event = RealtimeEvent(
+        event = SystemEvent(
+            group=EventGroup.SYSTEM,
+            name="system.pong",
             session_id=session_id,
-            type=EventType.PONG,
             content={"msg": "hi"},
         )
         await handler.send_event(event)
         assert len(stream.events) == 1
-        assert stream.events[0].type == EventType.PONG
+        assert stream.events[0].name == "system.pong"
 
     @pytest.mark.asyncio
     async def test_send_error_event_publishes_error(self):
         stream = CapturingEventStream()
         handler = self._make_handler(stream=stream)
         session_id = uuid.uuid4()
-        await handler._send_error_event(str(session_id), message="oops", error_type="test_error")
+        await handler._send_error_event(session_id, error_code=ErrorCode.EXECUTION_ERROR, message="oops")
         assert len(stream.events) == 1
         ev = stream.events[0]
-        assert ev.type == EventType.ERROR
+        assert ev.name == "system.error"
         assert ev.content["message"] == "oops"
-        assert ev.content["error_type"] == "test_error"
+        assert ev.error_code == ErrorCode.EXECUTION_ERROR
 
     @pytest.mark.asyncio
-    async def test_send_error_event_accepts_uuid_session_id(self):
+    async def test_send_error_event_uses_default_message(self):
         stream = CapturingEventStream()
         handler = self._make_handler(stream=stream)
         session_id = uuid.uuid4()
-        await handler._send_error_event(session_id, message="uuid session id")
+        await handler._send_error_event(session_id, error_code=ErrorCode.INSUFFICIENT_CREDITS)
         ev = stream.events[0]
         assert ev.session_id == session_id
+        assert "credits" in ev.content["message"].lower()
 
     @pytest.mark.asyncio
-    async def test_send_event_helper_builds_correct_event(self):
+    async def test_send_event_publishes_typed_event(self):
+        from ii_agent.realtime.events import SystemNotificationEvent
+
         stream = CapturingEventStream()
         handler = self._make_handler(stream=stream)
         session_id = uuid.uuid4()
-        await handler._send_event(
-            str(session_id),
+        await handler.send_event(SystemNotificationEvent(
+            session_id=session_id,
             message="deployment done",
-            event_type=EventType.SYSTEM,
-            extra_key="extra_val",
-        )
+            content={"message": "deployment done", "extra_key": "extra_val"},
+        ))
         ev = stream.events[0]
-        assert ev.type == EventType.SYSTEM
+        assert ev.name == "system.notification"
         assert ev.content["message"] == "deployment done"
         assert ev.content["extra_key"] == "extra_val"
 
-    def test_get_event_stream_returns_stream(self):
+    def test_pubsub_attribute_is_set(self):
         stream = CapturingEventStream()
         handler = self._make_handler(stream=stream)
-        assert handler.get_event_stream() is stream
+        assert handler._pubsub is stream
 
 
 # ===========================================================================
@@ -226,45 +332,50 @@ class TestPublishProjectHandlerExtractApiKey:
     """Test _extract_api_key method which has pure logic."""
 
     def _get_handler(self):
-        from ii_agent.agent.socket.command.publish_handler import PublishProjectHandler
+        from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
-        stream = CapturingEventStream()
-        container = _mock_container()
-        return PublishProjectHandler(event_stream=stream, container=container)
+        return PublishProjectHandler(
+            pubsub=CapturingEventStream(), container=_mock_container(),
+        )
+
+    def _content(self, **kwargs):
+        from ii_agent.realtime.schemas import PublishProjectContent
+
+        return PublishProjectContent(**kwargs)
 
     def test_extracts_from_vercel_api_key_field(self):
         handler = self._get_handler()
-        result = handler._extract_api_key({"vercel_api_key": "  key-123  "})
+        result = handler._extract_api_key(self._content(vercel_api_key="  key-123  "))
         assert result == "key-123"
 
     def test_returns_none_for_empty_vercel_api_key(self):
         handler = self._get_handler()
-        result = handler._extract_api_key({"vercel_api_key": "  "})
+        result = handler._extract_api_key(self._content(vercel_api_key="  "))
         assert result is None
 
     def test_extracts_from_credentials_dict(self):
         handler = self._get_handler()
-        result = handler._extract_api_key({"credentials": {"vercel_api_key": "cred-key"}})
+        result = handler._extract_api_key(self._content(credentials={"vercel_api_key": "cred-key"}))
         assert result == "cred-key"
 
     def test_extracts_from_token_field(self):
         handler = self._get_handler()
-        result = handler._extract_api_key({"token": "tok-456"})
+        result = handler._extract_api_key(self._content(token="tok-456"))
         assert result == "tok-456"
 
     def test_returns_none_when_no_api_key(self):
         handler = self._get_handler()
-        result = handler._extract_api_key({})
+        result = handler._extract_api_key(self._content())
         assert result is None
 
     def test_vercel_api_key_takes_priority_over_token(self):
         handler = self._get_handler()
-        result = handler._extract_api_key({"vercel_api_key": "v-key", "token": "tok"})
+        result = handler._extract_api_key(self._content(vercel_api_key="v-key", token="tok"))
         assert result == "v-key"
 
     def test_credentials_dict_empty_api_key(self):
         handler = self._get_handler()
-        result = handler._extract_api_key({"credentials": {"vercel_api_key": "  "}})
+        result = handler._extract_api_key(self._content(credentials={"vercel_api_key": "  "}))
         assert result is None
 
 
@@ -272,11 +383,10 @@ class TestPublishProjectHandlerParseEnvFile:
     """Test _parse_env_file pure method."""
 
     def _get_handler(self):
-        from ii_agent.agent.socket.command.publish_handler import PublishProjectHandler
+        from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         return PublishProjectHandler(
-            event_stream=CapturingEventStream(),
-            container=_mock_container(),
+            pubsub=CapturingEventStream(), container=_mock_container(),
         )
 
     def test_parses_simple_key_value(self):
@@ -329,11 +439,10 @@ class TestPublishProjectHandlerParseEnvPayload:
     """Test _parse_env_payload pure method."""
 
     def _get_handler(self):
-        from ii_agent.agent.socket.command.publish_handler import PublishProjectHandler
+        from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         return PublishProjectHandler(
-            event_stream=CapturingEventStream(),
-            container=_mock_container(),
+            pubsub=CapturingEventStream(), container=_mock_container(),
         )
 
     def test_parses_dict_payload(self):
@@ -366,11 +475,10 @@ class TestPublishProjectHandlerFormatEnvFlags:
     """Test _format_env_flags pure method."""
 
     def _get_handler(self):
-        from ii_agent.agent.socket.command.publish_handler import PublishProjectHandler
+        from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         return PublishProjectHandler(
-            event_stream=CapturingEventStream(),
-            container=_mock_container(),
+            pubsub=CapturingEventStream(), container=_mock_container(),
         )
 
     def test_builds_env_flags(self):
@@ -390,11 +498,10 @@ class TestPublishProjectHandlerExtractToolOutput:
     """Test _extract_tool_output method."""
 
     def _get_handler(self):
-        from ii_agent.agent.socket.command.publish_handler import PublishProjectHandler
+        from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         return PublishProjectHandler(
-            event_stream=CapturingEventStream(),
-            container=_mock_container(),
+            pubsub=CapturingEventStream(), container=_mock_container(),
         )
 
     def test_returns_string_user_display_content(self):
@@ -438,29 +545,29 @@ class TestPublishProjectHandlerHandle:
 
     @pytest.mark.asyncio
     async def test_handle_sends_error_when_no_deployment_context(self):
-        from ii_agent.agent.socket.command.publish_handler import PublishProjectHandler
+        from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         stream = CapturingEventStream()
         container = _mock_container()
         container.deployment_orchestration_service.create_deployment_context = AsyncMock(
             return_value=None
         )
-        handler = PublishProjectHandler(event_stream=stream, container=container)
+        handler = PublishProjectHandler(pubsub=stream, container=container)
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.publish_handler.get_db_session_local",
+            "ii_agent.realtime.handlers.publish.get_db_session_local",
             return_value=_noop_db_cm(),
         ):
-            await handler.handle({"vercel_api_key": "key"}, session_info)
+            await handler.dispatch({"vercel_api_key": "key"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert "project path" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_handle_sends_error_when_no_api_key(self):
-        from ii_agent.agent.socket.command.publish_handler import PublishProjectHandler
+        from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         stream = CapturingEventStream()
         container = _mock_container()
@@ -475,28 +582,27 @@ class TestPublishProjectHandlerHandle:
             return_value=fake_ctx
         )
 
-        handler = PublishProjectHandler(event_stream=stream, container=container)
+        handler = PublishProjectHandler(pubsub=stream, container=container)
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.publish_handler.get_db_session_local",
+            "ii_agent.realtime.handlers.publish.get_db_session_local",
             return_value=_noop_db_cm(),
         ):
-            await handler.handle({}, session_info)  # No API key
+            await handler.dispatch({}, session_info)  # No API key
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert "vercel api key" in errors[0].content["message"].lower()
 
     def test_get_command_type_is_publish(self):
-        from ii_agent.agent.socket.command.publish_handler import PublishProjectHandler
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.publish import PublishProjectHandler
+        from ii_agent.realtime.handlers.base import CommandType
 
         handler = PublishProjectHandler(
-            event_stream=CapturingEventStream(),
-            container=_mock_container(),
+            pubsub=CapturingEventStream(), container=_mock_container(),
         )
-        assert handler.get_command_type() == UserCommandType.PUBLISH_PROJECT
+        assert handler.get_command_type() == CommandType.PUBLISH_PROJECT
 
 
 # ===========================================================================
@@ -506,20 +612,19 @@ class TestPublishProjectHandlerHandle:
 
 class TestCloudRunPublishHandlerHelpers:
     def _get_handler(self):
-        from ii_agent.agent.socket.command.cloud_run_publish_handler import (
+        from ii_agent.realtime.handlers.cloud_run_publish import (
             CloudRunPublishHandler,
         )
 
         return CloudRunPublishHandler(
-            event_stream=CapturingEventStream(),
-            container=_mock_container(),
+            pubsub=CapturingEventStream(), container=_mock_container(),
         )
 
     def test_get_command_type(self):
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.base import CommandType
 
         handler = self._get_handler()
-        assert handler.get_command_type() == UserCommandType.PUBLISH_CLOUD_RUN
+        assert handler.get_command_type() == CommandType.PUBLISH_CLOUD_RUN
 
     def test_extract_env_vars_from_dict(self):
         handler = self._get_handler()
@@ -547,10 +652,10 @@ class TestCloudRunPublishHandlerHelpers:
         handler = self._get_handler()
         with (
             patch(
-                "ii_agent.agent.socket.command.cloud_run_publish_handler.CloudRunConfig.from_env"
+                "ii_agent.realtime.handlers.cloud_run_publish.CloudRunConfig.from_env"
             ) as mock_cfg,
             patch(
-                "ii_agent.agent.socket.command.cloud_run_publish_handler.CloudRunPublisher"
+                "ii_agent.realtime.handlers.cloud_run_publish.CloudRunPublisher"
             ) as mock_pub,
         ):
             mock_cfg.return_value = MagicMock()
@@ -606,7 +711,7 @@ class TestCloudRunPublishHandlerHelpers:
 class TestCloudRunPublishHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_when_no_context(self):
-        from ii_agent.agent.socket.command.cloud_run_publish_handler import (
+        from ii_agent.realtime.handlers.cloud_run_publish import (
             CloudRunPublishHandler,
         )
 
@@ -615,22 +720,22 @@ class TestCloudRunPublishHandlerHandle:
         container.deployment_orchestration_service.create_deployment_context = AsyncMock(
             return_value=None
         )
-        handler = CloudRunPublishHandler(event_stream=stream, container=container)
+        handler = CloudRunPublishHandler(pubsub=stream, container=container)
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.cloud_run_publish_handler.get_db_session_local",
+            "ii_agent.realtime.handlers.cloud_run_publish.get_db_session_local",
             return_value=_noop_db_cm(),
         ):
-            await handler.handle({}, session_info)
+            await handler.dispatch({}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert "project path" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_when_no_sandbox(self):
-        from ii_agent.agent.socket.command.cloud_run_publish_handler import (
+        from ii_agent.realtime.handlers.cloud_run_publish import (
             CloudRunPublishHandler,
         )
 
@@ -647,19 +752,19 @@ class TestCloudRunPublishHandlerHandle:
         )
         container.sandbox_service.resolve_sandbox_for_session = AsyncMock(return_value=None)
 
-        handler = CloudRunPublishHandler(event_stream=stream, container=container)
+        handler = CloudRunPublishHandler(pubsub=stream, container=container)
         session_info = _make_session_info()
 
         with (
             patch(
-                "ii_agent.agent.socket.command.cloud_run_publish_handler.get_db_session_local",
+                "ii_agent.realtime.handlers.cloud_run_publish.get_db_session_local",
                 return_value=_noop_db_cm(),
             ),
-            patch("ii_agent.agent.socket.command.cloud_run_publish_handler.E2BSandboxManager"),
+            patch("ii_agent.realtime.handlers.cloud_run_publish.E2BSandbox"),
         ):
-            await handler.handle({}, session_info)
+            await handler.dispatch({}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
 
 
@@ -670,13 +775,12 @@ class TestCloudRunPublishHandlerHandle:
 
 class TestAppleAppSetupHandlerValidateBundleId:
     def _get_handler(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleAppSetupHandler,
         )
 
         return AppleAppSetupHandler(
-            event_stream=CapturingEventStream(),
-            container=_mock_container(),
+            pubsub=CapturingEventStream(), container=_mock_container(),
         )
 
     def test_valid_bundle_id(self):
@@ -719,12 +823,12 @@ class TestAppleAppSetupHandlerValidateBundleId:
 class TestAppleAppSetupHandlerSendSetupStatus:
     @pytest.mark.asyncio
     async def test_sends_status_event(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleAppSetupHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAppSetupHandler(pubsub=stream, container=_mock_container())
         session_id = uuid.uuid4()
         await handler._send_setup_status(
             session_id,
@@ -735,19 +839,19 @@ class TestAppleAppSetupHandlerSendSetupStatus:
         )
         ev = stream.last_event()
         assert ev is not None
-        assert ev.type == EventType.APPLE_APP_SETUP_STATUS
+        assert ev.name == "integration.apple.app.setup_status"
         assert ev.content["status"] == "registering_bundle"
         assert ev.content["step"] == 1
         assert ev.content["total_steps"] == 3
 
     @pytest.mark.asyncio
     async def test_sends_status_with_extra_kwargs(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleAppSetupHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAppSetupHandler(pubsub=stream, container=_mock_container())
         session_id = uuid.uuid4()
         await handler._send_setup_status(
             session_id,
@@ -762,108 +866,108 @@ class TestAppleAppSetupHandlerSendSetupStatus:
 class TestAppleAppSetupHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_for_missing_bundle_id(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleAppSetupHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAppSetupHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
-        await handler.handle({"app_name": "My App"}, session_info)
+        await handler.dispatch({"app_name": "My App"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "bundle identifier" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_for_missing_app_name(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleAppSetupHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAppSetupHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
-        await handler.handle({"bundle_identifier": "com.example.app"}, session_info)
+        await handler.dispatch({"bundle_identifier": "com.example.app"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "app name" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_for_invalid_bundle_id_format(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleAppSetupHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAppSetupHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
-        await handler.handle(
+        await handler.dispatch(
             {"bundle_identifier": "invalid", "app_name": "My App"},
             session_info,
         )
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "invalid bundle identifier" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_when_no_apple_credential(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleAppSetupHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAppSetupHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.apple_app_setup_handler.AppleCredentials.get_active_session",
+            "ii_agent.realtime.handlers.apple_app_setup.AppleCredentials.get_active_session",
             new=AsyncMock(return_value=None),
         ):
-            await handler.handle(
+            await handler.dispatch(
                 {"bundle_identifier": "com.example.app", "app_name": "My App"},
                 session_info,
             )
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "authenticate with apple" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_when_auth_not_complete(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleAppSetupHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAppSetupHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
         cred = MagicMock()
         cred.auth_state = "pending_2fa"  # Not AUTHENTICATED
 
         with patch(
-            "ii_agent.agent.socket.command.apple_app_setup_handler.AppleCredentials.get_active_session",
+            "ii_agent.realtime.handlers.apple_app_setup.AppleCredentials.get_active_session",
             new=AsyncMock(return_value=cred),
         ):
-            await handler.handle(
+            await handler.dispatch(
                 {"bundle_identifier": "com.example.app", "app_name": "My App"},
                 session_info,
             )
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "incomplete" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_when_no_password(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleAppSetupHandler,
         )
         from ii_agent.integrations.mobile.apple import AppleAuthStateEnum
 
         stream = CapturingEventStream()
-        handler = AppleAppSetupHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAppSetupHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
 
         cred = MagicMock()
@@ -874,54 +978,53 @@ class TestAppleAppSetupHandlerHandle:
 
         with (
             patch(
-                "ii_agent.agent.socket.command.apple_app_setup_handler.AppleCredentials.get_active_session",
+                "ii_agent.realtime.handlers.apple_app_setup.AppleCredentials.get_active_session",
                 new=AsyncMock(return_value=cred),
             ),
             patch(
-                "ii_agent.agent.socket.command.apple_app_setup_handler.AppleCredentials.get_decrypted_session_data",
+                "ii_agent.realtime.handlers.apple_app_setup.AppleCredentials.get_decrypted_session_data",
                 return_value={},  # No _temp_password
             ),
         ):
-            await handler.handle(
+            await handler.dispatch(
                 {"bundle_identifier": "com.example.app", "app_name": "My App"},
                 session_info,
             )
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
 
 
 class TestAppleListAppsHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_when_no_credential(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleListAppsHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleListAppsHandler(event_stream=stream, container=_mock_container())
+        handler = AppleListAppsHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.apple_app_setup_handler.AppleCredentials.get_active_session",
+            "ii_agent.realtime.handlers.apple_app_setup.AppleCredentials.get_active_session",
             new=AsyncMock(return_value=None),
         ):
-            await handler.handle({}, session_info)
+            await handler.dispatch({}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
 
     def test_get_command_type(self):
-        from ii_agent.agent.socket.command.apple_app_setup_handler import (
+        from ii_agent.realtime.handlers.apple_app_setup import (
             AppleListAppsHandler,
         )
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.base import CommandType
 
         handler = AppleListAppsHandler(
-            event_stream=CapturingEventStream(),
-            container=_mock_container(),
+            pubsub=CapturingEventStream(), container=_mock_container(),
         )
-        assert handler.get_command_type() == UserCommandType.APPLE_LIST_APPS
+        assert handler.get_command_type() == CommandType.APPLE_LIST_APPS
 
 
 # ===========================================================================
@@ -932,70 +1035,70 @@ class TestAppleListAppsHandlerHandle:
 class TestAppleAuthLoginHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_for_missing_apple_id(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuthLoginHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuthLoginHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
-        await handler.handle({"password": "pass"}, session_info)
+        await handler.dispatch({"password": "pass"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "apple id and password" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_for_missing_password(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuthLoginHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuthLoginHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
-        await handler.handle({"apple_id": "user@example.com"}, session_info)
+        await handler.dispatch({"apple_id": "user@example.com"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
 
     @pytest.mark.asyncio
     async def test_sends_error_for_invalid_credentials(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuthLoginHandler
         from ii_agent.integrations.mobile.apple import AppleInvalidCredentialsError
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuthLoginHandler(pubsub=stream, container=_mock_container())
         handler.auth_client = MagicMock()
         handler.auth_client.initiate_login = AsyncMock(
             side_effect=AppleInvalidCredentialsError("bad creds")
         )
         session_info = _make_session_info()
 
-        await handler.handle(
+        await handler.dispatch(
             {"apple_id": "user@example.com", "password": "wrong"},
             session_info,
         )
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert "invalid apple id" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_for_rate_limit(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuthLoginHandler
         from ii_agent.integrations.mobile.apple import AppleRateLimitError
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuthLoginHandler(pubsub=stream, container=_mock_container())
         handler.auth_client = MagicMock()
         handler.auth_client.initiate_login = AsyncMock(
             side_effect=AppleRateLimitError("rate limit")
         )
         session_info = _make_session_info()
 
-        await handler.handle(
+        await handler.dispatch(
             {"apple_id": "user@example.com", "password": "pass"},
             session_info,
         )
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert (
             "rate" in errors[0].content["message"].lower()
@@ -1004,33 +1107,33 @@ class TestAppleAuthLoginHandlerHandle:
 
     @pytest.mark.asyncio
     async def test_sends_error_for_account_locked(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuthLoginHandler
         from ii_agent.integrations.mobile.apple import AppleAccountLockedError
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuthLoginHandler(pubsub=stream, container=_mock_container())
         handler.auth_client = MagicMock()
         handler.auth_client.initiate_login = AsyncMock(
             side_effect=AppleAccountLockedError("locked")
         )
         session_info = _make_session_info()
 
-        await handler.handle(
+        await handler.dispatch(
             {"apple_id": "user@example.com", "password": "pass"},
             session_info,
         )
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert "locked" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_2fa_required_event(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuthLoginHandler
         from ii_agent.integrations.mobile.apple.types import AppleSession, AppleAuthState
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuthLoginHandler(pubsub=stream, container=_mock_container())
 
         mock_session = MagicMock(spec=AppleSession)
         mock_session.auth_state = AppleAuthState.PENDING_2FA
@@ -1045,25 +1148,25 @@ class TestAppleAuthLoginHandlerHandle:
         handler.auth_client.initiate_login = AsyncMock(return_value=login_response)
 
         with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.save_or_update_credential",
+            "ii_agent.realtime.handlers.apple_auth.AppleCredentials.save_or_update_credential",
             new=AsyncMock(),
         ):
             session_info = _make_session_info()
-            await handler.handle(
+            await handler.dispatch(
                 {"apple_id": "user@example.com", "password": "pass"},
                 session_info,
             )
 
-        tfa_events = stream.events_of_type(EventType.APPLE_2FA_REQUIRED)
+        tfa_events = stream.events_of_type("integration.apple.auth.2fa_required")
         assert len(tfa_events) == 1
 
     @pytest.mark.asyncio
     async def test_sends_team_selection_when_no_2fa(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuthLoginHandler
         from ii_agent.integrations.mobile.apple.types import AppleSession, AppleAuthState
 
         stream = CapturingEventStream()
-        handler = AppleAuthLoginHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuthLoginHandler(pubsub=stream, container=_mock_container())
 
         mock_session = MagicMock(spec=AppleSession)
         mock_session.auth_state = AppleAuthState.AUTHENTICATED
@@ -1082,103 +1185,101 @@ class TestAppleAuthLoginHandlerHandle:
         handler.auth_client.get_teams = AsyncMock(return_value=[mock_team])
 
         with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.save_or_update_credential",
+            "ii_agent.realtime.handlers.apple_auth.AppleCredentials.save_or_update_credential",
             new=AsyncMock(),
         ):
             session_info = _make_session_info()
-            await handler.handle(
+            await handler.dispatch(
                 {"apple_id": "user@example.com", "password": "pass"},
                 session_info,
             )
 
-        team_events = stream.events_of_type(EventType.APPLE_TEAM_SELECTION)
+        team_events = stream.events_of_type("integration.apple.auth.team_selection")
         assert len(team_events) == 1
 
     def test_get_command_type(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuthLoginHandler
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.apple_auth import AppleAuthLoginHandler
+        from ii_agent.realtime.handlers.base import CommandType
 
-        handler = AppleAuthLoginHandler(
-            event_stream=CapturingEventStream(), container=_mock_container()
-        )
-        assert handler.get_command_type() == UserCommandType.APPLE_AUTH_LOGIN
+        handler = AppleAuthLoginHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        assert handler.get_command_type() == CommandType.APPLE_AUTH_LOGIN
 
 
 class TestAppleAuth2FAHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_for_short_code(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuth2FAHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuth2FAHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuth2FAHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
-        await handler.handle({"code": "123"}, session_info)
+        await handler.dispatch({"code": "123"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "6-digit" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_for_non_digit_code(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuth2FAHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuth2FAHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuth2FAHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
-        await handler.handle({"code": "ABCDEF"}, session_info)
+        await handler.dispatch({"code": "ABCDEF"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
 
     @pytest.mark.asyncio
     async def test_sends_error_when_no_credential(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuth2FAHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuth2FAHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuth2FAHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
+            "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_user_credential",
             new=AsyncMock(return_value=None),
         ):
-            await handler.handle({"code": "123456"}, session_info)
+            await handler.dispatch({"code": "123456"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
 
     @pytest.mark.asyncio
     async def test_sends_error_when_no_session_data(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuth2FAHandler
 
         stream = CapturingEventStream()
-        handler = AppleAuth2FAHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuth2FAHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
         fake_cred = MagicMock()
 
         with (
             patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
+                "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_user_credential",
                 new=AsyncMock(return_value=fake_cred),
             ),
             patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_session_data",
+                "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_decrypted_session_data",
                 return_value=None,
             ),
         ):
-            await handler.handle({"code": "123456"}, session_info)
+            await handler.dispatch({"code": "123456"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
 
     @pytest.mark.asyncio
     async def test_sends_error_for_invalid_2fa_code(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleAuth2FAHandler
         from ii_agent.integrations.mobile.apple import Apple2FAInvalidCodeError
         from ii_agent.integrations.mobile.apple.types import AppleSession, AppleAuthState
 
         stream = CapturingEventStream()
-        handler = AppleAuth2FAHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuth2FAHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
         fake_cred = MagicMock()
 
@@ -1193,22 +1294,22 @@ class TestAppleAuth2FAHandlerHandle:
 
         with (
             patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
+                "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_user_credential",
                 new=AsyncMock(return_value=fake_cred),
             ),
             patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_session_data",
+                "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_decrypted_session_data",
                 return_value={"_temp_password": "mypass", "auth_state": "pending_2fa"},
             ),
             patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleAuth2FAHandler.handle",
+                "ii_agent.realtime.handlers.apple_auth.AppleAuth2FAHandler.handle",
                 wraps=handler.handle,
             ),
         ):
             # Patch AppleSession.model_validate
             with (
                 patch(
-                    "ii_agent.agent.socket.command.apple_auth_handler.AppleSession",
+                    "ii_agent.realtime.handlers.apple_auth.AppleSession",
                     return_value=mock_session,
                 )
                 if False
@@ -1217,122 +1318,118 @@ class TestAppleAuth2FAHandlerHandle:
                     return_value=mock_session,
                 )
             ):
-                await handler.handle({"code": "123456"}, session_info)
+                await handler.dispatch({"code": "123456"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
 
     def test_get_command_type(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleAuth2FAHandler
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.apple_auth import AppleAuth2FAHandler
+        from ii_agent.realtime.handlers.base import CommandType
 
-        handler = AppleAuth2FAHandler(
-            event_stream=CapturingEventStream(), container=_mock_container()
-        )
-        assert handler.get_command_type() == UserCommandType.APPLE_AUTH_2FA
+        handler = AppleAuth2FAHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        assert handler.get_command_type() == CommandType.APPLE_AUTH_2FA
 
 
 class TestAppleAuthSelectTeamHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_for_missing_team_id(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import (
+        from ii_agent.realtime.handlers.apple_auth import (
             AppleAuthSelectTeamHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleAuthSelectTeamHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuthSelectTeamHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
-        await handler.handle({}, session_info)
+        await handler.dispatch({}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "team" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_when_no_credential(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import (
+        from ii_agent.realtime.handlers.apple_auth import (
             AppleAuthSelectTeamHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleAuthSelectTeamHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuthSelectTeamHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
+            "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_user_credential",
             new=AsyncMock(return_value=None),
         ):
-            await handler.handle({"team_id": "TEAM1"}, session_info)
+            await handler.dispatch({"team_id": "TEAM1"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
 
     @pytest.mark.asyncio
     async def test_sends_error_for_invalid_team_id(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import (
+        from ii_agent.realtime.handlers.apple_auth import (
             AppleAuthSelectTeamHandler,
         )
 
         stream = CapturingEventStream()
-        handler = AppleAuthSelectTeamHandler(event_stream=stream, container=_mock_container())
+        handler = AppleAuthSelectTeamHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
         fake_cred = MagicMock()
         fake_cred.available_teams = [{"team_id": "OTHER_TEAM", "name": "Other"}]
 
         with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
+            "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_user_credential",
             new=AsyncMock(return_value=fake_cred),
         ):
-            await handler.handle({"team_id": "WRONG_TEAM"}, session_info)
+            await handler.dispatch({"team_id": "WRONG_TEAM"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "invalid team" in errors[0].content["message"].lower()
 
     def test_get_command_type(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import (
+        from ii_agent.realtime.handlers.apple_auth import (
             AppleAuthSelectTeamHandler,
         )
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.base import CommandType
 
-        handler = AppleAuthSelectTeamHandler(
-            event_stream=CapturingEventStream(), container=_mock_container()
-        )
-        assert handler.get_command_type() == UserCommandType.APPLE_AUTH_SELECT_TEAM
+        handler = AppleAuthSelectTeamHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        assert handler.get_command_type() == CommandType.APPLE_AUTH_SELECT_TEAM
 
 
 class TestAppleCheckAuthHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_no_auth_event_when_no_credential(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleCheckAuthHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleCheckAuthHandler
 
         stream = CapturingEventStream()
-        handler = AppleCheckAuthHandler(event_stream=stream, container=_mock_container())
+        handler = AppleCheckAuthHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with (
             patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_active_session",
+                "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_active_session",
                 new=AsyncMock(return_value=None),
             ),
             patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_user_credential",
+                "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_user_credential",
                 new=AsyncMock(return_value=None),
             ),
         ):
-            await handler.handle({}, session_info)
+            await handler.dispatch({}, session_info)
 
-        check_events = stream.events_of_type(EventType.APPLE_AUTH_CHECK_RESULT)
+        check_events = stream.events_of_type("integration.apple.auth.check_result")
         assert len(check_events) == 1
         assert check_events[0].content["has_valid_auth"] is False
         assert check_events[0].content["has_expo_token"] is False
 
     @pytest.mark.asyncio
     async def test_sends_check_result_with_credential(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleCheckAuthHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleCheckAuthHandler
 
         stream = CapturingEventStream()
-        handler = AppleCheckAuthHandler(event_stream=stream, container=_mock_container())
+        handler = AppleCheckAuthHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
         fake_cred = MagicMock()
         fake_cred.apple_id = "user@example.com"
@@ -1340,110 +1437,106 @@ class TestAppleCheckAuthHandlerHandle:
 
         with (
             patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_active_session",
+                "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_active_session",
                 new=AsyncMock(return_value=fake_cred),
             ),
             patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_expo_token",
+                "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_decrypted_expo_token",
                 return_value="expo-token-abc",
             ),
             patch(
-                "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_decrypted_app_specific_password",
+                "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_decrypted_app_specific_password",
                 return_value=None,
             ),
         ):
-            await handler.handle({}, session_info)
+            await handler.dispatch({}, session_info)
 
-        check_events = stream.events_of_type(EventType.APPLE_AUTH_CHECK_RESULT)
+        check_events = stream.events_of_type("integration.apple.auth.check_result")
         assert len(check_events) == 1
         assert check_events[0].content["has_expo_token"] is True
         assert check_events[0].content["apple_id"] == "user@example.com"
 
     @pytest.mark.asyncio
     async def test_sends_error_check_result_on_exception(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleCheckAuthHandler
+        from ii_agent.realtime.handlers.apple_auth import AppleCheckAuthHandler
 
         stream = CapturingEventStream()
-        handler = AppleCheckAuthHandler(event_stream=stream, container=_mock_container())
+        handler = AppleCheckAuthHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.get_active_session",
+            "ii_agent.realtime.handlers.apple_auth.AppleCredentials.get_active_session",
             new=AsyncMock(side_effect=Exception("db error")),
         ):
-            await handler.handle({}, session_info)
+            await handler.dispatch({}, session_info)
 
-        check_events = stream.events_of_type(EventType.APPLE_AUTH_CHECK_RESULT)
+        check_events = stream.events_of_type("integration.apple.auth.check_result")
         assert len(check_events) == 1
         assert check_events[0].content["has_valid_auth"] is False
 
     def test_get_command_type(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import AppleCheckAuthHandler
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.apple_auth import AppleCheckAuthHandler
+        from ii_agent.realtime.handlers.base import CommandType
 
-        handler = AppleCheckAuthHandler(
-            event_stream=CapturingEventStream(), container=_mock_container()
-        )
-        assert handler.get_command_type() == UserCommandType.APPLE_CHECK_AUTH
+        handler = AppleCheckAuthHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        assert handler.get_command_type() == CommandType.APPLE_CHECK_AUTH
 
 
 class TestSaveExpoTokenHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_for_empty_token(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import SaveExpoTokenHandler
+        from ii_agent.realtime.handlers.apple_auth import SaveExpoTokenHandler
 
         stream = CapturingEventStream()
-        handler = SaveExpoTokenHandler(event_stream=stream, container=_mock_container())
+        handler = SaveExpoTokenHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
-        await handler.handle({"expo_token": "  "}, session_info)
+        await handler.dispatch({"expo_token": "  "}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "expo token" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_saves_token_and_sends_success_event(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import SaveExpoTokenHandler
+        from ii_agent.realtime.handlers.apple_auth import SaveExpoTokenHandler
 
         stream = CapturingEventStream()
-        handler = SaveExpoTokenHandler(event_stream=stream, container=_mock_container())
+        handler = SaveExpoTokenHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.save_expo_token",
+            "ii_agent.realtime.handlers.apple_auth.AppleCredentials.save_expo_token",
             new=AsyncMock(),
         ):
-            await handler.handle({"expo_token": "my-expo-token"}, session_info)
+            await handler.dispatch({"expo_token": "my-expo-token"}, session_info)
 
-        saved_events = stream.events_of_type(EventType.EXPO_TOKEN_SAVED)
+        saved_events = stream.events_of_type("integration.expo.token_saved")
         assert len(saved_events) == 1
         assert saved_events[0].content["success"] is True
 
     @pytest.mark.asyncio
     async def test_sends_error_on_save_exception(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import SaveExpoTokenHandler
+        from ii_agent.realtime.handlers.apple_auth import SaveExpoTokenHandler
 
         stream = CapturingEventStream()
-        handler = SaveExpoTokenHandler(event_stream=stream, container=_mock_container())
+        handler = SaveExpoTokenHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.apple_auth_handler.AppleCredentials.save_expo_token",
+            "ii_agent.realtime.handlers.apple_auth.AppleCredentials.save_expo_token",
             new=AsyncMock(side_effect=Exception("DB error")),
         ):
-            await handler.handle({"expo_token": "my-expo-token"}, session_info)
+            await handler.dispatch({"expo_token": "my-expo-token"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
 
     def test_get_command_type(self):
-        from ii_agent.agent.socket.command.apple_auth_handler import SaveExpoTokenHandler
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.apple_auth import SaveExpoTokenHandler
+        from ii_agent.realtime.handlers.base import CommandType
 
-        handler = SaveExpoTokenHandler(
-            event_stream=CapturingEventStream(), container=_mock_container()
-        )
-        assert handler.get_command_type() == UserCommandType.SAVE_EXPO_TOKEN
+        handler = SaveExpoTokenHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        assert handler.get_command_type() == CommandType.SAVE_EXPO_TOKEN
 
 
 # ===========================================================================
@@ -1453,13 +1546,12 @@ class TestSaveExpoTokenHandlerHandle:
 
 class TestSubmitTestflightHandlerExtractToolOutput:
     def _get_handler(self):
-        from ii_agent.agent.socket.command.submit_testflight_handler import (
+        from ii_agent.realtime.handlers.submit_testflight import (
             SubmitTestflightHandler,
         )
 
         return SubmitTestflightHandler(
-            event_stream=CapturingEventStream(),
-            container=_mock_container(),
+            pubsub=CapturingEventStream(), container=_mock_container(),
         )
 
     def test_returns_string_display_content(self):
@@ -1496,16 +1588,16 @@ class TestSubmitTestflightHandlerExtractToolOutput:
 class TestSubmitTestflightHandlerSendTestflightLog:
     @pytest.mark.asyncio
     async def test_sends_testflight_log_event(self):
-        from ii_agent.agent.socket.command.submit_testflight_handler import (
+        from ii_agent.realtime.handlers.submit_testflight import (
             SubmitTestflightHandler,
         )
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
+        handler = SubmitTestflightHandler(pubsub=stream, container=_mock_container())
         session_id = uuid.uuid4()
         await handler._send_testflight_log(session_id, "Build started", status="running")
 
-        logs = stream.events_of_type(EventType.TESTFLIGHT_LOG)
+        logs = stream.events_of_type("integration.testflight.log")
         assert len(logs) == 1
         assert logs[0].content["message"] == "Build started"
         assert logs[0].content["status"] == "running"
@@ -1513,86 +1605,86 @@ class TestSubmitTestflightHandlerSendTestflightLog:
 
     @pytest.mark.asyncio
     async def test_sends_testflight_log_with_string_session_id(self):
-        from ii_agent.agent.socket.command.submit_testflight_handler import (
+        from ii_agent.realtime.handlers.submit_testflight import (
             SubmitTestflightHandler,
         )
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
+        handler = SubmitTestflightHandler(pubsub=stream, container=_mock_container())
         session_id = str(uuid.uuid4())
         await handler._send_testflight_log(session_id, "Error occurred", is_error=True)
 
-        logs = stream.events_of_type(EventType.TESTFLIGHT_LOG)
+        logs = stream.events_of_type("integration.testflight.log")
         assert len(logs) == 1
         assert logs[0].content["is_error"] is True
 
     @pytest.mark.asyncio
     async def test_sends_testflight_log_default_status(self):
-        from ii_agent.agent.socket.command.submit_testflight_handler import (
+        from ii_agent.realtime.handlers.submit_testflight import (
             SubmitTestflightHandler,
         )
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
+        handler = SubmitTestflightHandler(pubsub=stream, container=_mock_container())
         session_id = uuid.uuid4()
         await handler._send_testflight_log(session_id, "Starting")
 
-        logs = stream.events_of_type(EventType.TESTFLIGHT_LOG)
+        logs = stream.events_of_type("integration.testflight.log")
         assert logs[0].content["status"] == "running"
 
 
 class TestSubmitTestflightHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_when_no_credential(self):
-        from ii_agent.agent.socket.command.submit_testflight_handler import (
+        from ii_agent.realtime.handlers.submit_testflight import (
             SubmitTestflightHandler,
         )
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
+        handler = SubmitTestflightHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
+            "ii_agent.realtime.handlers.submit_testflight.AppleCredentials.get_active_session",
             new=AsyncMock(return_value=None),
         ):
-            await handler.handle({}, session_info)
+            await handler.dispatch({}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "authenticate with apple" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_when_auth_not_complete(self):
-        from ii_agent.agent.socket.command.submit_testflight_handler import (
+        from ii_agent.realtime.handlers.submit_testflight import (
             SubmitTestflightHandler,
         )
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
+        handler = SubmitTestflightHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
         cred = MagicMock()
         cred.auth_state = "pending"
 
         with patch(
-            "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
+            "ii_agent.realtime.handlers.submit_testflight.AppleCredentials.get_active_session",
             new=AsyncMock(return_value=cred),
         ):
-            await handler.handle({}, session_info)
+            await handler.dispatch({}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) == 1
         assert "incomplete" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_when_no_expo_token(self):
-        from ii_agent.agent.socket.command.submit_testflight_handler import (
+        from ii_agent.realtime.handlers.submit_testflight import (
             SubmitTestflightHandler,
         )
         from ii_agent.integrations.mobile.apple import AppleAuthStateEnum
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
+        handler = SubmitTestflightHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
         cred = MagicMock()
         cred.auth_state = AppleAuthStateEnum.AUTHENTICATED.value
@@ -1601,37 +1693,37 @@ class TestSubmitTestflightHandlerHandle:
 
         with (
             patch(
-                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
+                "ii_agent.realtime.handlers.submit_testflight.AppleCredentials.get_active_session",
                 new=AsyncMock(return_value=cred),
             ),
             patch(
-                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_session_data",
+                "ii_agent.realtime.handlers.submit_testflight.AppleCredentials.get_decrypted_session_data",
                 return_value={"_temp_password": "mypass"},
             ),
             patch(
-                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_expo_token",
+                "ii_agent.realtime.handlers.submit_testflight.AppleCredentials.get_decrypted_expo_token",
                 return_value=None,
             ),
             patch(
-                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.clear_session_password",
+                "ii_agent.realtime.handlers.submit_testflight.AppleCredentials.clear_session_password",
                 new=AsyncMock(),
             ),
         ):
-            await handler.handle({}, session_info)  # No expo_token in content
+            await handler.dispatch({}, session_info)  # No expo_token in content
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert "expo token" in errors[0].content["message"].lower()
 
     @pytest.mark.asyncio
     async def test_sends_error_when_no_apple_password(self):
-        from ii_agent.agent.socket.command.submit_testflight_handler import (
+        from ii_agent.realtime.handlers.submit_testflight import (
             SubmitTestflightHandler,
         )
         from ii_agent.integrations.mobile.apple import AppleAuthStateEnum
 
         stream = CapturingEventStream()
-        handler = SubmitTestflightHandler(event_stream=stream, container=_mock_container())
+        handler = SubmitTestflightHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
         cred = MagicMock()
         cred.auth_state = AppleAuthStateEnum.AUTHENTICATED.value
@@ -1640,33 +1732,31 @@ class TestSubmitTestflightHandlerHandle:
 
         with (
             patch(
-                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_active_session",
+                "ii_agent.realtime.handlers.submit_testflight.AppleCredentials.get_active_session",
                 new=AsyncMock(return_value=cred),
             ),
             patch(
-                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_session_data",
+                "ii_agent.realtime.handlers.submit_testflight.AppleCredentials.get_decrypted_session_data",
                 return_value={},  # No _temp_password
             ),
             patch(
-                "ii_agent.agent.socket.command.submit_testflight_handler.AppleCredentials.get_decrypted_expo_token",
+                "ii_agent.realtime.handlers.submit_testflight.AppleCredentials.get_decrypted_expo_token",
                 return_value="expo-token",
             ),
         ):
-            await handler.handle({"expo_token": "expo-token"}, session_info)
+            await handler.dispatch({"expo_token": "expo-token"}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
 
     def test_get_command_type(self):
-        from ii_agent.agent.socket.command.submit_testflight_handler import (
+        from ii_agent.realtime.handlers.submit_testflight import (
             SubmitTestflightHandler,
         )
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.base import CommandType
 
-        handler = SubmitTestflightHandler(
-            event_stream=CapturingEventStream(), container=_mock_container()
-        )
-        assert handler.get_command_type() == UserCommandType.SUBMIT_TESTFLIGHT
+        handler = SubmitTestflightHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        assert handler.get_command_type() == CommandType.SUBMIT_TESTFLIGHT
 
 
 # ===========================================================================
@@ -1676,11 +1766,11 @@ class TestSubmitTestflightHandlerHandle:
 
 class TestPlanHandlerGetCommandType:
     def test_get_command_type_is_plan(self):
-        from ii_agent.agent.socket.command.plan_handler import PlanHandler
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.plan import PlanHandler
+        from ii_agent.realtime.handlers.base import CommandType
 
-        handler = PlanHandler(event_stream=CapturingEventStream(), container=_mock_container())
-        assert handler.get_command_type() == UserCommandType.PLAN
+        handler = PlanHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        assert handler.get_command_type() == CommandType.PLAN
 
 
 def _make_plan_content(**kwargs) -> dict:
@@ -1699,7 +1789,7 @@ def _make_plan_content(**kwargs) -> dict:
 class TestPlanHandlerHandle:
     @pytest.mark.asyncio
     async def test_returns_early_when_validation_fails(self):
-        from ii_agent.agent.socket.command.plan_handler import PlanHandler
+        from ii_agent.realtime.handlers.plan import PlanHandler
 
         stream = CapturingEventStream()
         container = _mock_container()
@@ -1709,25 +1799,25 @@ class TestPlanHandlerHandle:
         val_result.error_message = "Insufficient credits"
         val_result.error_type = "credit_error"
         val_result.session_info = None
-        container.session_validation_service.validate_and_prepare_session = AsyncMock(
+        container.session_service.validate_and_prepare_session = AsyncMock(
             return_value=val_result
         )
 
-        handler = PlanHandler(event_stream=stream, container=container)
+        handler = PlanHandler(pubsub=stream, container=container)
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.plan_handler.get_db_session_local",
+            "ii_agent.realtime.handlers.plan.get_db_session_local",
             return_value=_noop_db_cm(),
         ):
-            await handler.handle(_make_plan_content(), session_info)
+            await handler.dispatch(_make_plan_content(), session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
 
     @pytest.mark.asyncio
     async def test_routes_to_error_for_invalid_build_mode(self):
-        from ii_agent.agent.socket.command.plan_handler import PlanHandler
+        from ii_agent.realtime.handlers.plan import PlanHandler
 
         stream = CapturingEventStream()
         container = _mock_container()
@@ -1737,46 +1827,48 @@ class TestPlanHandlerHandle:
         val_result.error_message = None
         val_result.session_info = _make_session_info()
         val_result.llm_config = MagicMock()
-        container.session_validation_service.validate_and_prepare_session = AsyncMock(
+        container.session_service.validate_and_prepare_session = AsyncMock(
             return_value=val_result
         )
 
         task_result = MagicMock()
         task_result.task = MagicMock()
         task_result.task.id = uuid.uuid4()
-        task_result.user_event = RealtimeEvent(
-            session_id=val_result.session_info.id,
-            type=EventType.USER_MESSAGE,
+        task_result.user_event = ApplicationEvent(
+            group=EventGroup.USER,
+            name="session.user_message",
+            session_id=uuid.UUID(val_result.session_info.id),
             content={},
         )
-        task_result.processing_event = RealtimeEvent(
-            session_id=val_result.session_info.id,
-            type=EventType.PROCESSING,
+        task_result.processing_event = ApplicationEvent(
+            group=EventGroup.SYSTEM,
+            name="agent.processing",
+            session_id=uuid.UUID(val_result.session_info.id),
             content={},
         )
         container.execution_service.create_task_with_lock = AsyncMock(return_value=task_result)
 
-        handler = PlanHandler(event_stream=stream, container=container)
+        handler = PlanHandler(pubsub=stream, container=container)
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.plan_handler.get_db_session_local",
+            "ii_agent.realtime.handlers.plan.get_db_session_local",
             return_value=_noop_db_cm(),
         ):
-            await handler.handle(
+            await handler.dispatch(
                 _make_plan_content(
                     build_mode="design"
                 ),  # 'design' hits else branch in _handle_plan
                 session_info,
             )
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert any("invalid plan mode" in ev.content["message"].lower() for ev in errors)
 
     @pytest.mark.asyncio
     async def test_returns_early_when_no_task_created(self):
-        from ii_agent.agent.socket.command.plan_handler import PlanHandler
+        from ii_agent.realtime.handlers.plan import PlanHandler
 
         stream = CapturingEventStream()
         container = _mock_container()
@@ -1786,19 +1878,19 @@ class TestPlanHandlerHandle:
         val_result.error_message = None
         val_result.session_info = _make_session_info()
         val_result.llm_config = MagicMock()
-        container.session_validation_service.validate_and_prepare_session = AsyncMock(
+        container.session_service.validate_and_prepare_session = AsyncMock(
             return_value=val_result
         )
         container.execution_service.create_task_with_lock = AsyncMock(return_value=None)
 
-        handler = PlanHandler(event_stream=stream, container=container)
+        handler = PlanHandler(pubsub=stream, container=container)
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.plan_handler.get_db_session_local",
+            "ii_agent.realtime.handlers.plan.get_db_session_local",
             return_value=_noop_db_cm(),
         ):
-            await handler.handle(_make_plan_content(), session_info)
+            await handler.dispatch(_make_plan_content(), session_info)
 
         # No crash, no events beyond what was already in stream
         assert True
@@ -1807,17 +1899,17 @@ class TestPlanHandlerHandle:
 class TestPlanHandlerPrepareFiles:
     @pytest.mark.asyncio
     async def test_returns_empty_lists_when_no_files(self):
-        from ii_agent.agent.socket.command.plan_handler import PlanHandler
-        from ii_agent.agent.socket.schemas import QueryCommandContent
+        from ii_agent.realtime.handlers.plan import PlanHandler
+        from ii_agent.realtime.schemas import QueryCommandContent
 
-        handler = PlanHandler(event_stream=CapturingEventStream(), container=_mock_container())
+        handler = PlanHandler(pubsub=CapturingEventStream(), container=_mock_container())
         query = QueryCommandContent(
             text="hi", files=[], model_id="gpt-4o", provider="openai", agent_type="general"
         )
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.plan_handler.get_db_session_local",
+            "ii_agent.realtime.handlers.plan.get_db_session_local",
             return_value=_noop_db_cm(),
         ):
             images, files = await handler._prepare_files(query, session_info)
@@ -1827,8 +1919,8 @@ class TestPlanHandlerPrepareFiles:
 
     @pytest.mark.asyncio
     async def test_builds_image_and_file_lists_from_service(self):
-        from ii_agent.agent.socket.command.plan_handler import PlanHandler
-        from ii_agent.agent.socket.schemas import QueryCommandContent
+        from ii_agent.realtime.handlers.plan import PlanHandler
+        from ii_agent.realtime.schemas import QueryCommandContent
 
         container = _mock_container()
         container.file_service.prepare_agent_files = AsyncMock(
@@ -1837,7 +1929,7 @@ class TestPlanHandlerPrepareFiles:
                 [{"id": "f1", "url": "https://file.local/f.txt", "filename": "f.txt"}],
             )
         )
-        handler = PlanHandler(event_stream=CapturingEventStream(), container=container)
+        handler = PlanHandler(pubsub=CapturingEventStream(), container=container)
         query = QueryCommandContent(
             text="hi",
             files=["file-uuid-1"],
@@ -1848,7 +1940,7 @@ class TestPlanHandlerPrepareFiles:
         session_info = _make_session_info()
 
         with patch(
-            "ii_agent.agent.socket.command.plan_handler.get_db_session_local",
+            "ii_agent.realtime.handlers.plan.get_db_session_local",
             return_value=_noop_db_cm(),
         ):
             images, files = await handler._prepare_files(query, session_info)
@@ -1860,10 +1952,10 @@ class TestPlanHandlerPrepareFiles:
 class TestPlanHandlerEmitPlanModificationSuggestions:
     @pytest.mark.asyncio
     async def test_emits_plan_modification_options(self):
-        from ii_agent.agent.socket.command.plan_handler import PlanHandler
+        from ii_agent.realtime.handlers.plan import PlanHandler
 
         stream = CapturingEventStream()
-        handler = PlanHandler(event_stream=stream, container=_mock_container())
+        handler = PlanHandler(pubsub=stream, container=_mock_container())
         session_info = _make_session_info()
         run_id = uuid.uuid4()
 
@@ -1874,7 +1966,7 @@ class TestPlanHandlerEmitPlanModificationSuggestions:
             suggestions=["Add feature X", "Remove step 3"],
         )
 
-        opts = stream.events_of_type(EventType.PLAN_MODIFICATION_OPTIONS)
+        opts = stream.events_of_type("plan.modification.options")
         assert len(opts) == 1
         assert opts[0].content["message"] == "Choose an option"
         assert "Add feature X" in opts[0].content["suggestions"]
@@ -1888,84 +1980,82 @@ class TestPlanHandlerEmitPlanModificationSuggestions:
 class TestContinueRunHandlerHandle:
     @pytest.mark.asyncio
     async def test_sends_error_when_run_id_missing(self):
-        from ii_agent.agent.socket.command.continue_run_handler import ContinueRunHandler
+        from ii_agent.realtime.handlers.continue_run import ContinueRunHandler
 
         stream = CapturingEventStream()
         container = _mock_container()
         with patch(
-            "ii_agent.agent.socket.command.continue_run_handler.AgentFactory"
+            "ii_agent.realtime.handlers.continue_run.AgentFactory"
         ) as mock_factory:
             mock_factory.return_value = MagicMock()
-            handler = ContinueRunHandler(event_stream=stream, container=container)
+            handler = ContinueRunHandler(pubsub=stream, container=container)
 
         session_info = _make_session_info()
-        await handler.handle({"confirmed": True}, session_info)
+        await handler.dispatch({"confirmed": True}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert "run_id" in errors[0].content["message"]
 
     @pytest.mark.asyncio
     async def test_sends_error_when_confirmed_missing(self):
-        from ii_agent.agent.socket.command.continue_run_handler import ContinueRunHandler
+        from ii_agent.realtime.handlers.continue_run import ContinueRunHandler
 
         stream = CapturingEventStream()
         container = _mock_container()
         with patch(
-            "ii_agent.agent.socket.command.continue_run_handler.AgentFactory"
+            "ii_agent.realtime.handlers.continue_run.AgentFactory"
         ) as mock_factory:
             mock_factory.return_value = MagicMock()
-            handler = ContinueRunHandler(event_stream=stream, container=container)
+            handler = ContinueRunHandler(pubsub=stream, container=container)
 
         session_info = _make_session_info()
         run_id = str(uuid.uuid4())
-        await handler.handle({"run_id": run_id}, session_info)
+        await handler.dispatch({"run_id": run_id}, session_info)
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert "confirmed" in errors[0].content["message"]
 
     @pytest.mark.asyncio
     async def test_sends_agent_continue_event_then_run_not_found(self):
-        from ii_agent.agent.socket.command.continue_run_handler import ContinueRunHandler
+        from ii_agent.realtime.handlers.continue_run import ContinueRunHandler
 
         stream = CapturingEventStream()
         container = _mock_container()
         with patch(
-            "ii_agent.agent.socket.command.continue_run_handler.AgentFactory"
+            "ii_agent.realtime.handlers.continue_run.AgentFactory"
         ) as mock_factory:
             mock_factory.return_value = MagicMock()
-            handler = ContinueRunHandler(event_stream=stream, container=container)
+            handler = ContinueRunHandler(pubsub=stream, container=container)
 
         session_info = _make_session_info()
         run_id = str(uuid.uuid4())
 
         with patch(
-            "ii_agent.agent.socket.command.continue_run_handler.AgentSessionStore"
+            "ii_agent.realtime.handlers.continue_run.AgentSessionStore"
         ) as mock_store_cls:
             mock_store = MagicMock()
             mock_store.get_by_run_id = AsyncMock(return_value=None)
             mock_store_cls.return_value = mock_store
 
-            await handler.handle({"run_id": run_id, "confirmed": True}, session_info)
+            await handler.dispatch({"run_id": run_id, "confirmed": True}, session_info)
 
         # AGENT_CONTINUE should be emitted before error
-        continue_events = stream.events_of_type(EventType.AGENT_CONTINUE)
+        continue_events = stream.events_of_type("agent.continue")
         assert len(continue_events) >= 1
 
-        errors = stream.events_of_type(EventType.ERROR)
+        errors = stream.events_of_name("system.error")
         assert len(errors) >= 1
         assert "not found" in errors[0].content["message"].lower()
 
     def test_get_command_type(self):
-        from ii_agent.agent.socket.command.continue_run_handler import ContinueRunHandler
-        from ii_agent.agent.socket.command.command_handler import UserCommandType
+        from ii_agent.realtime.handlers.continue_run import ContinueRunHandler
+        from ii_agent.realtime.handlers.base import CommandType
 
         with patch(
-            "ii_agent.agent.socket.command.continue_run_handler.AgentFactory"
+            "ii_agent.realtime.handlers.continue_run.AgentFactory"
         ) as mock_factory:
             mock_factory.return_value = MagicMock()
-            handler = ContinueRunHandler(
-                event_stream=CapturingEventStream(), container=_mock_container()
-            )
-        assert handler.get_command_type() == UserCommandType.CONTINUE_RUN
+            handler = ContinueRunHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        assert handler.get_command_type() == CommandType.CONTINUE_RUN

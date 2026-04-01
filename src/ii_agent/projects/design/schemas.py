@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +22,7 @@ class ElementInfoRequest(BaseModel):
 class AIChangeRequest(BaseModel):
     """Request body for AI-assisted design change."""
 
-    session_id: str
+    session_id: UUID
     element_info: ElementInfoRequest
     user_request: str
 
@@ -56,7 +57,7 @@ class IframeDocumentSnapshot(BaseModel):
 class IframeAIPlanRequest(BaseModel):
     """Request body for AI edits that operate on the design-mode iframe copy."""
 
-    session_id: str
+    session_id: UUID
     user_request: str
     selected_element: Optional[ElementInfoRequest] = None
     document_snapshot: IframeDocumentSnapshot
@@ -107,7 +108,7 @@ class StyleChange(BaseModel):
 class DesignStateRequest(BaseModel):
     """Request body for persisting design-mode state (pending changes)."""
 
-    session_id: str
+    session_id: UUID
     changes: List[StyleChange] = Field(default_factory=list)
     redo_changes: Optional[List[StyleChange]] = None
 
@@ -115,13 +116,13 @@ class DesignStateRequest(BaseModel):
 class DesignStateGetRequest(BaseModel):
     """Request body for loading persisted design-mode state."""
 
-    session_id: str
+    session_id: UUID
 
 
 class DesignStateResponse(BaseModel):
     """Response for persisted design-mode state."""
 
-    session_id: str
+    session_id: UUID
     changes: List[StyleChange] = Field(default_factory=list)
     redo_changes: List[StyleChange] = Field(default_factory=list)
     updated_at: Optional[int] = None
@@ -130,7 +131,7 @@ class DesignStateResponse(BaseModel):
 class SyncRequest(BaseModel):
     """Request body for syncing design changes to workspace files."""
 
-    session_id: str
+    session_id: UUID
     changes: List[StyleChange] = Field(default_factory=list)
     project_info: Optional[Dict[str, Any]] = None
 
@@ -146,7 +147,7 @@ class SyncResponse(BaseModel):
 class SyncStateRequest(BaseModel):
     """Request body for syncing persisted design-mode changes."""
 
-    session_id: str
+    session_id: UUID
 
 
 class SyncStateResponse(BaseModel):

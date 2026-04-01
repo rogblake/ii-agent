@@ -331,7 +331,7 @@ export function SlideDesignModeView({
         const load = async () => {
             try {
                 const response = await axiosInstance.get(
-                    '/slides/design/slide-deck-proxy',
+                    '/v1/slides/design/slide-deck-proxy',
                     {
                         params: {
                             session_id: sessionId,

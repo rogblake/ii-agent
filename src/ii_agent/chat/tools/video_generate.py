@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import uuid
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 from urllib.parse import urlparse
 
-from ii_agent.billing.reservations.types import BillingQuote
 from ii_agent.chat.types import (
     ArrayResultContent,
     ErrorTextContent,
@@ -20,13 +18,13 @@ from ii_agent.chat.types import (
     VideoFrameReference,
     StorybookContext,
 )
-from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.core.storage.client import media_storage, storage
+from ii_agent.core.db import get_db_session_local
+from ii_agent.core.storage.client import get_storage
 
 from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +67,6 @@ TRUSTED_DOMAINS = [
 DEFAULT_VIDEO_COST_USD_PER_8S_SEGMENT = 0.75
 
 
-
 def is_trusted_url(url: str) -> bool:
     """Check if URL host is a trusted domain for SSRF protection."""
     if not url:
@@ -94,7 +91,7 @@ class VideoGenerationTool(BaseTool):
         self,
         session_id: str,
         *,
-        container: ServiceContainer,
+        container: ApplicationContainer,
         media_preferences: Optional[MediaPreferences] = None,
         video_settings: Optional[VideoSettings] = None,
         video_frames: Optional[list[VideoFrameReference]] = None,
@@ -102,7 +99,9 @@ class VideoGenerationTool(BaseTool):
         self._container = container
         self.session_id = session_id
         self.media_preferences = media_preferences
-        self.video_model_name = media_preferences.model_name if media_preferences else "veo-3.1-generate-preview"
+        self.video_model_name = (
+            media_preferences.model_name if media_preferences else "veo-3.1-generate-preview"
+        )
         self.video_provider = media_preferences.provider if media_preferences else "vertex"
         self.video_settings = video_settings or VideoSettings()
         self.video_frames = video_frames or []
@@ -219,23 +218,9 @@ class VideoGenerationTool(BaseTool):
             required=["prompt"],
         )
 
-    async def quote_cost(self, tool_call: ToolCallInput) -> BillingQuote | None:
-        """Reserve a bounded amount based on requested duration/segment count."""
-        try:
-            params = json.loads(tool_call.input)
-        except (TypeError, json.JSONDecodeError):
-            params = {}
-
-        duration = params.get("duration") or getattr(self.video_settings, "duration", "6s")
-        seconds = DURATION_TO_SECONDS.get(str(duration), 6)
-        segments = max(1, math.ceil(seconds / MAX_SINGLE_SEGMENT_SECONDS))
-        max_usd = segments * DEFAULT_VIDEO_COST_USD_PER_8S_SEGMENT
-        return BillingQuote(
-            strategy="bounded",
-            reserve_usd=max_usd,
-            max_usd=max_usd,
-            metadata={"segments": segments, "requested_seconds": seconds},
-        )
+    async def quote_cost(self, tool_call: ToolCallInput) -> None:
+        """Return None; billing uses direct deduction after execution."""
+        return None
 
     async def run(self, tool_call: ToolCallInput) -> ToolResponse:
         logger.debug("[VIDEO_TOOL] Processing request")
@@ -311,12 +296,12 @@ class VideoGenerationTool(BaseTool):
 
         except (json.JSONDecodeError, KeyError) as e:
             logger.error(f"[VIDEO_TOOL] Invalid tool input: {e}")
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Invalid tool input: {e}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Invalid tool input: {e}"))
 
         try:
-            logger.info(f"Generating video: model={self.video_model_name}, duration={duration_seconds}s")
+            logger.info(
+                f"Generating video: model={self.video_model_name}, duration={duration_seconds}s"
+            )
 
             # Validate and use LLM-provided frame URLs (SSRF protection)
             start_frame_url = None
@@ -342,14 +327,20 @@ class VideoGenerationTool(BaseTool):
             if self.video_frames:
                 for frame in self.video_frames:
                     # User's START frame: only for first segment
-                    if frame.type == "start" and not start_frame_url and not is_continuation_segment:
+                    if (
+                        frame.type == "start"
+                        and not start_frame_url
+                        and not is_continuation_segment
+                    ):
                         frame_url = await self._get_frame_url(frame)
                         if frame_url:
                             start_frame_url = frame_url
 
                     # User's END frame: single-segment or final segment only
                     elif frame.type == "end" and not end_frame_url:
-                        is_single_segment_first = not is_multi_segment_video and not is_continuation_segment
+                        is_single_segment_first = (
+                            not is_multi_segment_video and not is_continuation_segment
+                        )
                         should_use_end_frame = is_final_segment or is_single_segment_first
 
                         if should_use_end_frame:
@@ -380,7 +371,8 @@ class VideoGenerationTool(BaseTool):
                 person_generation = "allow_adult"
 
             # Get tool client
-            from ii_agent.agent.runtime.tools.clients import _get_client
+            from ii_agent.agents.tools.clients import _get_client
+
             tool_client = _get_client()
 
             # EXTENSION MODE: Extend existing video
@@ -439,13 +431,11 @@ class VideoGenerationTool(BaseTool):
             video_cost = response.cost or 0.0
 
             if not video_url:
-                error_message = getattr(response, 'error', None)
+                error_message = getattr(response, "error", None)
                 if error_message:
                     logger.warning(f"Video generation failed: {error_message}")
                     return ToolResponse(
-                        output=ErrorTextContent(
-                            value=f"Video generation failed: {error_message}"
-                        )
+                        output=ErrorTextContent(value=f"Video generation failed: {error_message}")
                     )
                 else:
                     logger.warning("Video generation completed but no URL returned")
@@ -484,9 +474,7 @@ class VideoGenerationTool(BaseTool):
 
         except Exception as e:
             logger.error(f"Video generation failed: {e}", exc_info=True)
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Video generation failed: {str(e)}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Video generation failed: {str(e)}"))
 
     async def _ensure_jpeg_url(self, url: str) -> str:
         """If *url* points to a HEIC/HEIF file, convert to JPEG and return a
@@ -535,21 +523,7 @@ class VideoGenerationTool(BaseTool):
                 file_data = await self._container.file_service.get_file_by_id(db, file_id)
                 if file_data and file_data.storage_path:
                     storage_path = file_data.storage_path
-
-                    # Detect HEIC by content_type or file extension
-                    is_heic = (file_data.content_type or "").lower() in ("image/heic", "image/heif")
-                    if not is_heic and file_data.file_name:
-                        ext = file_data.file_name.rsplit(".", 1)[-1].lower() if "." in file_data.file_name else ""
-                        is_heic = ext in ("heic", "heif")
-
-                    if is_heic:
-                        url = await self._convert_heic_and_upload(file_id, storage_path)
-                    elif storage_path.startswith("sessions/"):
-                        url = media_storage.get_public_url(storage_path)
-                    else:
-                        url = await self._copy_to_public_storage(
-                            file_id, storage_path, file_data.content_type
-                        )
+                    url = get_storage().public_url(storage_path)
                     logger.info(f"[VIDEO_TOOL] Resolved file {file_id} -> {url}")
                     return url
         except Exception as e:
@@ -559,12 +533,13 @@ class VideoGenerationTool(BaseTool):
     async def _convert_heic_and_upload(self, file_id: str, source_path: str) -> str:
         """Convert a HEIC file to JPEG and upload to public storage."""
         import anyio
-        from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+        from ii_agent.agents.utils.heic import convert_heic_to_jpeg
 
         public_path = f"video_generation_frames/{file_id[:8]}.jpg"
 
         def _convert_and_upload():
             import io
+
             file_obj = storage.read(source_path)
             heic_bytes = file_obj.read()
             file_obj.close()
@@ -580,7 +555,7 @@ class VideoGenerationTool(BaseTool):
         """Download a HEIC image from a URL, convert to JPEG, and upload."""
         import anyio
         import httpx
-        from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+        from ii_agent.agents.utils.heic import convert_heic_to_jpeg
 
         async def _download_convert_upload():
             async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
@@ -590,6 +565,7 @@ class VideoGenerationTool(BaseTool):
 
             def _convert_and_upload():
                 import io
+
                 jpeg_bytes, _ = convert_heic_to_jpeg(heic_bytes)
                 file_id = str(uuid.uuid4())[:8]
                 public_path = f"video_generation_frames/{file_id}.jpg"
@@ -606,18 +582,12 @@ class VideoGenerationTool(BaseTool):
         self, file_id: str, source_path: str, content_type: str | None
     ) -> str:
         """Copy a file from private storage to public media storage."""
-        import anyio
-
         ext = source_path.rsplit(".", 1)[-1] if "." in source_path else "png"
         public_path = f"video_generation_frames/{file_id[:8]}.{ext}"
 
-        def _copy_sync():
-            file_data = storage.read(source_path)
-            return media_storage.upload_and_get_permanent_url(
-                file_data, public_path, content_type or "image/png"
-            )
-
-        return await anyio.to_thread.run_sync(_copy_sync)
+        file_data = await get_storage().read(source_path)
+        await get_storage().write(public_path, file_data, content_type or "image/png")
+        return get_storage().public_url(public_path)
 
     def _convert_urls_to_reference_images(self, urls: list[str]) -> list:
         """Convert image URLs to VideoReferenceImage objects for the API."""
@@ -632,9 +602,7 @@ class VideoGenerationTool(BaseTool):
             if not is_trusted_url(url):
                 logger.warning(f"[VIDEO_TOOL] Skipping untrusted reference image URL: {url}")
                 continue
-            reference_images.append(
-                VideoReferenceImage(url=url, reference_type="asset")
-            )
+            reference_images.append(VideoReferenceImage(url=url, reference_type="asset"))
             logger.debug(f"[VIDEO_TOOL] Added reference image URL: {url}")
 
         return reference_images

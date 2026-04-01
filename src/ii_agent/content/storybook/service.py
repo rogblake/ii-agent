@@ -124,12 +124,11 @@ class StorybookService:
             id=str(uuid.uuid4()),
             session_id=session_id,
             name=name,
-            version=1,
             style_json=style_json,
             aspect_ratio=aspect_ratio,
             resolution=resolution,
         )
-        return await self._repo.create(db, storybook)
+        return await self._repo.save(db, storybook)
 
     async def create_storybook_page(
         self,

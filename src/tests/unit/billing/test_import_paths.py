@@ -31,16 +31,17 @@ def _run_python_import(code: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_credit_reservation_service_imports_in_fresh_process() -> None:
+def test_credit_service_imports_in_fresh_process() -> None:
     result = _run_python_import(
-        "from ii_agent.billing.reservations.service import CreditReservationService; "
-        "print(CreditReservationService.__name__)"
+        "from ii_agent.credits.service import CreditService; "
+        "print(CreditService.__name__)"
     )
     assert result.returncode == 0, result.stderr or result.stdout
 
 
-def test_billing_recovery_imports_in_fresh_process() -> None:
+def test_credit_repository_imports_in_fresh_process() -> None:
     result = _run_python_import(
-        "from ii_agent.workers.cron import billing_recovery; print(billing_recovery.__name__)"
+        "from ii_agent.billing.credit_repository import CreditRepository; "
+        "print(CreditRepository.__name__)"
     )
     assert result.returncode == 0, result.stderr or result.stdout

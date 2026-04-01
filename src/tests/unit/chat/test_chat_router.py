@@ -119,7 +119,7 @@ def test_get_advanced_mode_settings_success():
     ):
         app = _build_app(svc)
         client = TestClient(app)
-        resp = client.get(f"/v1/chat/conversations/{_SESSION_ID}/advanced-mode")
+        resp = client.get(f"/chat/conversations/{_SESSION_ID}/advanced-mode")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -137,7 +137,7 @@ def test_get_advanced_mode_validates_session_access():
     ):
         app = _build_app(svc)
         client = TestClient(app)
-        resp = client.get(f"/v1/chat/conversations/{_SESSION_ID}/advanced-mode")
+        resp = client.get(f"/chat/conversations/{_SESSION_ID}/advanced-mode")
 
     assert resp.status_code == 200
     svc.validate_session_access.assert_called_once()
@@ -160,7 +160,7 @@ def test_update_advanced_mode_settings_success():
         app = _build_app(svc)
         client = TestClient(app)
         resp = client.post(
-            f"/v1/chat/conversations/{_SESSION_ID}/advanced-mode",
+            f"/chat/conversations/{_SESSION_ID}/advanced-mode",
             json={"enabled": True, "references": []},
         )
 
@@ -180,7 +180,7 @@ def test_update_advanced_mode_validates_session_access():
         app = _build_app(svc)
         client = TestClient(app)
         resp = client.post(
-            f"/v1/chat/conversations/{_SESSION_ID}/advanced-mode",
+            f"/chat/conversations/{_SESSION_ID}/advanced-mode",
             json={"enabled": False},
         )
 
@@ -215,7 +215,7 @@ def test_send_chat_creates_new_session_and_streams_sse():
     client = TestClient(app)
 
     resp = client.post(
-        "/v1/chat/conversations",
+        "/chat/conversations",
         json={"content": "Hello world", "model_id": "gpt-4o"},
     )
 
@@ -239,7 +239,7 @@ def test_send_chat_existing_session_no_session_event():
     client = TestClient(app)
 
     resp = client.post(
-        "/v1/chat/conversations",
+        "/chat/conversations",
         json={"content": "Hello", "model_id": "gpt-4o", "session_id": _SESSION_ID},
     )
 
@@ -258,7 +258,7 @@ def test_send_chat_insufficient_credits_returns_402():
     client = TestClient(app, raise_server_exceptions=False)
 
     resp = client.post(
-        "/v1/chat/conversations",
+        "/chat/conversations",
         json={"content": "Hello", "model_id": "gpt-4o"},
     )
 
@@ -275,7 +275,7 @@ def test_send_chat_session_creation_failure_returns_500():
     client = TestClient(app, raise_server_exceptions=False)
 
     resp = client.post(
-        "/v1/chat/conversations",
+        "/chat/conversations",
         json={"content": "Hello", "model_id": "gpt-4o"},
     )
 
@@ -298,8 +298,22 @@ def test_send_chat_streams_all_event_types():
         {"type": "code_interpreter_delta", "content": "code"},
         {"type": "code_interpreter_stop"},
         {"type": "tool_progress", "tool_call_id": "tc1", "name": "web_search", "output": "result"},
-        {"type": "tool_result", "tool_call_id": "tc1", "name": "web_search", "output": "done", "is_error": False},
-        {"type": "usage", "usage": {"input_tokens": 10, "output_tokens": 20, "cache_creation_tokens": 0, "cache_read_tokens": 0}},
+        {
+            "type": "tool_result",
+            "tool_call_id": "tc1",
+            "name": "web_search",
+            "output": "done",
+            "is_error": False,
+        },
+        {
+            "type": "usage",
+            "usage": {
+                "input_tokens": 10,
+                "output_tokens": 20,
+                "cache_creation_tokens": 0,
+                "cache_read_tokens": 0,
+            },
+        },
         {"type": "error", "message": "oops", "code": "test_err"},
         {"type": "complete", "message_id": str(uuid.uuid4()), "finish_reason": "end_turn"},
     ]
@@ -316,7 +330,7 @@ def test_send_chat_streams_all_event_types():
     app = _build_app(svc)
     client = TestClient(app)
     resp = client.post(
-        "/v1/chat/conversations",
+        "/chat/conversations",
         json={"content": "Test", "model_id": "gpt-4o"},
     )
 
@@ -353,7 +367,7 @@ def test_send_chat_stream_exception_yields_error_event():
     app = _build_app(svc)
     client = TestClient(app)
     resp = client.post(
-        "/v1/chat/conversations",
+        "/chat/conversations",
         json={"content": "Test", "model_id": "gpt-4o"},
     )
 
@@ -374,7 +388,7 @@ def test_stop_conversation_returns_success():
 
     app = _build_app(svc)
     client = TestClient(app)
-    resp = client.post(f"/v1/chat/conversations/{_SESSION_ID}/stop")
+    resp = client.post(f"/chat/conversations/{_SESSION_ID}/stop")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -388,7 +402,7 @@ def test_stop_conversation_no_last_message():
 
     app = _build_app(svc)
     client = TestClient(app)
-    resp = client.post(f"/v1/chat/conversations/{_SESSION_ID}/stop")
+    resp = client.post(f"/chat/conversations/{_SESSION_ID}/stop")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -401,7 +415,7 @@ def test_stop_conversation_validates_session_access():
 
     app = _build_app(svc)
     client = TestClient(app)
-    client.post(f"/v1/chat/conversations/{_SESSION_ID}/stop")
+    client.post(f"/chat/conversations/{_SESSION_ID}/stop")
 
     svc.validate_session_access.assert_called_once()
 
@@ -433,7 +447,7 @@ def test_get_message_history_success():
 
     app = _build_app(svc)
     client = TestClient(app)
-    resp = client.get(f"/v1/chat/conversations/{_SESSION_ID}")
+    resp = client.get(f"/chat/conversations/{_SESSION_ID}")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -450,7 +464,7 @@ def test_get_message_history_with_pagination():
 
     app = _build_app(svc)
     client = TestClient(app)
-    resp = client.get(f"/v1/chat/conversations/{_SESSION_ID}?limit=10&before=msg-123")
+    resp = client.get(f"/chat/conversations/{_SESSION_ID}?limit=10&before=msg-123")
 
     assert resp.status_code == 200
     svc.build_message_history_response.assert_called_once()
@@ -477,7 +491,7 @@ def test_get_public_message_history_no_auth_required():
     app.dependency_overrides[get_chat_service] = lambda: svc
 
     client = TestClient(app)
-    resp = client.get(f"/v1/chat/conversations/{_SESSION_ID}/public")
+    resp = client.get(f"/chat/conversations/{_SESSION_ID}/public")
 
     assert resp.status_code == 200
     svc.validate_public_session_access.assert_called_once()
@@ -494,7 +508,7 @@ def test_clear_conversation_success():
 
     app = _build_app(svc)
     client = TestClient(app)
-    resp = client.delete(f"/v1/chat/conversation/{_SESSION_ID}")
+    resp = client.delete(f"/chat/conversation/{_SESSION_ID}")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -509,6 +523,6 @@ def test_clear_conversation_validates_session_access():
 
     app = _build_app(svc)
     client = TestClient(app)
-    client.delete(f"/v1/chat/conversation/{_SESSION_ID}")
+    client.delete(f"/chat/conversation/{_SESSION_ID}")
 
     svc.validate_session_access.assert_called_once()

@@ -16,7 +16,7 @@ import { ACCESS_TOKEN } from '@/constants/auth'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const baseQuery = fetchBaseQuery({
-    baseUrl: API_URL,
+    baseUrl: `${API_URL}/v1`,
     prepareHeaders: (headers) => {
         const token = localStorage.getItem(ACCESS_TOKEN)
         if (token) {

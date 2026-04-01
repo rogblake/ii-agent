@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.projects.deployments.exceptions import DeploymentNotFoundError
 from ii_agent.projects.deployments.models import ProjectDeployment
 from ii_agent.projects.deployments.repository import DeploymentsRepository
+from ii_agent.projects.deployments.schemas import ProjectDeploymentResponse
+from ii_agent.projects.deployments.types import DeploymentStatus
 from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.projects.exceptions import ProjectNotFoundError
 from ii_agent.projects.repository import ProjectRepository
@@ -29,14 +31,10 @@ class DeploymentsService:
     async def get_project_deployment(
         self,
         db: AsyncSession,
-        user_id: str,
-        project_id: str,
-    ) -> ProjectDeployment:
-        """Get the current deployment information for a project.
-
-        Returns deployment details including provider type, which is needed
-        to determine if subdomain claiming is available (Cloud Run only).
-        """
+        user_id: uuid.UUID,
+        project_id: uuid.UUID,
+    ) -> ProjectDeploymentResponse:
+        """Get the current deployment information for a project."""
         project = await self._project_repo.get_by_id_and_user(
             db,
             project_id=project_id,
@@ -54,24 +52,23 @@ class DeploymentsService:
         if not deployment:
             raise DeploymentNotFoundError(project_id)
 
-        return deployment
+        return ProjectDeploymentResponse.model_validate(deployment)
 
     async def create_deployment(
         self,
         db: AsyncSession,
         *,
-        project_id: str,
-        user_id: str,
+        project_id: uuid.UUID,
+        user_id: uuid.UUID,
         provider: str,
         environment: str = "production",
         source_path: Optional[str] = None,
         snapshot_id: Optional[str] = None,
-    ) -> ProjectDeployment:
+    ) -> ProjectDeploymentResponse:
         """Create a new deployment record with auto-incrementing version."""
         max_version = await self._deployments_repo.get_max_version(db, project_id)
 
         deployment = ProjectDeployment(
-            id=str(uuid.uuid4()),
             project_id=project_id,
             deployed_by_user_id=user_id,
             provider=provider,
@@ -79,23 +76,24 @@ class DeploymentsService:
             source_path=source_path,
             snapshot_id=snapshot_id,
             version=max_version + 1,
-            deployment_status="pending",
+            deployment_status=DeploymentStatus.PENDING,
             started_at=datetime.now(timezone.utc),
         )
 
-        return await self._deployments_repo.create(db, deployment)
+        entity = await self._deployments_repo.save(db, deployment)
+        return ProjectDeploymentResponse.model_validate(entity)
 
     async def update_deployment_status(
         self,
         db: AsyncSession,
         *,
-        deployment_id: str,
+        deployment_id: uuid.UUID,
         status: str,
         deployment_url: Optional[str] = None,
         error_message: Optional[str] = None,
         error_phase: Optional[str] = None,
         error_details: Optional[dict] = None,
-    ) -> Optional[ProjectDeployment]:
+    ) -> Optional[ProjectDeploymentResponse]:
         """Update deployment status and optional error/url fields."""
         deployment = await self._deployments_repo.get_by_id(db, deployment_id)
         if not deployment:
@@ -113,23 +111,24 @@ class DeploymentsService:
             deployment.error_details = error_details
 
         now = datetime.now(timezone.utc)
-        if status == "deployed":
+        if status == DeploymentStatus.DEPLOYED:
             deployment.deployed_at = now
             deployment.finished_at = now
-        elif status == "failed":
+        elif status == DeploymentStatus.FAILED:
             deployment.finished_at = now
 
-        return await self._deployments_repo.update(db, deployment)
+        entity = await self._deployments_repo.update(db, deployment)
+        return ProjectDeploymentResponse.model_validate(entity)
 
     async def update_deployment_metadata(
         self,
         db: AsyncSession,
         *,
-        deployment_id: str,
+        deployment_id: uuid.UUID,
         metadata: Optional[dict[str, Any]] = None,
         upload_duration_ms: Optional[int] = None,
         build_duration_ms: Optional[int] = None,
-    ) -> Optional[ProjectDeployment]:
+    ) -> Optional[ProjectDeploymentResponse]:
         """Update deployment metadata and performance metrics."""
         deployment = await self._deployments_repo.get_by_id(db, deployment_id)
         if not deployment:
@@ -145,15 +144,16 @@ class DeploymentsService:
         if build_duration_ms is not None:
             deployment.build_duration_ms = build_duration_ms
 
-        return await self._deployments_repo.update(db, deployment)
+        entity = await self._deployments_repo.update(db, deployment)
+        return ProjectDeploymentResponse.model_validate(entity)
 
     async def set_active_deployment(
         self,
         db: AsyncSession,
         *,
-        project_id: str,
-        deployment_id: str,
-    ) -> Optional[ProjectDeployment]:
+        project_id: uuid.UUID,
+        deployment_id: uuid.UUID,
+    ) -> Optional[ProjectDeploymentResponse]:
         """Mark a deployment as the active one for its project.
 
         Updates the project's production_url to the deployment's URL.
@@ -167,4 +167,4 @@ class DeploymentsService:
             project.production_url = deployment.deployment_url
             await self._project_repo.update(db, project)
 
-        return deployment
+        return ProjectDeploymentResponse.model_validate(deployment)

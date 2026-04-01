@@ -1,4 +1,4 @@
-"""Unit tests for ii_agent.agent.socket.socketio – SocketIOManager.
+"""Unit tests for ii_agent.realtime.manager – SocketIOManager.
 
 Note: SocketIOManager transitively imports google.genai models with APIs that
 may not be available in all dev environments. We therefore test the observable
@@ -22,6 +22,7 @@ import pytest
 # ---------------------------------------------------------------------------
 # Minimal in-process stub for SocketIO server
 # ---------------------------------------------------------------------------
+
 
 class FakeSio:
     def __init__(self):
@@ -59,12 +60,14 @@ class FakeSio:
     def on(self, name):
         def _decorator(fn):
             return fn
+
         return _decorator
 
 
 # ---------------------------------------------------------------------------
 # Minimal SocketIOManager stub (mirrors the real implementation)
 # ---------------------------------------------------------------------------
+
 
 class StubSocketIOManager:
     """Minimal reimplementation of SocketIOManager logic for testing."""
@@ -120,11 +123,14 @@ class StubSocketIOManager:
         if not payload:
             return False
 
-        await self.sio.save_session(sid, {
-            "authenticated": True,
-            "user_id": payload.get("user_id"),
-            "session_id": auth.get("session_uuid"),
-        })
+        await self.sio.save_session(
+            sid,
+            {
+                "authenticated": True,
+                "user_id": payload.get("user_id"),
+                "session_id": auth.get("session_uuid"),
+            },
+        )
         return True
 
     def _verify_token(self, token: str):
@@ -181,7 +187,7 @@ class StubSocketIOManager:
         if not self._container:
             return None
         try:
-            return await self._container.session_service.find_session_by_id_info(
+            return await self._container.session_service.get_session_by_id(
                 None, uuid.UUID(session_uuid)
             )
         except Exception:
@@ -192,10 +198,11 @@ class StubSocketIOManager:
 # Test fixtures
 # ---------------------------------------------------------------------------
 
+
 def _mock_container():
     container = MagicMock()
     container.session_service = MagicMock()
-    container.session_service.find_session_by_id_info = AsyncMock()
+    container.session_service.get_session_by_id = AsyncMock()
     return container
 
 
@@ -209,6 +216,7 @@ def _session_info(user_id: str = "user-1"):
 # ---------------------------------------------------------------------------
 # SocketIOManager (stub) instantiation
 # ---------------------------------------------------------------------------
+
 
 class TestSocketIOManagerInit:
     def test_can_instantiate(self):
@@ -225,6 +233,7 @@ class TestSocketIOManagerInit:
 # set_container
 # ---------------------------------------------------------------------------
 
+
 class TestSetContainer:
     def test_sets_container(self):
         manager = StubSocketIOManager(FakeSio())
@@ -236,6 +245,7 @@ class TestSetContainer:
 # ---------------------------------------------------------------------------
 # shutdown
 # ---------------------------------------------------------------------------
+
 
 class TestShutdown:
     @pytest.mark.asyncio
@@ -250,6 +260,7 @@ class TestShutdown:
 # _emit_chat_event
 # ---------------------------------------------------------------------------
 
+
 class TestEmitChatEvent:
     @pytest.mark.asyncio
     async def test_emits_chat_event_to_room(self):
@@ -259,7 +270,7 @@ class TestEmitChatEvent:
         assert len(sio.emitted) == 1
         event_name, payload, room = sio.emitted[0]
         assert event_name == "chat_event"
-        assert payload["type"] == "agent_response"
+        assert payload["name"] == "agent.response"
         assert payload["content"] == {"text": "hi"}
         assert room == "room-1"
 
@@ -268,6 +279,7 @@ class TestEmitChatEvent:
 # _emit_error
 # ---------------------------------------------------------------------------
 
+
 class TestEmitError:
     @pytest.mark.asyncio
     async def test_emits_error_event(self):
@@ -275,13 +287,14 @@ class TestEmitError:
         manager = StubSocketIOManager(sio)
         await manager._emit_error("room-1", "Something went wrong")
         _, payload, _ = sio.emitted[0]
-        assert payload["type"] == "error"
+        assert payload["name"] == "system.error"
         assert payload["content"]["message"] == "Something went wrong"
 
 
 # ---------------------------------------------------------------------------
 # _emit_system_event
 # ---------------------------------------------------------------------------
+
 
 class TestEmitSystemEvent:
     @pytest.mark.asyncio
@@ -290,7 +303,7 @@ class TestEmitSystemEvent:
         manager = StubSocketIOManager(sio)
         await manager._emit_system_event("room-1", "Session ready", session_id="s-1")
         _, payload, _ = sio.emitted[0]
-        assert payload["type"] == "system"
+        assert payload["name"] == "connection.established"
         assert payload["content"]["message"] == "Session ready"
         assert payload["content"]["session_id"] == "s-1"
 
@@ -298,6 +311,7 @@ class TestEmitSystemEvent:
 # ---------------------------------------------------------------------------
 # _is_session_owner
 # ---------------------------------------------------------------------------
+
 
 class TestIsSessionOwner:
     def test_returns_true_when_user_owns_session(self):
@@ -323,6 +337,7 @@ class TestIsSessionOwner:
 # _leave_current_session
 # ---------------------------------------------------------------------------
 
+
 class TestLeaveCurrentSession:
     @pytest.mark.asyncio
     async def test_leaves_room(self):
@@ -344,6 +359,7 @@ class TestLeaveCurrentSession:
 # ---------------------------------------------------------------------------
 # connect – authentication gate
 # ---------------------------------------------------------------------------
+
 
 class TestConnect:
     @pytest.mark.asyncio
@@ -388,6 +404,7 @@ class TestConnect:
 # disconnect
 # ---------------------------------------------------------------------------
 
+
 class TestDisconnect:
     @pytest.mark.asyncio
     async def test_leaves_session_on_disconnect(self):
@@ -418,6 +435,7 @@ class TestDisconnect:
 # leave_session
 # ---------------------------------------------------------------------------
 
+
 class TestLeaveSession:
     @pytest.mark.asyncio
     async def test_leaves_session_room(self):
@@ -440,6 +458,7 @@ class TestLeaveSession:
 # chat_message – routing
 # ---------------------------------------------------------------------------
 
+
 class TestChatMessage:
     @pytest.mark.asyncio
     async def test_emits_error_when_not_authenticated(self):
@@ -447,7 +466,7 @@ class TestChatMessage:
         manager = StubSocketIOManager(sio)
         await manager.chat_message("sid-1", {"type": "query"})
         _, payload, _ = sio.emitted[0]
-        assert payload["type"] == "error"
+        assert payload["name"] == "system.error"
 
     @pytest.mark.asyncio
     async def test_emits_error_when_session_missing_uuid(self):
@@ -456,20 +475,23 @@ class TestChatMessage:
         await sio.save_session("sid-1", {"user_id": "u1", "authenticated": True})
         await manager.chat_message("sid-1", {"type": "query"})
         _, payload, _ = sio.emitted[0]
-        assert payload["type"] == "error"
+        assert payload["name"] == "system.error"
 
     @pytest.mark.asyncio
     async def test_emits_error_when_session_not_found(self):
         sio = FakeSio()
         manager = StubSocketIOManager(sio)
         container = _mock_container()
-        container.session_service.find_session_by_id_info = AsyncMock(return_value=None)
+        container.session_service.get_session_by_id = AsyncMock(return_value=None)
         manager._container = container
         await sio.save_session("sid-1", {"user_id": "u1", "authenticated": True})
-        await manager.chat_message("sid-1", {
-            "type": "query",
-            "session_uuid": str(uuid.uuid4()),
-        })
+        await manager.chat_message(
+            "sid-1",
+            {
+                "type": "query",
+                "session_uuid": str(uuid.uuid4()),
+            },
+        )
         assert any(evt[1]["type"] == "error" for evt in sio.emitted)
 
     @pytest.mark.asyncio
@@ -478,17 +500,17 @@ class TestChatMessage:
         manager = StubSocketIOManager(sio)
         container = _mock_container()
         session = _session_info(user_id="other-user")
-        container.session_service.find_session_by_id_info = AsyncMock(return_value=session)
+        container.session_service.get_session_by_id = AsyncMock(return_value=session)
         manager._container = container
         await sio.save_session("sid-1", {"user_id": "u1", "authenticated": True})
-        await manager.chat_message("sid-1", {
-            "type": "query",
-            "session_uuid": str(uuid.uuid4()),
-        })
-        assert any(
-            "Access" in evt[1]["content"].get("message", "")
-            for evt in sio.emitted
+        await manager.chat_message(
+            "sid-1",
+            {
+                "type": "query",
+                "session_uuid": str(uuid.uuid4()),
+            },
         )
+        assert any("Access" in evt[1]["content"].get("message", "") for evt in sio.emitted)
 
     @pytest.mark.asyncio
     async def test_emits_error_for_unknown_command(self):
@@ -498,13 +520,16 @@ class TestChatMessage:
         manager.command_factory.get_handler_by_string = MagicMock(return_value=None)
         container = _mock_container()
         session = _session_info(user_id="u1")
-        container.session_service.find_session_by_id_info = AsyncMock(return_value=session)
+        container.session_service.get_session_by_id = AsyncMock(return_value=session)
         manager._container = container
         await sio.save_session("sid-1", {"user_id": "u1", "authenticated": True})
-        await manager.chat_message("sid-1", {
-            "type": "unknown_cmd",
-            "session_uuid": str(session.id),
-        })
+        await manager.chat_message(
+            "sid-1",
+            {
+                "type": "unknown_cmd",
+                "session_uuid": str(session.id),
+            },
+        )
         assert any(evt[1]["type"] == "error" for evt in sio.emitted)
 
     @pytest.mark.asyncio
@@ -517,12 +542,15 @@ class TestChatMessage:
         manager.command_factory.get_handler_by_string = MagicMock(return_value=mock_handler)
         container = _mock_container()
         session = _session_info(user_id="u1")
-        container.session_service.find_session_by_id_info = AsyncMock(return_value=session)
+        container.session_service.get_session_by_id = AsyncMock(return_value=session)
         manager._container = container
         await sio.save_session("sid-1", {"user_id": "u1", "authenticated": True})
-        await manager.chat_message("sid-1", {
-            "type": "ping",
-            "session_uuid": str(session.id),
-        })
+        await manager.chat_message(
+            "sid-1",
+            {
+                "type": "ping",
+                "session_uuid": str(session.id),
+            },
+        )
         # No error should be emitted since handler is found
         assert not any(evt[1]["type"] == "error" for evt in sio.emitted)

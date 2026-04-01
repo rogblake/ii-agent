@@ -20,7 +20,7 @@ from ..utils import PromptBuilder
 from .base import BaseMediaHandler
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 
 @register_handler("infographic")
@@ -46,17 +46,19 @@ class InfographicMediaHandler(BaseMediaHandler):
         session_id: str,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
-        container: ServiceContainer,
+        container: ApplicationContainer,
     ) -> list[ImageGenerationTool]:
-        return [ImageGenerationTool(
-            session_id=session_id,
-            media_preferences=media_preferences,
-            image_aspect_ratio=media_preferences.aspect_ratio,
-            image_resolution=media_preferences.resolution,
-            references=None,
-            mini_tools_mode=False,
-            container=container,
-        )]
+        return [
+            ImageGenerationTool(
+                session_id=session_id,
+                media_preferences=media_preferences,
+                image_aspect_ratio=media_preferences.aspect_ratio,
+                image_resolution=media_preferences.resolution,
+                references=None,
+                mini_tools_mode=False,
+                container=container,
+            )
+        ]
 
     async def build_llm_context(
         self,
@@ -92,13 +94,13 @@ class InfographicMediaHandler(BaseMediaHandler):
         infographic_prompt_guidance = (
             "\n\n[Infographic prompt guidance: Your prompt to generate_image MUST include all of the following "
             "infographic requirements directly in the prompt text:\n"
-            "- Start with an explicit infographic instruction (e.g., \"Create a detailed infographic titled ...\")\n"
+            '- Start with an explicit infographic instruction (e.g., "Create a detailed infographic titled ...")\n'
             "- Single clear topic/message; if multiple points are provided, synthesize into one focused theme\n"
             "- Always include a main title; if the user does not provide one, generate a concise topic title in the user's language\n"
             "- Title and section headings for every block; group related facts into labeled columns/cards\n"
             "- Organized flow (top-to-bottom or left-to-right); add arrows/connectors for sequences or steps\n"
             "- Choose a layout that matches the data (grid, flowchart, timeline, map, comparison)\n"
-            "- Include a unifying \"visual backbone\" (consistent accent line, frame, or motif) spanning the layout\n"
+            '- Include a unifying "visual backbone" (consistent accent line, frame, or motif) spanning the layout\n'
             "- Use visual separators (lines, background blocks, icons) and balanced whitespace between sections\n"
             "- FULL-BLEED layout that fills the entire frame; avoid large empty margins, thick borders, or floating poster look\n"
             "- Avoid split-panel or page-like layouts; do NOT render the infographic as two separate pages/cards\n"

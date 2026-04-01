@@ -4,14 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
 from openai import AsyncOpenAI
-from pydantic import SecretStr
-
-from ii_agent.billing.types import BillingContextValue, BillingScope
-from ii_agent.chat.types import MessageRole, TextContent
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
-from ii_agent.core.llm.execution_service import LLMBillingContext, LLMExecutionService
-from ii_agent.sessions.title_config import SessionTitleConfig
+from ii_agent.core.config.session_title import SessionTitleConfig
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +25,11 @@ class SessionTitleService:
     def __init__(
         self,
         config: SessionTitleConfig,
-        llm_execution_service: LLMExecutionService | None = None,
     ) -> None:
         self._config = config
-        self._llm_execution_service = llm_execution_service
         self._client: AsyncOpenAI | None = None
         if config.openai_api_key and config.enabled:
-            if llm_execution_service is None:
-                self._client = AsyncOpenAI(api_key=config.openai_api_key)
-            else:
-                # Keep a simple truthy marker so existing pending-title logic
-                # still treats semantic titling as available.
-                self._client = object()  # type: ignore[assignment]
+            self._client = AsyncOpenAI(api_key=config.openai_api_key)
 
     def _should_generate_semantic_title(self, query: str) -> bool:
         """Return whether the query should use LLM title generation."""
@@ -84,8 +72,8 @@ class SessionTitleService:
         query: str,
         max_length: int = 80,
         *,
-        session_id: str | None = None,
-        user_id: str | None = None,
+        session_id: uuid.UUID | None = None,
+        user_id: uuid.UUID | None = None,
         app_kind: str = "chat",
     ) -> str:
         """Generate a semantic title for the given user query.
@@ -121,11 +109,11 @@ class SessionTitleService:
 
     def schedule_title_update(
         self,
-        session_id: str,
+        session_id: uuid.UUID,
         query: str,
         max_length: int = 80,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         app_kind: str,
     ) -> None:
         """Fire-and-forget: generate an LLM title in the background and update the DB.
@@ -150,8 +138,8 @@ class SessionTitleService:
     async def _background_title_update(
         self,
         *,
-        session_id: str,
-        user_id: str,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
         app_kind: str,
         query: str,
         max_length: int,
@@ -205,9 +193,9 @@ class SessionTitleService:
                 exc_info=True,
             )
 
-    async def _persist_title_update(self, session_id: str, title: str) -> bool:
+    async def _persist_title_update(self, session_id: uuid.UUID, title: str) -> bool:
         """Persist a resolved title and clear the pending flag."""
-        from ii_agent.core.db.manager import get_db_session_local
+        from ii_agent.core.db import get_db_session_local
         from ii_agent.sessions.repository import SessionRepository
 
         repo = SessionRepository()
@@ -226,57 +214,11 @@ class SessionTitleService:
         self,
         query: str,
         *,
-        session_id: str | None = None,
-        user_id: str | None = None,
+        session_id: uuid.UUID | None = None,
+        user_id: uuid.UUID | None = None,
         app_kind: str = "chat",
     ) -> str:
         """Call the OpenAI API to generate a title."""
-        if (
-            self._llm_execution_service is not None
-            and session_id is not None
-            and user_id is not None
-        ):
-            llm_config = LLMConfig(
-                model=self._config.model,
-                api_key=SecretStr(self._config.openai_api_key)
-                if self._config.openai_api_key
-                else None,
-                api_type=APITypes.OPENAI,
-                config_type="system",
-            )
-            client = self._llm_execution_service.create_client(llm_config)
-            messages = [
-                self._llm_execution_service.new_message(
-                    role=MessageRole.SYSTEM,
-                    session_id=session_id,
-                    parts=[TextContent(text=_SYSTEM_PROMPT)],
-                ),
-                self._llm_execution_service.new_message(
-                    role=MessageRole.USER,
-                    session_id=session_id,
-                    parts=[TextContent(text=query)],
-                ),
-            ]
-            response = await self._llm_execution_service.send_once(
-                client=client,
-                messages=messages,
-                billing_context=LLMBillingContext(
-                    scope=BillingScope.for_session(
-                        user_id=user_id,
-                        app_kind=app_kind,
-                        session_id=session_id,
-                        billing_context=BillingContextValue.SESSION_TITLE,
-                    ),
-                    llm_config=llm_config,
-                    model_id=llm_config.model,
-                    requested_output_token_cap=self._config.max_tokens,
-                ),
-                usage_key=f"session_title:{session_id}",
-            )
-            if isinstance(response.content, list):
-                return self._llm_execution_service.extract_text_content(response.content)
-            return str(response.content or "")
-
         if not isinstance(self._client, AsyncOpenAI):
             raise RuntimeError("Session title LLM client unavailable")
 

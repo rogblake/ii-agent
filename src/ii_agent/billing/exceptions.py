@@ -16,13 +16,9 @@ class BillingException(IIAgentError):
 class BillingServiceError(BillingException):
     """Base error for billing service issues."""
 
-    pass
-
 
 class BillingConfigurationError(BillingServiceError):
     """Raised when billing configuration is missing or invalid."""
-
-    pass
 
 
 class BillingUnsupportedPlanError(BillingException):
@@ -40,13 +36,6 @@ class BillingGatewayError(BillingException):
 class StripeConfigError(BillingConfigurationError):
     """Raised when Stripe configuration is missing or invalid."""
 
-    pass
-
-
-# ---------------------------------------------------------------------------
-# Typed billing errors (credit_fix.md §Error Handling Contract)
-# ---------------------------------------------------------------------------
-
 
 class InsufficientCreditsError(PaymentRequiredError):
     """User does not have enough credits to proceed."""
@@ -55,26 +44,21 @@ class InsufficientCreditsError(PaymentRequiredError):
         self,
         message: str = "Insufficient credits",
         *,
-        phase: str | None = None,
         available_credits: float | None = None,
         required_credits: float | None = None,
-        reservation_id: str | None = None,
     ) -> None:
         super().__init__(message)
         self.retryable = False
-        self.billing_context: dict[str, Any] = {
-            "phase": phase,
-            "available_credits": available_credits,
-            "required_credits": required_credits,
-            "reservation_id": reservation_id,
-        }
+        self.available_credits = available_credits
+        self.required_credits = required_credits
 
     def to_billing_payload(self) -> dict[str, Any]:
         return {
             "code": "insufficient_credits",
             "message": self.message,
             "retryable": False,
-            "billing_context": self.billing_context,
+            "available_credits": self.available_credits,
+            "required_credits": self.required_credits,
         }
 
 
@@ -84,27 +68,20 @@ class BillingReconciliationRequiredError(PaymentRequiredError):
     def __init__(
         self,
         message: str = "Billing reconciliation required",
-        *,
-        reservation_id: str | None = None,
     ) -> None:
         super().__init__(message)
         self.retryable = False
-        self.billing_context: dict[str, Any] = {
-            "phase": "reserve",
-            "reservation_id": reservation_id,
-        }
 
     def to_billing_payload(self) -> dict[str, Any]:
         return {
             "code": "billing_reconciliation_required",
             "message": self.message,
             "retryable": False,
-            "billing_context": self.billing_context,
         }
 
 
 class BillingTemporarilyUnavailableError(BillingException):
-    """Billing system is temporarily unavailable — retry later."""
+    """Billing system is temporarily unavailable -- retry later."""
 
     status_code = 503
 
@@ -117,7 +94,6 @@ class BillingTemporarilyUnavailableError(BillingException):
             "code": "billing_temporarily_unavailable",
             "message": self.message,
             "retryable": True,
-            "billing_context": {},
         }
 
 

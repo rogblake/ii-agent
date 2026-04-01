@@ -23,7 +23,7 @@ from ii_agent.chat.types import (
     FileUrlContentPart,
     TextContentPart,
 )
-from ii_agent.core.db.manager import get_db_session_local
+from ii_agent.core.db import get_db_session_local
 
 from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
 
@@ -492,6 +492,8 @@ class ConcatenateVideosTool(BaseTool):
 
             file_id = str(uuid.uuid4())
             file_name = f"video-concat-{file_id[:8]}.mp4"
+            # TODO: Migrate to path_resolver.user_generated(user_id, file_id, ext)
+            # once user_id is available on tool instance
             blob_path = f"sessions/{self.session_id}/generated/{file_name}"
 
             def _upload_to_gcs() -> tuple[int, str]:

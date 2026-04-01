@@ -30,7 +30,7 @@ axiosInstance.interceptors.response.use(
             // Only logout if it's NOT a connector-specific endpoint
             // Connector endpoints return 401 when the connector token is invalid,
             // not when the user session is invalid
-            const isConnectorEndpoint = error.config?.url?.includes('/connectors/')
+            const isConnectorEndpoint = error.config?.url?.includes('/v1/connectors/')
 
             if (!isConnectorEndpoint) {
                 localStorage.removeItem(ACCESS_TOKEN)

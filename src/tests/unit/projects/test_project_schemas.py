@@ -197,9 +197,7 @@ class TestDecryptSecretsValidator:
     def test_decrypt_called_with_secrets_value(self):
         secrets_payload = {"DB_PASS": "encrypted_value"}
 
-        with patch(
-            "ii_agent.projects.secrets.utils._decrypt_secrets_payload"
-        ) as mock_decrypt:
+        with patch("ii_agent.projects.secrets.utils._decrypt_secrets_payload") as mock_decrypt:
             mock_decrypt.return_value = {"DB_PASS": "decrypted_value"}
             schema = SessionProjectResponse(**_base_data(secrets_json=secrets_payload))
 
@@ -207,9 +205,7 @@ class TestDecryptSecretsValidator:
         assert schema.secrets == {"DB_PASS": "decrypted_value"}
 
     def test_decrypt_called_with_none(self):
-        with patch(
-            "ii_agent.projects.secrets.utils._decrypt_secrets_payload"
-        ) as mock_decrypt:
+        with patch("ii_agent.projects.secrets.utils._decrypt_secrets_payload") as mock_decrypt:
             mock_decrypt.return_value = None
             schema = SessionProjectResponse(**_base_data(secrets_json=None))
 

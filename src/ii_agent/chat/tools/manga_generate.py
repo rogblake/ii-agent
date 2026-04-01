@@ -9,7 +9,7 @@ from ii_agent.chat.types import MediaPreferences
 from .storybook_generate import StorybookGenerationTool
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class MangaGenerationTool(StorybookGenerationTool):
         self,
         session_id: str,
         *,
-        container: ServiceContainer,
+        container: ApplicationContainer,
         media_preferences: Optional[MediaPreferences] = None,
     ):
         super().__init__(
@@ -130,9 +130,7 @@ class MangaGenerationTool(StorybookGenerationTool):
 
         return enhanced
 
-    def _augment_non_cover_prompt(
-        self, image_prompt: str, text_content: str
-    ) -> str:
+    def _augment_non_cover_prompt(self, image_prompt: str, text_content: str) -> str:
         """Inject speech bubble text into the image prompt for manga pages."""
         if text_content:
             language_label = self.storybook_language or "the selected language"

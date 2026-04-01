@@ -18,10 +18,7 @@ class TestExtractSlideHeadAndBody:
     """Tests for _extract_slide_head_and_body()."""
 
     def test_full_html_document(self):
-        html = (
-            "<html><head><style>body{}</style></head>"
-            "<body><div>Hello</div></body></html>"
-        )
+        html = "<html><head><style>body{}</style></head><body><div>Hello</div></body></html>"
         head, body = _extract_slide_head_and_body(html)
         assert "<style>body{}</style>" in head
         assert "<div>Hello</div>" in body

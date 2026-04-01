@@ -9,8 +9,9 @@ import uuid
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 
-from ii_agent.auth.dependencies import DBSession, CurrentUser
+from ii_agent.auth.dependencies import CurrentUser
 from ii_agent.billing.exceptions import InsufficientCreditsError
+from ii_agent.core.dependencies import DBSession
 from ii_agent.core.exceptions import InternalError, PaymentRequiredError
 from ii_agent.chat.api.dependencies import ChatServiceDep
 from ii_agent.chat.api.schemas import (
@@ -25,7 +26,7 @@ from ii_agent.chat.media.orchestrator import MediaOrchestrator
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/v1/chat", tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 @router.get(
@@ -33,7 +34,7 @@ router = APIRouter(prefix="/v1/chat", tags=["chat"])
     response_model=AdvancedModeState,
 )
 async def get_advanced_mode_settings(
-    session_id: str,
+    session_id: uuid.UUID,
     current_user: CurrentUser,
     db_session: DBSession,
     chat_service: ChatServiceDep,
@@ -42,12 +43,12 @@ async def get_advanced_mode_settings(
     await chat_service.validate_session_access(
         db_session,
         session_id=session_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
     )
     return await MediaOrchestrator.get_advanced_mode_state(
         db_session=db_session,
         session_id=session_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
     )
 
 
@@ -56,7 +57,7 @@ async def get_advanced_mode_settings(
     response_model=AdvancedModeState,
 )
 async def update_advanced_mode_settings(
-    session_id: str,
+    session_id: uuid.UUID,
     request: AdvancedModeUpdateRequest,
     current_user: CurrentUser,
     db_session: DBSession,
@@ -66,12 +67,12 @@ async def update_advanced_mode_settings(
     await chat_service.validate_session_access(
         db_session,
         session_id=session_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
     )
     return await MediaOrchestrator.update_advanced_mode_state(
         db_session=db_session,
         session_id=session_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         enabled=request.enabled,
         references=request.references,
     )
@@ -138,7 +139,7 @@ async def send_chat_message(
     await chat_service.validate_model_for_chat(
         db_session,
         model_id=request.model_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
     )
 
     # Use existing session or create new one
@@ -147,13 +148,13 @@ async def send_chat_message(
 
     if request.session_id:
         # Use existing session
-        session_id = str(request.session_id)
+        session_id = request.session_id
 
         # Validate user has access to this session
         await chat_service.validate_session_access(
             db_session,
             session_id=session_id,
-            user_id=str(current_user.id),
+            user_id=current_user.id,
         )
         logger.info(
             f"Reusing existing session {session_id} for user {current_user.id}"
@@ -163,12 +164,12 @@ async def send_chat_message(
         try:
             session_metadata = await chat_service.create_chat_session(
                 db_session,
-                user_id=str(current_user.id),
+                user_id=current_user.id,
                 user_message=request.content,
                 model_id=request.model_id,
             )
             session_id = session_metadata.session_id
-            request.session_id = uuid.UUID(session_id)
+            request.session_id = session_id
             logger.info(f"Created new session {session_id} for user {current_user.id}")
 
         except Exception as e:
@@ -186,7 +187,7 @@ async def send_chat_message(
             if session_metadata:
                 session_event = {
                     "status": "created",
-                    "session_id": session_metadata.session_id,
+                    "session_id": str(session_metadata.session_id),
                     "name": session_metadata.name,
                     "title_pending": session_metadata.title_pending,
                     "agent_type": session_metadata.agent_type,
@@ -214,13 +215,13 @@ async def send_chat_message(
                 stream = chat_service.stream_council_chat_response(
                     db_session,
                     chat_request=request,
-                    user_id=str(current_user.id),
+                    user_id=current_user.id,
                 )
             else:
                 stream = chat_service.stream_chat_response(
                     db_session,
                     chat_request=request,
-                    user_id=str(current_user.id),
+                    user_id=current_user.id,
                 )
 
             # Stream response from provider
@@ -455,13 +456,11 @@ async def stop_conversation(
     Returns:
         StopConversationResponse with success status and last message ID
     """
-    session_id = str(session_id)
-
     # Validate session access
     await chat_service.validate_session_access(
         db_session,
         session_id=session_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
     )
 
     # Stop the conversation
@@ -472,13 +471,13 @@ async def stop_conversation(
 
     return StopConversationResponse(
         success=True,
-        last_message_id=UUID(last_message_id) if last_message_id else None,
+        last_message_id=last_message_id,
     )
 
 
 @router.get("/conversations/{session_id}", response_model=MessageHistoryResponse)
 async def get_message_history(
-    session_id: str,
+    session_id: uuid.UUID,
     current_user: CurrentUser,
     db_session: DBSession,
     chat_service: ChatServiceDep,
@@ -489,7 +488,7 @@ async def get_message_history(
     await chat_service.validate_session_access(
         db_session,
         session_id=session_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
     )
 
     return await chat_service.build_message_history_response(
@@ -500,9 +499,43 @@ async def get_message_history(
     )
 
 
-@router.get("/conversations/{session_id}/public", response_model=MessageHistoryResponse)
+@router.delete("/conversation/{session_id}", response_model=ClearHistoryResponse)
+async def clear_conversation(
+    session_id: uuid.UUID,
+    current_user: CurrentUser,
+    db_session: DBSession,
+    chat_service: ChatServiceDep,
+) -> ClearHistoryResponse:
+    """Clear all messages in a conversation."""
+    await chat_service.validate_session_access(
+        db_session,
+        session_id=session_id,
+        user_id=current_user.id,
+    )
+
+    # Clear messages
+    deleted_count = await chat_service.clear_messages(
+        db_session,
+        session_id=session_id
+    )
+
+    return ClearHistoryResponse(
+        success=True,
+        deleted_count=deleted_count,
+        message="Conversation cleared successfully",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Public endpoints (served under /v1/public/chat/conversations)
+# ---------------------------------------------------------------------------
+
+public_router = APIRouter(prefix="/chat/conversations", tags=["Chat Public"])
+
+
+@public_router.get("/{session_id}", response_model=MessageHistoryResponse)
 async def get_public_message_history(
-    session_id: str,
+    session_id: uuid.UUID,
     db_session: DBSession,
     chat_service: ChatServiceDep,
     limit: int = Query(50, ge=1, le=200),
@@ -519,31 +552,4 @@ async def get_public_message_history(
         session_id=session_id,
         limit=limit,
         before=before,
-    )
-
-
-@router.delete("/conversation/{session_id}", response_model=ClearHistoryResponse)
-async def clear_conversation(
-    session_id: str,
-    current_user: CurrentUser,
-    db_session: DBSession,
-    chat_service: ChatServiceDep,
-) -> ClearHistoryResponse:
-    """Clear all messages in a conversation."""
-    await chat_service.validate_session_access(
-        db_session,
-        session_id=session_id,
-        user_id=str(current_user.id),
-    )
-
-    # Clear messages
-    deleted_count = await chat_service.clear_messages(
-        db_session,
-        session_id=session_id
-    )
-
-    return ClearHistoryResponse(
-        success=True,
-        deleted_count=deleted_count,
-        message="Conversation cleared successfully",
     )

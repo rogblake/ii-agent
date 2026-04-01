@@ -10,7 +10,11 @@ import {
 import { useLocation, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { io, Socket, ManagerOptions, SocketOptions } from 'socket.io-client'
-import { AgentEvent, WebSocketConnectionState } from '@/typings/agent'
+import {
+    AgentEvent,
+    WebSocketConnectionState,
+    ChatMessagePayload
+} from '@/typings/agent'
 import { useAppDispatch, useAppSelector } from '@/state/store'
 import {
     selectIsFromNewQuestion,
@@ -21,18 +25,11 @@ import {
 } from '@/state'
 import { ACCESS_TOKEN } from '@/constants/auth'
 
-interface WebSocketMessageContent {
-    [key: string]: unknown
-}
-
 interface SocketIOContextType {
     socket: Socket | null
     isSessionReady: boolean
     connectSocket: () => void
-    sendMessage: (payload: {
-        type: string
-        content: WebSocketMessageContent
-    }) => boolean
+    sendMessage: (payload: ChatMessagePayload) => boolean
     joinSession: () => void
 }
 
@@ -42,7 +39,7 @@ interface SocketIOProviderProps {
     children: ReactNode
     handleEvent: (data: {
         id: string
-        type: AgentEvent
+        name: AgentEvent
         content: Record<string, unknown>
     }) => void
 }
@@ -183,7 +180,7 @@ export function SocketIOProvider({
         socketInstance.on('chat_event', (data) => {
             try {
                 if (
-                    data?.type === AgentEvent.SYSTEM &&
+                    data?.name === AgentEvent.CONNECTION_ESTABLISHED &&
                     typeof data?.content?.session_id === 'string'
                 ) {
                     setIsSessionReady(true)
@@ -248,7 +245,7 @@ export function SocketIOProvider({
     }, [socket, shouldDisableJoinSession])
 
     const sendMessage = useCallback(
-        (payload: { type: string; content: WebSocketMessageContent }) => {
+        (payload: ChatMessagePayload) => {
             if (!socket || !socket.connected) {
                 toast.error(
                     'Socket.IO connection is not open. Please try again.'
@@ -256,12 +253,14 @@ export function SocketIOProvider({
                 return false
             }
 
-            // Include session_uuid in the payload if available (for reconnection handling)
-            const messageWithSession = sessionIdRef.current
-                ? { ...payload, session_uuid: sessionIdRef.current }
-                : payload
+            // Ensure session_uuid is set from current session
+            const message: ChatMessagePayload = {
+                ...payload,
+                session_uuid:
+                    payload.session_uuid || sessionIdRef.current || ''
+            }
 
-            socket.emit('chat_message', messageWithSession)
+            socket.emit('chat_message', message)
             return true
         },
         [socket]

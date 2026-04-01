@@ -103,7 +103,7 @@ async def claim_subdomain(
     project_id = request.project_id
 
     # Verify ownership
-    project = await subdomain_service.get_user_project(db, project_id, str(current_user.id))
+    project = await subdomain_service.get_user_project(db, project_id, current_user.id)
     if not project:
         raise ProjectNotFoundError("Project not found or you don't have access to it")
 
@@ -140,7 +140,7 @@ async def claim_subdomain(
         result = await kv_service.create_subdomain(
             subdomain=subdomain,
             cloud_run_url=cloud_run_url,
-            project_id=project_id,
+            project_id=str(project_id),
             user_id=str(current_user.id),
         )
 
@@ -169,7 +169,7 @@ async def claim_subdomain(
         await subdomain_service.create_or_update_custom_domain(
             db,
             project_id=project_id,
-            user_id=str(current_user.id),
+            user_id=current_user.id,
             subdomain=subdomain,
             full_domain=full_domain_url,
             cloudflare_record_id=getattr(result, "record_id", None),
@@ -227,7 +227,7 @@ async def get_subdomain(
 
     if not is_admin:
         record = await subdomain_service.get_subdomain_record(
-            db, subdomain, user_id=str(current_user.id)
+            db, subdomain, user_id=current_user.id
         )
         if not record:
             raise SubdomainNotFoundError("Subdomain not found")
@@ -268,7 +268,7 @@ async def delete_subdomain(
     is_admin = getattr(current_user, "role", None) == "admin"
 
     record = await subdomain_service.get_subdomain_record(
-        db, subdomain, user_id=str(current_user.id), is_admin=is_admin
+        db, subdomain, user_id=current_user.id, is_admin=is_admin
     )
     if not is_admin and not record:
         raise SubdomainNotFoundError("Subdomain not found")
@@ -277,7 +277,7 @@ async def delete_subdomain(
         result: SubdomainResult = await kv_service.delete_subdomain(subdomain)
 
         if result.success and record:
-            owner_user_id = str(current_user.id)
+            owner_user_id = current_user.id
             if is_admin:
                 owner_user_id = (
                     await subdomain_service.get_project_owner_user_id(db, record.project_id)

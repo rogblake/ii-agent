@@ -34,7 +34,7 @@ class RedisSettings(BaseSettings):
     )
 
     max_connections: int = Field(
-        default=50,
+        default=30,
         description="Maximum number of Redis connections in pool",
         ge=1,
     )
@@ -55,3 +55,5 @@ class RedisSettings(BaseSettings):
         default=True,
         description="Decode Redis responses to strings",
     )
+
+    # TODO: add is_ssl method check

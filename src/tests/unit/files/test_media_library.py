@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -17,12 +18,14 @@ class FakeFileRepo:
                 file_name="generated.png",
                 storage_path="sessions/s1/generated/img.png",
                 created_at=datetime.now(timezone.utc),
+                source="agent_generated",
             ),
             SimpleNamespace(
                 id="f2",
                 file_name="upload.png",
                 storage_path="users/u1/uploads/img.png",
                 created_at=datetime.now(timezone.utc),
+                source="user_upload",
             ),
         ]
 
@@ -32,12 +35,19 @@ class FakeSessionRepo:
 
 
 @pytest.mark.asyncio
-async def test_media_library_pagination_and_source_classification(settings_factory, in_memory_storage):
+async def test_media_library_pagination_and_source_classification(settings_factory):
+    storage_mock = MagicMock()
+    storage_mock.signed_urls_batch = AsyncMock(
+        side_effect=lambda paths, **kw: [f"https://signed.local/{p}" for p in paths]
+    )
+    storage_mock.public_url = MagicMock(
+        side_effect=lambda p: f"https://public.local/{p}"
+    )
+
     service = FileService(
         file_repo=FakeFileRepo(),
         session_repo=FakeSessionRepo(),
-        file_store=in_memory_storage,
-        media_store=in_memory_storage,
+        storage=storage_mock,
         config=settings_factory(),
     )
 

@@ -69,6 +69,7 @@ import {
     AttachmentMeta,
     BUILD_MODE,
     BUILD_STEP,
+    ErrorCode,
     Message,
     Milestone,
     PlanModificationSuggestion,
@@ -221,7 +222,7 @@ export function useAppEvents() {
         (
             data: {
                 id: string
-                type: AgentEvent
+                name: AgentEvent
                 content: Record<string, unknown>
                 run_id?: string
                 session_id?: string
@@ -428,7 +429,7 @@ export function useAppEvents() {
 
             // ── Event switch ──
 
-            switch (data.type) {
+            switch (data.name) {
                 case AgentEvent.AGENT_INITIALIZED: {
                     // Reset agent tracking state once per replay session
                     if (ignoreClickAction && !hasResetForReplay.current) {
@@ -518,12 +519,12 @@ export function useAppEvents() {
                     const errorMessage =
                         (data.content.message as string) ||
                         'An unexpected error occurred.'
-                    const errorType = data.content.error_type as string | undefined
+                    const errorCode = (data.content.error_code ?? data.error_code) as ErrorCode | undefined
                     const sessionIdFromEvent =
                         (data.session_id as string | undefined) ??
                         (data.content.session_id as string | undefined)
 
-                    if (errorType === 'insufficient_credits') {
+                    if (errorCode === ErrorCode.INSUFFICIENT_CREDITS) {
                         if (!ignoreClickAction) {
                             toast.error(
                                 'You have run out of credits. Redirecting to upgrade your plan...'
@@ -536,11 +537,11 @@ export function useAppEvents() {
                     }
 
                     if (
-                        errorType === 'design_sync_state_error' ||
-                        errorType === 'slide_deck_sync_state_error'
+                        errorCode === ErrorCode.DESIGN_SYNC_STATE_ERROR ||
+                        errorCode === ErrorCode.SLIDE_DECK_SYNC_STATE_ERROR
                     ) {
                         const operation =
-                            errorType === 'design_sync_state_error'
+                            errorCode === 'design_sync_state_error'
                                 ? 'design_sync_state_complete'
                                 : 'slide_deck_sync_state_complete'
 
@@ -548,7 +549,7 @@ export function useAppEvents() {
                             new CustomEvent('design-mode-sync-response', {
                                 detail: {
                                     operation,
-                                    error_type: errorType,
+                                    error_code: errorCode,
                                     message: errorMessage,
                                     session_id: sessionIdFromEvent
                                 }
@@ -575,6 +576,52 @@ export function useAppEvents() {
                     const vscode_url = data.content.vscode_url as string
                     // Always update vscode_url, even if null/empty (to clear stale URLs from previous sessions)
                     dispatch(setVscodeUrl(vscode_url || ''))
+                    break
+                }
+
+                case AgentEvent.CONNECTION_ESTABLISHED: {
+                    // join_session acknowledgment — the BE sends this with
+                    // session_id in content after a successful join.
+                    if (data.content.session_id) {
+                        dispatch(
+                            setActiveSessionId(
+                                data.content.session_id as string
+                            )
+                        )
+                        dispatch(setIsCreatingSession(false))
+                        // Invalidate sessions cache to refresh the session list
+                        dispatch(
+                            sessionApi.util.invalidateTags([
+                                { type: 'Sessions', id: 'LIST' }
+                            ])
+                        )
+                        setTimeout(() => {
+                            dispatch(setCurrentQuestion(''))
+                            dispatch(setRequireClearFiles(true))
+                            // Only navigate from the home page — chat and agent pages
+                            // manage their own session URLs. This prevents stale
+                            // join_session events from overwriting the URL
+                            // when switching between sessions.
+                            const isOnHomePage = location.pathname === '/'
+                            if (isOnHomePage) {
+                                dispatch(setIsFromNewQuestion(true))
+                                navigate(`/${data.content.session_id}`)
+                            }
+                        }, 0)
+
+                        const deployment = data.content.deployment as
+                            | { url?: unknown }
+                            | undefined
+                        const deploymentUrl = (deployment?.url ||
+                            data.content.deployment_url) as string | undefined
+                        if (deploymentUrl) {
+                            dispatch(setPublished(deploymentUrl))
+                            toast.success(
+                                (data.content.message as string) ||
+                                    `Deployment live at ${deploymentUrl}`
+                            )
+                        }
+                    }
                     break
                 }
 
@@ -641,46 +688,6 @@ export function useAppEvents() {
                                 timestamp: Date.now()
                             })
                         )
-                    } else if (data.content.session_id) {
-                        dispatch(
-                            setActiveSessionId(
-                                data.content.session_id as string
-                            )
-                        )
-                        dispatch(setIsCreatingSession(false))
-                        // Invalidate sessions cache to refresh the session list
-                        dispatch(
-                            sessionApi.util.invalidateTags([
-                                { type: 'Sessions', id: 'LIST' }
-                            ])
-                        )
-                        setTimeout(() => {
-                            dispatch(setCurrentQuestion(''))
-                            dispatch(setRequireClearFiles(true))
-                            // Only navigate from the home page — chat and agent pages
-                            // manage their own session URLs. This prevents stale
-                            // join_session SYSTEM events from overwriting the URL
-                            // when switching between sessions.
-                            const isOnHomePage = location.pathname === '/'
-                            if (isOnHomePage) {
-                                dispatch(setIsFromNewQuestion(true))
-                                navigate(`/${data.content.session_id}`)
-                            }
-                        }, 0)
-
-                        const deployment = data.content.deployment as
-                            | { url?: unknown }
-                            | undefined
-                        const deploymentUrl = (deployment?.url ||
-                            data.content.deployment_url) as string | undefined
-                        if (deploymentUrl) {
-                            dispatch(setPublished(deploymentUrl))
-                            toast.success(
-                                (data.content.message as string) ||
-                                    `Deployment live at ${deploymentUrl}`
-                            )
-                            break
-                        }
                     } else {
                         const deployment = data.content.deployment as
                             | { url?: unknown }
@@ -769,7 +776,7 @@ export function useAppEvents() {
                     }
                     break
                 }
-                case AgentEvent.AGENT_THINKING: {
+                case AgentEvent.AGENT_REASONING: {
                     if (!planModificationOptionsRef.current) {
                         dispatch(clearPlanModificationOptions())
                     }
@@ -798,7 +805,7 @@ export function useAppEvents() {
                     break
                 }
 
-                case AgentEvent.AGENT_THINKING_DELTA: {
+                case AgentEvent.AGENT_REASONING_DELTA: {
                     const deltaText = data.content.text as string
                     if (!deltaText) break
                     handleStreamingDelta(
@@ -1518,41 +1525,9 @@ export function useAppEvents() {
                 }
 
                 case AgentEvent.UPLOAD_SUCCESS: {
+                    // Files are already in Redux state via use-upload-files.tsx.
+                    // UPLOAD_SUCCESS confirms the BE received them — just clear the uploading flag.
                     safeDispatch(setIsUploading(false))
-
-                    // Update the uploaded files state
-                    const newFiles = data.content.files as {
-                        path: string
-                        saved_path: string
-                    }[]
-
-                    // Filter out files that are part of folders
-                    const folderMetadataFiles = newFiles.filter((f) =>
-                        f.path.startsWith('folder:')
-                    )
-
-                    const folderNames = folderMetadataFiles
-                        .map((f) => {
-                            const match = f.path.match(/^folder:(.+):\d+$/)
-                            return match ? match[1] : null
-                        })
-                        .filter(Boolean) as string[]
-
-                    // Only add files that are not part of folders or are folder metadata files
-                    const filesToAdd = newFiles.filter((f) => {
-                        // If it's a folder metadata file, include it
-                        if (f.path.startsWith('folder:')) {
-                            return true
-                        }
-
-                        // For regular files, exclude them if they might be part of a folder
-                        return !folderNames.some((folderName) =>
-                            f.path.includes(folderName)
-                        )
-                    })
-
-                    const paths = filesToAdd.map((f) => f.path)
-                    safeDispatch({ type: 'ADD_UPLOADED_FILES', payload: paths })
                     break
                 }
 

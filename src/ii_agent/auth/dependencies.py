@@ -4,19 +4,20 @@ This module provides authentication-related dependencies that are used
 across all domains that need user authentication.
 """
 
-from typing import Annotated
+from typing import Annotated, TypeAlias
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.dependencies import DBSession, SettingsDep
-from ii_agent.auth.users.dependencies import UserRepositoryDep
-from ii_agent.auth.users.models import User
+from ii_agent.core.dependencies import DBSession
+from ii_agent.core.dependencies import SettingsDep
+from ii_agent.users.dependencies import UserRepositoryDep
+from ii_agent.users.models import User
 from ii_agent.auth.jwt_handler import jwt_handler
 from ii_agent.auth.schemas import TokenPayload
 from ii_agent.auth.exceptions import InvalidTokenException, UserNotFoundException
-from ii_agent.auth.users.exceptions import UserDisabledException
+from ii_agent.users.exceptions import UserDisabledException
 
 # Re-export security scheme for use in routers
 security = HTTPBearer()
@@ -59,7 +60,7 @@ async def get_current_user(
 
 
 # Type alias for current user dependency
-CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentUser: TypeAlias = Annotated[User, Depends(get_current_user)]
 
 
 __all__ = [

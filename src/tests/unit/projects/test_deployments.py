@@ -100,9 +100,7 @@ class TestGetProjectDeployment:
         svc = _make_service(project_repo=project_repo)
 
         with pytest.raises(ProjectNotFoundError):
-            await svc.get_project_deployment(
-                AsyncMock(), user_id="u-1", project_id="missing"
-            )
+            await svc.get_project_deployment(AsyncMock(), user_id="u-1", project_id="missing")
 
     async def test_raises_deployment_not_found_when_no_deployment(self):
         project_repo = MagicMock()
@@ -111,14 +109,10 @@ class TestGetProjectDeployment:
         deployments_repo = MagicMock()
         deployments_repo.get_latest_deployment = AsyncMock(return_value=None)
 
-        svc = _make_service(
-            project_repo=project_repo, deployments_repo=deployments_repo
-        )
+        svc = _make_service(project_repo=project_repo, deployments_repo=deployments_repo)
 
         with pytest.raises(DeploymentNotFoundError):
-            await svc.get_project_deployment(
-                AsyncMock(), user_id="u-1", project_id="proj-1"
-            )
+            await svc.get_project_deployment(AsyncMock(), user_id="u-1", project_id="proj-1")
 
     async def test_returns_deployment_on_success(self):
         project = _make_project()
@@ -130,13 +124,9 @@ class TestGetProjectDeployment:
         deployments_repo = MagicMock()
         deployments_repo.get_latest_deployment = AsyncMock(return_value=deployment)
 
-        svc = _make_service(
-            project_repo=project_repo, deployments_repo=deployments_repo
-        )
+        svc = _make_service(project_repo=project_repo, deployments_repo=deployments_repo)
 
-        result = await svc.get_project_deployment(
-            AsyncMock(), user_id="u-1", project_id="proj-1"
-        )
+        result = await svc.get_project_deployment(AsyncMock(), user_id="u-1", project_id="proj-1")
         assert result is deployment
 
     async def test_queries_with_provider_none(self):
@@ -149,13 +139,9 @@ class TestGetProjectDeployment:
         deployments_repo = MagicMock()
         deployments_repo.get_latest_deployment = AsyncMock(return_value=deployment)
 
-        svc = _make_service(
-            project_repo=project_repo, deployments_repo=deployments_repo
-        )
+        svc = _make_service(project_repo=project_repo, deployments_repo=deployments_repo)
 
-        await svc.get_project_deployment(
-            AsyncMock(), user_id="u-1", project_id="proj-1"
-        )
+        await svc.get_project_deployment(AsyncMock(), user_id="u-1", project_id="proj-1")
 
         deployments_repo.get_latest_deployment.assert_called_once()
         call_kwargs = deployments_repo.get_latest_deployment.call_args[1]
@@ -328,9 +314,7 @@ class TestUpdateDeploymentStatus:
 
         svc = _make_service(deployments_repo=deployments_repo)
 
-        await svc.update_deployment_status(
-            AsyncMock(), deployment_id="d-1", status="deployed"
-        )
+        await svc.update_deployment_status(AsyncMock(), deployment_id="d-1", status="deployed")
         assert deployment.deployment_status == "deployed"
 
     async def test_deployed_sets_deployed_at_and_finished_at(self):
@@ -342,9 +326,7 @@ class TestUpdateDeploymentStatus:
         svc = _make_service(deployments_repo=deployments_repo)
 
         before = datetime.now(timezone.utc)
-        await svc.update_deployment_status(
-            AsyncMock(), deployment_id="d-1", status="deployed"
-        )
+        await svc.update_deployment_status(AsyncMock(), deployment_id="d-1", status="deployed")
 
         assert deployment.deployed_at is not None
         assert deployment.finished_at is not None
@@ -358,9 +340,7 @@ class TestUpdateDeploymentStatus:
 
         svc = _make_service(deployments_repo=deployments_repo)
 
-        await svc.update_deployment_status(
-            AsyncMock(), deployment_id="d-1", status="failed"
-        )
+        await svc.update_deployment_status(AsyncMock(), deployment_id="d-1", status="failed")
 
         assert deployment.finished_at is not None
         assert deployment.deployed_at is None  # Not set for 'failed'
@@ -373,9 +353,7 @@ class TestUpdateDeploymentStatus:
 
         svc = _make_service(deployments_repo=deployments_repo)
 
-        await svc.update_deployment_status(
-            AsyncMock(), deployment_id="d-1", status="building"
-        )
+        await svc.update_deployment_status(AsyncMock(), deployment_id="d-1", status="building")
 
         assert deployment.deployed_at is None
         assert deployment.finished_at is None
@@ -405,9 +383,7 @@ class TestUpdateDeploymentStatus:
 
         svc = _make_service(deployments_repo=deployments_repo)
 
-        await svc.update_deployment_status(
-            AsyncMock(), deployment_id="d-1", status="deployed"
-        )
+        await svc.update_deployment_status(AsyncMock(), deployment_id="d-1", status="deployed")
 
         # URL should remain unchanged
         assert deployment.deployment_url == "old-url"
@@ -560,9 +536,7 @@ class TestSetActiveDeployment:
         project_repo.get_by_id = AsyncMock(return_value=project)
         project_repo.update = AsyncMock(return_value=project)
 
-        svc = _make_service(
-            project_repo=project_repo, deployments_repo=deployments_repo
-        )
+        svc = _make_service(project_repo=project_repo, deployments_repo=deployments_repo)
 
         result = await svc.set_active_deployment(
             AsyncMock(), project_id="proj-1", deployment_id="d-1"
@@ -582,13 +556,9 @@ class TestSetActiveDeployment:
         project_repo.get_by_id = AsyncMock(return_value=project)
         project_repo.update = AsyncMock(return_value=project)
 
-        svc = _make_service(
-            project_repo=project_repo, deployments_repo=deployments_repo
-        )
+        svc = _make_service(project_repo=project_repo, deployments_repo=deployments_repo)
 
-        await svc.set_active_deployment(
-            AsyncMock(), project_id="proj-1", deployment_id="d-1"
-        )
+        await svc.set_active_deployment(AsyncMock(), project_id="proj-1", deployment_id="d-1")
 
         # URL should remain unchanged when deployment has no URL
         assert project.production_url == "https://old.url"
@@ -603,9 +573,7 @@ class TestSetActiveDeployment:
         project_repo = MagicMock()
         project_repo.get_by_id = AsyncMock(return_value=None)
 
-        svc = _make_service(
-            project_repo=project_repo, deployments_repo=deployments_repo
-        )
+        svc = _make_service(project_repo=project_repo, deployments_repo=deployments_repo)
 
         result = await svc.set_active_deployment(
             AsyncMock(), project_id="proj-1", deployment_id="d-1"

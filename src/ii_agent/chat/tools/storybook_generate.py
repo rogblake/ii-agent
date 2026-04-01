@@ -9,30 +9,29 @@ import uuid
 from io import BytesIO
 from typing import Any, Literal, Optional, TYPE_CHECKING, cast
 
-import anyio
 import httpx
 
 from ii_agent.workers.celery.utils import queue_task
-from ii_agent.core.db.manager import get_db_session_local
+from ii_agent.core.db import get_db_session_local
 
 from ii_agent.content.media.service import _generate_image
 from ii_agent.chat.types import (
     ErrorTextContent,
     MediaPreferences,
     StorybookProgressContent,
+    StorybookResultContent,
     StorybookPageResult,
 )
-from ii_agent.core.storage.client import media_storage
+from ii_agent.core.storage.client import get_storage
 from ii_agent.content.storybook.html_generator import (
     generate_storybook_page_html,
     generate_text_only_page_html,
 )
 
-from ii_agent.billing.reservations.types import BillingQuote
 from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +114,7 @@ class StorybookGenerationTool(BaseTool):
         self,
         session_id: str,
         *,
-        container: ServiceContainer,
+        container: ApplicationContainer,
         media_preferences: Optional[MediaPreferences] = None,
     ):
         self._container = container
@@ -548,22 +547,9 @@ class StorybookGenerationTool(BaseTool):
 
         return (page_results, image_url, voice_cost_usd)
 
-    async def quote_cost(self, tool_call: ToolCallInput) -> BillingQuote | None:
-        """Bounded quote based on scene count × per-page image cost."""
-        try:
-            params = json.loads(tool_call.input)
-            scenes = params.get("scenes", [])
-            page_count = max(len(scenes), 1)
-            page_count = min(page_count, MAX_CONTENT_SCENES)
-        except (json.JSONDecodeError, KeyError):
-            page_count = 5  # safe default
-        reserve_usd = page_count * _STORYBOOK_PER_PAGE_COST_USD
-        return BillingQuote(
-            strategy="bounded",
-            reserve_usd=reserve_usd,
-            max_usd=reserve_usd,
-            metadata={"tool_name": self.name, "page_count": page_count},
-        )
+    async def quote_cost(self, tool_call: ToolCallInput) -> None:
+        """Return None; billing uses direct deduction after execution."""
+        return None
 
     async def run(self, tool_call: ToolCallInput) -> ToolResponse:
         return ToolResponse(
@@ -682,7 +668,7 @@ class StorybookGenerationTool(BaseTool):
                 expires=STORYBOOK_TASK_EXPIRES_SECONDS,
                 headers={
                     "session_id": self.session_id,
-                    "user_id": session.user_id,
+                    "user_id": str(session_info.user_id),
                 },
             )
 
@@ -1020,6 +1006,8 @@ class StorybookGenerationTool(BaseTool):
         """Upload composite image to GCS and persist metadata."""
         file_id = str(uuid.uuid4())
         file_name = f"storybook-scene-{scene_number}-{file_id[:8]}.png"
+        # TODO: Migrate to path_resolver.user_storybook(user_id, file_id, "png")
+        # once self.user_id is available on StorybookGenerationTool
         storage_path = f"sessions/{self.session_id}/storybook/{file_name}"
 
         last_error: Optional[Exception] = None
@@ -1027,12 +1015,8 @@ class StorybookGenerationTool(BaseTool):
         for attempt in range(MAX_RETRIES):
             try:
                 content_io = BytesIO(composite_png)
-                url = await anyio.to_thread.run_sync(
-                    media_storage.upload_and_get_permanent_url,
-                    content_io,
-                    storage_path,
-                    "image/png",
-                )
+                await get_storage().write(storage_path, content_io, "image/png")
+                url = get_storage().public_url(storage_path)
 
                 logger.info(f"[STORYBOOK] Uploaded composite to GCS: {storage_path}")
 

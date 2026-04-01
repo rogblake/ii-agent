@@ -16,6 +16,7 @@ from ii_agent.chat.vectorstore.openai import OpenAIVectorStore
 # Factory helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_vector_store_record(
     user_id: str = "user-1",
     vector_store_id: str = "vs_abc",
@@ -35,26 +36,27 @@ def _make_vector_store_record(
 
 
 def _make_openai_vs_store() -> OpenAIVectorStore:
-    """Create an OpenAIVectorStore with mocked internals."""
-    with (
-        patch("ii_agent.chat.vectorstore.openai.get_system_llm_config") as mock_cfg,
-        patch("ii_agent.chat.vectorstore.openai.get_settings"),
-        patch("ii_agent.chat.vectorstore.openai.AsyncOpenAI") as mock_openai,
-    ):
-        llm_cfg = MagicMock()
-        llm_cfg.api_key.get_secret_value.return_value = "sk-test"
-        llm_cfg.base_url = None
-        llm_cfg.model = "gpt-4"
-        mock_cfg.return_value = llm_cfg
+    """Create an OpenAIVectorStore with mocked internals.
 
-        store = OpenAIVectorStore()
-        store.client = MagicMock()
+    The constructor is lazy (no DB/config calls), so we just create the
+    instance and inject a mock client directly into ``_client`` so that
+    ``_get_client()`` returns it without hitting the DB.
+    """
+    store = OpenAIVectorStore()
+    store._client = MagicMock()
+    # Set a fake LLM config so that self.llm_config doesn't raise
+    llm_cfg = MagicMock()
+    llm_cfg.model = "gpt-4"
+    store._llm_config = llm_cfg
+    # Keep a convenience alias used by existing tests.
+    store.client = store._client
     return store
 
 
 # ---------------------------------------------------------------------------
 # _is_vector_store_expired
 # ---------------------------------------------------------------------------
+
 
 class TestIsVectorStoreExpired:
     @pytest.mark.asyncio
@@ -97,6 +99,7 @@ class TestIsVectorStoreExpired:
 # ---------------------------------------------------------------------------
 # _check_vector_store_expired_on_provider
 # ---------------------------------------------------------------------------
+
 
 class TestCheckVectorStoreExpiredOnProvider:
     @pytest.mark.asyncio
@@ -159,6 +162,7 @@ class TestCheckVectorStoreExpiredOnProvider:
 # _create_vector_store_on_provider
 # ---------------------------------------------------------------------------
 
+
 class TestCreateVectorStoreOnProvider:
     @pytest.mark.asyncio
     async def test_creates_vector_store(self):
@@ -183,6 +187,7 @@ class TestCreateVectorStoreOnProvider:
 # ---------------------------------------------------------------------------
 # _get_vector_store_from_db
 # ---------------------------------------------------------------------------
+
 
 class TestGetVectorStoreFromDb:
     @pytest.mark.asyncio
@@ -214,6 +219,7 @@ class TestGetVectorStoreFromDb:
 # ---------------------------------------------------------------------------
 # delete
 # ---------------------------------------------------------------------------
+
 
 class TestDelete:
     @pytest.mark.asyncio
@@ -258,7 +264,9 @@ class TestDelete:
         db_session.delete = AsyncMock()
         db_session.commit = AsyncMock()
 
-        store.client.vector_stores.delete = AsyncMock(side_effect=Exception("not found on provider"))
+        store.client.vector_stores.delete = AsyncMock(
+            side_effect=Exception("not found on provider")
+        )
 
         result = await store.delete(db_session, "user-1", "sess-1")
         # Should still succeed and delete from DB
@@ -269,6 +277,7 @@ class TestDelete:
 # ---------------------------------------------------------------------------
 # add_file
 # ---------------------------------------------------------------------------
+
 
 class TestAddFile:
     @pytest.mark.asyncio
@@ -287,8 +296,12 @@ class TestAddFile:
             db.commit = AsyncMock()
             yield db
 
-        with patch("ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()):
-            with patch.object(store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)):
+        with patch(
+            "ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()
+        ):
+            with patch.object(
+                store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)
+            ):
                 result = await store.add_file("user-1", "sess-1", "file-1")
         assert result == 0
 
@@ -319,9 +332,16 @@ class TestAddFile:
         store.client.files.create = AsyncMock(return_value=openai_file)
         store.client.vector_stores.files.create_and_poll = AsyncMock(return_value=vs_file)
 
-        with patch("ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()):
-            with patch.object(store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)):
-                with patch("ii_agent.chat.vectorstore.openai.anyio.to_thread.run_sync", new=AsyncMock(return_value=b"pdf content")):
+        with patch(
+            "ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()
+        ):
+            with patch.object(
+                store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)
+            ):
+                with patch(
+                    "ii_agent.chat.vectorstore.openai.anyio.to_thread.run_sync",
+                    new=AsyncMock(return_value=b"pdf content"),
+                ):
                     result = await store.add_file("user-1", "sess-1", "file-1")
 
         assert result == 1
@@ -336,7 +356,9 @@ class TestAddFile:
             db.execute = AsyncMock(side_effect=Exception("DB error"))
             yield db
 
-        with patch("ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()):
+        with patch(
+            "ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()
+        ):
             result = await store.add_file("user-1", "sess-1", "file-1")
 
         assert result == 0
@@ -345,6 +367,7 @@ class TestAddFile:
 # ---------------------------------------------------------------------------
 # search
 # ---------------------------------------------------------------------------
+
 
 class TestSearch:
     @pytest.mark.asyncio
@@ -369,8 +392,12 @@ class TestSearch:
             db = AsyncMock()
             yield db
 
-        with patch("ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()):
-            with patch.object(store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)):
+        with patch(
+            "ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()
+        ):
+            with patch.object(
+                store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)
+            ):
                 results = await store.search("user-1", "sess-1", "my query")
 
         assert len(results) == 1
@@ -385,8 +412,12 @@ class TestSearch:
             db = AsyncMock()
             yield db
 
-        with patch("ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()):
-            with patch.object(store, "_get_or_create_vector_store", new=AsyncMock(side_effect=Exception("error"))):
+        with patch(
+            "ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()
+        ):
+            with patch.object(
+                store, "_get_or_create_vector_store", new=AsyncMock(side_effect=Exception("error"))
+            ):
                 results = await store.search("user-1", "sess-1", "query")
 
         assert results == []
@@ -419,8 +450,12 @@ class TestSearch:
             db = AsyncMock()
             yield db
 
-        with patch("ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()):
-            with patch.object(store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)):
+        with patch(
+            "ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()
+        ):
+            with patch.object(
+                store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)
+            ):
                 results = await store.search("user-1", "sess-1", "query")
 
         assert "citations" in results[0]["metadata"]
@@ -429,6 +464,7 @@ class TestSearch:
 # ---------------------------------------------------------------------------
 # add_files_batch
 # ---------------------------------------------------------------------------
+
 
 class TestAddFilesBatch:
     @pytest.mark.asyncio
@@ -444,8 +480,12 @@ class TestAddFilesBatch:
             db.execute = AsyncMock(return_value=scalar)
             yield db
 
-        with patch("ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()):
-            with patch.object(store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)):
+        with patch(
+            "ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()
+        ):
+            with patch.object(
+                store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)
+            ):
                 result = await store.add_files_batch("user-1", "sess-1", ["file-1"])
 
         assert result == []
@@ -460,7 +500,9 @@ class TestAddFilesBatch:
             db.execute = AsyncMock(side_effect=Exception("DB error"))
             yield db
 
-        with patch("ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()):
+        with patch(
+            "ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()
+        ):
             result = await store.add_files_batch("user-1", "sess-1", ["file-1"])
 
         assert result == []
@@ -482,9 +524,16 @@ class TestAddFilesBatch:
             db.execute = AsyncMock(return_value=scalar)
             yield db
 
-        with patch("ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()):
-            with patch.object(store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)):
-                with patch("ii_agent.chat.vectorstore.openai.mimetypes.guess_type", return_value=("video/mp4", None)):
+        with patch(
+            "ii_agent.chat.vectorstore.openai.get_db_session_local", return_value=fake_db_cm()
+        ):
+            with patch.object(
+                store, "_get_or_create_vector_store", new=AsyncMock(return_value=record)
+            ):
+                with patch(
+                    "ii_agent.chat.vectorstore.openai.mimetypes.guess_type",
+                    return_value=("video/mp4", None),
+                ):
                     result = await store.add_files_batch("user-1", "sess-1", ["file-1"])
 
         assert result == []

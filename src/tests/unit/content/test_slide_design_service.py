@@ -194,7 +194,9 @@ async def test_sync_persisted_slide_deck_changes_sandbox_unavailable(settings_fa
     ]
     event_service = _FakeEventService()
     sandbox_service = SimpleNamespace(get_sandbox_by_session_id=AsyncMock(return_value=None))
-    service = _make_service(settings_factory, repo=repo, sandbox_service=sandbox_service, event_service=event_service)
+    service = _make_service(
+        settings_factory, repo=repo, sandbox_service=sandbox_service, event_service=event_service
+    )
 
     def _always_apply(html, **kwargs):
         return "<div>new</div>", True, None
@@ -235,10 +237,10 @@ async def test_sync_persisted_slide_deck_changes_success(settings_factory, monke
     ]
     event_service = _FakeEventService()
     sandbox = _FakeSandbox()
-    sandbox_service = SimpleNamespace(
-        get_sandbox_by_session_id=AsyncMock(return_value=sandbox)
+    sandbox_service = SimpleNamespace(get_sandbox_by_session_id=AsyncMock(return_value=sandbox))
+    service = _make_service(
+        settings_factory, repo=repo, sandbox_service=sandbox_service, event_service=event_service
     )
-    service = _make_service(settings_factory, repo=repo, sandbox_service=sandbox_service, event_service=event_service)
 
     def _always_apply(html, **kwargs):
         return "<div data-design-id='id-1'>new</div>", True, None
@@ -279,8 +281,12 @@ async def test_sync_persisted_slide_deck_changes_success(settings_factory, monke
 async def test_get_slide_proxy_html_and_deck_proxy_html(settings_factory):
     repo = _FakeRepo()
     repo.slides = [
-        SimpleNamespace(slide_number=1, slide_content="<html><body>One</body></html>", slide_title="One"),
-        SimpleNamespace(slide_number=2, slide_content="<html><body>Two</body></html>", slide_title="Two"),
+        SimpleNamespace(
+            slide_number=1, slide_content="<html><body>One</body></html>", slide_title="One"
+        ),
+        SimpleNamespace(
+            slide_number=2, slide_content="<html><body>Two</body></html>", slide_title="Two"
+        ),
     ]
     service = _make_service(
         settings_factory,

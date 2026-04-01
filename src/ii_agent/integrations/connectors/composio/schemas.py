@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import Optional, List
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -33,7 +34,7 @@ class UpdateProfileToolsRequest(BaseModel):
 class ConnectToolkitResponse(BaseModel):
     """Response from toolkit connection."""
     success: bool
-    profile_id: str
+    profile_id: UUID
     redirect_url: str
     message: str
     connection_status: str
@@ -56,14 +57,14 @@ class ProfileMCPConfigResponse(BaseModel):
 class SyncProfileResponse(BaseModel):
     """Profile sync response."""
     success: bool
-    mcp_setting_id: str
+    mcp_setting_id: UUID
     message: str
 
 
 class ComposioProfileInfo(BaseModel):
     """Profile information returned to API."""
-    id: str
-    user_id: str
+    id: UUID
+    user_id: UUID
     profile_name: str
     toolkit_slug: str
     toolkit_name: str

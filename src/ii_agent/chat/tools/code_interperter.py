@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 import logging
 import io
@@ -25,10 +26,10 @@ from ii_agent.chat.types import ErrorTextContent, JsonResultContent
 
 from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
 from ii_agent.chat.messages.models import ChatMessage
-from ii_agent.files.models import FileUpload
+from ii_agent.files.models import FileAsset, SessionAsset
 from ii_agent.core.config.llm_config import LLMConfig
-from ii_agent.core.storage import BaseStorage
-from ii_agent.core.storage.locations import get_session_file_path
+from ii_agent.core.storage.providers.base import StorageProvider
+from ii_agent.core.storage.path_resolver import path_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class CodeInterpreter(BaseTool):
         self,
         llm_config: LLMConfig,
         db_session: AsyncSession,
-        storage: BaseStorage,
+        storage: StorageProvider,
         session_id: str,
         parent_message_id: uuid.UUID,
         user_id: str,
@@ -141,7 +142,7 @@ class CodeInterpreter(BaseTool):
         try:
             # Get all file info from database in a single query
             result = await self.db_session.execute(
-                select(FileUpload).where(FileUpload.id.in_(file_ids))
+                select(FileAsset).where(FileAsset.id.in_(file_ids))
             )
             file_uploads = result.scalars().all()
 
@@ -152,10 +153,8 @@ class CodeInterpreter(BaseTool):
             # Upload each file to OpenAI
             for file_upload in file_uploads:
                 try:
-                    # Download file from GCS (blocking I/O operation)
-                    file_content = await anyio.to_thread.run_sync(
-                        self.storage.read, file_upload.storage_path
-                    )
+                    # Download file from GCS
+                    file_content = await self.storage.read(file_upload.storage_path)
 
                     # Upload to OpenAI
                     file_obj = await self.client.files.create(
@@ -239,30 +238,29 @@ class CodeInterpreter(BaseTool):
 
                 # Generate storage path
                 file_name = f"code_output_{openai_file_id}{ext}"
-                storage_path = get_session_file_path(
-                    self.session_id, str(uuid.uuid4()), file_name
-                )
+                file_ext = ext.lstrip(".") or "bin"
+                file_uuid = str(uuid.uuid4())
+                storage_path = path_resolver.user_file(self.user_id, file_uuid, file_ext)
 
-                # Upload to GCS (blocking I/O operation)
-                public_url = await anyio.to_thread.run_sync(
-                    self.storage.upload_and_get_permanent_url,
-                    file_obj,
-                    storage_path,
-                    content_type=content_type,
-                )
+                # Upload to GCS
+                await self.storage.write(storage_path, file_obj, content_type)
+                public_url = self.storage.public_url(storage_path)
 
                 # Save to database
-                db_file = FileUpload(
+                db_file = FileAsset(
                     id=str(uuid.uuid4()),
                     user_id=self.user_id,
                     file_name=file_name,
                     file_size=len(file_bytes),
                     storage_path=storage_path,
                     content_type=content_type,
-                    session_id=self.session_id,
                 )
                 self.db_session.add(db_file)
                 await self.db_session.flush()
+                # Link to session
+                self.db_session.add(
+                    SessionAsset(session_id=self.session_id, asset_id=db_file.id)
+                )
 
                 output_files.append(
                     {

@@ -760,9 +760,7 @@ class TestApplyChangesWithSourceMapping:
         change = _make_style_change(design_id=design_id, element_context=ctx)
 
         sandbox = _make_sandbox(file_content=content)
-        backfilled_content = (
-            f'<div data-design-id="{design_id}" className="foo">Content</div>'
-        )
+        backfilled_content = f'<div data-design-id="{design_id}" className="foo">Content</div>'
 
         with (
             patch(
@@ -843,9 +841,7 @@ class TestApplyChangesWithSourceMapping:
         """Test that multiple changes are processed and progress is tracked."""
         file_path = "/workspace/src/App.tsx"
 
-        changes = [
-            _make_style_change(design_id=f"did-{i}") for i in range(3)
-        ]
+        changes = [_make_style_change(design_id=f"did-{i}") for i in range(3)]
 
         def make_content(design_id: str) -> str:
             return _content_with_design_id(design_id)

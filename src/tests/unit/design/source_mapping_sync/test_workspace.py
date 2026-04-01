@@ -20,6 +20,7 @@ from ii_agent.projects.design.source_mapping_sync._workspace import (
 # _normalize_workspace_file_path
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeWorkspaceFilePath:
     def test_absolute_workspace_path(self):
         assert _normalize_workspace_file_path("/workspace/src/App.tsx") == "/workspace/src/App.tsx"
@@ -31,7 +32,10 @@ class TestNormalizeWorkspaceFilePath:
         assert _normalize_workspace_file_path("workspace/src/App.tsx") == "/workspace/src/App.tsx"
 
     def test_file_uri(self):
-        assert _normalize_workspace_file_path("file:///workspace/src/App.tsx") == "/workspace/src/App.tsx"
+        assert (
+            _normalize_workspace_file_path("file:///workspace/src/App.tsx")
+            == "/workspace/src/App.tsx"
+        )
 
     def test_quote_wrapped(self):
         assert _normalize_workspace_file_path('"workspace/src/App.tsx"') == "/workspace/src/App.tsx"
@@ -70,14 +74,18 @@ class TestNormalizeWorkspaceFilePath:
 # _normalize_workspace_path (alias)
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeWorkspacePath:
     def test_alias(self):
-        assert _normalize_workspace_path("src/App.tsx") == _normalize_workspace_file_path("src/App.tsx")
+        assert _normalize_workspace_path("src/App.tsx") == _normalize_workspace_file_path(
+            "src/App.tsx"
+        )
 
 
 # ---------------------------------------------------------------------------
 # _normalize_react_source_file_name
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeReactSourceFileName:
     def test_simple(self):
@@ -119,6 +127,7 @@ class TestNormalizeReactSourceFileName:
 # _workspace_relative_path
 # ---------------------------------------------------------------------------
 
+
 class TestWorkspaceRelativePath:
     def test_normal(self):
         assert _workspace_relative_path("/workspace/src/App.tsx") == "src/App.tsx"
@@ -143,12 +152,15 @@ class TestWorkspaceRelativePath:
 # _score_source_path
 # ---------------------------------------------------------------------------
 
+
 class TestScoreSourcePath:
     def test_tsx_ranked_first(self):
         assert _score_source_path("src/App.tsx") < _score_source_path("src/App.jsx")
 
     def test_src_preferred(self):
-        assert _score_source_path("/workspace/src/App.tsx") < _score_source_path("/workspace/App.tsx")
+        assert _score_source_path("/workspace/src/App.tsx") < _score_source_path(
+            "/workspace/App.tsx"
+        )
 
     def test_shorter_preferred(self):
         s1 = _score_source_path("/workspace/src/App.tsx")
@@ -170,6 +182,7 @@ class TestScoreSourcePath:
 # ---------------------------------------------------------------------------
 # _parse_search_paths
 # ---------------------------------------------------------------------------
+
 
 class TestParseSearchPaths:
     def test_grep_output(self):
@@ -198,6 +211,7 @@ class TestParseSearchPaths:
 # _score_globals_css_candidate
 # ---------------------------------------------------------------------------
 
+
 class TestScoreGlobalsCssCandidate:
     def test_src_app_globals(self):
         assert _score_globals_css_candidate("/workspace/src/app/globals.css") == 0
@@ -219,11 +233,14 @@ class TestScoreGlobalsCssCandidate:
 # _get_workspace_top_level_dirs (async)
 # ---------------------------------------------------------------------------
 
+
 class TestGetWorkspaceTopLevelDirs:
     async def test_filtered_dirs(self, fake_sandbox):
-        sb = fake_sandbox(command_outputs={
-            "find /workspace": "/workspace/myapp\n/workspace/.git\n/workspace/node_modules\n/workspace/src\n"
-        })
+        sb = fake_sandbox(
+            command_outputs={
+                "find /workspace": "/workspace/myapp\n/workspace/.git\n/workspace/node_modules\n/workspace/src\n"
+            }
+        )
         result = await _get_workspace_top_level_dirs(sb)
         assert "/workspace/myapp" in result
         assert "/workspace/src" in result
@@ -231,9 +248,7 @@ class TestGetWorkspaceTopLevelDirs:
         assert "/workspace/node_modules" not in result
 
     async def test_caching(self, fake_sandbox):
-        sb = fake_sandbox(command_outputs={
-            "find /workspace": "/workspace/myapp\n"
-        })
+        sb = fake_sandbox(command_outputs={"find /workspace": "/workspace/myapp\n"})
         result1 = await _get_workspace_top_level_dirs(sb)
         # Modify command output — should still get cached
         sb._command_outputs = {}
@@ -256,9 +271,7 @@ class TestGetWorkspaceTopLevelDirs:
         assert result == []
 
     async def test_non_workspace_filtered(self, fake_sandbox):
-        sb = fake_sandbox(command_outputs={
-            "find /workspace": "/other/dir\n/workspace/src\n"
-        })
+        sb = fake_sandbox(command_outputs={"find /workspace": "/other/dir\n/workspace/src\n"})
         result = await _get_workspace_top_level_dirs(sb)
         assert "/other/dir" not in result
 
@@ -266,6 +279,7 @@ class TestGetWorkspaceTopLevelDirs:
 # ---------------------------------------------------------------------------
 # _read_file_with_workspace_fallback (async)
 # ---------------------------------------------------------------------------
+
 
 class TestReadFileWithWorkspaceFallback:
     async def test_direct_read(self, fake_sandbox):
@@ -295,15 +309,19 @@ class TestReadFileWithWorkspaceFallback:
         assert content == "found"
 
     async def test_all_fail(self, fake_sandbox):
-        sb = fake_sandbox(command_outputs={"find /workspace -maxdepth 1": "", "find /workspace -type f": ""})
+        sb = fake_sandbox(
+            command_outputs={"find /workspace -maxdepth 1": "", "find /workspace -type f": ""}
+        )
         with pytest.raises(FileNotFoundError):
             await _read_file_with_workspace_fallback(sb, "/workspace/src/App.tsx")
 
     async def test_bytes_decoded(self, fake_sandbox):
         sb = fake_sandbox()
+
         # Override read_file to return bytes
         async def read_bytes(path):
             return b"bytes content"
+
         sb.read_file = read_bytes
         content, path = await _read_file_with_workspace_fallback(sb, "/workspace/src/App.tsx")
         assert content == "bytes content"
@@ -317,6 +335,7 @@ class TestReadFileWithWorkspaceFallback:
 # ---------------------------------------------------------------------------
 # _search_workspace_for_fixed_string (async)
 # ---------------------------------------------------------------------------
+
 
 class TestSearchWorkspaceForFixedString:
     async def test_returns_output(self, fake_sandbox):

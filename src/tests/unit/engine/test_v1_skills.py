@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from ii_agent.agent.runtime.skills.base import SkillCreator
+from ii_agent.agents.skills.base import SkillCreator
 from ii_agent.settings.skills.skills_ref.models import Skill, SkillProperties, SkillSource
 from ii_agent.settings.skills.skills_ref.validator import (
     MAX_COMPATIBILITY_LENGTH,

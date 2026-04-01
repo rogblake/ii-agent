@@ -1,5 +1,7 @@
 """Database introspection endpoints for projects."""
 
+import uuid
+
 from fastapi import APIRouter, Query
 
 from ii_agent.auth.dependencies import CurrentUser, DBSession
@@ -15,7 +17,7 @@ router = APIRouter(tags=["Project Database"])
 
 @router.get("/{project_id}/database/schema", response_model=ProjectDatabaseSchemaResponse)
 async def get_project_database_schema(
-    project_id: str,
+    project_id: uuid.UUID,
     current_user: CurrentUser,
     database_service: DatabaseServiceDep,
     db: DBSession,
@@ -25,7 +27,7 @@ async def get_project_database_schema(
     tables = await database_service.get_project_db_tables(
         db,
         project_id=project_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
     )
 
     if tables is None:
@@ -39,7 +41,7 @@ async def get_project_database_schema(
     response_model=ProjectDatabaseRecordsResponse,
 )
 async def get_project_database_records(
-    project_id: str,
+    project_id: uuid.UUID,
     current_user: CurrentUser,
     database_service: DatabaseServiceDep,
     db: DBSession,
@@ -52,7 +54,7 @@ async def get_project_database_records(
     result = await database_service.get_project_db_records(
         db,
         project_id=project_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         table_name=table,
         limit=limit,
         offset=offset,

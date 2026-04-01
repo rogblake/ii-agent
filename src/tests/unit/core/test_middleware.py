@@ -19,8 +19,7 @@ def _make_request(path: str = "/test", headers: dict | None = None) -> Request:
         "method": "GET",
         "path": path,
         "headers": [
-            (k.lower().encode("utf-8"), v.encode("utf-8"))
-            for k, v in (headers or {}).items()
+            (k.lower().encode("utf-8"), v.encode("utf-8")) for k, v in (headers or {}).items()
         ],
         "query_string": b"",
     }

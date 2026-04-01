@@ -17,6 +17,7 @@ from .connected_account_service import ConnectedAccountService, ConnectedAccount
 from .mcp_server_service import MCPServerService, MCPServer
 from .repository import ComposioProfileRepository
 from .service import ComposioService
+from .dependencies import ComposioProfileRepositoryDep, ComposioServiceDep
 from .router import router
 from .schemas import (
     ComposioProfileInfo,
@@ -52,6 +53,9 @@ __all__ = [
     "ComposioProfileRepository",
     # Service
     "ComposioService",
+    # Dependencies (Dep aliases)
+    "ComposioProfileRepositoryDep",
+    "ComposioServiceDep",
     # Router
     "router",
     # Schemas

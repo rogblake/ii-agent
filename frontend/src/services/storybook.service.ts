@@ -215,7 +215,7 @@ class StorybookService {
         })
 
         const response = await axiosInstance.get<StorybookListResponse>(
-            `/storybooks/session/${sessionId}?${params.toString()}`
+            `/v1/storybooks/session/${sessionId}?${params.toString()}`
         )
         return response.data
     }
@@ -225,7 +225,7 @@ class StorybookService {
      */
     async getStorybook(storybookId: string): Promise<Storybook> {
         const response = await axiosInstance.get<Storybook>(
-            `/storybooks/${storybookId}`
+            `/v1/storybooks/${storybookId}`
         )
         return response.data
     }
@@ -247,7 +247,7 @@ class StorybookService {
         }
         const suffix = params.toString()
         const response = await axiosInstance.post<StorybookVoiceOverResponse>(
-            `/storybooks/${storybookId}/voice${suffix ? `?${suffix}` : ''}`
+            `/v1/storybooks/${storybookId}/voice${suffix ? `?${suffix}` : ''}`
         )
         return response.data
     }
@@ -257,7 +257,7 @@ class StorybookService {
      */
     async getPublicStorybook(storybookId: string): Promise<Storybook> {
         const response = await axiosInstance.get<Storybook>(
-            `/storybooks/public/${storybookId}`
+            `/v1/public/storybooks/${storybookId}`
         )
         return response.data
     }
@@ -269,7 +269,7 @@ class StorybookService {
         storybookId: string
     ): Promise<StorybookGenerationResponse> {
         const response = await axiosInstance.get<StorybookGenerationResponse>(
-            `/storybooks/${storybookId}/progress`
+            `/v1/storybooks/${storybookId}/progress`
         )
         return response.data
     }
@@ -281,7 +281,7 @@ class StorybookService {
         storybookId: string
     ): Promise<StorybookCancelResponse> {
         const response = await axiosInstance.post<StorybookCancelResponse>(
-            `/storybooks/${storybookId}/cancel`
+            `/v1/storybooks/${storybookId}/cancel`
         )
         return response.data
     }
@@ -291,7 +291,7 @@ class StorybookService {
      */
     async downloadStorybookPdf(storybookId: string): Promise<Blob> {
         const response = await axiosInstance.get(
-            `/storybooks/${storybookId}/download`,
+            `/v1/storybooks/${storybookId}/download`,
             { responseType: 'blob' }
         )
         return response.data
@@ -303,7 +303,7 @@ class StorybookService {
     async downloadStorybookWithProgress(
         storybookId: string
     ): Promise<AsyncGenerator<StorybookDownloadProgress, void, unknown>> {
-        const endpoint = `/storybooks/${storybookId}/download/stream`
+        const endpoint = `/v1/storybooks/${storybookId}/download/stream`
         const token = localStorage.getItem(ACCESS_TOKEN)
 
         // Use fetch with Authorization header for streaming
@@ -368,7 +368,7 @@ class StorybookService {
      */
     async downloadStorybookPagePdf(storybookId: string, pageNumber: number): Promise<Blob> {
         const response = await axiosInstance.get(
-            `/storybooks/${storybookId}/download/page/${pageNumber}`,
+            `/v1/storybooks/${storybookId}/download/page/${pageNumber}`,
             { responseType: 'blob' }
         )
         return response.data
@@ -379,7 +379,7 @@ class StorybookService {
      */
     async downloadStorybookPagePng(storybookId: string, pageNumber: number): Promise<Blob> {
         const response = await axiosInstance.get(
-            `/storybooks/${storybookId}/download/png/${pageNumber}`,
+            `/v1/storybooks/${storybookId}/download/png/${pageNumber}`,
             { responseType: 'blob' }
         )
         return response.data
@@ -390,7 +390,7 @@ class StorybookService {
      */
     async downloadStorybookPngZip(storybookId: string): Promise<Blob> {
         const response = await axiosInstance.get(
-            `/storybooks/${storybookId}/download/png`,
+            `/v1/storybooks/${storybookId}/download/png`,
             { responseType: 'blob' }
         )
         return response.data
@@ -402,7 +402,7 @@ class StorybookService {
     async downloadStorybookPngWithProgress(
         storybookId: string
     ): Promise<AsyncGenerator<StorybookDownloadProgress, void, unknown>> {
-        const endpoint = `/storybooks/${storybookId}/download/png/stream`
+        const endpoint = `/v1/storybooks/${storybookId}/download/png/stream`
         const token = localStorage.getItem(ACCESS_TOKEN)
 
         // Use fetch with Authorization header for streaming
@@ -468,7 +468,7 @@ class StorybookService {
             page_number: pageNumber.toString()
         })
         // Return full URL for iframe src (auth handled by axios interceptor when loading via srcDoc)
-        return `${this.baseURL}/storybooks/${storybookId}/edit/proxy?${params.toString()}`
+        return `${this.baseURL}/v1/storybooks/${storybookId}/edit/proxy?${params.toString()}`
     }
 
     /**
@@ -483,7 +483,7 @@ class StorybookService {
             page_changes: pageChanges
         }
         const response = await axiosInstance.post<SaveEditsResponse>(
-            `/storybooks/${storybookId}/edit/save`,
+            `/v1/storybooks/${storybookId}/edit/save`,
             request
         )
         return response.data
@@ -494,7 +494,7 @@ class StorybookService {
      */
     async getVersionHistory(storybookId: string): Promise<VersionHistoryResponse> {
         const response = await axiosInstance.get<VersionHistoryResponse>(
-            `/storybooks/${storybookId}/versions`
+            `/v1/storybooks/${storybookId}/versions`
         )
         return response.data
     }
@@ -510,7 +510,7 @@ class StorybookService {
         formData.append('file', file)
 
         const response = await axiosInstance.post<StorybookBackgroundUploadResponse>(
-            `/storybooks/${storybookId}/edit/upload-background`,
+            `/v1/storybooks/${storybookId}/edit/upload-background`,
             formData,
             {
                 headers: {
@@ -537,7 +537,7 @@ class StorybookService {
             element_context: elementContext
         }
         const response = await axiosInstance.post<AIRewriteResponse>(
-            `/storybooks/${storybookId}/edit/ai-rewrite`,
+            `/v1/storybooks/${storybookId}/edit/ai-rewrite`,
             request
         )
         return response.data
@@ -559,7 +559,7 @@ class StorybookService {
             text_position: textPosition
         }
         const response = await axiosInstance.post<AIGenerateBackgroundResponse>(
-            `/storybooks/${storybookId}/edit/ai-generate-background`,
+            `/v1/storybooks/${storybookId}/edit/ai-generate-background`,
             request
         )
         return response.data
@@ -636,7 +636,7 @@ class StorybookService {
             text_percentage: params.textPercentage
         }
         const response = await axiosInstance.post<AIRegenerateImageResponse>(
-            `/storybooks/${params.storybookId}/edit/ai-regenerate-image`,
+            `/v1/storybooks/${params.storybookId}/edit/ai-regenerate-image`,
             request
         )
         return response.data

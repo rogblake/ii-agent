@@ -1,239 +1,187 @@
 """Composio Cache Service - Redis caching for Composio data."""
-import json
-from typing import Optional, Dict, Any, List
 
-from ii_agent.core.redis import entity_cache
-from ii_agent.core.logger import logger
+import json
+import logging
+from typing import Any, Dict, List, Optional
+
+from ii_agent.core.redis.cache import EntityCache
+
+logger = logging.getLogger(__name__)
+
 
 class ComposioCacheService:
     """Cache service for Composio toolkit and integration data.
 
-    Cache Keys:
-    - composio:toolkits:all - All toolkits list
-    - composio:toolkit:{slug} - Individual toolkit details
-    - composio:toolkit:{slug}:actions - Toolkit actions list
-    - composio:toolkit:{slug}:icon - Toolkit icon/logo URL
-    - composio:categories:all - All categories list
+    Cache Keys (relative to the ``composio`` namespace):
+    - toolkits:all - All toolkits list
+    - toolkit:{slug} - Individual toolkit details
+    - toolkit:{slug}:actions - Toolkit actions list
+    - toolkit:{slug}:icon - Toolkit icon/logo URL
+    - categories:all - All categories list
+    - action:{name}:display_name - Action display name
     """
 
     # Cache TTL values (in seconds)
-    TTL_TOOLKITS_LIST = 604800  # 7 days = 7 x 24 x 60 x 60
+    TTL_TOOLKITS_LIST = 604800  # 7 days
     TTL_TOOLKIT_DETAILS = 604800
     TTL_TOOLKIT_ACTIONS = 604800
     TTL_TOOLKIT_ICON = 604800
     TTL_CATEGORIES = 604800
     TTL_ACTION_DISPLAY_NAME = 604800
 
-    @staticmethod
-    async def get_all_toolkits() -> Optional[Dict[str, Any]]:
-        """Get cached list of all toolkits."""
+    def __init__(self, *, cache: EntityCache) -> None:
+        self._cache = cache
+
+    # ── Toolkits ──────────────────────────────────────────────────────────
+
+    async def get_all_toolkits(self) -> Optional[Dict[str, Any]]:
         try:
-            result = await entity_cache.get("composio:toolkits:all")
+            result = await self._cache.get("toolkits:all")
             if result:
-                logger.debug("Cache HIT: composio:toolkits:all")
                 return json.loads(result) if not isinstance(result, dict) else result
         except Exception as e:
-            logger.error(f"Error getting cached toolkits: {e}")
-            return None
+            logger.error("Error getting cached toolkits: %s", e)
+        return None
 
-    @staticmethod
-    async def set_all_toolkits(toolkits_data: Dict[str, Any]) -> bool:
-        """Cache the list of all toolkits."""
+    async def set_all_toolkits(self, toolkits_data: Dict[str, Any]) -> bool:
         try:
-            success = await entity_cache.set(
-                "composio:toolkits:all",
-                toolkits_data,
-                ttl=ComposioCacheService.TTL_TOOLKITS_LIST
+            return await self._cache.set(
+                "toolkits:all", toolkits_data, ttl=self.TTL_TOOLKITS_LIST
             )
-            if success:
-                logger.debug("Cache SET: composio:toolkits:all")
-                return success
         except Exception as e:
-            logger.error(f"Error caching toolkits: {e}")
+            logger.error("Error caching toolkits: %s", e)
             return False
 
-    @staticmethod
-    async def get_toolkit_details(toolkit_slug: str) -> Optional[Dict[str, Any]]:
-        """Get cached toolkit details."""
+    # ── Toolkit details ───────────────────────────────────────────────────
+
+    async def get_toolkit_details(self, toolkit_slug: str) -> Optional[Dict[str, Any]]:
         try:
-            cache_key = f"composio:toolkit:{toolkit_slug}"
-            result = await entity_cache.get(cache_key)
+            result = await self._cache.get(f"toolkit:{toolkit_slug}")
             if result:
-                logger.debug(f"Cache HIT: {cache_key}")
                 return json.loads(result) if not isinstance(result, dict) else result
         except Exception as e:
-            logger.error(f"Error getting cached toolkit details for {toolkit_slug}: {e}")
-            return None
+            logger.error("Error getting cached toolkit details for %s: %s", toolkit_slug, e)
+        return None
 
-    @staticmethod
-    async def set_toolkit_details(toolkit_slug: str, toolkit_data: Dict[str, Any]) -> bool:
-        """Cache toolkit details."""
+    async def set_toolkit_details(self, toolkit_slug: str, toolkit_data: Dict[str, Any]) -> bool:
         try:
-            cache_key = f"composio:toolkit:{toolkit_slug}"
-            success = await entity_cache.set(
-                cache_key,
-                toolkit_data,
-                ttl=ComposioCacheService.TTL_TOOLKIT_DETAILS
+            return await self._cache.set(
+                f"toolkit:{toolkit_slug}", toolkit_data, ttl=self.TTL_TOOLKIT_DETAILS
             )
-            if success:
-                logger.debug(f"Cache SET: {cache_key}")
-                return success
         except Exception as e:
-            logger.error(f"Error caching toolkit details for {toolkit_slug}: {e}")
+            logger.error("Error caching toolkit details for %s: %s", toolkit_slug, e)
             return False
 
-    @staticmethod
-    async def get_toolkit_actions(toolkit_slug: str) -> Optional[Dict[str, Any]]:
-        """Get cached toolkit actions."""
+    # ── Toolkit actions ───────────────────────────────────────────────────
+
+    async def get_toolkit_actions(self, toolkit_slug: str) -> Optional[Dict[str, Any]]:
         try:
-            cache_key = f"composio:toolkit:{toolkit_slug}:actions"
-            result = await entity_cache.get(cache_key)
+            result = await self._cache.get(f"toolkit:{toolkit_slug}:actions")
             if result:
-                logger.debug(f"Cache HIT: {cache_key}")
                 return json.loads(result) if not isinstance(result, dict) else result
         except Exception as e:
-            logger.error(f"Error getting cached toolkit actions for {toolkit_slug}: {e}")
-            return None
+            logger.error("Error getting cached toolkit actions for %s: %s", toolkit_slug, e)
+        return None
 
-    @staticmethod
-    async def set_toolkit_actions(toolkit_slug: str, actions_data: List[Dict[str, Any]], categories: Optional[List[str]] = None) -> bool:
-        """Cache toolkit actions with optional categories."""
+    async def set_toolkit_actions(
+        self,
+        toolkit_slug: str,
+        actions_data: List[Dict[str, Any]],
+        categories: Optional[List[str]] = None,
+    ) -> bool:
         try:
-            cache_key = f"composio:toolkit:{toolkit_slug}:actions"
-            cache_data = {
-                "actions": actions_data,
-                "categories": categories or [],
-                "success": True
-            }
-            success = await entity_cache.set(
-                cache_key,
-                cache_data,
-                ttl=ComposioCacheService.TTL_TOOLKIT_ACTIONS
+            cache_data = {"actions": actions_data, "categories": categories or [], "success": True}
+            return await self._cache.set(
+                f"toolkit:{toolkit_slug}:actions", cache_data, ttl=self.TTL_TOOLKIT_ACTIONS
             )
-            if success:
-                logger.debug(f"Cache SET: {cache_key}")
-                return success
         except Exception as e:
-            logger.error(f"Error caching toolkit actions for {toolkit_slug}: {e}")
+            logger.error("Error caching toolkit actions for %s: %s", toolkit_slug, e)
             return False
 
-    @staticmethod
-    async def get_toolkit_icon(toolkit_slug: str) -> Optional[str]:
-        """Get cached toolkit icon URL."""
+    # ── Toolkit icon ──────────────────────────────────────────────────────
+
+    async def get_toolkit_icon(self, toolkit_slug: str) -> Optional[str]:
         try:
-            cache_key = f"composio:toolkit:{toolkit_slug}:icon"
-            result = await entity_cache.get(cache_key)
+            result = await self._cache.get(f"toolkit:{toolkit_slug}:icon")
             if result:
-                logger.debug(f"Cache HIT: {cache_key}")
                 data = json.loads(result) if not isinstance(result, dict) else result
                 return data.get("icon_url")
-            return None
         except Exception as e:
-            logger.error(f"Error getting cached toolkit icon for {toolkit_slug}: {e}")
-            return None
+            logger.error("Error getting cached toolkit icon for %s: %s", toolkit_slug, e)
+        return None
 
-    @staticmethod
-    async def set_toolkit_icon(toolkit_slug: str, icon_url: Optional[str]) -> bool:
-        """Cache toolkit icon URL."""
+    async def set_toolkit_icon(self, toolkit_slug: str, icon_url: Optional[str]) -> bool:
         try:
-            cache_key = f"composio:toolkit:{toolkit_slug}:icon"
-            cache_data = {"icon_url": icon_url}
-            success = await entity_cache.set(
-                cache_key,
-                cache_data,
-                ttl=ComposioCacheService.TTL_TOOLKIT_ICON
+            return await self._cache.set(
+                f"toolkit:{toolkit_slug}:icon", {"icon_url": icon_url}, ttl=self.TTL_TOOLKIT_ICON
             )
-            if success:
-                logger.debug(f"Cache SET: {cache_key}")
-                return success
         except Exception as e:
-            logger.error(f"Error caching toolkit icon for {toolkit_slug}: {e}")
+            logger.error("Error caching toolkit icon for %s: %s", toolkit_slug, e)
             return False
 
-    @staticmethod
-    async def get_categories() -> Optional[List[Dict[str, Any]]]:
-        """Get cached categories list."""
+    # ── Categories ────────────────────────────────────────────────────────
+
+    async def get_categories(self) -> Optional[List[Dict[str, Any]]]:
         try:
-            result = await entity_cache.get("composio:categories:all")
+            result = await self._cache.get("categories:all")
             if result:
-                logger.debug("Cache HIT: composio:categories:all")
                 return json.loads(result) if not isinstance(result, dict) else result
         except Exception as e:
-            logger.error(f"Error getting cached categories: {e}")
-            return None
+            logger.error("Error getting cached categories: %s", e)
+        return None
 
-    @staticmethod
-    async def set_categories(categories_data: List[Dict[str, Any]]) -> bool:
-        """Cache categories list."""
+    async def set_categories(self, categories_data: List[Dict[str, Any]]) -> bool:
         try:
-            cache_data = {"categories": categories_data}
-            success = await entity_cache.set(
-                "composio:categories:all",
-                cache_data,
-                ttl=ComposioCacheService.TTL_CATEGORIES
+            return await self._cache.set(
+                "categories:all", {"categories": categories_data}, ttl=self.TTL_CATEGORIES
             )
-            if success:
-                logger.debug("Cache SET: composio:categories:all")
-                return success
         except Exception as e:
-            logger.error(f"Error caching categories: {e}")
+            logger.error("Error caching categories: %s", e)
             return False
 
-    @staticmethod
-    async def get_action_display_name(action_name: str) -> Optional[str]:
-        """Get cached action display name."""
+    # ── Action display names ──────────────────────────────────────────────
+
+    async def get_action_display_name(self, action_name: str) -> Optional[str]:
         try:
-            cache_key = f"composio:action:{action_name}:display_name"
-            result = await entity_cache.get(cache_key)
+            result = await self._cache.get(f"action:{action_name}:display_name")
             if result:
-                logger.debug(f"Cache HIT: {cache_key}")
                 data = json.loads(result) if not isinstance(result, dict) else result
                 return data.get("display_name")
-            return None
         except Exception as e:
-            logger.error(f"Error getting cached action display name for {action_name}: {e}")
-            return None
+            logger.error("Error getting cached action display name for %s: %s", action_name, e)
+        return None
 
-    @staticmethod
-    async def set_action_display_name(action_name: str, display_name: str) -> bool:
-        """Cache action display name."""
+    async def set_action_display_name(self, action_name: str, display_name: str) -> bool:
         try:
-            cache_key = f"composio:action:{action_name}:display_name"
-            cache_data = {"display_name": display_name}
-            success = await entity_cache.set(
-                cache_key,
-                cache_data,
-                ttl=ComposioCacheService.TTL_ACTION_DISPLAY_NAME
+            return await self._cache.set(
+                f"action:{action_name}:display_name",
+                {"display_name": display_name},
+                ttl=self.TTL_ACTION_DISPLAY_NAME,
             )
-            if success:
-                logger.debug(f"Cache SET: {cache_key}")
-                return success
         except Exception as e:
-            logger.error(f"Error caching action display name for {action_name}: {e}")
+            logger.error("Error caching action display name for %s: %s", action_name, e)
             return False
 
-    @staticmethod
-    async def invalidate_toolkit(toolkit_slug: str) -> bool:
-        """Invalidate all cache entries for a specific toolkit."""
+    # ── Invalidation ──────────────────────────────────────────────────────
+
+    async def invalidate_toolkit(self, toolkit_slug: str) -> bool:
         try:
-            await entity_cache.evict(f"composio:toolkit:{toolkit_slug}")
-            await entity_cache.evict(f"composio:toolkit:{toolkit_slug}:actions")
-            await entity_cache.evict(f"composio:toolkit:{toolkit_slug}:icon")
-            await entity_cache.evict("composio:toolkits:all")
-            logger.info(f"Invalidated cache for toolkit: {toolkit_slug}")
+            await self._cache.evict(f"toolkit:{toolkit_slug}")
+            await self._cache.evict(f"toolkit:{toolkit_slug}:actions")
+            await self._cache.evict(f"toolkit:{toolkit_slug}:icon")
+            await self._cache.evict("toolkits:all")
+            logger.info("Invalidated cache for toolkit: %s", toolkit_slug)
             return True
         except Exception as e:
-            logger.error(f"Error invalidating toolkit cache for {toolkit_slug}: {e}")
+            logger.error("Error invalidating toolkit cache for %s: %s", toolkit_slug, e)
             return False
 
-    @staticmethod
-    async def invalidate_all() -> bool:
-        """Invalidate all Composio cache entries."""
+    async def invalidate_all(self) -> bool:
         try:
-            await entity_cache.evict("composio:toolkits:all")
-            await entity_cache.evict("composio:categories:all")
+            await self._cache.evict("toolkits:all")
+            await self._cache.evict("categories:all")
             logger.info("Invalidated all Composio cache entries")
             return True
         except Exception as e:
-            logger.error(f"Error invalidating all Composio cache: {e}")
+            logger.error("Error invalidating all Composio cache: %s", e)
             return False

@@ -28,6 +28,7 @@ def _make_tool(token="ghp_test", default_repo=None, metadata=None) -> GitHubTool
 
 def _tool_call(action: str, **kwargs) -> "ToolCallInput":  # noqa: F821
     from ii_agent.chat.tools.base import ToolCallInput
+
     payload = {"action": action, **kwargs}
     return ToolCallInput(input=json.dumps(payload), id="call-1", name="github")
 
@@ -77,6 +78,7 @@ class TestInvalidInput:
     async def test_returns_error_for_invalid_json(self):
         tool = _make_tool()
         from ii_agent.chat.tools.base import ToolCallInput
+
         bad_call = ToolCallInput(input="not-json", id="c-1", name="github")
         result = await tool.run(bad_call)
         assert isinstance(result.output, ErrorTextContent)
@@ -192,11 +194,13 @@ class TestHTTPErrors:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
-        mock_client.get = AsyncMock(side_effect=httpx.HTTPStatusError(
-            message="Unauthorized",
-            request=MagicMock(),
-            response=mock_resp,
-        ))
+        mock_client.get = AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                message="Unauthorized",
+                request=MagicMock(),
+                response=mock_resp,
+            )
+        )
 
         with patch("httpx.AsyncClient", return_value=mock_client):
             result = await tool.run(_tool_call("list_repos"))
@@ -211,11 +215,13 @@ class TestHTTPErrors:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
-        mock_client.get = AsyncMock(side_effect=httpx.HTTPStatusError(
-            message="Forbidden",
-            request=MagicMock(),
-            response=mock_resp,
-        ))
+        mock_client.get = AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                message="Forbidden",
+                request=MagicMock(),
+                response=mock_resp,
+            )
+        )
 
         with patch("httpx.AsyncClient", return_value=mock_client):
             result = await tool.run(_tool_call("list_repos"))
@@ -230,11 +236,13 @@ class TestHTTPErrors:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
-        mock_client.get = AsyncMock(side_effect=httpx.HTTPStatusError(
-            message="Not Found",
-            request=MagicMock(),
-            response=mock_resp,
-        ))
+        mock_client.get = AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                message="Not Found",
+                request=MagicMock(),
+                response=mock_resp,
+            )
+        )
 
         with patch("httpx.AsyncClient", return_value=mock_client):
             result = await tool.run(_tool_call("list_repos"))
@@ -352,9 +360,7 @@ class TestListCommits:
         mock_resp = _mock_response([])
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_resp)
-        await tool._list_commits(
-            mock_client, {}, {"owner": "o", "repo": "r", "branch": "feature"}
-        )
+        await tool._list_commits(mock_client, {}, {"owner": "o", "repo": "r", "branch": "feature"})
         call_kwargs = mock_client.get.call_args
         assert call_kwargs.kwargs["params"]["sha"] == "feature"
 
@@ -380,15 +386,14 @@ class TestGetFile:
         mock_resp = _mock_response(data)
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_resp)
-        result = await tool._get_file(
-            mock_client, {}, {"owner": "o", "repo": "r", "path": "src"}
-        )
+        result = await tool._get_file(mock_client, {}, {"owner": "o", "repo": "r", "path": "src"})
         assert result["type"] == "directory"
         assert len(result["contents"]) == 1
 
     @pytest.mark.asyncio
     async def test_handles_base64_file_content(self):
         import base64
+
         tool = _make_tool()
         content = base64.b64encode(b"hello world").decode("utf-8")
         data = {
@@ -461,9 +466,7 @@ class TestListIssues:
         mock_resp = _mock_response(issues)
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_resp)
-        result = await tool._list_issues(
-            mock_client, {}, {"owner": "o", "repo": "r"}
-        )
+        result = await tool._list_issues(mock_client, {}, {"owner": "o", "repo": "r"})
         assert len(result) == 1
         assert result[0]["number"] == 1
 
@@ -534,11 +537,13 @@ class TestCreateCommit:
         commit_resp = _mock_response({"tree": {"sha": "tree123"}})
         blob_resp = _mock_response({"sha": "blob123"})
         tree_resp = _mock_response({"sha": "new-tree-sha"})
-        new_commit_resp = _mock_response({
-            "sha": "new-commit-sha",
-            "author": {"name": "Author", "date": "2024-01-01"},
-            "html_url": "https://github.com/o/r/commit/new-commit-sha",
-        })
+        new_commit_resp = _mock_response(
+            {
+                "sha": "new-commit-sha",
+                "author": {"name": "Author", "date": "2024-01-01"},
+                "html_url": "https://github.com/o/r/commit/new-commit-sha",
+            }
+        )
         update_ref_resp = _mock_response({})
 
         mock_client = AsyncMock()
@@ -670,6 +675,7 @@ class TestGetReadme:
     @pytest.mark.asyncio
     async def test_decodes_base64_content(self):
         import base64
+
         tool = _make_tool()
         content = base64.b64encode(b"# README").decode("utf-8")
         data = {

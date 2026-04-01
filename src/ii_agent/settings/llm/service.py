@@ -2,123 +2,133 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
 import uuid
+from datetime import datetime, timezone
 
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-from ii_agent.settings.llm.models import LLMSetting
+from ii_agent.core.secrets.encryption import encryption_manager
+from ii_agent.sessions.repository import SessionRepository
+from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.settings.llm.exceptions import LLMSettingNotFoundError
-from ii_agent.settings.llm.repository import LLMSettingRepository
+from ii_agent.settings.llm.models import ModelSetting
+from ii_agent.settings.llm.repository import ModelSettingRepository
 from ii_agent.settings.llm.schemas import (
+    ModelConfig,
+    ModelParams,
+    LLMModelInfo,
+    LLMModelList,
     ModelSettingCreate,
-    ModelSettingUpdate,
     ModelSettingInfo,
     ModelSettingInfoWithKey,
     ModelSettingList,
-    LLMModelInfo,
-    LLMModelList,
+    ModelSettingUpdate,
+    PricingInfo,
 )
-from ii_agent.sessions.repository import SessionRepository
-from ii_agent.sessions.schemas import SessionInfo
-from ii_agent.core.secrets.encryption import encryption_manager
-from ii_agent.core.config.llm_config import LLMConfig
-from ii_agent.core.config.settings import Settings
 
 
-class LLMSettingService:
+class ModelSettingService:
     """Service for managing LLM settings - business logic layer."""
 
     def __init__(
         self,
         *,
-        repo: LLMSettingRepository,
-        config: Settings,
+        repo: ModelSettingRepository,
         session_repo: SessionRepository,
     ) -> None:
-        self._config = config
         self._repo = repo
         self._session_repo = session_repo
 
+    # ------------------------------------------------------------------
+    # CRUD
+    # ------------------------------------------------------------------
+
     async def create_model_settings(
-        self, db: AsyncSession, *, setting_model_in: ModelSettingCreate, user_id: str
+        self,
+        db: AsyncSession,
+        *,
+        model_setting_request: ModelSettingCreate,
+        user_id: uuid.UUID,
     ) -> ModelSettingInfo:
-        """Create or update model settings for a specific model."""
-        existing = await self._repo.get_by_model_and_user(
-            db, setting_model_in.model, user_id
+        """Create or upsert model settings for a specific model."""
+        existing = await self._repo.find_by_model_and_user(
+            db, model_setting_request.model_id, user_id=user_id
         )
 
-        encrypted_api_key = encryption_manager.encrypt(setting_model_in.api_key)
+        encrypted_api_key = encryption_manager.encrypt(model_setting_request.api_key)
+        configs_dict = (
+            model_setting_request.configs.model_dump(exclude_none=True)
+            if model_setting_request.configs
+            else None
+        )
+        pricing_dict = (
+            model_setting_request.pricing.model_dump() if model_setting_request.pricing else None
+        )
 
         if existing:
-            existing.api_type = setting_model_in.api_type.value
+            existing.provider = model_setting_request.provider
             existing.encrypted_api_key = encrypted_api_key
-            existing.base_url = setting_model_in.base_url
-            existing.max_retries = setting_model_in.max_retries
-            existing.max_message_chars = setting_model_in.max_message_chars
-            existing.temperature = setting_model_in.temperature
-            existing.thinking_tokens = setting_model_in.thinking_tokens
-            existing.llm_metadata = setting_model_in.metadata
+            existing.base_url = model_setting_request.base_url
+            existing.display_name = model_setting_request.display_name
+            existing.params = configs_dict
+            existing.pricing = pricing_dict
+            existing.config_type = model_setting_request.config_type
+            existing.is_default = model_setting_request.is_default
+            existing.is_active = model_setting_request.is_active
             existing.updated_at = datetime.now(timezone.utc)
 
             updated = await self._repo.update(db, existing)
             return _to_model_setting_info(updated)
-        else:
-            new_setting = LLMSetting(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                model=setting_model_in.model,
-                api_type=setting_model_in.api_type.value,
-                encrypted_api_key=encrypted_api_key,
-                base_url=setting_model_in.base_url,
-                max_retries=setting_model_in.max_retries,
-                max_message_chars=setting_model_in.max_message_chars,
-                temperature=setting_model_in.temperature,
-                thinking_tokens=setting_model_in.thinking_tokens,
-                llm_metadata=setting_model_in.metadata,
-                is_active=True,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
 
-            created = await self._repo.create(db, new_setting)
-            return _to_model_setting_info(created)
+        new_setting = ModelSetting(
+            user_id=user_id,
+            model_id=model_setting_request.model_id,
+            provider=model_setting_request.provider,
+            encrypted_api_key=encrypted_api_key,
+            base_url=model_setting_request.base_url,
+            display_name=model_setting_request.display_name,
+            configs=configs_dict,
+            pricing=pricing_dict,
+            config_type=model_setting_request.config_type,
+            is_default=model_setting_request.is_default,
+            is_active=model_setting_request.is_active,
+        )
+
+        created = await self._repo.create(db, new_setting)
+        return _to_model_setting_info(created)
 
     async def update_model_settings(
         self,
         db: AsyncSession,
         *,
-        model_id: str,
+        setting_id: uuid.UUID,
         setting_update: ModelSettingUpdate,
-        user_id: str,
+        user_id: uuid.UUID,
     ) -> ModelSettingInfo:
         """Update existing model settings.
 
         Raises:
             LLMSettingNotFoundError: If setting not found or access denied.
         """
-        setting = await self._repo.get_by_id_and_user(db, model_id, user_id)
+        setting = await self._repo.find_by_id_and_user_id(db, setting_id, user_id)
         if not setting:
-            raise LLMSettingNotFoundError(
-                f"Model setting {model_id} not found or access denied"
-            )
+            raise LLMSettingNotFoundError(f"Model setting {setting_id} not found or access denied")
 
         if setting_update.api_key is not None:
             setting.encrypted_api_key = encryption_manager.encrypt(setting_update.api_key)
         if setting_update.base_url is not None:
             setting.base_url = setting_update.base_url
-        if setting_update.max_retries is not None:
-            setting.max_retries = setting_update.max_retries
-        if setting_update.max_message_chars is not None:
-            setting.max_message_chars = setting_update.max_message_chars
-        if setting_update.temperature is not None:
-            setting.temperature = setting_update.temperature
-        if setting_update.thinking_tokens is not None:
-            setting.thinking_tokens = setting_update.thinking_tokens
-        if setting_update.metadata is not None:
-            setting.llm_metadata = setting_update.metadata
+        if setting_update.display_name is not None:
+            setting.display_name = setting_update.display_name
+        if setting_update.configs is not None:
+            setting.params = setting_update.configs.model_dump(exclude_none=True)
+        if setting_update.pricing is not None:
+            setting.pricing = setting_update.pricing.model_dump()
+        if setting_update.config_type is not None:
+            setting.config_type = setting_update.config_type
+        if setting_update.is_default is not None:
+            setting.is_default = setting_update.is_default
         if setting_update.is_active is not None:
             setting.is_active = setting_update.is_active
 
@@ -130,12 +140,12 @@ class LLMSettingService:
         self,
         db: AsyncSession,
         *,
-        model_id: str,
-        user_id: str,
+        setting_id: uuid.UUID,
+        user_id: uuid.UUID,
         include_key: bool = False,
-    ) -> Optional[ModelSettingInfoWithKey | ModelSettingInfo]:
+    ) -> ModelSettingInfoWithKey | ModelSettingInfo | None:
         """Get model settings by ID."""
-        setting = await self._repo.get_by_id_and_user(db, model_id, user_id)
+        setting = await self._repo.find_by_id_and_user_id(db, setting_id, user_id)
         if not setting:
             return None
 
@@ -146,178 +156,237 @@ class LLMSettingService:
         db: AsyncSession,
         *,
         model_name: str,
-        user_id: str,
+        user_id: str | uuid.UUID,
         include_key: bool = False,
-    ) -> Optional[ModelSettingInfoWithKey | ModelSettingInfo]:
-        """Get model settings by model name."""
-        setting = await self._repo.get_by_model_and_user(db, model_name, user_id)
+    ) -> ModelSettingInfoWithKey | ModelSettingInfo | None:
+        """Get model settings by model_id string."""
+        setting = await self._repo.find_by_model_and_user(db, model_name, user_id)
         if not setting:
             return None
 
         return _to_model_setting_info(setting, include_key=include_key)
 
     async def list_model_settings(
-        self, db: AsyncSession, *, user_id: str, api_type: Optional[str] = None
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str | uuid.UUID,
+        provider: str | None = None,
     ) -> ModelSettingList:
         """List all model settings for a user."""
-        settings = await self._repo.list_by_user(db, user_id, api_type=api_type)
+        settings = await self._repo.find_all_by_user(db, user_id, provider=provider)
         model_list = [_to_model_setting_info(s) for s in settings]
         return ModelSettingList(models=model_list)
 
     async def delete_model_settings(
-        self, db: AsyncSession, *, model_id: str, user_id: str
+        self,
+        db: AsyncSession,
+        *,
+        model_id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> bool:
         """Delete model settings by ID."""
-        setting = await self._repo.get_by_id_and_user(db, model_id, user_id)
+        setting = await self._repo.find_by_id_and_user_id(db, model_id, user_id)
         if not setting:
             return False
 
         await self._repo.delete(db, setting)
         return True
 
-    async def get_all_available_models(
-        self, db: AsyncSession, *, user_id: str
-    ) -> LLMModelList:
-        """Get all available models from both system configs and user settings."""
-        models = []
+    # ------------------------------------------------------------------
+    # Aggregation / resolution
+    # ------------------------------------------------------------------
 
-        for model_id, llm_config in self._config.llm_configs.items():
+    async def get_all_available_models(
+        self, db: AsyncSession, *, user_id: uuid.UUID
+    ) -> LLMModelList:
+        """Get all available models from DB (system + user settings).
+
+        The database is the single source of truth. System models are seeded
+        from ``LLM_CONFIGS`` env var at startup via ``seed_admin_llm_settings``.
+        """
+        models: list[LLMModelInfo] = []
+
+        # 1. System rows from DB (user_id IS NULL, config_type='system')
+        system_rows = await self._repo.find_all_system_models(db)
+        for row in system_rows:
+            pricing = PricingInfo.model_validate(row.pricing) if row.pricing else None
             models.append(
                 LLMModelInfo(
-                    id=model_id,
-                    model=llm_config.model,
-                    api_type=llm_config.api_type,
-                    source="system",
-                    description=f"System configured {model_id}",
+                    id=row.id,
+                    model_id=row.model_id,
+                    model=row.model_id,
+                    provider=row.provider,
+                    source=row.config_type,
+                    display_name=row.display_name or row.model_id,
+                    base_url=row.base_url,
+                    pricing=pricing,
                 )
             )
 
+        # 2. User settings
         user_settings = await self.list_model_settings(db, user_id=user_id)
 
         for setting in user_settings.models:
             models.append(
                 LLMModelInfo(
                     id=setting.id,
-                    model=setting.model,
-                    api_type=setting.api_type,
-                    source="user",
-                    description=f"User configured {setting.model}",
+                    model_id=setting.model_id,
+                    model=setting.model_id,
+                    provider=setting.provider,
+                    source=setting.config_type,
+                    display_name=setting.display_name or setting.model_id,
+                    base_url=setting.base_url,
+                    pricing=setting.pricing,
                 )
             )
 
         return LLMModelList(models=models)
 
-    async def get_user_llm_config(
-        self, db: AsyncSession, *, model_id: str, user_id: str
-    ) -> LLMConfig:
-        """Get LLM config from user settings in database.
+    async def get_user_model_config(
+        self,
+        db: AsyncSession,
+        *,
+        setting_id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> ModelConfig:
+        """Get model config from user settings in database.
 
         Raises:
             ValueError: If config not found.
         """
-        llm_setting = await self.get_model_settings(
-            db,
-            model_id=model_id,
-            user_id=user_id,
-            include_key=True,
-        )
+        setting = await self._repo.find_by_id_and_user_id(db, setting_id, user_id)
+        if not setting:
+            raise ValueError(f"Model setting not found: {setting_id}")
+        return _setting_to_model_config(setting)
 
-        if not llm_setting:
-            raise ValueError(f"LLM setting not found for model_id: {model_id}")
+    async def resolve_system_config(self, db: AsyncSession, *, model_id: str) -> ModelConfig:
+        """Resolve a system model config from DB by model_id.
 
-        return llm_setting.to_llm_config()
+        Raises:
+            ValueError: If no system setting found for the given model_id.
+        """
+        setting = await self._repo.find_system_model_by_model_id(db, model_id)
+        if not setting:
+            raise ValueError(f"System model config not found for model: {model_id}")
+        return _setting_to_model_config(setting)
 
-    async def get_llm_settings(
+    async def resolve_config_by_setting_id(
+        self, db: AsyncSession, *, setting_id: uuid.UUID
+    ) -> ModelConfig:
+        """Resolve a model config by its model_settings.id (user or system).
+
+        Raises:
+            ValueError: If no setting found for the given id.
+        """
+        setting = await self._repo.get_by_id(db, setting_id)
+        if not setting:
+            raise ValueError(f"Model setting not found: {setting_id}")
+        return _setting_to_model_config(setting)
+
+    async def resolve_model_config(
         self,
         db: AsyncSession,
         *,
         session: SessionInfo,
         source: str | None = None,
         model_id: str | None = None,
-    ) -> LLMConfig:
-        """Get LLM settings based on the session's llm_setting_id.
+    ) -> ModelConfig:
+        """Resolve the model config for an agent run.
 
-        Looks up the session in the database to retrieve its ``llm_setting_id``
-        and resolves to either a user or system LLM config.
+        Looks up the session's ``model_setting_id`` and resolves to either
+        a user or system config.
 
-        Args:
-            db: Database session.
-            session: Session info (used to look up the session record).
-            source: "user" to prefer user configs, otherwise system configs.
-            model_id: The model ID requested by the caller.
+        Raises:
+            ValueError: If no matching config can be found.
         """
         current_session = await self._session_repo.get_by_id(db, session.id)
-        llm_setting_id = current_session.llm_setting_id if current_session else None
+        model_setting_id = current_session.model_setting_id if current_session else None
 
-        if llm_setting_id is None:
-            if source == "user":
-                return await self.get_user_llm_config(
+        if model_setting_id is None:
+            if source == "user" and model_id:
+                return await self.get_user_model_config(
                     db,
-                    model_id=model_id,
-                    user_id=str(session.user_id),
+                    setting_id=uuid.UUID(model_id),
+                    user_id=session.user_id,
                 )
-            else:
-                return get_system_llm_config(model_id=model_id, config=self._config)
-        else:
-            try:
-                return await self.get_user_llm_config(
-                    db,
-                    model_id=llm_setting_id,
-                    user_id=str(session.user_id),
-                )
-            except ValueError:
-                return get_system_llm_config(
-                    model_id=llm_setting_id,
-                    config=self._config,
-                )
+            if not model_id:
+                raise ValueError("model_id is required when session has no model_setting_id")
+            return await self.resolve_system_config(db, model_id=model_id)
+
+        try:
+            return await self.get_user_model_config(
+                db,
+                setting_id=model_setting_id,
+                user_id=session.user_id,
+            )
+        except (ValueError, AttributeError):
+            return await self.resolve_config_by_setting_id(db, setting_id=model_setting_id)
 
 
 # ---------------------------------------------------------------------------
-# Standalone helpers (no db access needed)
+# Standalone async helpers (DB-based)
 # ---------------------------------------------------------------------------
 
 
-def get_system_llm_config(*, model_id: str, config: Settings) -> LLMConfig:
-    """Get LLM config from system configuration.
+async def get_system_model_config_from_db(db: AsyncSession, *, model_id: str) -> ModelConfig:
+    """Get system model config from the database.
+
+    Standalone helper for code outside the service (e.g., tool constructors).
 
     Raises:
-        ValueError: If config not found.
+        ValueError: If no system setting found for the given model_id.
     """
-    llm_config = config.llm_configs.get(model_id)
-    if not llm_config:
-        raise ValueError(f"LLM config not found for model: {model_id}")
-    llm_config.setting_id = model_id
-    llm_config.config_type = "system"
-    return llm_config
+    repo = ModelSettingRepository()
+    setting = await repo.find_system_model_by_model_id(db, model_id)
+    if not setting:
+        raise ValueError(f"System model config not found for model: {model_id}")
+    return _setting_to_model_config(setting)
 
 
-# ---------------------------------------------------------------------------
-# Private converter helpers
-# ---------------------------------------------------------------------------
+def _setting_to_model_config(setting: ModelSetting) -> ModelConfig:
+    """Convert a DB ``ModelSetting`` row to a ``ModelConfig`` value object."""
+    params = ModelParams.model_validate(setting.params) if setting.params else ModelParams()
+    pricing = PricingInfo.model_validate(setting.pricing) if setting.pricing else None
+
+    api_key: SecretStr | None = None
+    if setting.encrypted_api_key:
+        api_key = SecretStr(encryption_manager.decrypt(setting.encrypted_api_key))
+
+    return ModelConfig(
+        id=setting.id,
+        model_id=setting.model_id,
+        provider=setting.provider,
+        api_key=api_key,
+        base_url=setting.base_url,
+        display_name=setting.display_name,
+        params=params,
+        pricing=pricing,
+        config_type=setting.config_type,
+    )
 
 
 def _to_model_setting_info(
-    setting: LLMSetting, *, include_key: bool = False
+    setting: ModelSetting, *, include_key: bool = False
 ) -> ModelSettingInfoWithKey | ModelSettingInfo:
-    """Convert database model to Pydantic model.
+    """Convert database model to Pydantic model."""
+    configs = ModelParams.model_validate(setting.params) if setting.params else None
+    pricing = PricingInfo.model_validate(setting.pricing) if setting.pricing else None
 
-    When *include_key* is ``True`` the returned object is a
-    ``ModelSettingInfoWithKey`` containing the decrypted API key.
-    """
     shared = dict(
         id=setting.id,
-        model=setting.model,
-        api_type=setting.api_type,
+        model_id=setting.model_id,
+        provider=setting.provider,
         base_url=setting.base_url,
-        max_retries=setting.max_retries,
-        max_message_chars=setting.max_message_chars,
-        temperature=setting.temperature,
-        thinking_tokens=setting.thinking_tokens,
+        display_name=setting.display_name,
+        configs=configs,
+        pricing=pricing,
+        config_type=setting.config_type,
+        is_default=setting.is_default,
         is_active=setting.is_active,
         has_api_key=bool(setting.encrypted_api_key),
         created_at=setting.created_at.isoformat() if setting.created_at else "",
         updated_at=setting.updated_at.isoformat() if setting.updated_at else None,
-        metadata=setting.llm_metadata or {},
     )
 
     if include_key:

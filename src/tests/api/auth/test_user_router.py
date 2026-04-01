@@ -1,6 +1,6 @@
 import pytest
 
-from ii_agent.auth.users.router import router
+from ii_agent.users.router import router
 from tests.api.contracts import assert_auth_contract, assert_routes_present
 
 pytestmark = pytest.mark.unit

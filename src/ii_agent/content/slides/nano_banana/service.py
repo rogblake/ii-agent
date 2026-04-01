@@ -1,10 +1,4 @@
 """Business logic for Nano Banana design mode.
-
-Handles:
-- Vision-based component detection via LLMExecutionService (provider-agnostic)
-- HTML overlay generation for interactive editing
-- Image regeneration with modifications
-- Version tracking and management
 """
 
 from __future__ import annotations
@@ -19,11 +13,10 @@ import httpx
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.billing.types import BillingContextValue, BillingScope
+from ii_agent.chat.llm.factory import get_client
+from ii_agent.chat.llm.utils import make_message, parse_tool_input
 from ii_agent.chat.types import BinaryContent, MessageRole, TextContent, ToolCall
 from ii_agent.core.config.llm_config import LLMConfig
-from ii_agent.core.llm.execution_service import LLMBillingContext, LLMExecutionService
-from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.projects.design.utils.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
     DESIGN_MODE_RUNTIME_SCRIPT,
@@ -191,11 +184,9 @@ class NanoBananaService:
         self,
         *,
         repo: NanoBananaRepository,
-        llm_execution_service: LLMExecutionService,
         llm_config: LLMConfig,
     ) -> None:
         self._repo = repo
-        self._llm_execution_service = llm_execution_service
         self._llm_config = llm_config
         self._slide_gen_config = None
 
@@ -500,9 +491,9 @@ class NanoBananaService:
 
         prompt = COMPONENT_DETECTION_PROMPT.format(width=width, height=height)
 
-        client = self._llm_execution_service.create_client(self._llm_config)
+        client = get_client(self._llm_config)
         messages = [
-            self._llm_execution_service.new_message(
+            make_message(
                 role=MessageRole.USER,
                 session_id=session_id,
                 parts=[
@@ -512,36 +503,12 @@ class NanoBananaService:
             )
         ]
 
-        response = await self._llm_execution_service.send_once(
-            client=client,
-            messages=messages,
-            tools=[DETECT_COMPONENTS_TOOL],
-            provider_options={
-                "gemini": {
-                    "system_instruction": (
-                        "You are a vision analysis system that detects visual "
-                        "components in presentation slide images. "
-                        "Always call the provided tool with your results."
-                    ),
-                },
-            },
-            billing_context=LLMBillingContext(
-                scope=BillingScope.for_session(
-                    user_id=user_id,
-                    app_kind="chat",
-                    session_id=session_id,
-                    billing_context=BillingContextValue.NANO_BANANA,
-                ),
-                llm_config=self._llm_config,
-                model_id=self._llm_config.model,
-            ),
-            usage_key=f"nano_banana_detect:{session_id}:{get_or_generate_request_id()}",
-        )
+        response = await client.send(messages, tools=[DETECT_COMPONENTS_TOOL])
 
         # Extract the structured payload from the tool call
         for part in response.content or []:
             if isinstance(part, ToolCall) and part.name == _DETECT_TOOL_NAME:
-                payload = self._llm_execution_service.parse_tool_input(part.input)
+                payload = parse_tool_input(part.input)
                 raw_components = payload.get("components", [])
                 components = _build_components(raw_components, width, height)
                 logger.info(

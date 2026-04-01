@@ -224,7 +224,7 @@ class TestDetectTemplateType:
         from ii_agent.projects.cloud_run.source_preparer import detect_template_type
         from ii_agent.projects.cloud_run.schemas import TemplateType
 
-        archive = _make_tar_gz({"next.config.js": 'module.exports = {}'})
+        archive = _make_tar_gz({"next.config.js": "module.exports = {}"})
         result = await detect_template_type(archive)
         assert result == TemplateType.NEXTJS_SHADCN
 
@@ -240,9 +240,7 @@ class TestDetectTemplateType:
         from ii_agent.projects.cloud_run.source_preparer import detect_template_type
         from ii_agent.projects.cloud_run.schemas import TemplateType
 
-        archive = _make_tar_gz(
-            {"vite.config.ts": "export default {}", "package.json": "{}"}
-        )
+        archive = _make_tar_gz({"vite.config.ts": "export default {}", "package.json": "{}"})
         result = await detect_template_type(archive)
         assert result == TemplateType.REACT_VITE_SHADCN
 
@@ -250,9 +248,7 @@ class TestDetectTemplateType:
         from ii_agent.projects.cloud_run.source_preparer import detect_template_type
         from ii_agent.projects.cloud_run.schemas import TemplateType
 
-        archive = _make_tar_gz(
-            {"vite.config.js": "export default {}", "package.json": "{}"}
-        )
+        archive = _make_tar_gz({"vite.config.js": "export default {}", "package.json": "{}"})
         result = await detect_template_type(archive)
         assert result == TemplateType.REACT_VITE_SHADCN
 
@@ -330,9 +326,7 @@ class TestPrepareSourceWithDockerfile:
         from ii_agent.projects.cloud_run.schemas import TemplateType
 
         original = _make_tar_gz({"package.json": "{}", "src/main.tsx": "<></>"})
-        result = await prepare_source_with_dockerfile(
-            original, TemplateType.NEXTJS_SHADCN
-        )
+        result = await prepare_source_with_dockerfile(original, TemplateType.NEXTJS_SHADCN)
         names = _tar_file_names(result)
         assert "Dockerfile" in names
 
@@ -342,12 +336,8 @@ class TestPrepareSourceWithDockerfile:
         )
         from ii_agent.projects.cloud_run.schemas import TemplateType
 
-        original = _make_tar_gz(
-            {"Dockerfile": "FROM node:18", "package.json": "{}"}
-        )
-        result = await prepare_source_with_dockerfile(
-            original, TemplateType.NEXTJS_SHADCN
-        )
+        original = _make_tar_gz({"Dockerfile": "FROM node:18", "package.json": "{}"})
+        result = await prepare_source_with_dockerfile(original, TemplateType.NEXTJS_SHADCN)
         names = list(_tar_file_names(result))
         dockerfile_count = sum(1 for n in names if n == "Dockerfile")
         assert dockerfile_count == 1
@@ -359,9 +349,7 @@ class TestPrepareSourceWithDockerfile:
         from ii_agent.projects.cloud_run.schemas import TemplateType
 
         original = _make_tar_gz({"package.json": "{}"})
-        result = await prepare_source_with_dockerfile(
-            original, TemplateType.REACT_VITE_SHADCN
-        )
+        result = await prepare_source_with_dockerfile(original, TemplateType.REACT_VITE_SHADCN)
         # Should be parseable as tar.gz
         with tarfile.open(fileobj=io.BytesIO(result), mode="r:gz") as tar:
             members = tar.getmembers()
@@ -381,9 +369,7 @@ class TestPrepareSourceWithDockerfile:
                 "src/main.tsx": entry_content,
             }
         )
-        result = await prepare_source_with_dockerfile(
-            original, TemplateType.REACT_VITE_SHADCN
-        )
+        result = await prepare_source_with_dockerfile(original, TemplateType.REACT_VITE_SHADCN)
         # The watermark component file should be present
         names = _tar_file_names(result)
         assert any("IIAgent" in n or "ii-agent" in n.lower() for n in names), (
@@ -404,9 +390,7 @@ class TestPrepareSourceWithDockerfile:
                 "src/main.tsx": entry_content,
             }
         )
-        result = await prepare_source_with_dockerfile(
-            original, TemplateType.REACT_VITE_SHADCN
-        )
+        result = await prepare_source_with_dockerfile(original, TemplateType.REACT_VITE_SHADCN)
         # Entry file should be present but unmodified (no extra IIAgent import)
         with tarfile.open(fileobj=io.BytesIO(result), mode="r:gz") as tar:
             entry_member = None

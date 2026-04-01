@@ -22,10 +22,8 @@ def test_encrypt_payload_wraps_json_for_encryption(monkeypatch):
     payload = {"A": "1", "B": 2}
     result = secret_utils._encrypt_secrets_payload(payload)
 
-    assert result == {
-        "encrypted_data": "encrypted:{\"A\": \"1\", \"B\": 2}"
-    }
-    assert fake_manager.last_encrypt == "{\"A\": \"1\", \"B\": 2}"
+    assert result == {"encrypted_data": 'encrypted:{"A": "1", "B": 2}'}
+    assert fake_manager.last_encrypt == '{"A": "1", "B": 2}'
 
 
 def test_decrypt_payload_returns_payload_when_not_encrypted():
@@ -47,9 +45,7 @@ def test_decrypt_payload_returns_none_when_decryption_fails(monkeypatch):
 
 def test_decrypt_payload_parses_decrypted_json(monkeypatch):
     fake_manager = FakeEncryptionManager()
-    fake_manager._decrypted_payloads = {
-        "encrypted:payload": "{\"A\": \"1\", \"B\": true}"
-    }
+    fake_manager._decrypted_payloads = {"encrypted:payload": '{"A": "1", "B": true}'}
     monkeypatch.setattr(secret_utils, "encryption_manager", fake_manager)
 
     assert secret_utils._decrypt_secrets_payload({"encrypted_data": "encrypted:payload"}) == {

@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -26,14 +27,29 @@ class SessionRepo:
 
 
 @pytest.mark.asyncio
-async def test_file_upload_lifecycle_integration(settings_factory, in_memory_storage):
+async def test_file_upload_lifecycle_integration(settings_factory):
     repo = FileRepo()
+
+    storage_mock = MagicMock()
+    storage_mock.signed_upload_url = AsyncMock(
+        side_effect=lambda path, ct, **kw: f"https://upload.local/{path}"
+    )
+    storage_mock.exists = AsyncMock(return_value=True)
+    storage_mock.signed_url = AsyncMock(
+        side_effect=lambda path, **kw: f"https://signed.local/{path}"
+    )
+    storage_mock.signed_urls_batch = AsyncMock(
+        side_effect=lambda paths, **kw: [f"https://signed.local/{p}" for p in paths]
+    )
+    storage_mock.public_url = MagicMock(
+        side_effect=lambda p: f"https://public.local/{p}"
+    )
+
     service = FileService(
         file_repo=repo,
         session_repo=SessionRepo(),
-        file_store=in_memory_storage,
-        media_store=None,
-        config=settings_factory(),
+        storage=storage_mock,
+        config=settings_factory(storage={"file_upload_size_limit": 10}),
     )
 
     upload = await service.generate_upload_url(
@@ -42,12 +58,9 @@ async def test_file_upload_lifecycle_integration(settings_factory, in_memory_sto
         file_name="a.txt",
         content_type="text/plain",
         file_size=3,
-        upload_storage=in_memory_storage,
-        max_file_size=10,
     )
 
     blob = f"users/u1/uploads/{upload.id}-a.txt"
-    in_memory_storage.write(b"abc", blob)
 
     completed = await service.complete_upload(
         db=None,
@@ -57,7 +70,6 @@ async def test_file_upload_lifecycle_integration(settings_factory, in_memory_sto
         file_size=3,
         content_type="text/plain",
         session_id="s1",
-        upload_storage=in_memory_storage,
     )
 
     downloads = await service.generate_download_urls(

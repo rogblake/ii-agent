@@ -127,6 +127,7 @@ web_modules/
 
 # dotenv environment variable files
 .env
+model_configs.yaml
 .env.development.local
 .env.test.local
 .env.production.local
@@ -208,7 +209,7 @@ start_tool_server.sh
 a2a_agents.json
 
 .idea/
-.claude/settings.*
+.claude/
 .codex/
 .shared/
 .gemini/

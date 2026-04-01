@@ -3,8 +3,8 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.agent.events.models import EventType, RealtimeEvent
-from ii_agent.agent.events.service import EventService
+from ii_agent.realtime.events import ApplicationEvent, EventGroup
+from ii_agent.realtime.events.service import EventService
 
 
 class FakeEventRepo:
@@ -21,7 +21,9 @@ async def test_normalize_timestamp_uses_event_timestamp_when_present(settings_fa
     service = EventService(event_repo=FakeEventRepo(), config=settings_factory())
     now = datetime(2026, 2, 1, tzinfo=timezone.utc).timestamp()
 
-    event = RealtimeEvent(type=EventType.SYSTEM, content={"x": 1}, timestamp=now)
+    event = ApplicationEvent(
+        group=EventGroup.SYSTEM, name="system.notification", content={"x": 1}, timestamp=now
+    )
     normalized = service._normalize_timestamp(event)
 
     assert normalized == datetime.fromtimestamp(now, tz=timezone.utc)
@@ -32,7 +34,9 @@ async def test_save_event_delegates_to_repository_with_utc_timestamp(settings_fa
     repo = FakeEventRepo()
     service = EventService(event_repo=repo, config=settings_factory())
 
-    event = RealtimeEvent(type=EventType.SYSTEM, content={"message": "hi"})
+    event = ApplicationEvent(
+        group=EventGroup.SYSTEM, name="system.notification", content={"message": "hi"}
+    )
     session_id = uuid4()
 
     result = await service.save_event(db=None, session_id=session_id, event=event)

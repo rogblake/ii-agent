@@ -1,16 +1,17 @@
 """SQLAlchemy models for mcp_settings domain."""
 
+import uuid
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Boolean, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
-import uuid
 
 from ii_agent.core.db.base import Base, TimestampColumn
 
 if TYPE_CHECKING:
-    from ii_agent.auth.users.models import User
+    from ii_agent.users.models import User
 
 
 class MCPSetting(Base):
@@ -18,13 +19,8 @@ class MCPSetting(Base):
 
     __tablename__ = "mcp_settings"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
-    user_id: Mapped[str] = mapped_column(
-        String,
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE")
     )
     mcp_config: Mapped[dict] = mapped_column(JSONB(none_as_null=True))

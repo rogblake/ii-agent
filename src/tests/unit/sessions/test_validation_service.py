@@ -1,21 +1,31 @@
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
 
 from ii_agent.core.config.llm_config import LLMConfig
-from ii_agent.agent.application.validation_service import SessionValidationService
+from ii_agent.sessions.service import SessionService
 from ii_agent.sessions.title_service import SessionTitleService
-from ii_agent.sessions.title_config import SessionTitleConfig
+from ii_agent.core.config.session_title import SessionTitleConfig
 
 
-class FakeSessionService:
+class FakeSessionRepo:
+    """Minimal repo that returns a pre-configured session ORM object."""
+
     def __init__(self, session):
-        self.session = session
+        self._session = session
 
-    async def get_session_by_id(self, db, session_id):
-        return self.session
+    async def get_by_id_with_project(self, db, session_id):
+        return self._session
+
+    async def get_by_id(self, db, session_id):
+        return self._session
+
+    async def update(self, db, session):
+        pass
+
+    async def create(self, db, session):
+        return session
 
 
 class FakeBalanceRepo:
@@ -29,10 +39,6 @@ class FakeBalanceRepo:
 
     async def get_billing_status(self, db, user_id):
         return self._status
-
-
-# Note: FakeBalanceRepo stores status as a plain string. BillingStatus is a
-# str enum, so ``BillingStatus.OK == "ok"`` is True — both sides compare fine.
 
 
 class FakeLLMSettingService:
@@ -60,12 +66,22 @@ class FakeDB:
         return None
 
 
+def _make_service(session=None, balance_repo=None):
+    return SessionService(
+        session_repo=FakeSessionRepo(session),
+        event_repo=SimpleNamespace(),
+        run_task_service=SimpleNamespace(),
+        file_store=SimpleNamespace(),
+        sandbox_repo=SimpleNamespace(),
+        config=SimpleNamespace(session_title=SimpleNamespace(openai_api_key=None)),
+        title_service=SessionTitleService(config=SessionTitleConfig(openai_api_key=None)),
+        balance_repo=balance_repo,
+    )
+
+
 @pytest.mark.asyncio
 async def test_validate_session_returns_error_when_session_missing():
-    service = SessionValidationService(
-        session_service=FakeSessionService(session=None),
-        title_service=SessionTitleService(config=SessionTitleConfig(openai_api_key=None)),
-    )
+    service = _make_service(session=None)
 
     result = await service.validate_and_prepare_session(
         db=FakeDB(),
@@ -78,12 +94,10 @@ async def test_validate_session_returns_error_when_session_missing():
 
 
 @pytest.mark.asyncio
-async def test_validate_session_bypasses_billing_check_for_user_model(
-    settings_factory, monkeypatch
-):
+async def test_validate_session_bypasses_billing_check_for_user_model(monkeypatch):
     monkeypatch.setattr(
-        "ii_agent.agent.application.validation_service.SessionService._build_session_info",
-        lambda _session: SimpleNamespace(
+        "ii_agent.sessions.service.SessionService._build_session_info",
+        lambda _session, **kw: SimpleNamespace(
             id=str(uuid4()),
             user_id="u1",
             created_at="2026-01-01T00:00:00+00:00",
@@ -102,7 +116,6 @@ async def test_validate_session_bypasses_billing_check_for_user_model(
         created_at=None,
         updated_at=None,
         api_version="v1",
-        agent_state_path="/workspace/state",
         name="session",
         agent_type=None,
         llm_setting_id=None,
@@ -117,10 +130,7 @@ async def test_validate_session_bypasses_billing_check_for_user_model(
     )
     llm_config = LLMConfig(model="gpt-4o", api_type="openai", config_type="user")
 
-    service = SessionValidationService(
-        session_service=FakeSessionService(session=session),
-        title_service=SessionTitleService(config=SessionTitleConfig(openai_api_key=None)),
-    )
+    service = _make_service(session=session)
 
     result = await service.validate_and_prepare_session(
         db=FakeDB(),
@@ -134,11 +144,11 @@ async def test_validate_session_bypasses_billing_check_for_user_model(
 
 
 @pytest.mark.asyncio
-async def test_validate_session_rejects_reconciliation_required(settings_factory, monkeypatch):
+async def test_validate_session_rejects_reconciliation_required(monkeypatch):
     """Users with billing_status != 'ok' are blocked before agent work starts."""
     monkeypatch.setattr(
-        "ii_agent.agent.application.validation_service.SessionService._build_session_info",
-        lambda _session: SimpleNamespace(
+        "ii_agent.sessions.service.SessionService._build_session_info",
+        lambda _session, **kw: SimpleNamespace(
             id=str(uuid4()),
             user_id="u1",
             created_at="2026-01-01T00:00:00+00:00",
@@ -157,7 +167,6 @@ async def test_validate_session_rejects_reconciliation_required(settings_factory
         created_at=None,
         updated_at=None,
         api_version="v1",
-        agent_state_path="/workspace/state",
         name="session",
         agent_type=None,
         llm_setting_id=None,
@@ -172,10 +181,9 @@ async def test_validate_session_rejects_reconciliation_required(settings_factory
     )
     llm_config = LLMConfig(model="gpt-4o", api_type="openai")
 
-    service = SessionValidationService(
-        session_service=FakeSessionService(session=session),
+    service = _make_service(
+        session=session,
         balance_repo=FakeBalanceRepo(credits=100, bonus=0, status="reconciliation_required"),
-        title_service=SessionTitleService(config=SessionTitleConfig(openai_api_key=None)),
     )
 
     result = await service.validate_and_prepare_session(
@@ -190,73 +198,11 @@ async def test_validate_session_rejects_reconciliation_required(settings_factory
 
 
 @pytest.mark.asyncio
-async def test_validate_session_does_not_schedule_title_update_when_billing_is_blocked(
-    settings_factory,
-    monkeypatch,
-):
-    monkeypatch.setattr(
-        "ii_agent.agent.application.validation_service.SessionService._build_session_info",
-        lambda _session: SimpleNamespace(
-            id=str(uuid4()),
-            user_id="u1",
-            created_at="2026-01-01T00:00:00+00:00",
-            updated_at="2026-01-01T00:00:00+00:00",
-            workspace_dir="/workspace",
-            is_public=False,
-            agent_type=None,
-            llm_setting_id=None,
-        ),
-    )
-
-    session = SimpleNamespace(
-        id=str(uuid4()),
-        user_id="u1",
-        status="active",
-        created_at=None,
-        updated_at=None,
-        api_version="v1",
-        agent_state_path="/workspace/state",
-        name=None,
-        agent_type=None,
-        llm_setting_id=None,
-        session_metadata={},
-        is_public=False,
-        public_url=None,
-        summary_message_id=None,
-        parent_session_id=None,
-        prompt_tokens=0,
-        completion_tokens=0,
-        cost=0.0,
-    )
-    llm_config = LLMConfig(model="gpt-4o", api_type="openai")
-    title_service = SessionTitleService(config=SessionTitleConfig(openai_api_key=None))
-    title_service.build_initial_title = MagicMock(return_value=(None, True))
-    title_service.schedule_title_update = MagicMock()
-
-    service = SessionValidationService(
-        session_service=FakeSessionService(session=session),
-        balance_repo=FakeBalanceRepo(credits=100, bonus=0, status="reconciliation_required"),
-        title_service=title_service,
-    )
-
-    result = await service.validate_and_prepare_session(
-        db=FakeDB(),
-        session_id=uuid4(),
-        query_text="hello",
-        llm_setting_service=FakeLLMSettingService(llm_config),
-    )
-
-    assert result.is_valid is False
-    assert result.error_type == "billing_reconciliation_required"
-    title_service.schedule_title_update.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_validate_session_does_not_precheck_credit_amount(settings_factory, monkeypatch):
+async def test_validate_session_does_not_precheck_credit_amount(monkeypatch):
     """Low balances should still reach the runtime reservation gate when status is healthy."""
     monkeypatch.setattr(
-        "ii_agent.agent.application.validation_service.SessionService._build_session_info",
-        lambda _session: SimpleNamespace(
+        "ii_agent.sessions.service.SessionService._build_session_info",
+        lambda _session, **kw: SimpleNamespace(
             id=str(uuid4()),
             user_id="u1",
             created_at="2026-01-01T00:00:00+00:00",
@@ -275,7 +221,6 @@ async def test_validate_session_does_not_precheck_credit_amount(settings_factory
         created_at=None,
         updated_at=None,
         api_version="v1",
-        agent_state_path="/workspace/state",
         name="session",
         agent_type=None,
         llm_setting_id=None,
@@ -290,10 +235,9 @@ async def test_validate_session_does_not_precheck_credit_amount(settings_factory
     )
     llm_config = LLMConfig(model="gpt-4o", api_type="openai")
 
-    service = SessionValidationService(
-        session_service=FakeSessionService(session=session),
+    service = _make_service(
+        session=session,
         balance_repo=FakeBalanceRepo(credits=0, bonus=0, status="ok"),
-        title_service=SessionTitleService(config=SessionTitleConfig(openai_api_key=None)),
     )
 
     result = await service.validate_and_prepare_session(

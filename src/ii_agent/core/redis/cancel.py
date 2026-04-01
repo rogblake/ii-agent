@@ -1,26 +1,17 @@
-"""Run cancellation management.
-
-Import pattern:
-    from ii_agent.core.redis import (
-        register_run,
-        cancel_run,
-        is_cancelled,
-        cleanup_run,
-        raise_if_cancelled,
-        RunCancelledException,
-    )
-"""
+"""Run cancellation management."""
 
 import asyncio
-import logging
 from abc import ABC, abstractmethod
 from typing import Dict
 
 from redis.asyncio import Redis
 
-from ii_agent.core.exceptions import RunCancelledException
+from ii_agent.core.logger import logger
 
-logger = logging.getLogger(__name__)
+class RunCancelledException(Exception):
+    """Exception raised when a run is cancelled."""
+
+    pass
 
 
 class BaseRunCancellationManager(ABC):
@@ -33,7 +24,11 @@ class BaseRunCancellationManager(ABC):
 
     @abstractmethod
     async def cancel_run(self, run_id: str) -> bool:
-        """Cancel a run by marking it as cancelled."""
+        """Cancel a run by marking it as cancelled.
+
+        Returns:
+            bool: True if run was found and cancelled, False if run not found.
+        """
         pass
 
     @abstractmethod
@@ -69,10 +64,16 @@ class MemoryRunCancellationManager(BaseRunCancellationManager):
         self._lock = asyncio.Lock()
 
     async def register_run(self, run_id: str) -> None:
+        """Register a new run as not cancelled."""
         async with self._lock:
             self._cancelled_runs[run_id] = False
 
     async def cancel_run(self, run_id: str) -> bool:
+        """Cancel a run by marking it as cancelled.
+
+        Returns:
+            bool: True if run was found and cancelled, False if run not found.
+        """
         async with self._lock:
             if run_id in self._cancelled_runs:
                 self._cancelled_runs[run_id] = True
@@ -83,48 +84,82 @@ class MemoryRunCancellationManager(BaseRunCancellationManager):
                 return False
 
     async def is_cancelled(self, run_id: str) -> bool:
+        """Check if a run is cancelled."""
         async with self._lock:
             return self._cancelled_runs.get(run_id, False)
 
     async def cleanup_run(self, run_id: str) -> None:
+        """Remove a run from tracking (called when run completes)."""
         async with self._lock:
             if run_id in self._cancelled_runs:
                 del self._cancelled_runs[run_id]
 
     async def raise_if_cancelled(self, run_id: str) -> None:
+        """Check if a run should be cancelled and raise exception if so."""
         if await self.is_cancelled(run_id):
             logger.info(f"Cancelling run {run_id}")
             raise RunCancelledException(f"Run {run_id} was cancelled")
 
     async def get_active_runs(self) -> Dict[str, bool]:
+        """Get all currently tracked runs and their cancellation status."""
         async with self._lock:
             return self._cancelled_runs.copy()
 
 
 class RedisRunCancellationManager(BaseRunCancellationManager):
-    """Redis-based distributed cancellation manager for multi-worker deployments."""
+    """Redis-based distributed cancellation manager for multi-worker deployments.
 
-    RUN_STATE_TTL = 3600  # 1 hour TTL
+    Stores cancellation state in Redis, making it safe for use across
+    multiple workers and servers.
+    """
+
+    # TTL for run state keys (1 hour - runs should complete before this)
+    RUN_STATE_TTL = 3600
 
     def __init__(self, redis_client: Redis, namespace: str = "run_cancel"):
+        """Initialize Redis cancellation manager.
+
+        Args:
+            redis_client: Async Redis client instance
+            namespace: Namespace prefix for Redis keys
+        """
         self._redis = redis_client
         self._namespace = namespace
 
     def _make_key(self, run_id: str) -> str:
+        """Create namespaced Redis key for run ID.
+
+        Args:
+            run_id: Run identifier
+
+        Returns:
+            Namespaced Redis key
+        """
         return f"{self._namespace}:{run_id}"
 
     async def register_run(self, run_id: str) -> None:
+        """Register a new run as not cancelled."""
         try:
             key = self._make_key(run_id)
+            # Set to "0" (not cancelled) with TTL
             await self._redis.setex(key, self.RUN_STATE_TTL, "0")
         except Exception as e:
-            logger.error(f"Failed to register run {run_id} in Redis: {e}", exc_info=True)
+            logger.error(
+                f"Failed to register run {run_id} in Redis: {e}", exc_info=True
+            )
 
     async def cancel_run(self, run_id: str) -> bool:
+        """Cancel a run by marking it as cancelled.
+
+        Returns:
+            bool: True if run was found and cancelled, False if run not found.
+        """
         try:
             key = self._make_key(run_id)
+            # Check if key exists
             exists = await self._redis.exists(key)
             if exists:
+                # Set to "1" (cancelled) and refresh TTL
                 await self._redis.setex(key, self.RUN_STATE_TTL, "1")
                 logger.info(f"Run {run_id} marked for cancellation")
                 return True
@@ -136,15 +171,21 @@ class RedisRunCancellationManager(BaseRunCancellationManager):
             return False
 
     async def is_cancelled(self, run_id: str) -> bool:
+        """Check if a run is cancelled."""
         try:
             key = self._make_key(run_id)
             value = await self._redis.get(key)
+            # Value is "1" if cancelled, "0" if active, None if not found
             return value == "1"
         except Exception as e:
-            logger.error(f"Failed to check cancellation for run {run_id}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to check cancellation for run {run_id} in Redis: {e}",
+                exc_info=True,
+            )
             return False
 
     async def cleanup_run(self, run_id: str) -> None:
+        """Remove a run from tracking (called when run completes)."""
         try:
             key = self._make_key(run_id)
             await self._redis.delete(key)
@@ -152,20 +193,26 @@ class RedisRunCancellationManager(BaseRunCancellationManager):
             logger.error(f"Failed to cleanup run {run_id} in Redis: {e}", exc_info=True)
 
     async def raise_if_cancelled(self, run_id: str) -> None:
+        """Check if a run should be cancelled and raise exception if so."""
         if await self.is_cancelled(run_id):
             logger.info(f"Cancelling run {run_id}")
             raise RunCancelledException(f"Run {run_id} was cancelled")
 
     async def get_active_runs(self) -> Dict[str, bool]:
+        """Get all currently tracked runs and their cancellation status.
+
+        Note: This can be expensive if many runs are active.
+        """
         try:
             pattern = f"{self._namespace}:*"
             keys = await self._redis.keys(pattern)
 
             result = {}
             for key in keys:
+                # Extract run_id from key
                 run_id = key.split(":", 1)[1] if ":" in key else key
                 value = await self._redis.get(key)
-                result[run_id] = value == "1"
+                result[run_id] = value == "1"  # True if cancelled
 
             return result
         except Exception as e:
@@ -173,20 +220,24 @@ class RedisRunCancellationManager(BaseRunCancellationManager):
             return {}
 
 
+# Initialize cancellation manager based on configuration
 def _create_cancellation_manager() -> BaseRunCancellationManager:
     """Create cancellation manager based on Redis availability."""
     try:
         from ii_agent.core.config.settings import get_settings
-        from ii_agent.core.redis.client import redis_client
+        from ii_agent.core.redis.client import get_redis_client
+        redis_client = get_redis_client()
 
-        if get_settings().redis.session_enabled and redis_client is not None:
+        if get_settings().redis.session_enabled:
             logger.info("Using Redis-based run cancellation manager")
             return RedisRunCancellationManager(redis_client=redis_client)
         else:
             logger.info("Using in-memory run cancellation manager")
             return MemoryRunCancellationManager()
     except Exception as e:
-        logger.warning(f"Failed to initialize Redis cancellation manager, falling back to memory: {e}")
+        logger.warning(
+            f"Failed to initialize Redis cancellation manager, falling back to memory: {e}"
+        )
         return MemoryRunCancellationManager()
 
 
@@ -222,17 +273,3 @@ async def raise_if_cancelled(run_id: str) -> None:
 async def get_active_runs() -> Dict[str, bool]:
     """Get all currently tracked runs and their cancellation status."""
     return await _cancellation_manager.get_active_runs()
-
-
-__all__ = [
-    "RunCancelledException",
-    "BaseRunCancellationManager",
-    "MemoryRunCancellationManager",
-    "RedisRunCancellationManager",
-    "register_run",
-    "cancel_run",
-    "is_cancelled",
-    "cleanup_run",
-    "raise_if_cancelled",
-    "get_active_runs",
-]

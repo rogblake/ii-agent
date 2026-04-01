@@ -12,7 +12,7 @@ import {
 class SettingsService {
     async createModel(payload: IModel): Promise<IModel> {
         const response = await axiosInstance.post<IModel>(
-            '/user-settings/models',
+            '/v1/user-settings/models',
             payload
         )
         return response.data
@@ -20,26 +20,26 @@ class SettingsService {
 
     async updateModel(id: string, payload: Partial<IModel>): Promise<IModel> {
         const response = await axiosInstance.put<IModel>(
-            `/user-settings/models/${id}`,
+            `/v1/user-settings/models/${id}`,
             payload
         )
         return response.data
     }
 
     async deleteModel(id: string): Promise<void> {
-        await axiosInstance.delete(`/user-settings/models/${id}`)
+        await axiosInstance.delete(`/v1/user-settings/models/${id}`)
     }
 
     async getAvailableModels(): Promise<GetAvailableModelsResponse> {
         const response = await axiosInstance.get<GetAvailableModelsResponse>(
-            `/user-settings/models`
+            `/v1/user-settings/models`
         )
         return response.data
     }
 
     async getModelById(id: string): Promise<IModel> {
         const response = await axiosInstance.get<IModel>(
-            `/user-settings/models/${id}`
+            `/v1/user-settings/models/${id}`
         )
         return response.data
     }
@@ -47,7 +47,7 @@ class SettingsService {
     async getMcpSettings(): Promise<GetMcpSettingsResponse> {
         const response =
             await axiosInstance.get<GetMcpSettingsResponse>(
-                '/user-settings/mcp'
+                '/v1/user-settings/mcp'
             )
         return response.data
     }
@@ -56,7 +56,7 @@ class SettingsService {
         payload: UpdateMcpSettingsPayload
     ): Promise<IMcpSettings> {
         const response = await axiosInstance.post<IMcpSettings>(
-            '/user-settings/mcp',
+            '/v1/user-settings/mcp',
             payload
         )
         return response.data
@@ -67,26 +67,26 @@ class SettingsService {
         payload: UpdateMcpSettingsPayload
     ): Promise<IMcpSettings> {
         const response = await axiosInstance.put<IMcpSettings>(
-            `/user-settings/mcp/${id}`,
+            `/v1/user-settings/mcp/${id}`,
             payload
         )
         return response.data
     }
 
     async deleteMcpSettings(id: string): Promise<void> {
-        await axiosInstance.delete(`/user-settings/mcp/${id}`)
+        await axiosInstance.delete(`/v1/user-settings/mcp/${id}`)
     }
 
     async getCodexSettings(): Promise<IMcpSettings | null> {
         const response = await axiosInstance.get<IMcpSettings | null>(
-            '/user-settings/mcp/codex'
+            '/v1/user-settings/mcp/codex'
         )
         return response.data
     }
 
     async getClaudeCodeSettings(): Promise<IMcpSettings | null> {
         const response = await axiosInstance.get<IMcpSettings | null>(
-            '/user-settings/mcp/claude-code'
+            '/v1/user-settings/mcp/claude-code'
         )
         return response.data
     }
@@ -99,7 +99,7 @@ class SettingsService {
         search?: boolean
     }): Promise<IMcpSettings> {
         const response = await axiosInstance.post<IMcpSettings>(
-            '/user-settings/mcp/codex',
+            '/v1/user-settings/mcp/codex',
             payload
         )
         return response.data
@@ -109,7 +109,7 @@ class SettingsService {
         authorization_code?: string
     }): Promise<IMcpSettings> {
         const response = await axiosInstance.post<IMcpSettings>(
-            '/user-settings/mcp/claude-code',
+            '/v1/user-settings/mcp/claude-code',
             payload
         )
         return response.data
@@ -118,21 +118,21 @@ class SettingsService {
     // Skills API methods
     async getSkills(includeBuiltin: boolean = true): Promise<GetSkillsResponse> {
         const response = await axiosInstance.get<GetSkillsResponse>(
-            `/user-settings/skills?include_builtin=${includeBuiltin}`
+            `/v1/user-settings/skills?include_builtin=${includeBuiltin}`
         )
         return response.data
     }
 
     async getSkillById(id: string): Promise<ISkill> {
         const response = await axiosInstance.get<ISkill>(
-            `/user-settings/skills/${id}`
+            `/v1/user-settings/skills/${id}`
         )
         return response.data
     }
 
     async addSkillFromGitHub(githubUrl: string): Promise<ISkill> {
         const response = await axiosInstance.post<ISkill>(
-            '/user-settings/skills/github',
+            '/v1/user-settings/skills/github',
             { github_url: githubUrl }
         )
         return response.data
@@ -140,14 +140,14 @@ class SettingsService {
 
     async toggleSkill(id: string, isEnabled: boolean): Promise<ISkill> {
         const response = await axiosInstance.patch<ISkill>(
-            `/user-settings/skills/${id}/toggle`,
+            `/v1/user-settings/skills/${id}/toggle`,
             { is_enabled: isEnabled }
         )
         return response.data
     }
 
     async deleteSkill(id: string): Promise<void> {
-        await axiosInstance.delete(`/user-settings/skills/${id}`)
+        await axiosInstance.delete(`/v1/user-settings/skills/${id}`)
     }
 }
 

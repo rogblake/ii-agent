@@ -43,9 +43,7 @@ def get_sync_database_url() -> str | None:
 
 sync_database_url = get_sync_database_url()
 if sync_database_url:
-    config.set_main_option(
-        "sqlalchemy.url", sync_database_url.replace("%", "%%")
-    )
+    config.set_main_option("sqlalchemy.url", sync_database_url.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:

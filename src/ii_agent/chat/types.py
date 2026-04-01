@@ -71,7 +71,7 @@ from typing import List, Optional, Union, Dict, Any, Literal
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from ii_agent.billing.usage.models import TokenUsage
+from ii_agent.billing.schemas import TokenUsage
 
 
 MessageRoleType = Literal["user", "assistant", "system", "tool"]

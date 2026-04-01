@@ -30,11 +30,7 @@ def _make_service(
 ) -> StorybookEditService:
     repo = repo or MagicMock()
     version_service = version_service or MagicMock()
-    return StorybookEditService(
-        repo=repo,
-        version_service=version_service,
-        reservation_service=MagicMock(),
-    )
+    return StorybookEditService(repo=repo, version_service=version_service)
 
 
 def _change(
@@ -295,7 +291,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_style_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            await service.apply_changes_to_html(html, [change])
+            result = await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -307,7 +303,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_text_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            await service.apply_changes_to_html(html, [change])
+            result = await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -319,7 +315,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_icon_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            await service.apply_changes_to_html(html, [change])
+            result = await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -331,7 +327,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_delete_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            await service.apply_changes_to_html(html, [change])
+            result = await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -343,7 +339,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_move_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            await service.apply_changes_to_html(html, [change])
+            result = await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio
@@ -355,7 +351,7 @@ class TestApplyChangesToHtml:
             "ii_agent.content.storybook.edit_service.apply_slide_swap_change_with_status",
             return_value=(html, True),
         ) as mock_fn:
-            await service.apply_changes_to_html(html, [change])
+            result = await service.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio

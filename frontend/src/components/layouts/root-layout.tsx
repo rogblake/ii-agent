@@ -1,6 +1,9 @@
 import { Outlet } from 'react-router'
 import { WebSocketProvider } from '@/contexts/websocket-context'
-import { useAppEvents } from '@/hooks/use-app-events'
+import {
+    AppEventsProvider,
+    useAppEventsContext
+} from '@/contexts/app-events-context'
 import { useNavigationLeaveSession } from '@/hooks/use-navigation-leave-session'
 import { useWebSocketAuthSync } from '@/hooks/use-websocket-auth-sync'
 import { ChatProvider } from '@/hooks/use-chat-query'
@@ -13,14 +16,24 @@ function RootLayoutContent() {
     return <Outlet />
 }
 
-export function RootLayout() {
-    const { handleEvent } = useAppEvents()
+function WebSocketBridge({ children }: { children: React.ReactNode }) {
+    const { handleEvent } = useAppEventsContext()
 
     return (
         <WebSocketProvider handleEvent={handleEvent}>
-            <ChatProvider>
-                <RootLayoutContent />
-            </ChatProvider>
+            {children}
         </WebSocketProvider>
+    )
+}
+
+export function RootLayout() {
+    return (
+        <AppEventsProvider>
+            <WebSocketBridge>
+                <ChatProvider>
+                    <RootLayoutContent />
+                </ChatProvider>
+            </WebSocketBridge>
+        </AppEventsProvider>
     )
 }

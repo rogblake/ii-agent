@@ -6,8 +6,8 @@ Models migrated from core/db/models.py:
 """
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Text, ForeignKey, Index, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 import uuid
@@ -16,7 +16,7 @@ from ii_agent.core.db.base import Base, TimestampColumn
 
 # Forward references for relationships
 if TYPE_CHECKING:
-    from ii_agent.auth.users.models import User
+    from ii_agent.users.models import User
     from ii_agent.sessions.models import Session
     from ii_agent.projects.deployments.models import ProjectDeployment
     from ii_agent.projects.subdomains.models import ProjectCustomDomain
@@ -27,10 +27,9 @@ class Project(Base):
 
     __tablename__ = "projects"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"))
-    session_id: Mapped[Optional[str]] = mapped_column(
-        String, ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    session_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True
     )
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -42,17 +41,6 @@ class Project(Base):
     database_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     storage_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     secrets_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    current_production_deployment_id: Mapped[Optional[str]] = mapped_column(
-        String,
-        ForeignKey("project_deployments.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    custom_domain_id: Mapped[Optional[str]] = mapped_column(
-        String,
-        ForeignKey("project_custom_domains.id", ondelete="SET NULL", use_alter=True),
-        nullable=True,
-        comment="Reference to project's custom domain",
-    )
     created_at: Mapped[datetime] = mapped_column(
         TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )

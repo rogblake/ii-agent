@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import io
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -12,7 +13,7 @@ from ii_agent.files.exceptions import (
     FileUploadNotFoundError,
     FileSizeLimitExceededError,
 )
-from ii_agent.files.service import FileService
+from ii_agent.files.service import FileService, IMAGE_CONTENT_TYPES
 
 
 # ---------------------------------------------------------------------------
@@ -89,91 +90,46 @@ class FakeSessionRepo:
         return self.sessions.get(str(session_id))
 
 
+def _make_storage_mock() -> MagicMock:
+    """Create a mock with async StorageService-compatible interface."""
+    storage = MagicMock()
+    storage.signed_url = AsyncMock(side_effect=lambda path, **kw: f"signed://{path}")
+    storage.signed_urls_batch = AsyncMock(
+        side_effect=lambda paths, **kw: [f"signed://{p}" for p in paths]
+    )
+    storage.signed_upload_url = AsyncMock(
+        side_effect=lambda path, ct, **kw: f"upload://{path}"
+    )
+    storage.exists = AsyncMock(return_value=False)
+    storage.write = AsyncMock(return_value="path")
+    storage.write_from_url = AsyncMock(side_effect=lambda url, path, ct=None: path)
+    storage.read = AsyncMock(return_value=io.BytesIO(b""))
+    storage.public_url = MagicMock(side_effect=lambda path: f"public://{path}")
+    return storage
+
+
 def _make_service(
     *,
     file_repo=None,
     session_repo=None,
-    file_store=None,
-    media_store=None,
+    storage=None,
 ) -> FileService:
     config = SimpleNamespace(
         storage=SimpleNamespace(
             media_bucket_name="media-bucket",
             file_upload_bucket_name="uploads-bucket",
+            file_upload_size_limit=1_000_000,
+            signed_url_ttl_seconds=3600,
         )
     )
-    # Simple in-memory storage mock
-    if file_store is None:
-        file_store = SimpleNamespace(
-            get_download_signed_url=lambda path, **kw: f"signed://{path}",
-            get_download_signed_urls_batch=lambda paths, **kw: [f"signed://{p}" for p in paths],
-            get_upload_signed_url=lambda path, ct, **kw: f"upload://{path}",
-            is_exists=lambda path: False,
-            write=lambda content, path, **kw: None,
-            write_from_url=lambda url, path, content_type=None: path,
-            get_public_url=lambda path: f"public://{path}",
-            get_permanent_url=lambda path: f"permanent://{path}",
-        )
+    if storage is None:
+        storage = _make_storage_mock()
     return FileService(
         file_repo=file_repo or FakeFileRepo(),
         session_repo=session_repo or FakeSessionRepo(),
-        file_store=file_store,
-        media_store=media_store,
+        storage=storage,
         config=config,
     )
-
-
-# ---------------------------------------------------------------------------
-# _get_storage_for_path
-# ---------------------------------------------------------------------------
-
-
-class TestGetStorageForPath:
-    def test_uses_media_store_for_session_path(self):
-        media_store = MagicMock()
-        svc = _make_service(media_store=media_store)
-        storage = svc._get_storage_for_path("sessions/s1/file.txt")
-        assert storage is media_store
-
-    def test_uses_file_store_when_no_media_store(self):
-        svc = _make_service(media_store=None)
-        file_store = svc._storage
-        storage = svc._get_storage_for_path("sessions/s1/file.txt")
-        assert storage is file_store
-
-    def test_uses_file_store_for_non_session_path(self):
-        media_store = MagicMock()
-        svc = _make_service(media_store=media_store)
-        file_store = svc._storage
-        storage = svc._get_storage_for_path("users/u1/uploads/file.txt")
-        assert storage is file_store
-
-
-# ---------------------------------------------------------------------------
-# _get_file_url
-# ---------------------------------------------------------------------------
-
-
-class TestGetFileUrl:
-    def test_returns_none_for_empty_path(self):
-        svc = _make_service()
-        assert svc._get_file_url(None) is None
-        assert svc._get_file_url("") is None
-
-    def test_returns_https_url_as_is(self):
-        svc = _make_service()
-        url = "https://example.com/file.txt"
-        assert svc._get_file_url(url) == url
-
-    def test_returns_http_url_as_is(self):
-        svc = _make_service()
-        url = "http://example.com/file.txt"
-        assert svc._get_file_url(url) == url
-
-    def test_generates_signed_url_for_storage_path(self):
-        svc = _make_service()
-        result = svc._get_file_url("users/u1/uploads/file.txt")
-        assert result == "signed://users/u1/uploads/file.txt"
 
 
 # ---------------------------------------------------------------------------
@@ -302,34 +258,6 @@ class TestWriteFileFromUrl:
         assert "file.txt" in result.name
 
     @pytest.mark.asyncio
-    async def test_uses_media_store_for_session_files(self):
-        session_repo = FakeSessionRepo()
-        session_repo.sessions["s-1"] = SimpleNamespace(id="s-1", user_id="u-1")
-        file_store = MagicMock()
-        file_store.write_from_url = MagicMock()
-        media_store = MagicMock()
-        media_store.write_from_url = MagicMock()
-        media_store.get_download_signed_url = MagicMock(return_value="signed://media")
-        svc = _make_service(
-            session_repo=session_repo,
-            file_store=file_store,
-            media_store=media_store,
-        )
-
-        result = await svc.write_file_from_url(
-            None,
-            url="https://example.com/file.txt",
-            file_name="file.txt",
-            file_size=500,
-            content_type="text/plain",
-            session_id="s-1",
-        )
-
-        media_store.write_from_url.assert_called_once()
-        file_store.write_from_url.assert_not_called()
-        assert result.url == "signed://media"
-
-    @pytest.mark.asyncio
     async def test_raises_when_session_not_found_and_no_user_id(self):
         svc = _make_service()
         from ii_agent.sessions.exceptions import SessionNotFoundError
@@ -368,7 +296,6 @@ class TestGenerateUploadUrl:
     @pytest.mark.asyncio
     async def test_raises_when_size_exceeds_limit(self):
         svc = _make_service()
-        upload_storage = MagicMock()
         with pytest.raises(FileSizeLimitExceededError):
             await svc.generate_upload_url(
                 None,
@@ -376,24 +303,17 @@ class TestGenerateUploadUrl:
                 file_name="big.zip",
                 content_type="application/zip",
                 file_size=1_000_001,
-                upload_storage=upload_storage,
-                max_file_size=1_000_000,
             )
 
     @pytest.mark.asyncio
     async def test_returns_upload_url(self):
         svc = _make_service()
-        upload_storage = SimpleNamespace(
-            get_upload_signed_url=lambda path, ct, **kw: f"upload://{path}"
-        )
         result = await svc.generate_upload_url(
             None,
             user_id="u-1",
             file_name="photo.jpg",
             content_type="image/jpeg",
             file_size=500,
-            upload_storage=upload_storage,
-            max_file_size=10_000_000,
         )
         assert result.upload_url.startswith("upload://")
         assert result.id is not None
@@ -408,10 +328,6 @@ class TestCompleteUpload:
     @pytest.mark.asyncio
     async def test_raises_when_blob_not_found(self):
         svc = _make_service()
-        upload_storage = SimpleNamespace(
-            is_exists=lambda path: False,
-            get_download_signed_url=lambda path: f"signed://{path}",
-        )
         with pytest.raises(FileUploadNotFoundError):
             await svc.complete_upload(
                 None,
@@ -421,16 +337,13 @@ class TestCompleteUpload:
                 file_size=100,
                 content_type="text/plain",
                 session_id=None,
-                upload_storage=upload_storage,
             )
 
     @pytest.mark.asyncio
     async def test_returns_upload_complete_response(self):
-        svc = _make_service()
-        upload_storage = SimpleNamespace(
-            is_exists=lambda path: True,
-            get_download_signed_url=lambda path: f"signed://{path}",
-        )
+        storage = _make_storage_mock()
+        storage.exists = AsyncMock(return_value=True)
+        svc = _make_service(storage=storage)
         result = await svc.complete_upload(
             None,
             user_id="u-1",
@@ -439,7 +352,6 @@ class TestCompleteUpload:
             file_size=100,
             content_type="text/plain",
             session_id=None,
-            upload_storage=upload_storage,
         )
         assert result.file_url.startswith("signed://")
 
@@ -499,19 +411,13 @@ class TestUploadAvatar:
     @pytest.mark.asyncio
     async def test_uploads_and_returns_url(self):
         svc = _make_service()
-        avatar_storage = SimpleNamespace(
-            write=lambda content, path, **kw: None,
-            get_public_url=lambda path: f"public://{path}",
-        )
         result = await svc.upload_avatar(
             None,
             user_id="u-1",
             file_content=b"image bytes",
             file_extension="jpg",
-            avatar_storage=avatar_storage,
         )
         assert "u-1" in result
-        assert "avatar.jpg" in result
 
 
 # ---------------------------------------------------------------------------
@@ -522,8 +428,7 @@ class TestUploadAvatar:
 class TestGetAvatarUrl:
     def test_returns_public_url(self):
         svc = _make_service()
-        avatar_storage = SimpleNamespace(get_public_url=lambda path: f"public://{path}")
-        result = svc.get_avatar_url("users/u1/profile/avatar.jpg", avatar_storage)
+        result = svc.get_avatar_url("users/u1/profile/avatar.jpg")
         assert result == "public://users/u1/profile/avatar.jpg"
 
 

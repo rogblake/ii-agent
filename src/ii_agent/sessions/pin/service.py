@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import List
 
 from sqlalchemy.exc import IntegrityError
@@ -13,6 +14,7 @@ from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.pin.models import SessionPin
 from ii_agent.sessions.pin.repository import PinRepository
+from ii_agent.sessions.pin.schemas import SessionPinItem
 
 logger = logging.getLogger(__name__)
 
@@ -31,25 +33,25 @@ class SessionPinService:
         self._pin_repo = pin_repo
         self._session_repo = session_repo
 
-    async def get_user_pins(self, db: AsyncSession, user_id: str) -> List[dict]:
+    async def get_user_pins(self, db: AsyncSession, user_id: uuid.UUID) -> List[SessionPinItem]:
         """Get all pinned sessions for a user."""
         pins = await self._pin_repo.get_user_pins(db, user_id)
 
         return [
-            {
-                "id": p.id,
-                "session_id": p.session_id,
-                "session_name": p.session.name,
-                "agent_type": p.session.agent_type,
-                "created_at": p.created_at,
-                "session_created_at": p.session.created_at,
-                "last_message_at": p.session.last_message_at,
-            }
+            SessionPinItem(
+                id=p.id,
+                session_id=p.session_id,
+                session_name=p.session.name,
+                agent_type=p.session.agent_type,
+                created_at=p.created_at,
+                session_created_at=p.session.created_at,
+                last_message_at=p.session.last_message_at,
+            )
             for p in pins
-            if p.session is not None and p.session.deleted_at is None
+            if p.session is not None and not p.session.is_deleted
         ]
 
-    async def pin_session(self, db: AsyncSession, user_id: str, session_id: str) -> bool:
+    async def pin_session(self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
         """Pin a session for the user.
 
         Returns True if pinned successfully, False if already pinned.
@@ -74,14 +76,14 @@ class SessionPinService:
             # savepoint is rolled back, the outer session stays valid.
             return False
 
-    async def unpin_session(self, db: AsyncSession, user_id: str, session_id: str) -> bool:
+    async def unpin_session(self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
         """Unpin a session for the user.
 
         Returns True if unpinned, False if not found.
         """
         return await self._pin_repo.delete_by_user_and_session(db, user_id, session_id)
 
-    async def is_pinned(self, db: AsyncSession, user_id: str, session_id: str) -> bool:
+    async def is_pinned(self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
         """Check if a session is pinned by the user."""
         item = await self._pin_repo.get_by_user_and_session(db, user_id, session_id)
         return item is not None

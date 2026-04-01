@@ -18,7 +18,7 @@ export function useSessionManager({
     handleEvent: (
         data: {
             id: string
-            type: AgentEvent
+            name: AgentEvent
             content: Record<string, unknown>
             run_id?: string
             session_id?: string
@@ -99,14 +99,14 @@ export function useSessionManager({
                             AgentEvent.SANDBOX_STATUS,
                             AgentEvent.PROCESSING,
                             AgentEvent.AGENT_CONTINUE
-                        ].includes(event.type)
+                        ].includes(event.name)
                         const isDelay =
                             delayTimeRef.current > 0 &&
                             i > 0 &&
                             isReplayMode &&
                             !ignoreEvents
                         if (isDelay) {
-                            dispatch({ type: 'SET_LOADING', payload: true })
+                            dispatch(setLoading(true))
                             await new Promise((resolve) =>
                                 setTimeout(resolve, delayTimeRef.current)
                             )
@@ -121,12 +121,12 @@ export function useSessionManager({
                             AgentEvent.PLAN_GENERATED,
                             AgentEvent.MILESTONE_UPDATE,
                             AgentEvent.PLAN_MODIFICATION_OPTIONS
-                        ].includes(event.type)
+                        ].includes(event.name)
 
                         handleEvent(
                             {
                                 id: event.id,
-                                type: event.type,
+                                name: event.name,
                                 // Inject session_id into content for replay (mirrors SocketIOSubscriber behavior)
                                 content: { ...event.content, session_id: id },
                                 // Include run_id and session_id at top level for HITL continue_run
@@ -157,8 +157,8 @@ export function useSessionManager({
                     setIsReplayMode(false)
                 }
 
-                // Start processing events with delay
-                processEventsWithDelay()
+                // Await so the finally block runs after all events are processed
+                await processEventsWithDelay()
             }
         } catch (error) {
             console.error('Failed to fetch session events:', error)

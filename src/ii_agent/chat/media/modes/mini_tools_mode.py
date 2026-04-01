@@ -5,10 +5,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.chat.types import MediaPreferences
-from ii_agent.content.media.repository import MediaTemplateRepository
-from ii_agent.content.media.service import MediaTemplateService
-from ii_agent.core.config.settings import get_settings
-from ii_agent.core.storage.client import media_storage
+from ii_agent.core.container import get_app_container
 from ..utils import PromptBuilder
 from .base import BaseModeStrategy
 
@@ -56,11 +53,7 @@ class MiniToolsModeStrategy(BaseModeStrategy):
 
         if target_id:
             try:
-                template = await MediaTemplateService(
-                    config=get_settings(),
-                    repo=MediaTemplateRepository(),
-                    media_storage=media_storage,
-                ).get_media_template_by_id(db_session, target_id)
+                template = await get_app_container().media_template_service.get_media_template_by_id(db_session, target_id)
 
                 if template:
                     target_name = target_name or template.name

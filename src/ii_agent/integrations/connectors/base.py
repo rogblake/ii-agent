@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
 
 
+
 @dataclass
 class ConnectorData:
     """Data returned from OAuth callback."""

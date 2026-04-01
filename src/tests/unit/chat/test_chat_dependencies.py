@@ -16,10 +16,9 @@ from ii_agent.chat.api.dependencies import (
     get_chat_message_repository,
     get_chat_service,
     get_chat_tool_service,
-    get_container,
-    get_llm_loop_service,
-    get_message_service,
+    _get_message_service as get_message_service,
 )
+from ii_agent.core.dependencies import _get_container as get_container
 from ii_agent.chat.application.file_processing_service import ChatFileProcessor
 from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
 from ii_agent.chat.messages.history_service import ChatMessageHistoryService
@@ -79,14 +78,11 @@ class TestGetChatMessageRepository:
 
 
 class TestGetMessageService:
-    def test_returns_message_service_instance(self):
-        result = get_message_service()
-        assert isinstance(result, MessageService)
-
-    def test_returns_new_instance_each_call(self):
-        a = get_message_service()
-        b = get_message_service()
-        assert a is not b
+    def test_returns_container_message_service(self):
+        mock_container = MagicMock()
+        mock_container.message_service = MagicMock(spec=MessageService)
+        result = get_message_service(mock_container)
+        assert result is mock_container.message_service
 
 
 # ---------------------------------------------------------------------------
@@ -96,20 +92,14 @@ class TestGetMessageService:
 
 class TestGetChatFileProcessor:
     def test_returns_chat_file_processor_instance(self):
-        mock_settings = MagicMock()
-        with patch(
-            "ii_agent.chat.api.dependencies.get_settings", return_value=mock_settings
-        ):
-            result = get_chat_file_processor()
+        mock_container = MagicMock()
+        result = get_chat_file_processor(mock_container)
         assert isinstance(result, ChatFileProcessor)
 
-    def test_settings_injected_into_processor(self):
-        mock_settings = MagicMock()
-        with patch(
-            "ii_agent.chat.api.dependencies.get_settings", return_value=mock_settings
-        ):
-            result = get_chat_file_processor()
-        assert result._config is mock_settings
+    def test_config_injected_into_processor(self):
+        mock_container = MagicMock()
+        result = get_chat_file_processor(mock_container)
+        assert result._config is mock_container.config
 
 
 # ---------------------------------------------------------------------------
@@ -174,46 +164,6 @@ class TestGetChatMessageHistory:
 
 
 # ---------------------------------------------------------------------------
-# get_llm_loop_service
-# ---------------------------------------------------------------------------
-
-
-class TestGetLLMLoopService:
-    def test_returns_llm_turn_loop_service_instance(self):
-        mock_llm_billing = MagicMock()
-        mock_message_service = MagicMock()
-        mock_llm_invocation_repo = MagicMock()
-        mock_tool_invocation_repo = MagicMock()
-
-        result = get_llm_loop_service(
-            llm_billing=mock_llm_billing,
-            llm_invocation_repo=mock_llm_invocation_repo,
-            message_service=mock_message_service,
-            tool_invocation_repo=mock_tool_invocation_repo,
-        )
-
-        assert isinstance(result, LLMTurnLoopService)
-
-    def test_dependencies_passed_correctly(self):
-        mock_llm_billing = MagicMock()
-        mock_message_service = MagicMock()
-        mock_llm_invocation_repo = MagicMock()
-        mock_tool_invocation_repo = MagicMock()
-
-        result = get_llm_loop_service(
-            llm_billing=mock_llm_billing,
-            llm_invocation_repo=mock_llm_invocation_repo,
-            message_service=mock_message_service,
-            tool_invocation_repo=mock_tool_invocation_repo,
-        )
-
-        assert result._llm_billing is mock_llm_billing
-        assert result._message_service is mock_message_service
-        assert result._llm_invocation_repo is mock_llm_invocation_repo
-        assert result._tool_invocation_repo is mock_tool_invocation_repo
-
-
-# ---------------------------------------------------------------------------
 # get_chat_service
 # ---------------------------------------------------------------------------
 
@@ -225,10 +175,8 @@ class TestGetChatService:
             "credit_service": MagicMock(),
             "file_processor": MagicMock(),
             "tool_service": MagicMock(),
-            "llm_loop": MagicMock(),
             "message_history": MagicMock(),
             "message_service": MagicMock(),
-            "chat_run_service": MagicMock(),
             "session_repo": MagicMock(),
             "container": MagicMock(),
             "title_service": MagicMock(),
@@ -245,11 +193,9 @@ class TestGetChatService:
 
         assert result._file_processor is mocks["file_processor"]
         assert result._tool_service is mocks["tool_service"]
-        assert result._llm_loop is mocks["llm_loop"]
         assert result._message_history is mocks["message_history"]
         assert result._message_service is mocks["message_service"]
         assert result._session_repo is mocks["session_repo"]
-        assert result._chat_run_service is mocks["chat_run_service"]
         assert result._llm_setting_service is mocks["llm_setting_service"]
         assert result._credit_service is mocks["credit_service"]
         assert result._container is mocks["container"]

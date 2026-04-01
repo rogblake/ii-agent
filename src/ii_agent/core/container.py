@@ -1,377 +1,488 @@
-"""Centralized service container for non-router consumers.
+"""Centralized service container — single source of truth for service wiring.
 
-Created once in ii_agent.app lifespan after secrets are loaded.
-Passed to socket handlers, subscribers, cron, etc.
+Created once in ``ii_agent.app.lifespan`` after secrets are loaded and stored
+on ``app.state.container``.  All consumers — FastAPI ``Depends()``, socket
+handlers, subscribers, cron tasks — ultimately read services from here.
 
-Router endpoints use FastAPI Depends() via per-domain dependencies.py files instead.
+**Container-primary pattern:**
 
-The create() factory delegates to the same factory functions used by FastAPI
-Depends(), keeping wiring logic in a single place per service.
+* ``ServiceContainer.create()`` instantiates all repositories and services
+  directly (no factory-function imports from ``dependencies.py``).
+* Domain ``dependencies.py`` files are *thin accessors* that pull from the
+  container via ``ContainerDep``, so wiring logic lives in exactly one place.
 """
 
 from __future__ import annotations
 
-from ii_agent.core.config.settings import get_settings
+from dataclasses import dataclass, field
+from typing import Any
 
-# -- Factory imports (from domain dependencies.py files) ----------------
-from ii_agent.auth.users.dependencies import (
-    get_api_key_repository,
-    get_user_repository,
-    get_user_service,
-    get_waitlist_repository,
-)
-from ii_agent.billing.credits.dependencies import (
-    get_credit_balance_repository,
-    get_credit_service,
-    get_credit_ledger_repository,
-)
-from ii_agent.billing.reservations.dependencies import (
-    get_credit_reservation_repository,
-    get_credit_reservation_service,
-)
-from ii_agent.billing.usage.dependencies import (
-    get_llm_invocation_repository,
-    get_metrics_repository,
-    get_usage_record_repository,
-    get_usage_service,
-)
-from ii_agent.billing.dependencies import (
-    get_billing_service,
-    get_stripe_config,
-)
-from ii_agent.billing.customers.dependencies import (
-    get_billing_customer_repository,
-    get_billing_customer_service,
-)
-from ii_agent.content.media.dependencies import (
-    get_media_template_repository,
-    get_media_template_service,
-)
-from ii_agent.settings.skills.dependencies import (
-    get_skill_repository,
-    get_skill_service,
-)
-from ii_agent.content.slides.dependencies import get_slide_repository
-from ii_agent.content.slides.design.dependencies import (
-    get_slide_design_repository,
-    get_slide_design_service,
-)
-from ii_agent.content.storybook.dependencies import (
-    get_storybook_repository,
-    get_storybook_service,
-)
-from ii_agent.core.llm.dependencies import (
-    get_llm_billing_service,
-    get_llm_config_resolver,
-    get_llm_execution_service,
-)
-from ii_agent.agent.dependencies import (
-    get_agent_run_service,
-    get_agent_run_task_repository,
-    get_agent_service,
-    get_execution_service,
-    get_plan_service,
-    get_session_validation_service,
-)
-from ii_agent.agent.sandboxes.dependencies import (
-    get_sandbox_repository,
-    get_sandbox_service,
-)
-from ii_agent.agent.sandboxes.workspace_explorer_service import WorkspaceExplorerService
-from ii_agent.files.dependencies import (
-    get_file_repository,
-    get_file_service,
-)
-from ii_agent.integrations.connectors.composio.dependencies import (
-    get_composio_profile_repository,
-    get_composio_service,
-)
-from ii_agent.integrations.connectors.dependencies import (
-    get_connector_repository,
-    get_connector_service,
-)
-from ii_agent.projects.dependencies import (
-    get_database_service,
-    get_deployment_orchestration_service,
-    get_project_repository,
-    get_project_service,
-    get_sandbox_env_sync_service,
-    get_secret_service,
-)
-from ii_agent.projects.design.dependencies import (
-    get_project_design_repository,
-    get_project_design_service,
-)
-from ii_agent.projects.deployments.dependencies import (
-    get_deployments_repository,
-    get_deployments_service,
-)
-from ii_agent.agent.events.dependencies import (
-    build_event_service,
-    get_event_repository,
-)
-from ii_agent.agent.events.publisher import NoopEventPublisher
-from ii_agent.sessions.dependencies import (
-    get_session_fork_service,
-    get_session_repository,
-    get_session_service,
-)
-from ii_agent.sessions.title_dependencies import get_session_title_service
-from ii_agent.settings.llm.dependencies import (
-    get_llm_setting_repository,
-    get_llm_setting_service,
-)
-from ii_agent.settings.mcp.dependencies import (
-    get_mcp_setting_repository,
-    get_mcp_setting_service,
-)
+from pydantic import SecretStr
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.core.redis.client import get_redis_client
+from ii_agent.core.redis.cache import EntityCache, TypedEntityCache, get_entity_cache
+from ii_agent.core.redis import client as _redis_client_mod
 
-if TYPE_CHECKING:
-    from ii_agent.agent.runs.service import AgentRunService
-    from ii_agent.agent.application.agent_service import AgentService
-    from ii_agent.agent.application.execution_service import ExecutionService
-    from ii_agent.agent.application.plan_service import PlanService
-    from ii_agent.billing.service import BillingService
-    from ii_agent.billing.credits.service import CreditService
-    from ii_agent.billing.reservations.service import CreditReservationService
-    from ii_agent.billing.usage.service import UsageService
-    from ii_agent.integrations.connectors.composio.service import ComposioService
-    from ii_agent.integrations.connectors.service import ConnectorService
-    from ii_agent.core.config.settings import Settings
-    from ii_agent.core.llm.billing_service import LLMBillingService
-    from ii_agent.core.llm.execution_service import LLMExecutionService
-    from ii_agent.core.llm.config_resolver import LLMConfigResolver
-    from ii_agent.agent.events.service import EventService
-    from ii_agent.files.service import FileService
-    from ii_agent.settings.llm.service import LLMSettingService
-    from ii_agent.settings.mcp.service import MCPSettingService
-    from ii_agent.content.media.service import MediaTemplateService
-    from ii_agent.projects.deployment_orchestration_service import (
-        DeploymentOrchestrationService,
-    )
-    from ii_agent.projects.databases.service import DatabaseService
-    from ii_agent.projects.deployments.service import DeploymentsService
-    from ii_agent.projects.secrets.service import SecretService
-    from ii_agent.projects.service import ProjectService
-    from ii_agent.agent.sandboxes.service import SandboxService
-    from ii_agent.agent.sandboxes.env_sync_service import SandboxEnvSyncService
-    from ii_agent.agent.sandboxes.workspace_explorer_service import WorkspaceExplorerService
-    from ii_agent.sessions.service import SessionService
-    from ii_agent.sessions.fork_service import SessionForkService
-    from ii_agent.agent.application.validation_service import SessionValidationService
-    from ii_agent.settings.skills.service import SkillService
-    from ii_agent.content.slides.design.service import SlideDesignService
-    from ii_agent.content.storybook.service import StorybookService
-    from ii_agent.projects.design.service import ProjectDesignService
-    from ii_agent.auth.users.service import UserService
+# ── Repository classes ────────────────────────────────────────────────────
+from ii_agent.users.repository import APIKeyRepository, UserRepository
+from ii_agent.users.waitlist_repository import WaitlistRepository
+from ii_agent.sessions.repository import SessionRepository
+from ii_agent.sessions.pin.repository import PinRepository
+from ii_agent.sessions.wishlist.repository import WishlistRepository
+from ii_agent.realtime.events.repository import EventRepository
+from ii_agent.files.repository import FileRepository
+from ii_agent.tasks.repository import RunTaskRepository, TaskLogRepository
+from ii_agent.settings.llm.repository import ModelSettingRepository
+from ii_agent.settings.mcp.repository import MCPSettingRepository
+from ii_agent.settings.skills.repository import SkillRepository
+from ii_agent.projects.repository import ProjectRepository
+from ii_agent.projects.deployments.repository import DeploymentsRepository
+from ii_agent.projects.design.repository import ProjectDesignRepository
+from ii_agent.projects.subdomains.repository import SubdomainRepository
+from ii_agent.integrations.connectors.repository import ConnectorRepository
+from ii_agent.integrations.connectors.composio.repository import ComposioProfileRepository
+from ii_agent.content.media.repository import MediaTemplateRepository
+from ii_agent.content.storybook.repository import StorybookRepository
+from ii_agent.content.slides.repository import SlideContentRepository
+from ii_agent.content.slides.templates.repository import SlideTemplateRepository
+from ii_agent.content.slides.nano_banana.repository import NanoBananaRepository
+from ii_agent.content.slides.design.repository import SlideDesignRepository
+from ii_agent.chat.messages.repository import ChatMessageRepository
+from ii_agent.credits.repository import CreditBalanceRepository, CreditTransactionRepository
+from ii_agent.agents.sandboxes.repository import SandboxRepository
+
+# ── Schema classes (for TypedEntityCache) ────────────────────────────────
+from ii_agent.tasks.schemas import RunTaskResponse
+from ii_agent.users.schemas import UserResponse
+
+# ── Service classes ───────────────────────────────────────────────────────
+from ii_agent.users.service import UserService
+from ii_agent.billing.service import BillingService
+from ii_agent.sessions.service import SessionService
+from ii_agent.sessions.fork_service import SessionForkService
+from ii_agent.sessions.pin.service import SessionPinService
+from ii_agent.sessions.wishlist.service import SessionWishlistService
+from ii_agent.sessions.title_service import SessionTitleService
+from ii_agent.core.config.session_title import SessionTitleConfig
+from ii_agent.files.service import FileService
+from ii_agent.tasks.service import RunTaskService
+from ii_agent.settings.llm.service import ModelSettingService
+from ii_agent.settings.mcp.service import MCPSettingService
+from ii_agent.settings.skills.service import SkillService
+from ii_agent.projects.service import ProjectService
+from ii_agent.projects.deployments.service import DeploymentsService
+from ii_agent.projects.subdomains.service import SubdomainService
+from ii_agent.projects.deployment_orchestration_service import DeploymentOrchestrationService
+from ii_agent.integrations.connectors.service import ConnectorService
+from ii_agent.integrations.connectors.composio.service import ComposioService
+from ii_agent.integrations.connectors.composio.toolkit_service import ToolkitService
+from ii_agent.integrations.connectors.composio.auth_config_service import AuthConfigService
+from ii_agent.integrations.connectors.composio.connected_account_service import (
+    ConnectedAccountService,
+)
+from ii_agent.integrations.connectors.composio.mcp_server_service import MCPServerService
+from ii_agent.integrations.connectors.composio.cache_service import ComposioCacheService
+from ii_agent.content.media.service import MediaTemplateService
+from ii_agent.content.storybook.service import StorybookService
+from ii_agent.content.storybook.edit_service import StorybookEditService
+from ii_agent.content.storybook.export_service import StorybookExportService
+from ii_agent.content.storybook.version_service import StorybookVersionService
+from ii_agent.content.storybook.voice_service import StorybookVoiceService
+from ii_agent.content.storybook.ai_edit_service import StorybookAIEditService
+from ii_agent.content.slides.service import SlideService
+from ii_agent.content.slides.templates.service import SlideTemplateService
+from ii_agent.content.slides.nano_banana.service import NanoBananaService
+from ii_agent.content.slides.design.service import SlideDesignService
+from ii_agent.projects.design.service import ProjectDesignService
+from ii_agent.chat.messages.service import MessageService
+from ii_agent.credits.service import CreditService
+from ii_agent.agents.sandboxes.service import SandboxService
+from ii_agent.agents.sandboxes.explorer import WorkspaceExplorer
+from ii_agent.plans.service import PlanService
+from ii_agent.realtime.events.service import EventService
+
+# ── Storage ───────────────────────────────────────────────────────────────
+from ii_agent.core.storage.client import get_storage
+from ii_agent.core.storage.service import StorageService
+from ii_agent.core.storage.path_resolver import path_resolver
 
 
 @dataclass
-class ServiceContainer:
-    """Centralized service container for non-router consumers.
+class ApplicationContainer:
+    """Application-scoped service container.
 
-    A single ServiceContainer is created once in ii_agent.app lifespan (after
-    GCP secrets are loaded) and threaded through to all non-router consumers:
-    socket handlers, subscribers, and cron tasks.
-
-    This avoids module-level singleton imports and ensures every consumer
-    receives services wired with the post-secrets-loaded config.
+    Every service is created once in :meth:`create` and made available as
+    a read-only attribute.  Domain ``dependencies.py`` files access the
+    container via ``ContainerDep`` and expose individual services as
+    ``Annotated[SomeService, Depends(get_some_service)]``.
     """
 
+    # ── Infrastructure ────────────────────────────────────────────────────
     config: Settings
-    credit_service: CreditService
-    credit_reservation_service: CreditReservationService
-    usage_service: UsageService
-    llm_billing_service: LLMBillingService
-    llm_execution_service: LLMExecutionService
-    llm_config_resolver: LLMConfigResolver
+    storage_service: StorageService
+
+    # ── Domain services ───────────────────────────────────────────────────
+    user_service: UserService
+    billing_service: BillingService
     session_service: SessionService
     session_fork_service: SessionForkService
-    session_validation_service: SessionValidationService
-    event_service: EventService
-    llm_setting_service: LLMSettingService
+    session_title_service: SessionTitleService
+    session_pin_service: SessionPinService
+    session_wishlist_service: SessionWishlistService
     file_service: FileService
-    agent_run_service: AgentRunService
-    agent_service: AgentService
-    execution_service: ExecutionService
-    plan_service: PlanService
-    sandbox_service: SandboxService
-    workspace_explorer_service: WorkspaceExplorerService
+    run_task_service: RunTaskService
+    model_setting_service: ModelSettingService
+    mcp_setting_service: MCPSettingService
+    skill_service: SkillService
     project_service: ProjectService
-    secret_service: SecretService
-    database_service: DatabaseService
-    sandbox_env_sync_service: SandboxEnvSyncService
     deployments_service: DeploymentsService
     deployment_orchestration_service: DeploymentOrchestrationService
-    billing_service: BillingService
-    mcp_setting_service: MCPSettingService
-    user_service: UserService
+    subdomain_service: SubdomainService
     connector_service: ConnectorService
     composio_service: ComposioService
     media_template_service: MediaTemplateService
-    skill_service: SkillService
     storybook_service: StorybookService
-    project_design_service: ProjectDesignService
+    storybook_edit_service: StorybookEditService
+    storybook_export_service: StorybookExportService
+    storybook_version_service: StorybookVersionService
+    storybook_voice_service: StorybookVoiceService
+    storybook_ai_edit_service: StorybookAIEditService
+    slide_service: SlideService
+    slide_template_service: SlideTemplateService
+    nano_banana_service: NanoBananaService
     slide_design_service: SlideDesignService
+    project_design_service: ProjectDesignService
+    message_service: MessageService
+    credit_service: CreditService
+    sandbox_service: SandboxService
+    plan_service: PlanService
+    event_service: EventService
+    workspace_explorer_service: WorkspaceExplorer
+
+    # ── Repositories (exposed for consumers that need direct repo access) ─
+    event_repo: EventRepository = field(default_factory=EventRepository)
 
     @classmethod
-    def create(cls) -> ServiceContainer:
-        """Factory that wires all services with shared config.
+    def init(cls) -> ApplicationContainer:
+        """Wire all services with shared config.
 
-        Call this after GCP secrets have been applied to settings.
-
-        Delegates to factory functions from domain dependencies.py files
-        to keep wiring logic in a single place per service.
+        Call once, after GCP secrets have been applied to settings.
         """
 
         cfg = get_settings()
+        storage_provider = get_storage()
+        storage_svc = StorageService(provider=storage_provider, paths=path_resolver)
 
-        # ── Repositories (leaf nodes) ────────────────────────────────────────
-        user_repo = get_user_repository()
-        api_key_repo = get_api_key_repository()
-        waitlist_repo = get_waitlist_repository()
-        session_repo = get_session_repository()
-        event_repo = get_event_repository()
-        project_repo = get_project_repository()
-        file_repo = get_file_repository()
-        sandbox_repo = get_sandbox_repository()
-        agent_run_repo = get_agent_run_task_repository()
-        llm_setting_repo = get_llm_setting_repository()
-        mcp_setting_repo = get_mcp_setting_repository()
-        media_template_repo = get_media_template_repository()
-        deployments_repo = get_deployments_repository()
-        composio_repo = get_composio_profile_repository()
-        skill_repo = get_skill_repository()
-        storybook_repo = get_storybook_repository()
-        metrics_repo = get_metrics_repository()
-        usage_record_repo = get_usage_record_repository()
-        llm_invocation_repo = get_llm_invocation_repository()
-        connector_repo = get_connector_repository()
-        credit_balance_repo = get_credit_balance_repository()
-        credit_ledger_repo = get_credit_ledger_repository()
-        credit_reservation_repo = get_credit_reservation_repository()
-        billing_customer_repo = get_billing_customer_repository()
-
-        # ── Leaf services (depend only on repos / config) ────────────────────
-        credit_svc = get_credit_service(credit_balance_repo, credit_ledger_repo)
-        usage_svc = get_usage_service(credit_svc, metrics_repo, usage_record_repo)
-        credit_reservation_svc = get_credit_reservation_service(
-            credit_balance_repo,
-            credit_ledger_repo,
-            credit_reservation_repo,
-            credit_svc,
-            usage_svc,
+        # Caches (raw EntityCache for untyped, TypedEntityCache for single-model domains)
+        redis_client = get_redis_client(redis_settings=cfg.redis)
+        tasks_cache = TypedEntityCache(
+            get_entity_cache(redis_client=redis_client, namespace="tasks", ttl=3600),
+            RunTaskResponse,
         )
-        agent_run_svc = get_agent_run_service(agent_run_repo)
-        event_svc = build_event_service(
-            event_repo,
-            publisher=NoopEventPublisher(),
+        users_cache = TypedEntityCache(
+            get_entity_cache(redis_client=redis_client, namespace="users", ttl=3600),
+            UserResponse,
         )
-        mcp_setting_svc = get_mcp_setting_service(mcp_setting_repo)
-        skill_svc = get_skill_service(skill_repo)
-        storybook_svc = get_storybook_service(storybook_repo)
-        connector_svc = get_connector_service(connector_repo)
-        agent_svc = get_agent_service()
-        execution_svc = get_execution_service()
-        plan_svc = get_plan_service()
-        deployment_orch_svc = get_deployment_orchestration_service()
-        stripe_config = get_stripe_config()
+        sessions_cache = get_entity_cache(redis_client=redis_client, namespace="sessions", ttl=1800)
+        composio_cache = get_entity_cache(
+            redis_client=redis_client, namespace="composio", ttl=604800
+        )
+        media_cache = get_entity_cache(redis_client=redis_client, namespace="media", ttl=600)
 
-        # ── Services with cross-service deps ─────────────────────────────────
-        user_svc = get_user_service(user_repo, api_key_repo, waitlist_repo, credit_svc)
-        session_svc = get_session_service(session_repo, event_repo, sandbox_repo, agent_run_svc)
-        session_fork_svc = get_session_fork_service(session_repo, sandbox_repo)
-        file_svc = get_file_service(file_repo, session_repo)
-        llm_setting_svc = get_llm_setting_service(llm_setting_repo, session_repo)
-        composio_svc = get_composio_service(mcp_setting_svc, composio_repo)
-        sandbox_svc = get_sandbox_service(sandbox_repo, mcp_setting_svc, composio_svc)
-        workspace_explorer_svc = WorkspaceExplorerService(
+        # Repositories
+        user_repo = UserRepository()
+        api_key_repo = APIKeyRepository()
+        waitlist_repo = WaitlistRepository()
+        session_repo = SessionRepository()
+        event_repo = EventRepository()
+        file_repo = FileRepository()
+        run_task_repo = RunTaskRepository()
+        task_log_repo = TaskLogRepository()
+        model_setting_repo = ModelSettingRepository()
+        mcp_setting_repo = MCPSettingRepository()
+        skill_repo = SkillRepository()
+        project_repo = ProjectRepository()
+        deployments_repo = DeploymentsRepository()
+        project_design_repo = ProjectDesignRepository(session_repo=session_repo)
+        connector_repo = ConnectorRepository()
+        composio_repo = ComposioProfileRepository()
+        media_template_repo = MediaTemplateRepository()
+        storybook_repo = StorybookRepository()
+        slide_repo = SlideContentRepository()
+        slide_design_repo = SlideDesignRepository(session_repo=session_repo, slide_repo=slide_repo)
+        credit_balance_repo = CreditBalanceRepository()
+        credit_tx_repo = CreditTransactionRepository()
+        sandbox_repo = SandboxRepository()
+        pin_repo = PinRepository()
+        wishlist_repo = WishlistRepository()
+        subdomain_repo = SubdomainRepository()
+        slide_template_repo = SlideTemplateRepository()
+
+        # services
+        run_task_svc = RunTaskService(
+            task_repo=run_task_repo, log_repo=task_log_repo, cache=tasks_cache, config=cfg
+        )
+        mcp_setting_svc = MCPSettingService(repo=mcp_setting_repo, config=cfg)
+        skill_svc = SkillService(skill_repo=skill_repo, config=cfg)
+        storybook_svc = StorybookService(repo=storybook_repo, config=cfg)
+        storybook_version_svc = StorybookVersionService(
+            repo=storybook_repo,
+            storybook_service=storybook_svc,
+            config=cfg,
+        )
+        connector_svc = ConnectorService(connector_repo=connector_repo, config=cfg)
+        billing_svc = BillingService(settings=cfg)
+        deployment_orch_svc = DeploymentOrchestrationService(config=cfg)
+        message_svc = MessageService()
+        credit_svc = CreditService(
+            balance_repo=credit_balance_repo,
+            transaction_repo=credit_tx_repo,
+            config=cfg,
+        )
+
+        # ── Services with cross-service deps ──────────────────────────────
+        user_svc = UserService(
+            user_repo=user_repo,
+            api_key_repo=api_key_repo,
+            waitlist_repo=waitlist_repo,
+            credit_service=credit_svc,
+            cache=users_cache,
+            config=cfg,
+        )
+
+        sandbox_svc = SandboxService(
+            sandbox_repo=sandbox_repo,
+            session_repo=session_repo,
+            config=cfg,
+        )
+
+        session_svc = SessionService(
+            session_repo=session_repo,
+            event_repo=event_repo,
+            run_task_service=run_task_svc,
+            file_store=storage_provider,
+            sandbox_repo=sandbox_repo,
+            cache=sessions_cache,
+            config=cfg,
+        )
+
+        workspace_explorer_svc = WorkspaceExplorer(
             sandbox_service=sandbox_svc,
+        )
+
+        event_svc = EventService(
+            event_repo=event_repo,
             session_service=session_svc,
         )
-        billing_customer_svc = get_billing_customer_service(billing_customer_repo)
-        billing_svc = get_billing_service(
-            stripe_config,
-            user_repo,
-            billing_customer_svc,
+
+        plan_svc = PlanService(
+            session_service=session_svc,
+            event_service=event_svc,
         )
-        project_svc = get_project_service(project_repo, session_repo)
-        secret_svc = get_secret_service(project_repo)
-        database_svc = get_database_service(project_repo)
-        sandbox_env_sync_svc = get_sandbox_env_sync_service(session_repo, sandbox_repo)
-        deployments_svc = get_deployments_service(project_repo, deployments_repo)
-        media_template_svc = get_media_template_service(media_template_repo)
+
+        session_fork_svc = SessionForkService(
+            session_repo=session_repo,
+            sandbox_repo=sandbox_repo,
+            config=cfg,
+        )
+
+        session_title_svc = SessionTitleService(
+            config=SessionTitleConfig(),
+        )
+
+        session_pin_svc = SessionPinService(
+            pin_repo=pin_repo,
+            session_repo=session_repo,
+            config=cfg,
+        )
+
+        session_wishlist_svc = SessionWishlistService(
+            wishlist_repo=wishlist_repo,
+            session_repo=session_repo,
+            config=cfg,
+        )
+
+        file_svc = FileService(
+            file_repo=file_repo,
+            session_repo=session_repo,
+            storage=storage_svc,
+            config=cfg,
+        )
+
+        llm_setting_svc = ModelSettingService(
+            repo=model_setting_repo,
+            session_repo=session_repo,
+        )
+
+        composio_cache_svc = ComposioCacheService(cache=composio_cache)
+        composio_svc = ComposioService(
+            repo=composio_repo,
+            config=cfg,
+            mcp_setting_service=mcp_setting_svc,
+            toolkit_service=ToolkitService(cache_service=composio_cache_svc),
+            auth_config_service=AuthConfigService(),
+            connected_account_service=ConnectedAccountService(),
+            mcp_server_service=MCPServerService(),
+            cache_service=composio_cache_svc,
+        )
+
+        project_svc = ProjectService(
+            project_repo=project_repo,
+            session_repo=session_repo,
+            config=cfg,
+        )
+
+        deployments_svc = DeploymentsService(
+            project_repo=project_repo,
+            deployments_repo=deployments_repo,
+            config=cfg,
+        )
+
+        media_template_svc = MediaTemplateService(
+            repo=media_template_repo,
+            media_storage=storage_provider,
+            config=cfg,
+            cache=media_cache,
+        )
+
+        # ── Storybook sub-services ───────────────────────────────────────
+        storybook_export_svc = StorybookExportService(storybook_service=storybook_svc)
+        storybook_edit_svc = StorybookEditService(
+            repo=storybook_repo,
+            version_service=storybook_version_svc,
+            credit_service=credit_svc,
+        )
+        storybook_voice_svc = StorybookVoiceService(
+            repo=storybook_repo,
+            storybook_service=storybook_svc,
+            config=cfg,
+            credit_service=credit_svc,
+        )
+        storybook_ai_edit_svc = StorybookAIEditService(
+            session_service=session_svc,
+            user_service=user_svc,
+            llm_setting_service=llm_setting_svc,
+            credit_service=credit_svc,
+            config=cfg,
+        )
+
+        # ── Subdomain service ────────────────────────────────────────────
+        subdomain_svc = SubdomainService(
+            subdomain_repo=subdomain_repo,
+            project_repo=project_repo,
+            deployments_repo=deployments_repo,
+            config=cfg,
+        )
+
+        # ── Slide services ──────────────────────────────────────────────
+        slide_svc = SlideService(
+            slide_repo=slide_repo,
+            session_repo=session_repo,
+            config=cfg,
+        )
+
+        slide_template_svc = SlideTemplateService(
+            template_repo=slide_template_repo,
+            config=cfg,
+        )
+
+        nano_banana_repo = NanoBananaRepository(
+            session_repo=session_repo,
+            slide_repo=slide_repo,
+        )
+        nb_config = cfg.nano_banana
+        nano_banana_llm_config = LLMConfig(
+            model=nb_config.model,
+            api_key=SecretStr(nb_config.api_key) if nb_config.api_key else None,
+            api_type=APITypes(nb_config.api_type),
+            temperature=nb_config.temperature,
+            base_url=nb_config.base_url,
+            vertex_project_id=nb_config.vertex_project_id,
+            vertex_region=nb_config.vertex_region,
+            thinking_tokens=nb_config.thinking_tokens,
+            config_type="system",
+        )
+        nano_banana_svc = NanoBananaService(
+            repo=nano_banana_repo,
+            llm_config=nano_banana_llm_config,
+        )
+
         # ── Design services ──────────────────────────────────────────────
-        slide_repo = get_slide_repository()
-        project_design_repo = get_project_design_repository(session_repo)
-        slide_design_repo = get_slide_design_repository(session_repo, slide_repo)
-
-        # ── LLM infrastructure & validation ──────────────────────────────────
-        llm_billing_svc = get_llm_billing_service(
-            usage_svc,
-            credit_svc,
-            credit_reservation_svc,
-            cfg,
-        )
-        llm_execution_svc = get_llm_execution_service(
-            llm_billing_svc,
-            llm_invocation_repo,
-        )
-        llm_config_resolver = get_llm_config_resolver(llm_setting_svc, cfg)
-        title_svc = get_session_title_service(llm_execution_svc)
-        session_validation_svc = get_session_validation_service(
-            session_svc, title_svc, balance_repo=credit_balance_repo
+        slide_design_svc = SlideDesignService(
+            repo=slide_design_repo,
+            sandbox_service=sandbox_svc,
+            config=cfg,
         )
 
-        project_design_svc = get_project_design_service(
-            project_design_repo,
-            sandbox_svc,
-            llm_setting_svc,
-            llm_billing_svc,
-            llm_execution_svc,
-        )
-        slide_design_svc = get_slide_design_service(
-            slide_design_repo,
-            sandbox_svc,
+        project_design_svc = ProjectDesignService(
+            repo=project_design_repo,
+            sandbox_service=sandbox_svc,
+            llm_setting_service=llm_setting_svc,
+            config=cfg,
         )
 
         return cls(
             config=cfg,
-            credit_service=credit_svc,
-            credit_reservation_service=credit_reservation_svc,
-            usage_service=usage_svc,
-            llm_billing_service=llm_billing_svc,
-            llm_execution_service=llm_execution_svc,
-            llm_config_resolver=llm_config_resolver,
+            storage_service=storage_svc,
+            user_service=user_svc,
+            billing_service=billing_svc,
             session_service=session_svc,
             session_fork_service=session_fork_svc,
-            session_validation_service=session_validation_svc,
-            event_service=event_svc,
-            llm_setting_service=llm_setting_svc,
+            session_title_service=session_title_svc,
+            session_pin_service=session_pin_svc,
+            session_wishlist_service=session_wishlist_svc,
             file_service=file_svc,
-            agent_run_service=agent_run_svc,
-            agent_service=agent_svc,
-            execution_service=execution_svc,
-            plan_service=plan_svc,
-            sandbox_service=sandbox_svc,
-            workspace_explorer_service=workspace_explorer_svc,
+            run_task_service=run_task_svc,
+            llm_setting_service=llm_setting_svc,
+            mcp_setting_service=mcp_setting_svc,
+            skill_service=skill_svc,
             project_service=project_svc,
-            secret_service=secret_svc,
-            database_service=database_svc,
-            sandbox_env_sync_service=sandbox_env_sync_svc,
             deployments_service=deployments_svc,
             deployment_orchestration_service=deployment_orch_svc,
-            billing_service=billing_svc,
-            mcp_setting_service=mcp_setting_svc,
-            user_service=user_svc,
+            subdomain_service=subdomain_svc,
             connector_service=connector_svc,
             composio_service=composio_svc,
             media_template_service=media_template_svc,
-            skill_service=skill_svc,
             storybook_service=storybook_svc,
-            project_design_service=project_design_svc,
+            storybook_edit_service=storybook_edit_svc,
+            storybook_export_service=storybook_export_svc,
+            storybook_version_service=storybook_version_svc,
+            storybook_voice_service=storybook_voice_svc,
+            storybook_ai_edit_service=storybook_ai_edit_svc,
+            slide_service=slide_svc,
+            slide_template_service=slide_template_svc,
+            nano_banana_service=nano_banana_svc,
             slide_design_service=slide_design_svc,
+            project_design_service=project_design_svc,
+            message_service=message_svc,
+            credit_service=credit_svc,
+            sandbox_service=sandbox_svc,
+            plan_service=plan_svc,
+            event_service=event_svc,
+            workspace_explorer_service=workspace_explorer_svc,
+            event_repo=event_repo,
         )
+
+
+_app_container: ApplicationContainer | None = None
+
+
+def get_app_container() -> ApplicationContainer:
+    """Get the global ServiceContainer singleton.
+
+    Raises ``RuntimeError`` if called before ``set_app_container()``.
+    """
+    if _app_container is None:
+        raise RuntimeError(
+            "ServiceContainer not initialized. "
+            "Call set_app_container() during app lifespan startup."
+        )
+    return _app_container
+
+
+def set_app_container(container: ApplicationContainer | None) -> None:
+    """Set (or clear) the global ServiceContainer singleton."""
+    global _app_container
+    _app_container = container

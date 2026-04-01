@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 # Constants
-DEFAULT_SANDBOX_TIMEOUT_SECONDS = 7200  # 2 hours
+_DEFAULT_SANDBOX_TIMEOUT_SECONDS = 7200  # 2 hours
 
 # Type aliases
 SandboxProvider = Literal["e2b", "docker", "local"]
@@ -45,7 +45,7 @@ class SandboxSettings(BaseSettings):
     )
 
     timeout_seconds: int = Field(
-        default=DEFAULT_SANDBOX_TIMEOUT_SECONDS,
+        default=_DEFAULT_SANDBOX_TIMEOUT_SECONDS,
         description="Sandbox session timeout in seconds",
         gt=0,
     )
@@ -59,6 +59,17 @@ class SandboxSettings(BaseSettings):
     e2b_template_id: str = Field(
         default="base",
         description="E2B template ID for custom sandbox environments",
+    )
+
+    e2b_domain: Optional[str] = Field(
+        default=None,
+        description="E2B custom domain (None uses E2B default)",
+    )
+
+    extended_timeout_seconds: int = Field(
+        default=14400,
+        description="Extended timeout for reconnecting paused sandboxes (4 hours)",
+        gt=0,
     )
 
     auto_pause: bool = Field(

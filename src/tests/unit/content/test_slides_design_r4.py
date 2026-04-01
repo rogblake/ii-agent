@@ -1,4 +1,5 @@
 """Unit tests for SlideDesignService."""
+
 from __future__ import annotations
 
 import pytest
@@ -66,9 +67,7 @@ class TestGetSessionForRequest:
         service = _make_service(repo=repo)
 
         with pytest.raises(DesignSessionNotFoundError):
-            await service._get_session_for_request(
-                AsyncMock(), session_id="s1", user_id="u1"
-            )
+            await service._get_session_for_request(AsyncMock(), session_id="s1", user_id="u1")
 
     @pytest.mark.asyncio
     async def test_raises_when_user_id_mismatch(self):
@@ -78,9 +77,7 @@ class TestGetSessionForRequest:
         service = _make_service(repo=repo)
 
         with pytest.raises(DesignSessionAccessDeniedError):
-            await service._get_session_for_request(
-                AsyncMock(), session_id="s1", user_id="u1"
-            )
+            await service._get_session_for_request(AsyncMock(), session_id="s1", user_id="u1")
 
     @pytest.mark.asyncio
     async def test_returns_session_when_user_matches(self):
@@ -89,9 +86,7 @@ class TestGetSessionForRequest:
         repo.get_session = AsyncMock(return_value=session)
         service = _make_service(repo=repo)
 
-        result = await service._get_session_for_request(
-            AsyncMock(), session_id="s1", user_id="u1"
-        )
+        result = await service._get_session_for_request(AsyncMock(), session_id="s1", user_id="u1")
         assert result is session
 
 
@@ -157,12 +152,15 @@ class TestGetSlideProxyHtml:
         )
         service = _make_service(repo=repo)
 
-        with patch(
-            "ii_agent.content.slides.design.service.inject_runtime_script_only",
-            side_effect=lambda html: html + "<!-- injected -->",
-        ), patch(
-            "ii_agent.content.slides.design.service.sanitize_legacy_editable_artifacts",
-            side_effect=lambda html: html,
+        with (
+            patch(
+                "ii_agent.content.slides.design.service.inject_runtime_script_only",
+                side_effect=lambda html: html + "<!-- injected -->",
+            ),
+            patch(
+                "ii_agent.content.slides.design.service.sanitize_legacy_editable_artifacts",
+                side_effect=lambda html: html,
+            ),
         ):
             result = await service.get_slide_proxy_html(
                 AsyncMock(),
@@ -246,9 +244,7 @@ class TestApplySlideSyncBatch:
     async def test_unknown_change_type_fails(self):
         repo = MagicMock()
         repo.get_session_for_user = AsyncMock(return_value=SimpleNamespace())
-        repo.get_slide = AsyncMock(
-            return_value=_make_slide(1, content="<div>content</div>")
-        )
+        repo.get_slide = AsyncMock(return_value=_make_slide(1, content="<div>content</div>"))
         repo.update_slide_html = AsyncMock()
         service = _make_service(repo=repo)
 
@@ -264,9 +260,7 @@ class TestApplySlideSyncBatch:
             slide_number=1,
             changes=[change],
         )
-        result = await service.apply_slide_sync_batch(
-            AsyncMock(), request=request, user_id="u1"
-        )
+        result = await service.apply_slide_sync_batch(AsyncMock(), request=request, user_id="u1")
         assert result.failed == 1
         assert result.success is False
 
@@ -274,9 +268,7 @@ class TestApplySlideSyncBatch:
     async def test_text_change_processed(self):
         repo = MagicMock()
         repo.get_session_for_user = AsyncMock(return_value=SimpleNamespace())
-        repo.get_slide = AsyncMock(
-            return_value=_make_slide(1, content="<div>content</div>")
-        )
+        repo.get_slide = AsyncMock(return_value=_make_slide(1, content="<div>content</div>"))
         repo.update_slide_html = AsyncMock()
         service = _make_service(repo=repo)
 
@@ -312,9 +304,7 @@ class TestApplySlideDeckSyncBatch:
     @pytest.mark.asyncio
     async def test_returns_success_for_empty_changes(self):
         service = _make_service()
-        request = SlideDeckSyncBatchRequest(
-            session_id="s1", presentation_name="pres", changes=[]
-        )
+        request = SlideDeckSyncBatchRequest(session_id="s1", presentation_name="pres", changes=[])
         result = await service.apply_slide_deck_sync_batch(
             AsyncMock(), request=request, user_id="u1"
         )
@@ -338,9 +328,7 @@ class TestApplySlideDeckSyncBatch:
             session_id="s1", presentation_name="pres", changes=[change]
         )
         with pytest.raises(DesignSessionNotFoundError):
-            await service.apply_slide_deck_sync_batch(
-                AsyncMock(), request=request, user_id="u1"
-            )
+            await service.apply_slide_deck_sync_batch(AsyncMock(), request=request, user_id="u1")
 
     @pytest.mark.asyncio
     async def test_invalid_slide_number_increments_failed(self):
@@ -601,7 +589,12 @@ class TestParsePersistedDesignChanges:
         assert result[1].designId == "el2"
 
     def test_skips_non_dict_items(self):
-        raw = ["string", 42, None, {"designId": "el1", "type": "style", "property": "c", "value": {}, "timestamp": 100}]
+        raw = [
+            "string",
+            42,
+            None,
+            {"designId": "el1", "type": "style", "property": "c", "value": {}, "timestamp": 100},
+        ]
         result = SlideDesignService._parse_persisted_design_changes(raw)
         assert len(result) == 1
 

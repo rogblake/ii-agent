@@ -7,14 +7,13 @@ pytestmark = pytest.mark.unit
 
 
 EXPECTED_ROUTES = {
-    ("POST", "/chat/generate-upload-url"),
-    ("POST", "/chat/upload-complete"),
-    ("GET", "/chat/files/{file_id}"),
-    ("GET", "/public/chat/{session_id}/files/{file_id}"),
-    ("POST", "/chat/files/download-urls"),
-    ("GET", "/chat/user-media-library"),
-    ("POST", "/avatar"),
-    ("GET", "/avatar"),
+    ("POST", "/assets/upload"),
+    ("POST", "/assets/{asset_id}/complete"),
+    ("GET", "/assets/{asset_id}/download"),
+    ("POST", "/assets/download-urls"),
+    ("GET", "/assets/media-library"),
+    ("POST", "/assets/avatar"),
+    ("GET", "/assets/avatar"),
 }
 
 
@@ -25,6 +24,5 @@ def test_files_router_routes_registered():
 def test_files_router_auth_contract():
     assert_auth_contract(
         router,
-        protected=EXPECTED_ROUTES - {("GET", "/public/chat/{session_id}/files/{file_id}")},
-        public={("GET", "/public/chat/{session_id}/files/{file_id}")},
+        protected=EXPECTED_ROUTES,
     )

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import io
 import pytest
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.content.storybook.html_generator import (
     _calculate_dimensions,
     _escape_html,
@@ -32,6 +32,7 @@ from ii_agent.content.storybook.voice_service import (
 from ii_agent.content.storybook.schemas import (
     StorybookDetail,
     StorybookPageInfo,
+    StorybookVoiceOverResponse,
 )
 
 pytestmark = pytest.mark.unit
@@ -513,8 +514,7 @@ class TestStorybookVoiceServiceGetGenerationStatus:
             repo=MagicMock(),
             storybook_service=MagicMock(),
             config=SimpleNamespace(),
-            usage_service=MagicMock(),
-            reservation_service=MagicMock(),
+            credit_service=MagicMock(),
         )
 
     def test_returns_status_from_style_json(self):
@@ -546,28 +546,33 @@ class TestStorybookVoiceServiceGetGenerationStatus:
 
 
 class TestStorybookVoiceServiceGenerateVoiceoverAndDeductCredits:
-    def _make_service(self, *, repo=None, usage_service=None):
-        if usage_service is None:
-            usage_service = MagicMock()
-        usage_service.require_billing_ok = AsyncMock()
+    def _make_service(self, *, repo=None, credit_service=None):
+        if credit_service is None:
+            credit_svc = MagicMock()
+            credit_svc.has_sufficient_credits = AsyncMock(return_value=True)
+        else:
+            credit_svc = credit_service
         return StorybookVoiceService(
             repo=repo or MagicMock(),
             storybook_service=MagicMock(),
             config=SimpleNamespace(),
-            usage_service=usage_service,
-            reservation_service=MagicMock(),
+            credit_service=credit_svc,
         )
 
     @pytest.mark.asyncio
     async def test_returns_error_when_storybook_not_found(self):
         service = self._make_service()
-        service._repo.get_by_id = AsyncMock(return_value=None)
-        result = await service.generate_voiceover_and_deduct_credits(
-            db=AsyncMock(),
-            storybook_id="missing",
-            user_id="user-1",
-            session_id="sess-1",
-        )
+        with patch.object(
+            service,
+            "generate_voiceover",
+            new=AsyncMock(return_value=(None, False, 0.0)),
+        ):
+            result = await service.generate_voiceover_and_deduct_credits(
+                db=AsyncMock(),
+                storybook_id="missing",
+                user_id="user-1",
+                session_id="sess-1",
+            )
         assert not result.success
         assert "unavailable" in result.error.lower()
 
@@ -575,21 +580,10 @@ class TestStorybookVoiceServiceGenerateVoiceoverAndDeductCredits:
     async def test_returns_error_when_no_audio_generated(self):
         service = self._make_service()
         sb = _make_storybook()
-        service._repo.get_by_id = AsyncMock(return_value=sb)
-
-        async def _run_sync_side_effect(*, execute_fn, **kwargs):
-            return await execute_fn()
-
-        with (
-            patch.object(
-                service,
-                "generate_voiceover",
-                new=AsyncMock(return_value=(sb, False, 0.0)),
-            ),
-            patch(
-                "ii_agent.content.storybook.voice_service.run_storybook_sync_operation",
-                AsyncMock(side_effect=_run_sync_side_effect),
-            ),
+        with patch.object(
+            service,
+            "generate_voiceover",
+            new=AsyncMock(return_value=(sb, False, 0.0)),
         ):
             result = await service.generate_voiceover_and_deduct_credits(
                 db=AsyncMock(),
@@ -604,21 +598,10 @@ class TestStorybookVoiceServiceGenerateVoiceoverAndDeductCredits:
     async def test_returns_success_when_audio_generated_no_cost(self):
         service = self._make_service()
         sb = _make_storybook()
-        service._repo.get_by_id = AsyncMock(return_value=sb)
-
-        async def _run_sync_side_effect(*, execute_fn, **kwargs):
-            return await execute_fn()
-
-        with (
-            patch.object(
-                service,
-                "generate_voiceover",
-                new=AsyncMock(return_value=(sb, True, 0.0)),
-            ),
-            patch(
-                "ii_agent.content.storybook.voice_service.run_storybook_sync_operation",
-                AsyncMock(side_effect=_run_sync_side_effect),
-            ),
+        with patch.object(
+            service,
+            "generate_voiceover",
+            new=AsyncMock(return_value=(sb, True, 0.0)),
         ):
             result = await service.generate_voiceover_and_deduct_credits(
                 db=AsyncMock(),
@@ -631,12 +614,10 @@ class TestStorybookVoiceServiceGenerateVoiceoverAndDeductCredits:
 
     @pytest.mark.asyncio
     async def test_deducts_credits_when_cost_present(self):
-        mock_usage_service = MagicMock()
-        mock_usage_service.require_billing_ok = AsyncMock()
-        service = self._make_service(usage_service=mock_usage_service)
-        sb = _make_storybook(pages=[_make_page(page_number=1)])
-        service._repo.get_by_id = AsyncMock(return_value=sb)
-        run_storybook_sync_operation = AsyncMock(return_value=(sb, True))
+        credit_svc = MagicMock()
+        credit_svc.has_sufficient_credits = AsyncMock(return_value=True)
+        service = self._make_service(credit_service=credit_svc)
+        sb = _make_storybook()
         with (
             patch.object(
                 service,
@@ -644,13 +625,9 @@ class TestStorybookVoiceServiceGenerateVoiceoverAndDeductCredits:
                 new=AsyncMock(return_value=(sb, True, 0.10)),
             ),
             patch(
-                "ii_agent.content.storybook.voice_service.get_or_generate_request_id",
-                return_value="req-voice-1",
-            ),
-            patch(
-                "ii_agent.content.storybook.voice_service.run_storybook_sync_operation",
-                run_storybook_sync_operation,
-            ),
+                "ii_agent.content.storybook.voice_service.check_and_deduct_storybook_credits",
+                new=AsyncMock(),
+            ) as mock_deduct,
         ):
             db = AsyncMock()
             result = await service.generate_voiceover_and_deduct_credits(
@@ -659,56 +636,24 @@ class TestStorybookVoiceServiceGenerateVoiceoverAndDeductCredits:
                 user_id="user-1",
                 session_id="sess-1",
             )
-        assert run_storybook_sync_operation.await_args.kwargs["request"].idempotency_key == (
-            "storybook_voice:chat:storybook:session:sess-001:voice:sb-001:req-voice-1"
-        )
+        mock_deduct.assert_called_once()
         assert result.success
 
     @pytest.mark.asyncio
     async def test_insufficient_credits_returns_error(self):
-        mock_usage_service = MagicMock()
-        mock_usage_service.require_billing_ok = AsyncMock()
-        service = self._make_service(usage_service=mock_usage_service)
-        sb = _make_storybook(pages=[_make_page(page_number=1)])
-        service._repo.get_by_id = AsyncMock(return_value=sb)
-        with patch(
-            "ii_agent.content.storybook.voice_service.run_storybook_sync_operation",
-            AsyncMock(side_effect=InsufficientCreditsError()),
-        ):
-            result = await service.generate_voiceover_and_deduct_credits(
-                db=AsyncMock(),
-                storybook_id="sb-001",
-                user_id="user-1",
-                session_id="sess-1",
-            )
+        credit_svc = MagicMock()
+        credit_svc.has_sufficient_credits = AsyncMock(return_value=False)
+        service = self._make_service(credit_service=credit_svc)
+        sb = _make_storybook()
+        db = AsyncMock()
+        result = await service.generate_voiceover_and_deduct_credits(
+            db=db,
+            storybook_id="sb-001",
+            user_id="user-1",
+            session_id="sess-1",
+        )
         assert not result.success
         assert "Insufficient" in result.error
-
-    @pytest.mark.asyncio
-    async def test_explicit_idempotency_key_is_forwarded(self):
-        mock_usage_service = MagicMock()
-        mock_usage_service.require_billing_ok = AsyncMock()
-        service = self._make_service(usage_service=mock_usage_service)
-        sb = _make_storybook(pages=[_make_page(page_number=1)])
-        service._repo.get_by_id = AsyncMock(return_value=sb)
-        run_storybook_sync_operation = AsyncMock(return_value=(sb, True))
-        with patch(
-            "ii_agent.content.storybook.voice_service.run_storybook_sync_operation",
-            run_storybook_sync_operation,
-        ):
-            result = await service.generate_voiceover_and_deduct_credits(
-                db=AsyncMock(),
-                storybook_id="sb-001",
-                user_id="user-1",
-                session_id="sess-1",
-                idempotency_key="manual-key",
-            )
-
-        assert result.success
-        assert (
-            run_storybook_sync_operation.await_args.kwargs["request"].idempotency_key
-            == "manual-key"
-        )
 
 
 # ============================================================================

@@ -1,19 +1,24 @@
 """Repository layer for subdomains domain - data access only."""
 
-from datetime import datetime, timezone
 from typing import Optional
 import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.core.db.base import BaseRepository
 from ii_agent.projects.subdomains.models import ProjectCustomDomain
 
 
-class SubdomainRepository:
-    """Data access layer for ProjectCustomDomain model."""
+class SubdomainRepository(BaseRepository[ProjectCustomDomain]):
+    """Data access layer for ProjectCustomDomain model.
 
-    async def get_by_project_id(self, db: AsyncSession, project_id: str) -> Optional[ProjectCustomDomain]:
+    Inherits from BaseRepository: get_by_id, save, update.
+    """
+
+    model = ProjectCustomDomain
+
+    async def get_by_project_id(self, db: AsyncSession, project_id: uuid.UUID) -> Optional[ProjectCustomDomain]:
         """Get a custom domain by project ID."""
         result = await db.execute(
             select(ProjectCustomDomain).where(
@@ -39,41 +44,6 @@ class SubdomainRepository:
             )
         )
         return result.scalar_one_or_none()
-
-    async def create(
-        self,
-        db: AsyncSession,
-        *,
-        project_id: str,
-        user_id: str,
-        subdomain: str,
-        full_domain: str,
-        deployment_id: Optional[str] = None,
-        cloudflare_record_id: Optional[str] = None,
-    ) -> ProjectCustomDomain:
-        """Create a new custom domain record."""
-        custom_domain = ProjectCustomDomain(
-            id=str(uuid.uuid4()),
-            project_id=project_id,
-            subdomain=subdomain,
-            full_domain=full_domain,
-            deployment_id=deployment_id,
-            dns_status="active",
-            ssl_status="active",
-            cloudflare_record_id=cloudflare_record_id,
-            claimed_at=datetime.now(timezone.utc),
-            claimed_by_user_id=user_id,
-        )
-        db.add(custom_domain)
-        await db.flush()
-        await db.refresh(custom_domain)
-        return custom_domain
-
-    async def update(self, db: AsyncSession, domain: ProjectCustomDomain) -> ProjectCustomDomain:
-        """Flush and refresh an updated domain record."""
-        await db.flush()
-        await db.refresh(domain)
-        return domain
 
     async def delete(self, db: AsyncSession, domain: ProjectCustomDomain) -> None:
         """Delete a custom domain record."""

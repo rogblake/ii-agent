@@ -269,9 +269,7 @@ class TestMiniToolsModeStrategy:
             "ii_agent.chat.media.modes.mini_tools_mode.MediaTemplateService"
         ) as mock_svc_cls:
             mock_svc = MagicMock()
-            mock_svc.get_media_template_by_id = AsyncMock(
-                side_effect=Exception("DB error")
-            )
+            mock_svc.get_media_template_by_id = AsyncMock(side_effect=Exception("DB error"))
             mock_svc_cls.return_value = mock_svc
 
             # Should not raise even on exception
@@ -426,13 +424,9 @@ class TestStorybookModeStrategy:
             genre="fun_playful",
         )
 
-        with patch(
-            "ii_agent.chat.media.modes.storybook_mode.MediaTemplateService"
-        ) as mock_svc_cls:
+        with patch("ii_agent.chat.media.modes.storybook_mode.MediaTemplateService") as mock_svc_cls:
             mock_svc = MagicMock()
-            mock_svc.get_media_template_by_name = AsyncMock(
-                side_effect=Exception("DB error")
-            )
+            mock_svc.get_media_template_by_name = AsyncMock(side_effect=Exception("DB error"))
             mock_svc_cls.return_value = mock_svc
 
             # Should not raise
@@ -569,12 +563,11 @@ class TestTemplateReferenceModeStrategy:
         with patch(
             "ii_agent.chat.media.modes.template_reference_mode.MediaTemplateService"
         ) as mock_svc_cls:
+
             async def _mock_get(*args, **kwargs):
                 nonlocal call_count
                 call_count += 1
-                return SimpleNamespace(
-                    name="T", prompt=None, preview="http://cached.url"
-                )
+                return SimpleNamespace(name="T", prompt=None, preview="http://cached.url")
 
             mock_svc = MagicMock()
             mock_svc.get_media_template_by_id = _mock_get
@@ -604,9 +597,7 @@ class TestTemplateReferenceModeStrategy:
             "ii_agent.chat.media.modes.template_reference_mode.MediaTemplateService"
         ) as mock_svc_cls:
             mock_svc = MagicMock()
-            mock_svc.get_media_template_by_id = AsyncMock(
-                side_effect=Exception("Service failed")
-            )
+            mock_svc.get_media_template_by_id = AsyncMock(side_effect=Exception("Service failed"))
             mock_svc_cls.return_value = mock_svc
 
             result = await mode.build_prompt_context(

@@ -83,7 +83,7 @@ export function useNanoBananaDetection({
 
             try {
                 const response = await axiosInstance.post(
-                    '/slides/nano-banana/detect',
+                    '/v1/slides/nano-banana/detect',
                     {
                         session_id: sessionId,
                         presentation_name: presentationName,

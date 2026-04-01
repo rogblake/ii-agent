@@ -20,12 +20,14 @@ def _get_auth_router_module():
     """Get the ii_agent.auth.router module object (not the router APIRouter instance)."""
     # Ensure the module is loaded
     import ii_agent.auth  # noqa - loads parent package
+
     return sys.modules["ii_agent.auth.router"]
 
 
 # ---------------------------------------------------------------------------
 # Helper functions from auth/router.py
 # ---------------------------------------------------------------------------
+
 
 class TestMakeStateR4:
     def test_make_state_returns_string(self):
@@ -127,12 +129,14 @@ class TestSanitizeReturnToR4:
     def test_raises_for_relative_url(self):
         mod = _get_auth_router_module()
         from ii_agent.core.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             mod._sanitize_return_to("/relative/path")
 
     def test_raises_for_javascript_scheme(self):
         mod = _get_auth_router_module()
         from ii_agent.core.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             mod._sanitize_return_to("javascript:alert(1)")
 
@@ -180,12 +184,15 @@ class TestExchangeCodeForTokenR4:
     async def test_raises_bad_gateway_on_non_200(self):
         mod = _get_auth_router_module()
         from ii_agent.core.exceptions import BadGatewayError
+
         mock_response = MagicMock()
         mock_response.status_code = 400
         mock_response.text = "Bad Request"
 
-        with patch.object(mod, "get_settings") as mock_settings, \
-             patch("httpx.AsyncClient") as mock_client_class:
+        with (
+            patch.object(mod, "get_settings") as mock_settings,
+            patch("httpx.AsyncClient") as mock_client_class,
+        ):
             mock_settings.return_value.oauth.ii_redirect_uri = "https://app.com/callback"
             mock_settings.return_value.oauth.ii_client_id = "client-id"
             mock_settings.return_value.ii_token_url = "https://auth.example.com/token"
@@ -205,8 +212,10 @@ class TestExchangeCodeForTokenR4:
         mock_response.status_code = 200
         mock_response.json.return_value = {"access_token": "at", "id_token": "it"}
 
-        with patch.object(mod, "get_settings") as mock_settings, \
-             patch("httpx.AsyncClient") as mock_client_class:
+        with (
+            patch.object(mod, "get_settings") as mock_settings,
+            patch("httpx.AsyncClient") as mock_client_class,
+        ):
             mock_settings.return_value.oauth.ii_redirect_uri = "https://app.com/callback"
             mock_settings.return_value.oauth.ii_client_id = "client-id"
             mock_settings.return_value.ii_token_url = "https://auth.example.com/token"
@@ -241,12 +250,15 @@ class TestFetchUserinfoIfEnabledR4:
     async def test_raises_bad_gateway_when_userinfo_fails(self):
         mod = _get_auth_router_module()
         from ii_agent.core.exceptions import BadGatewayError
+
         mock_resp = MagicMock()
         mock_resp.status_code = 401
         mock_resp.text = "Unauthorized"
 
-        with patch.object(mod, "get_settings") as mock_settings, \
-             patch("httpx.AsyncClient") as mock_client_class:
+        with (
+            patch.object(mod, "get_settings") as mock_settings,
+            patch("httpx.AsyncClient") as mock_client_class,
+        ):
             mock_settings.return_value.oauth.ii_use_userinfo = True
             mock_settings.return_value.oauth.ii_userinfo_url = "https://auth.example.com/userinfo"
 
@@ -310,9 +322,7 @@ class TestReaderUserMeR4:
             subscription_current_period_end=datetime(2026, 2, 1, tzinfo=timezone.utc),
         )
         billing_customer_service = MagicMock()
-        billing_customer_service.get_effective_profile = AsyncMock(
-            return_value=billing_profile
-        )
+        billing_customer_service.get_effective_profile = AsyncMock(return_value=billing_profile)
 
         result = await mod.reader_user_me(
             db=AsyncMock(),
@@ -329,9 +339,11 @@ class TestReaderUserMeR4:
 # OIDC verification tests
 # ---------------------------------------------------------------------------
 
+
 def _get_oidc_verify_module():
     """Get the ii_agent.auth.oidc_verify module."""
     import ii_agent.auth  # noqa
+
     return sys.modules.get("ii_agent.auth.oidc_verify")
 
 
@@ -339,6 +351,7 @@ class TestOidcVerifyR4:
     def test_fetch_discovery_raises_on_non_200(self):
         from ii_agent.auth.oidc_verify import fetch_discovery
         from ii_agent.auth.exceptions import OIDCConfigError
+
         oidc_mod = sys.modules["ii_agent.auth.oidc_verify"]
         mock_response = MagicMock()
         mock_response.status_code = 500
@@ -356,6 +369,7 @@ class TestOidcVerifyR4:
 
     def test_fetch_discovery_returns_json_on_200(self):
         from ii_agent.auth.oidc_verify import fetch_discovery
+
         oidc_mod = sys.modules["ii_agent.auth.oidc_verify"]
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -376,18 +390,21 @@ class TestOidcVerifyR4:
 
     def test_verify_at_hash_no_at_hash_returns_none(self):
         from ii_agent.auth.oidc_verify import verify_at_hash_if_present
+
         claims = {"sub": "user-1"}
         # Should not raise
         verify_at_hash_if_present(claims, "access-token")
 
     def test_verify_at_hash_no_access_token_returns_none(self):
         from ii_agent.auth.oidc_verify import verify_at_hash_if_present
+
         claims = {"at_hash": "abc123"}
         # Should not raise
         verify_at_hash_if_present(claims, None)
 
     def test_verify_at_hash_matching_hash_does_not_raise(self):
         from ii_agent.auth.oidc_verify import verify_at_hash_if_present
+
         access_token = "test-access-token"
         digest = hashlib.sha256(access_token.encode("ascii")).digest()
         left_half = digest[: len(digest) // 2]
@@ -398,6 +415,7 @@ class TestOidcVerifyR4:
 
     def test_verify_at_hash_mismatched_raises(self):
         from ii_agent.auth.oidc_verify import verify_at_hash_if_present
+
         claims = {"at_hash": "wrong-hash-value"}
         with pytest.raises(RuntimeError, match="at_hash mismatch"):
             verify_at_hash_if_present(claims, "access-token", alg="RS256")
@@ -405,6 +423,7 @@ class TestOidcVerifyR4:
     def test_verify_id_token_missing_jwks_uri_raises(self):
         from ii_agent.auth.oidc_verify import verify_id_token_pyjwt
         from ii_agent.auth.exceptions import OIDCConfigError
+
         oidc_mod = sys.modules["ii_agent.auth.oidc_verify"]
 
         with patch.object(oidc_mod, "fetch_discovery") as mock_disc:
@@ -418,10 +437,13 @@ class TestOidcVerifyR4:
 
     def test_verify_id_token_invalid_jwt_raises_runtime(self):
         from ii_agent.auth.oidc_verify import verify_id_token_pyjwt
+
         oidc_mod = sys.modules["ii_agent.auth.oidc_verify"]
 
-        with patch.object(oidc_mod, "fetch_discovery") as mock_disc, \
-             patch.object(oidc_mod, "_jwks_client") as mock_jwks_client:
+        with (
+            patch.object(oidc_mod, "fetch_discovery") as mock_disc,
+            patch.object(oidc_mod, "_jwks_client") as mock_jwks_client,
+        ):
             mock_disc.return_value = {"jwks_uri": "https://auth.example.com/jwks"}
             mock_client_inst = MagicMock()
             mock_client_inst.get_signing_key_from_jwt.side_effect = Exception("bad token")
@@ -436,11 +458,14 @@ class TestOidcVerifyR4:
 
     def test_verify_id_token_nonce_mismatch_raises(self):
         from ii_agent.auth.oidc_verify import verify_id_token_pyjwt
+
         oidc_mod = sys.modules["ii_agent.auth.oidc_verify"]
 
-        with patch.object(oidc_mod, "fetch_discovery") as mock_disc, \
-             patch.object(oidc_mod, "_jwks_client") as mock_jwks_client, \
-             patch.object(oidc_mod, "jwt") as mock_jwt:
+        with (
+            patch.object(oidc_mod, "fetch_discovery") as mock_disc,
+            patch.object(oidc_mod, "_jwks_client") as mock_jwks_client,
+            patch.object(oidc_mod, "jwt") as mock_jwt,
+        ):
             mock_disc.return_value = {
                 "jwks_uri": "https://auth.example.com/jwks",
                 "id_token_signing_alg_values_supported": ["RS256"],

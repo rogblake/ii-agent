@@ -22,7 +22,7 @@ from ..utils import PromptBuilder
 from .base import BaseMediaHandler
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 
 @register_handler("poster")
@@ -48,17 +48,19 @@ class PosterMediaHandler(BaseMediaHandler):
         session_id: str,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
-        container: ServiceContainer,
+        container: ApplicationContainer,
     ) -> list[ImageGenerationTool]:
-        return [ImageGenerationTool(
-            session_id=session_id,
-            media_preferences=media_preferences,
-            image_aspect_ratio=media_preferences.aspect_ratio,
-            image_resolution=media_preferences.resolution,
-            references=None,
-            mini_tools_mode=False,
-            container=container,
-        )]
+        return [
+            ImageGenerationTool(
+                session_id=session_id,
+                media_preferences=media_preferences,
+                image_aspect_ratio=media_preferences.aspect_ratio,
+                image_resolution=media_preferences.resolution,
+                references=None,
+                mini_tools_mode=False,
+                container=container,
+            )
+        ]
 
     async def build_llm_context(
         self,
@@ -80,9 +82,7 @@ class PosterMediaHandler(BaseMediaHandler):
             return []
 
         try:
-            async with httpx.AsyncClient(
-                follow_redirects=True, timeout=30.0
-            ) as client:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
                 response = await client.get(template_url)
                 response.raise_for_status()
                 file_bytes = response.content
@@ -91,10 +91,7 @@ class PosterMediaHandler(BaseMediaHandler):
             return []
 
         if not mime_type:
-            mime_type = (
-                mimetypes.guess_type(template_url)[0]
-                or "application/octet-stream"
-            )
+            mime_type = mimetypes.guess_type(template_url)[0] or "application/octet-stream"
 
         return [
             TextContent(
@@ -134,7 +131,7 @@ class PosterMediaHandler(BaseMediaHandler):
         poster_prompt_guidance = (
             "\n\n[Poster prompt guidance: Your prompt to generate_image MUST include all of the following "
             "poster requirements directly in the prompt text:\n"
-            "- Start with an explicit poster instruction (e.g., \"Design a bold poster for ...\")\n"
+            '- Start with an explicit poster instruction (e.g., "Design a bold poster for ...")\n'
             "- Single clear concept; one focal subject or typography-driven hero\n"
             "- Always include a main title; if the user does not provide one, generate a concise title in the user's language\n"
             "- Include a subtitle/tagline and key details only if provided (date, time, location, CTA); do NOT invent specifics\n"

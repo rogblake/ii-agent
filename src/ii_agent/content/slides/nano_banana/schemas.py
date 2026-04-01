@@ -2,6 +2,7 @@
 
 from enum import Enum
 from typing import Dict, List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -68,7 +69,7 @@ class DetectedComponent(BaseModel):
 class DetectRequest(BaseModel):
     """Request to detect components in a slide image."""
 
-    session_id: str
+    session_id: UUID
     presentation_name: str
     slide_number: int = Field(..., ge=1)
     image_url: str
@@ -130,7 +131,7 @@ class Instruction(BaseModel):
 class RegenerateRequest(BaseModel):
     """Request to regenerate slide with instructions."""
 
-    session_id: str
+    session_id: UUID
     presentation_name: str
     slide_number: int = Field(..., ge=1)
     current_image_url: str
@@ -143,7 +144,7 @@ class RegenerateResponse(BaseModel):
 
     success: bool
     new_image_url: Optional[str] = None
-    new_version_id: Optional[str] = None
+    new_version_id: Optional[UUID] = None
     version_number: Optional[int] = None
     error: Optional[str] = None
 
@@ -154,7 +155,7 @@ class RegenerateResponse(BaseModel):
 class RemoveBackgroundRequest(BaseModel):
     """Request to remove background from slide."""
 
-    session_id: str
+    session_id: UUID
     presentation_name: str
     slide_number: int = Field(..., ge=1)
     image_url: str
@@ -165,7 +166,7 @@ class RemoveBackgroundResponse(BaseModel):
 
     success: bool
     new_image_url: Optional[str] = None
-    new_version_id: Optional[str] = None
+    new_version_id: Optional[UUID] = None
     error: Optional[str] = None
 
 
@@ -175,7 +176,7 @@ class RemoveBackgroundResponse(BaseModel):
 class SlideVersionInfo(BaseModel):
     """Information about a slide version."""
 
-    id: str
+    id: UUID
     version: int
     image_url: str
     thumbnail_url: Optional[str] = None
@@ -188,22 +189,22 @@ class GetVersionsResponse(BaseModel):
     """Response with version history."""
 
     versions: List[SlideVersionInfo]
-    current_version_id: Optional[str] = None
+    current_version_id: Optional[UUID] = None
 
 
 class RevertRequest(BaseModel):
     """Request to revert to a previous version."""
 
-    session_id: str
+    session_id: UUID
     presentation_name: str
     slide_number: int = Field(..., ge=1)
-    target_version_id: str
+    target_version_id: UUID
 
 
 class RevertResponse(BaseModel):
     """Response from revert operation."""
 
     success: bool
-    new_version_id: Optional[str] = None  # Revert creates a new version
+    new_version_id: Optional[UUID] = None  # Revert creates a new version
     new_image_url: Optional[str] = None
     error: Optional[str] = None

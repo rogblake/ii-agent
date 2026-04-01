@@ -7,11 +7,11 @@ pytestmark = pytest.mark.unit
 
 
 EXPECTED_ROUTES = {
-    ("POST", "/user-settings/models"),
-    ("GET", "/user-settings/models"),
-    ("GET", "/user-settings/models/{model_id}"),
-    ("PUT", "/user-settings/models/{model_id}"),
-    ("DELETE", "/user-settings/models/{model_id}"),
+    ("POST", "/models"),
+    ("GET", "/models"),
+    ("GET", "/models/{model_id}"),
+    ("PUT", "/models/{model_id}"),
+    ("DELETE", "/models/{model_id}"),
 }
 
 

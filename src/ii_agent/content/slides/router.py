@@ -13,8 +13,14 @@ from ii_agent.content.slides.schemas import (
     SlideWriteResponse,
     PresentationListResponse,
 )
+from ii_agent.content.slides.templates.router import router as templates_router
+from ii_agent.content.slides.design.router import router as design_router
+from ii_agent.content.slides.nano_banana.router import router as nano_banana_router
 
 router = APIRouter(prefix="/slides", tags=["Slide Management"])
+router.include_router(templates_router)
+router.include_router(design_router)
+router.include_router(nano_banana_router)
 
 
 @router.post("", response_model=SlideWriteResponse)
@@ -50,22 +56,6 @@ async def list_presentations(
         db,
         session_id=session_id,
         user_id=current_user.id,
-    )
-
-    return result
-
-
-@router.get("/public", response_model=PresentationListResponse)
-async def list_public_presentations(
-    slide_service: SlideServiceDep,
-    db: DBSession,
-    session_id: str = Query(..., description="Session ID"),
-):
-    """Get list of presentations from a public session."""
-
-    result = await slide_service.get_public_session_presentations(
-        db,
-        session_id=session_id,
     )
 
     return result
@@ -143,7 +133,30 @@ async def download_slides_with_progress(
     )
 
 
-@router.get("/public/download")
+# ---------------------------------------------------------------------------
+# Public endpoints (served under /v1/public/slides)
+# ---------------------------------------------------------------------------
+
+public_router = APIRouter(prefix="/slides", tags=["Slides Public"])
+
+
+@public_router.get("", response_model=PresentationListResponse)
+async def list_public_presentations(
+    slide_service: SlideServiceDep,
+    db: DBSession,
+    session_id: str = Query(..., description="Session ID"),
+):
+    """Get list of presentations from a public session."""
+
+    result = await slide_service.get_public_session_presentations(
+        db,
+        session_id=session_id,
+    )
+
+    return result
+
+
+@public_router.get("/download")
 async def download_public_slides(
     slide_service: SlideServiceDep,
     db: DBSession,
@@ -174,7 +187,7 @@ async def download_public_slides(
     )
 
 
-@router.get("/public/download/stream")
+@public_router.get("/download/stream")
 async def download_public_slides_with_progress(
     slide_service: SlideServiceDep,
     db: DBSession,

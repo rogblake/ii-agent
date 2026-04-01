@@ -12,6 +12,7 @@ Covers deeper branches not tested by the existing test file:
 - Claude request with extended thinking
 - format_tools_for_model with to_dict and model_dump objects
 """
+
 from __future__ import annotations
 
 import copy
@@ -23,7 +24,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.agent.runtime.models.anthropic.claude import (
+from ii_agent.agents.models.anthropic.claude import (
     ROLE_MAP,
     MCPServerConfiguration,
     Claude,
@@ -31,20 +32,21 @@ from ii_agent.agent.runtime.models.anthropic.claude import (
     format_tools_for_model,
     format_messages,
 )
-from ii_agent.agent.runtime.models.message import Message
-from ii_agent.agent.runtime.models.metrics import Metrics
-from ii_agent.agent.runtime.models.response import ModelResponse
-from ii_agent.agent.runtime.exceptions import (
+from ii_agent.agents.models.message import Message
+from ii_agent.agents.models.metrics import Metrics
+from ii_agent.agents.models.response import ModelResponse
+from ii_agent.agents.exceptions import (
     ModelProviderError,
     ModelRateLimitError,
 )
-from ii_agent.agent.runtime.media import Image, File
-from ii_agent.agent.types import Provider
+from ii_agent.files.media import Image, File
+from ii_agent.agents.types import Provider
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_claude(**kwargs) -> Claude:
     c = Claude(**kwargs)
@@ -87,6 +89,7 @@ def _make_provider_response(blocks, stop_reason="end_turn", role="assistant", us
 # ---------------------------------------------------------------------------
 # format_messages: deeper branches
 # ---------------------------------------------------------------------------
+
 
 class TestFormatMessagesDeep:
     def test_system_message_with_list_content_non_text_dict(self):
@@ -168,8 +171,7 @@ class TestFormatMessagesDeep:
         msgs = [Message(role="assistant", content="Using search", tool_calls=tool_calls)]
         formatted, _ = format_messages(msgs)
         assert any(
-            any(p.get("type") == "tool_use" for p in m.get("content", []))
-            for m in formatted
+            any(p.get("type") == "tool_use" for p in m.get("content", [])) for m in formatted
         )
 
     def test_assistant_tool_calls_with_non_json_arguments(self):
@@ -223,6 +225,7 @@ class TestFormatMessagesDeep:
 # _normalize_tool_definition deeper branches
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeToolDefinitionDeep:
     def test_dict_without_function_key_returned_as_is(self):
         tool = {"name": "fn", "type": "web_search"}
@@ -246,6 +249,7 @@ class TestNormalizeToolDefinitionDeep:
 # ---------------------------------------------------------------------------
 # Claude._parse_provider_response deep branches
 # ---------------------------------------------------------------------------
+
 
 class TestClaudeParseProviderResponseDeep:
     def test_mcp_tool_use_block(self):
@@ -329,6 +333,7 @@ class TestClaudeParseProviderResponseDeep:
 # Claude.ainvoke_stream() - happy path and error handling
 # ---------------------------------------------------------------------------
 
+
 class TestClaudeAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_yields_model_responses(self):
@@ -338,6 +343,7 @@ class TestClaudeAinvokeStream:
             ContentBlockStopEvent,
             MessageStopEvent,
         )
+
         c = _make_claude(api_key="key")
 
         # Create mock streaming events
@@ -376,6 +382,7 @@ class TestClaudeAinvokeStream:
     async def test_ainvoke_stream_rate_limit_raises(self):
         from anthropic import RateLimitError
         import httpx
+
         c = _make_claude(api_key="key")
 
         mock_response = MagicMock(spec=httpx.Response)
@@ -398,6 +405,7 @@ class TestClaudeAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_connection_error_raises(self):
         from anthropic import APIConnectionError
+
         c = _make_claude(api_key="key")
 
         err = MagicMock(spec=APIConnectionError)
@@ -420,6 +428,7 @@ class TestClaudeAinvokeStream:
 # ---------------------------------------------------------------------------
 # Claude.__deepcopy__ tests
 # ---------------------------------------------------------------------------
+
 
 class TestClaudeDeepcopy:
     def test_deepcopy_clears_client(self):
@@ -458,6 +467,7 @@ class TestClaudeDeepcopy:
 # Claude.get_async_client() paths
 # ---------------------------------------------------------------------------
 
+
 class TestClaudeGetAsyncClient:
     def test_returns_existing_async_client(self):
         c = Claude(api_key="key")
@@ -472,7 +482,9 @@ class TestClaudeGetAsyncClient:
         c = Claude()
         c.api_key = None
         c.async_client = None
-        with patch("ii_agent.agent.runtime.models.anthropic.claude.AsyncAnthropicClient") as MockClient:
+        with patch(
+            "ii_agent.agents.models.anthropic.claude.AsyncAnthropicClient"
+        ) as MockClient:
             mock_instance = MagicMock()
             mock_instance.is_closed.return_value = False
             MockClient.return_value = mock_instance
@@ -482,7 +494,9 @@ class TestClaudeGetAsyncClient:
     def test_creates_async_client_with_provided_api_key(self):
         c = Claude(api_key="provided_key")
         c.async_client = None
-        with patch("ii_agent.agent.runtime.models.anthropic.claude.AsyncAnthropicClient") as MockClient:
+        with patch(
+            "ii_agent.agents.models.anthropic.claude.AsyncAnthropicClient"
+        ) as MockClient:
             mock_instance = MagicMock()
             mock_instance.is_closed.return_value = False
             MockClient.return_value = mock_instance
@@ -494,6 +508,7 @@ class TestClaudeGetAsyncClient:
 # ---------------------------------------------------------------------------
 # Claude._prepare_request_kwargs more paths
 # ---------------------------------------------------------------------------
+
 
 class TestClaudePrepareRequestKwargsDeep:
     def test_system_message_as_list_of_text_blocks(self):
@@ -527,6 +542,7 @@ class TestClaudePrepareRequestKwargsDeep:
 # Claude ainvoke happy path with system + user messages
 # ---------------------------------------------------------------------------
 
+
 class TestClaudeAinvokeDeepHappyPaths:
     @pytest.mark.asyncio
     async def test_ainvoke_with_thinking_enabled(self):
@@ -534,7 +550,9 @@ class TestClaudeAinvokeDeepHappyPaths:
             api_key="key",
             thinking={"type": "enabled", "budget_tokens": 2048},
         )
-        thinking_block = _make_response_block("thinking", thinking="Let me think...", signature="sig_abc")
+        thinking_block = _make_response_block(
+            "thinking", thinking="Let me think...", signature="sig_abc"
+        )
         text_block = _make_response_block("text", text="Final answer", citations=None)
         provider_resp = _make_provider_response(
             [thinking_block, text_block], stop_reason="end_turn"
@@ -589,6 +607,7 @@ class TestClaudeAinvokeDeepHappyPaths:
     @pytest.mark.asyncio
     async def test_ainvoke_httpcore_connection_error(self):
         import httpcore
+
         c = _make_claude(api_key="key")
         c.async_client.beta.messages.create = AsyncMock(
             side_effect=httpcore.ConnectError("connection refused")

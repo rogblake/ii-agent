@@ -1,37 +1,17 @@
-"""Enhance prompt integration package."""
+"""Enhance prompt integration module.
+
+Provides prompt enhancement via external LLM providers.
+No database models -- this is a stateless integration.
+
+Import pattern:
+    from ii_agent.integrations.enhance_prompt import router
+    from ii_agent.integrations.enhance_prompt import create_enhance_prompt_client
+"""
+
+from .client import create_enhance_prompt_client
+from .router import router
 
 __all__ = [
-    "EnhancePromptClient",
-    "EnhancePromptResult",
-    "OpenAIEnhancePromptClient",
     "create_enhance_prompt_client",
     "router",
 ]
-
-
-def __getattr__(name: str):
-    if name in {
-        "EnhancePromptClient",
-        "EnhancePromptResult",
-        "OpenAIEnhancePromptClient",
-        "create_enhance_prompt_client",
-    }:
-        from .client import (
-            EnhancePromptClient,
-            EnhancePromptResult,
-            OpenAIEnhancePromptClient,
-            create_enhance_prompt_client,
-        )
-
-        exports = {
-            "EnhancePromptClient": EnhancePromptClient,
-            "EnhancePromptResult": EnhancePromptResult,
-            "OpenAIEnhancePromptClient": OpenAIEnhancePromptClient,
-            "create_enhance_prompt_client": create_enhance_prompt_client,
-        }
-        return exports[name]
-    if name == "router":
-        from .router import router
-
-        return router
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

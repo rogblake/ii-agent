@@ -37,11 +37,10 @@ def _make_ctx_db():
     return ctx, db
 
 
-def _make_session(session_id: str = "sess-1", sandbox_id: str = "sandbox-1") -> MagicMock:
+def _make_session(session_id: str = "sess-1") -> MagicMock:
     session = MagicMock()
     session.id = session_id
     session.status = "permanent"
-    session.sandbox_id = sandbox_id
     return session
 
 
@@ -245,6 +244,7 @@ class TestProcessBatch:
         extender._sandbox_service.get_sandbox_by_session_id = AsyncMock(return_value=mock_sandbox)
 
         import asyncio
+
         with patch("asyncio.gather", wraps=asyncio.gather) as mock_gather:
             success, failure = await extender.process_batch(db, sessions)
 
@@ -263,7 +263,9 @@ class TestRun:
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(return_value=_make_scalars_result([]))
 
-        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx):
+        with patch(
+            "ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx
+        ):
             result = await extender.run()
 
         assert result["status"] == "success"
@@ -282,7 +284,9 @@ class TestRun:
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(return_value=_make_scalars_result(sessions))
 
-        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx):
+        with patch(
+            "ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx
+        ):
             result = await extender.run()
 
         assert result["status"] == "success"
@@ -311,7 +315,9 @@ class TestRun:
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(return_value=_make_scalars_result(sessions))
 
-        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx):
+        with patch(
+            "ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx
+        ):
             result = await extender.run()
 
         assert result["status"] == "partial"
@@ -324,7 +330,9 @@ class TestRun:
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(side_effect=RuntimeError("DB failure"))
 
-        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx):
+        with patch(
+            "ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx
+        ):
             with pytest.raises(RuntimeError, match="DB failure"):
                 await extender.run()
 
@@ -334,7 +342,9 @@ class TestRun:
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(return_value=_make_scalars_result([]))
 
-        with patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx):
+        with patch(
+            "ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx
+        ):
             result = await extender.run()
 
         assert "duration_seconds" in result
@@ -355,7 +365,9 @@ class TestRun:
 
         # Prevent actual sleeping between batches
         with (
-            patch("ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx),
+            patch(
+                "ii_agent.workers.cron.jobs.extend_sandbox_timeout.get_db_session_local", new=ctx
+            ),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
             result = await extender.run()
@@ -391,11 +403,11 @@ class TestSandboxTimeoutExtenderConstructor:
                 return_value=mock_settings,
             ),
             patch(
-                "ii_agent.agent.sandboxes.service.SandboxService",
+                "ii_agent.agents.sandboxes.service.SandboxService",
                 return_value=mock_sandbox_service,
             ),
             patch(
-                "ii_agent.agent.sandboxes.repository.SandboxRepository",
+                "ii_agent.agents.sandboxes.repository.SandboxRepository",
                 return_value=MagicMock(),
             ),
         ):

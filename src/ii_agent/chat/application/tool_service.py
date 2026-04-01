@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.integrations.connectors.repository import ConnectorRepository
 from ii_agent.integrations.connectors.models import ConnectorTypeEnum
-from ii_agent.agent.runtime.tools.clients import _get_client
+from ii_agent.agents.tools.clients import _get_client
 from ii_agent.chat.tools.base import ToolCallInput
 from ii_agent.chat.tools.file_search import FileSearchTool
 from ii_agent.chat.tools.github import GitHubTool
@@ -25,7 +25,7 @@ from ii_agent.chat.media.orchestrator import MediaOrchestrator
 if TYPE_CHECKING:
     from ii_agent.chat.tools.base import BaseTool
     from ii_agent.chat.api.schemas import ChatMessageRequest
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class ChatToolService:
         self,
         *,
         connector_repo: ConnectorRepository,
-        container: ServiceContainer,
+        container: ApplicationContainer,
     ) -> None:
         self._connector_repo = connector_repo
         self._container = container

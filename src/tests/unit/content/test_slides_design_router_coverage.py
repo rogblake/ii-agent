@@ -1,4 +1,5 @@
 """Coverage-focused tests for slide design dependency and router wrappers."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock
@@ -8,7 +9,7 @@ import pytest
 
 from ii_agent.content.slides.design.dependencies import (
     get_slide_design_repository,
-    get_slide_design_service,
+    _get_slide_design_service as get_slide_design_service,
 )
 from ii_agent.content.slides.design.repository import SlideDesignRepository
 from ii_agent.content.slides.design.router import (
@@ -48,8 +49,12 @@ def test_get_slide_design_service_builds_service_with_dependencies(monkeypatch):
     class FakeSettings:
         mode = "unit"
 
-    monkeypatch.setattr("ii_agent.content.slides.design.dependencies.SlideDesignService", FakeService)
-    monkeypatch.setattr("ii_agent.content.slides.design.dependencies.get_settings", lambda: FakeSettings())
+    monkeypatch.setattr(
+        "ii_agent.content.slides.design.dependencies.SlideDesignService", FakeService
+    )
+    monkeypatch.setattr(
+        "ii_agent.content.slides.design.dependencies.get_settings", lambda: FakeSettings()
+    )
 
     repo = get_slide_design_repository(object(), object())
     service = get_slide_design_service(
@@ -60,6 +65,8 @@ def test_get_slide_design_service_builds_service_with_dependencies(monkeypatch):
     assert isinstance(service, FakeService)
     assert captured["repo"] is repo
     assert captured["config"].mode == "unit"
+
+
 def _current_user() -> SimpleNamespace:
     return SimpleNamespace(id="user-1")
 
@@ -109,8 +116,12 @@ async def _run_sync_routes():
     slide_state_response, deck_state_response = _stateful_responses()
 
     sync_service = AsyncMock()
-    sync_service.apply_slide_sync_batch.return_value = SlideDeckSyncBatchResponse(**slide_state_response)
-    sync_service.apply_slide_deck_sync_batch.return_value = SlideDeckSyncBatchResponse(**deck_state_response)
+    sync_service.apply_slide_sync_batch.return_value = SlideDeckSyncBatchResponse(
+        **slide_state_response
+    )
+    sync_service.apply_slide_deck_sync_batch.return_value = SlideDeckSyncBatchResponse(
+        **deck_state_response
+    )
 
     slide_request = SlideSyncBatchRequest(
         session_id="session-1",

@@ -1,7 +1,8 @@
 """SQLAlchemy models for session pins."""
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey, Index
+from sqlalchemy import ForeignKey, Index
+from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 import uuid
@@ -10,7 +11,7 @@ from ii_agent.core.db.base import Base, TimestampColumn
 
 # Forward references for relationships
 if TYPE_CHECKING:
-    from ii_agent.auth.users.models import User
+    from ii_agent.users.models import User
     from ii_agent.sessions.models import Session
 
 
@@ -19,17 +20,12 @@ class SessionPin(Base):
 
     __tablename__ = "session_pins"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
-    user_id: Mapped[str] = mapped_column(
-        String,
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE")
     )
-    session_id: Mapped[str] = mapped_column(
-        String,
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="CASCADE")
     )
     created_at: Mapped[datetime] = mapped_column(

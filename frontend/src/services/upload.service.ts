@@ -81,18 +81,18 @@ class UploadService {
     }
 
     async generateUploadUrl(data: GenerateUploadUrlRequest): Promise<GenerateUploadUrlResponse> {
-        const response = await axiosInstance.post<GenerateUploadUrlResponse>('/chat/generate-upload-url', data)
+        const response = await axiosInstance.post<GenerateUploadUrlResponse>('/v1/assets/upload', data)
         return response.data
     }
 
-    async uploadComplete(data: UploadCompleteRequest): Promise<UploadCompleteResponse> {
-        const response = await axiosInstance.post<UploadCompleteResponse>('/chat/upload-complete', data)
+    async uploadComplete(assetId: string, data?: UploadCompleteRequest): Promise<UploadCompleteResponse> {
+        const response = await axiosInstance.post<UploadCompleteResponse>(`/v1/assets/${assetId}/complete`, data ?? {})
         return response.data
     }
 
     async getUserMediaLibrary(params?: { limit?: number; offset?: number }): Promise<MediaLibraryResponse> {
         const response = await axiosInstance.get<MediaLibraryResponse>(
-            '/chat/user-media-library',
+            '/v1/assets/media-library',
             { params }
         )
         return response.data

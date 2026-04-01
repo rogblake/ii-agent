@@ -15,6 +15,16 @@ MIMETYPE_TO_EXTENSION = {
 }
 
 
+_HTTP_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/125.0.0.0 Safari/537.36"
+    ),
+    "Accept": "image/*,*/*;q=0.8",
+}
+
+
 async def is_image_url_available(url: str) -> Tuple[bool, Optional[str]]:
     """
     Checks if a URL points to an image that is likely available for embedding or download.
@@ -26,9 +36,16 @@ async def is_image_url_available(url: str) -> Tuple[bool, Optional[str]]:
         Tuple of (bool, Optional[str]): A tuple containing a boolean indicating whether the URL points to an accessible image, and an optional string containing the content type of the image.
     """
     try:
-        # Use a HEAD request to get headers without downloading the full content
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=_HTTP_HEADERS) as client:
+            # Try HEAD first; fall back to a small GET if the server rejects HEAD
             response = await client.head(url, follow_redirects=True, timeout=5.0)
+            if response.status_code in (403, 405, 501):
+                response = await client.get(
+                    url,
+                    follow_redirects=True,
+                    timeout=5.0,
+                    headers={"Range": "bytes=0-1023"},
+                )
 
         # Check for a successful status code (2xx)
         if not response.is_success:

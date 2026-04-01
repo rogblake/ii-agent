@@ -43,6 +43,7 @@ from ii_agent.chat.types import ToolCall
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _now():
     return datetime.now(timezone.utc)
 
@@ -95,6 +96,7 @@ def _instruction(instruction_type: InstructionType, ai_prompt: str = "") -> Inst
 # NanoBananaService instantiation
 # ---------------------------------------------------------------------------
 
+
 class TestNanoBananaServiceInit:
     def test_can_instantiate_with_dependencies(self):
         repo = MagicMock()
@@ -117,6 +119,7 @@ class TestNanoBananaServiceInit:
 # ---------------------------------------------------------------------------
 # _run_detection
 # ---------------------------------------------------------------------------
+
 
 class TestRunDetection:
     @pytest.mark.asyncio
@@ -176,9 +179,7 @@ class TestRunDetection:
         llm_execution_service = MagicMock()
         llm_execution_service.create_client.return_value = "client"
         llm_execution_service.new_message.return_value = "message"
-        llm_execution_service.send_once = AsyncMock(
-            return_value=SimpleNamespace(content=[])
-        )
+        llm_execution_service.send_once = AsyncMock(return_value=SimpleNamespace(content=[]))
         service = _make_service(llm_execution_service=llm_execution_service)
 
         with patch.object(
@@ -201,6 +202,7 @@ class TestRunDetection:
 # ---------------------------------------------------------------------------
 # detect_components – guard clauses
 # ---------------------------------------------------------------------------
+
 
 class TestDetectComponents:
     @pytest.mark.asyncio
@@ -241,6 +243,7 @@ class TestDetectComponents:
 # regenerate_slide – guard clauses
 # ---------------------------------------------------------------------------
 
+
 class TestRegenerateSlide:
     @pytest.mark.asyncio
     async def test_returns_failure_when_no_instructions(self):
@@ -278,6 +281,7 @@ class TestRegenerateSlide:
 # ---------------------------------------------------------------------------
 # revert_to_version
 # ---------------------------------------------------------------------------
+
 
 class TestRevertToVersion:
     @pytest.mark.asyncio
@@ -352,6 +356,7 @@ class TestRevertToVersion:
 # _build_overlay_html
 # ---------------------------------------------------------------------------
 
+
 class TestBuildOverlayHtml:
     def test_returns_valid_html_string(self):
         service = _make_service()
@@ -386,6 +391,7 @@ class TestBuildOverlayHtml:
 # ---------------------------------------------------------------------------
 # _build_component_div – static method
 # ---------------------------------------------------------------------------
+
 
 class TestBuildComponentDiv:
     def test_returns_div_with_design_id(self):
@@ -436,10 +442,12 @@ class TestBuildComponentDiv:
 # _get_image_dimensions
 # ---------------------------------------------------------------------------
 
+
 class TestGetImageDimensions:
     def test_returns_correct_dimensions(self):
         from io import BytesIO
         from PIL import Image
+
         img = Image.new("RGB", (640, 480))
         buf = BytesIO()
         img.save(buf, format="PNG")
@@ -454,6 +462,7 @@ class TestGetImageDimensions:
 # ---------------------------------------------------------------------------
 # _build_components
 # ---------------------------------------------------------------------------
+
 
 class TestBuildComponents:
     def test_returns_empty_list_for_non_list_payload(self):
@@ -490,6 +499,7 @@ class TestBuildComponents:
 # ---------------------------------------------------------------------------
 # Module-level helpers
 # ---------------------------------------------------------------------------
+
 
 class TestModuleLevelHelpers:
     def test_parse_bounding_box_returns_none_for_non_dict(self):

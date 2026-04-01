@@ -6,16 +6,16 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from ii_agent.agent.runtime.agent_sessions.agent import AgentSession
-from ii_agent.agent.runtime.agent_sessions.base import NoOpSessionStore
-from ii_agent.agent.runtime.agent_sessions.summary import (
+from ii_agent.agents.sessions.agent import AgentSession
+from ii_agent.agents.sessions.base import NoOpSessionStore
+from ii_agent.agents.sessions.summary import (
     DEFAULT_TOKEN_THRESHOLD,
     MODEL_TOKEN_THRESHOLDS,
     AgentSummary,
     SessionSummaryManager,
     SessionSummaryResponse,
 )
-from ii_agent.agent.runtime.run.base import RunStatus
+from ii_agent.agents.runs.base import RunStatus
 
 
 # ---------------------------------------------------------------------------
@@ -440,7 +440,9 @@ class TestSessionSummaryManager:
 
     def test_default_summary_request_message(self):
         manager = SessionSummaryManager()
-        assert "Provide" in manager.summary_request_message or len(manager.summary_request_message) > 0
+        assert (
+            "Provide" in manager.summary_request_message or len(manager.summary_request_message) > 0
+        )
 
     def test_default_summaries_updated_false(self):
         manager = SessionSummaryManager()
@@ -472,11 +474,11 @@ class TestNoOpSessionStore:
     @pytest.mark.asyncio
     async def test_get_or_create_run_task_returns_task(self, monkeypatch):
         from types import SimpleNamespace
-        from ii_agent.agent.runtime.agent_sessions import base as base_module
+        from ii_agent.agents.sessions import base as base_module
 
-        # Patch AgentRunTask to avoid SQLAlchemy mapper initialization during unit test
+        # Patch RunTask to avoid SQLAlchemy mapper initialization during unit test
         FakeTask = SimpleNamespace
-        monkeypatch.setattr(base_module, "AgentRunTask", FakeTask)
+        monkeypatch.setattr(base_module, "RunTask", FakeTask)
 
         store = NoOpSessionStore()
         task = await store.get_or_create_run_task(
@@ -490,10 +492,10 @@ class TestNoOpSessionStore:
     @pytest.mark.asyncio
     async def test_get_or_create_run_task_version_zero(self, monkeypatch):
         from types import SimpleNamespace
-        from ii_agent.agent.runtime.agent_sessions import base as base_module
+        from ii_agent.agents.sessions import base as base_module
 
         FakeTask = SimpleNamespace
-        monkeypatch.setattr(base_module, "AgentRunTask", FakeTask)
+        monkeypatch.setattr(base_module, "RunTask", FakeTask)
 
         store = NoOpSessionStore()
         task = await store.get_or_create_run_task(session_id="s1", run_id="r1")

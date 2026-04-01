@@ -33,9 +33,7 @@ def test_install_replaces_existing_jobs_and_writes():
     cron.entries.append(SimpleNamespace(comment="job-a", command="old", setall=lambda *_: None))
 
     manager = CronManager(tab=cron)
-    manager.install(
-        job=CronJobDefinition(name="job-a", schedule="* * * * *", command="echo hi")
-    )
+    manager.install(job=CronJobDefinition(name="job-a", schedule="* * * * *", command="echo hi"))
 
     assert len(cron.entries) == 1
     assert cron.entries[0].command == "echo hi"

@@ -39,7 +39,7 @@ def _stub_google_genai_interactions():
 _stub_google_genai_interactions()
 
 # Now the factory can be imported.
-from ii_agent.agent.runtime.factory.tools import (  # noqa: E402
+from ii_agent.agents.factory.tools import (  # noqa: E402
     AgentConfigManager,
     AgentToolConfig,
     AgentConfig,
@@ -48,7 +48,7 @@ from ii_agent.agent.runtime.factory.tools import (  # noqa: E402
     TOOL_CONFIRM_MAP,
     COMMON_TOOLS,
 )
-from ii_agent.agent.types import AgentType, Provider  # noqa: E402
+from ii_agent.agents.types import AgentType, Provider  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -312,7 +312,7 @@ class TestGetToolsForAgent:
         )
         config = AgentConfigManager.get_config(AgentType.GENERAL)
         assert config.supports_media is True
-        from ii_agent.agent.runtime.tools.media import ImageGenerateTool
+        from ii_agent.agents.tools.media import ImageGenerateTool
 
         assert ImageGenerateTool.name in tools
 

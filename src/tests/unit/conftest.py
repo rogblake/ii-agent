@@ -29,8 +29,9 @@ def fake_event_stream():
         def __init__(self) -> None:
             self.published = []
 
-        async def publish(self, event) -> None:
-            self.published.append(event)
+        async def publish(self, *args) -> None:
+            # Accepts publish(event) or publish(group, event)
+            self.published.append(args[-1])
 
     return _FakeEventStream()
 

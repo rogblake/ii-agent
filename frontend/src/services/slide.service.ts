@@ -47,14 +47,14 @@ class SlideService {
         }
 
         const response = await axiosInstance.get<SlideTemplatesResponse>(
-            `/slide-templates?${params.toString()}`
+            `/v1/slides/templates?${params.toString()}`
         )
         return response.data
     }
 
     async getSlideTemplate(templateId: string): Promise<SlideTemplate> {
         const response = await axiosInstance.get<SlideTemplate>(
-            `/slide-templates/${templateId}`
+            `/v1/slides/templates/${templateId}`
         )
         return response.data
     }
@@ -68,8 +68,8 @@ class SlideService {
         isPublic: boolean = false
     ): Promise<AsyncGenerator<SlideDownloadProgress, void, unknown>> {
         const endpoint = isPublic
-            ? `/slides/public/download/stream?session_id=${sessionId}${presentationName ? `&presentation_name=${encodeURIComponent(presentationName)}` : ''}`
-            : `/slides/download/stream?session_id=${sessionId}${presentationName ? `&presentation_name=${encodeURIComponent(presentationName)}` : ''}`
+            ? `/v1/public/slides/download/stream?session_id=${sessionId}${presentationName ? `&presentation_name=${encodeURIComponent(presentationName)}` : ''}`
+            : `/v1/slides/download/stream?session_id=${sessionId}${presentationName ? `&presentation_name=${encodeURIComponent(presentationName)}` : ''}`
 
         const token = localStorage.getItem(ACCESS_TOKEN)
 

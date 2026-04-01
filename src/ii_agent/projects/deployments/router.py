@@ -1,5 +1,7 @@
 """Deployment endpoints for projects."""
 
+import uuid
+
 from fastapi import APIRouter
 
 from ii_agent.auth.dependencies import CurrentUser, DBSession
@@ -15,7 +17,7 @@ router = APIRouter(tags=["Project Deployments"])
     response_model=ProjectDeploymentResponse,
 )
 async def get_project_deployment(
-    project_id: str,
+    project_id: uuid.UUID,
     current_user: CurrentUser,
     deployments_service: DeploymentsServiceDep,
     db: DBSession,
@@ -29,7 +31,7 @@ async def get_project_deployment(
     try:
         deployment = await deployments_service.get_project_deployment(
             db,
-            user_id=str(current_user.id),
+            user_id=current_user.id,
             project_id=project_id,
         )
     except DeploymentNotFoundError:

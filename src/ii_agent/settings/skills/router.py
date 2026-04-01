@@ -15,14 +15,14 @@ from ii_agent.settings.skills.schemas import (
     SkillDeleteResponse,
 )
 from ii_agent.core.exceptions import ValidationError as CoreValidationError
-from ii_agent.core.storage.client import storage
+from ii_agent.core.storage.client import get_storage
 from ii_agent.settings.skills.github import GitHubSkillError
 from ii_agent.settings.skills.skills_ref.errors import ParseError, ValidationError
 
 logger = logging.getLogger(__name__)
 
 
-router = APIRouter(prefix="/user-settings/skills", tags=["User Skills Management"])
+router = APIRouter(prefix="/skills", tags=["User Skills Management"])
 
 
 @router.post("/github", response_model=SkillInfo, status_code=201)
@@ -38,7 +38,7 @@ async def add_github_skill(
             db,
             user_id=str(current_user.id),
             github_url=request.github_url,
-            storage=storage,
+            storage=get_storage(),
             github_token=None,
         )
     except (GitHubSkillError, ParseError, ValidationError) as e:

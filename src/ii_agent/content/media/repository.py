@@ -5,18 +5,17 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.core.db.base import BaseRepository
 from ii_agent.content.media.models import MediaTemplate
 
 
-class MediaTemplateRepository:
-    """Data access layer for the media_templates table."""
+class MediaTemplateRepository(BaseRepository[MediaTemplate]):
+    """Data access layer for the media_templates table.
 
-    async def get_by_id(self, db: AsyncSession, template_id: str) -> Optional[MediaTemplate]:
-        """Get a media template by its ID."""
-        result = await db.execute(
-            select(MediaTemplate).where(MediaTemplate.id == template_id)
-        )
-        return result.scalar_one_or_none()
+    Inherits from BaseRepository: get_by_id, save, update.
+    """
+
+    model = MediaTemplate
 
     async def get_by_name(self, db: AsyncSession, name: str) -> Optional[MediaTemplate]:
         """Get a media template by its name."""

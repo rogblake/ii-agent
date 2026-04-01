@@ -4,14 +4,13 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from ii_agent.core.config.settings import get_settings
-from ii_agent.agent.dependencies import AgentRunServiceDep
-from ii_agent.agent.sandboxes.dependencies import SandboxRepositoryDep
-from ii_agent.agent.events.dependencies import EventRepositoryDep
+from ii_agent.core.dependencies import ContainerDep
+from ii_agent.tasks.service import RunTaskService
+from ii_agent.realtime.events.repository import EventRepository
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.service import SessionService
 from ii_agent.sessions.fork_service import SessionForkService
-from ii_agent.core.storage.client import media_storage, storage
+from ii_agent.sessions.title_service import SessionTitleService
 
 
 # ==================== Repository Dependencies ====================
@@ -25,40 +24,40 @@ def get_session_repository() -> SessionRepository:
 SessionRepositoryDep = Annotated[SessionRepository, Depends(get_session_repository)]
 
 
+def get_event_repository() -> EventRepository:
+    """Provide EventRepository instance."""
+    return EventRepository()
+
+
+EventRepositoryDep = Annotated[EventRepository, Depends(get_event_repository)]
+
+
 # ==================== Service Dependencies ====================
 
 
-def get_session_service(
-    session_repo: SessionRepositoryDep,
-    event_repo: EventRepositoryDep,
-    sandbox_repo: SandboxRepositoryDep,
-    agent_run_service: AgentRunServiceDep,
-) -> SessionService:
-    """Provide SessionService instance with explicit repo injection."""
-    return SessionService(
-        config=get_settings(),
-        session_repo=session_repo,
-        event_repo=event_repo,
-        agent_run_service=agent_run_service,
-        file_store=storage,
-        media_store=media_storage,
-        sandbox_repo=sandbox_repo,
-    )
+def _get_run_task_service(container: ContainerDep) -> RunTaskService:
+    return container.run_task_service
 
 
-SessionServiceDep = Annotated[SessionService, Depends(get_session_service)]
+RunTaskServiceDep = Annotated[RunTaskService, Depends(_get_run_task_service)]
 
 
-def get_session_fork_service(
-    session_repo: SessionRepositoryDep,
-    sandbox_repo: SandboxRepositoryDep,
-) -> SessionForkService:
-    """Provide SessionForkService instance."""
-    return SessionForkService(
-        session_repo=session_repo,
-        sandbox_repo=sandbox_repo,
-        config=get_settings(),
-    )
+def _get_session_service(container: ContainerDep) -> SessionService:
+    return container.session_service
 
 
-SessionForkServiceDep = Annotated[SessionForkService, Depends(get_session_fork_service)]
+SessionServiceDep = Annotated[SessionService, Depends(_get_session_service)]
+
+
+def _get_session_fork_service(container: ContainerDep) -> SessionForkService:
+    return container.session_fork_service
+
+
+SessionForkServiceDep = Annotated[SessionForkService, Depends(_get_session_fork_service)]
+
+
+def _get_session_title_service(container: ContainerDep) -> SessionTitleService:
+    return container.session_title_service
+
+
+SessionTitleServiceDep = Annotated[SessionTitleService, Depends(_get_session_title_service)]

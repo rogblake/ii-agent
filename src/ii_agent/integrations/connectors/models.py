@@ -6,29 +6,23 @@ Models migrated from core/db/models.py:
 - ComposioProfile
 """
 
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Boolean, ForeignKey, Index, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import JSONB
-from datetime import datetime, timezone
-from typing import Optional, TYPE_CHECKING
-from enum import Enum
 import uuid
 
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Boolean, ForeignKey, Index, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from datetime import datetime, timezone
+from typing import Optional, TYPE_CHECKING
+
 from ii_agent.core.db.base import Base, TimestampColumn
+from ii_agent.integrations.connectors.types import ComposioProfileStatus, ConnectorType
 
 # Forward references for relationships
 if TYPE_CHECKING:
-    from ii_agent.auth.users.models import User
+    from ii_agent.users.models import User
 
-
-class ConnectorTypeEnum(str, Enum):
-    """Enum for connector types."""
-
-    GOOGLE_DRIVE = "google_drive"
-    GITHUB = "github"
-    REVENUECAT = "revenuecat"
-    CHATGPT_MCP = "chatgpt_mcp"
-    COMPOSIO = "composio"
+# Backward compat alias
+ConnectorTypeEnum = ConnectorType
 
 
 class Connector(Base):
@@ -36,16 +30,11 @@ class Connector(Base):
 
     __tablename__ = "connectors"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
-    user_id: Mapped[str] = mapped_column(
-        String,
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE")
     )
-    connector_type: Mapped[str] = mapped_column(String)
+    connector_type: Mapped[ConnectorType] = mapped_column(String)
     access_token: Mapped[str] = mapped_column(String)
     refresh_token: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     token_expiry: Mapped[Optional[datetime]] = mapped_column(
@@ -83,13 +72,8 @@ class ComposioProfile(Base):
 
     __tablename__ = "composio_profiles"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
-    user_id: Mapped[str] = mapped_column(
-        String,
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         index=True
     )
@@ -110,9 +94,9 @@ class ComposioProfile(Base):
     redirect_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Status tracking
-    status: Mapped[str] = mapped_column(
-        String, default="pending", nullable=False
-    )  # Values: 'enable', 'disable', 'disconnected', 'pending'
+    status: Mapped[ComposioProfileStatus] = mapped_column(
+        String, default=ComposioProfileStatus.PENDING, nullable=False
+    )
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Tool configuration

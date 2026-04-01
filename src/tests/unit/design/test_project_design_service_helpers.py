@@ -150,7 +150,11 @@ async def test_apply_sync_plan_reports_missing_and_invalid_entries(settings_fact
         sandbox=sandbox,
         changes=changes,
         plan_entries=[
-            {"change_index": 1, "file_path": "/tmp/outside.tsx", "modifications": [{"type": "replace"}]}
+            {
+                "change_index": 1,
+                "file_path": "/tmp/outside.tsx",
+                "modifications": [{"type": "replace"}],
+            }
         ],
     )
 
@@ -174,11 +178,33 @@ def test_resolve_failed_sync_indexes_uses_fingerprint_fallback(settings_factory)
 
 
 @pytest.mark.asyncio
-async def test_normalize_iframe_plan_operations_filters_and_enriches_icon(settings_factory, monkeypatch):
+async def test_normalize_iframe_plan_operations_filters_and_enriches_icon(
+    settings_factory, monkeypatch
+):
     service = _make_service(settings_factory)
     nodes = [
-        SimpleNamespace(designId="hero", tagName="h1", className="", id=None, textContent="Hello", attributes={}, parentDesignId=None, childDesignIds=[], html="<h1>Hello</h1>"),
-        SimpleNamespace(designId="icon", tagName="svg", className="", id=None, textContent="", attributes={}, parentDesignId=None, childDesignIds=[], html="<svg></svg>"),
+        SimpleNamespace(
+            designId="hero",
+            tagName="h1",
+            className="",
+            id=None,
+            textContent="Hello",
+            attributes={},
+            parentDesignId=None,
+            childDesignIds=[],
+            html="<h1>Hello</h1>",
+        ),
+        SimpleNamespace(
+            designId="icon",
+            tagName="svg",
+            className="",
+            id=None,
+            textContent="",
+            attributes={},
+            parentDesignId=None,
+            childDesignIds=[],
+            html="<svg></svg>",
+        ),
     ]
     icon_tool = SimpleNamespace(name="icon_getter")
 
@@ -208,7 +234,12 @@ async def test_normalize_iframe_plan_operations_filters_and_enriches_icon(settin
     assert normalized == [
         {"op": "set_style", "design_id": "hero", "property": "color", "value": "red"},
         {"op": "set_text", "design_id": "hero", "text": "Updated"},
-        {"op": "set_icon", "design_id": "icon", "icon_name": "bell", "svg_inner": "<path d='M1 1' />"},
+        {
+            "op": "set_icon",
+            "design_id": "icon",
+            "icon_name": "bell",
+            "svg_inner": "<path d='M1 1' />",
+        },
         {"op": "move", "design_id": "hero", "anchor": "before:icon"},
         {"op": "swap", "design_id": "hero", "target_design_id": "icon"},
     ]
@@ -278,7 +309,6 @@ def test_validate_proxy_url_and_allowlist_helpers(settings_factory):
 
     checker = service._build_proxy_hostname_allow_check(
         session_public_url="https://public.example.com",
-        session_sandbox_id="sandbox-123",
         requested_hostname="3000-provider-id.e2b.app",
         sandbox_record=SimpleNamespace(provider_sandbox_id="provider-id"),
     )
@@ -342,7 +372,9 @@ async def test_fetch_proxy_html_redirect_and_error_paths(settings_factory, monke
         lambda **kwargs: _Client(
             [
                 _Response(status_code=302, headers={"location": "/next"}),
-                _Response(status_code=200, headers={"content-type": "text/html"}, text="<html>ok</html>"),
+                _Response(
+                    status_code=200, headers={"content-type": "text/html"}, text="<html>ok</html>"
+                ),
             ]
         ),
     )
@@ -355,7 +387,9 @@ async def test_fetch_proxy_html_redirect_and_error_paths(settings_factory, monke
 
     monkeypatch.setattr(
         "ii_agent.projects.design.service.httpx.AsyncClient",
-        lambda **kwargs: _Client([_Response(status_code=200, headers={"content-type": "application/json"})]),
+        lambda **kwargs: _Client(
+            [_Response(status_code=200, headers={"content-type": "application/json"})]
+        ),
     )
     with pytest.raises(DesignProxyFetchError):
         await service._fetch_proxy_html(
@@ -365,7 +399,9 @@ async def test_fetch_proxy_html_redirect_and_error_paths(settings_factory, monke
 
 
 @pytest.mark.asyncio
-async def test_sync_design_changes_internal_success_and_deterministic_failure(settings_factory, monkeypatch):
+async def test_sync_design_changes_internal_success_and_deterministic_failure(
+    settings_factory, monkeypatch
+):
     session = SimpleNamespace(user_id="user-1")
     repo = SimpleNamespace(get_session=AsyncMock(return_value=session))
     sandbox_service = SimpleNamespace(

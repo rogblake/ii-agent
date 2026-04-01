@@ -13,6 +13,7 @@ Covers previously untested branches:
 - Citations, UrlCitation, DocumentCitation edge cases
 - MessageReferences edge cases
 """
+
 from __future__ import annotations
 
 import base64
@@ -22,20 +23,21 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ii_agent.agent.runtime.models.message import (
+from ii_agent.agents.models.message import (
     Citations,
     DocumentCitation,
     Message,
     MessageReferences,
     UrlCitation,
 )
-from ii_agent.agent.runtime.models.metrics import Metrics
-from ii_agent.agent.runtime.media import Audio, File, Image, Video
+from ii_agent.agents.models.metrics import Metrics
+from ii_agent.files.media import Audio, File, Image, Video
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_b64_content(data: bytes) -> str:
     return base64.b64encode(data).decode("ascii")
@@ -44,6 +46,7 @@ def _make_b64_content(data: bytes) -> str:
 # ---------------------------------------------------------------------------
 # Message.get_content()
 # ---------------------------------------------------------------------------
+
 
 class TestGetContent:
     def test_get_content_returns_string_content(self):
@@ -63,6 +66,7 @@ class TestGetContent:
 # ---------------------------------------------------------------------------
 # Message.from_dict() - image reconstruction
 # ---------------------------------------------------------------------------
+
 
 class TestFromDictWithImages:
     def test_image_with_base64_content_reconstructed(self):
@@ -87,9 +91,7 @@ class TestFromDictWithImages:
         data = {
             "role": "user",
             "content": "See image",
-            "images": [
-                {"url": "https://example.com/img.png", "mime_type": "image/png"}
-            ],
+            "images": [{"url": "https://example.com/img.png", "mime_type": "image/png"}],
         }
         msg = Message.from_dict(data)
         assert msg.images is not None
@@ -110,6 +112,7 @@ class TestFromDictWithImages:
 # ---------------------------------------------------------------------------
 # Message.from_dict() - audio reconstruction
 # ---------------------------------------------------------------------------
+
 
 class TestFromDictWithAudio:
     def test_audio_with_base64_content_reconstructed(self):
@@ -137,7 +140,9 @@ class TestFromDictWithAudio:
         data = {
             "role": "user",
             "content": "Audio msg",
-            "audio": [{"id": "audio_1", "transcript": "Hello", "content": _make_b64_content(b"audio")}],
+            "audio": [
+                {"id": "audio_1", "transcript": "Hello", "content": _make_b64_content(b"audio")}
+            ],
         }
         msg = Message.from_dict(data)
         assert msg.audio is not None
@@ -153,6 +158,7 @@ class TestFromDictWithAudio:
 # ---------------------------------------------------------------------------
 # Message.from_dict() - video reconstruction
 # ---------------------------------------------------------------------------
+
 
 class TestFromDictWithVideos:
     def test_video_with_base64_content_reconstructed(self):
@@ -193,6 +199,7 @@ class TestFromDictWithVideos:
 # ---------------------------------------------------------------------------
 # Message.from_dict() - file reconstruction
 # ---------------------------------------------------------------------------
+
 
 class TestFromDictWithFiles:
     def test_file_with_base64_content_reconstructed(self):
@@ -235,6 +242,7 @@ class TestFromDictWithFiles:
 # ---------------------------------------------------------------------------
 # Message.from_dict() - output fields reconstruction
 # ---------------------------------------------------------------------------
+
 
 class TestFromDictWithOutputFields:
     def test_audio_output_with_base64_content(self):
@@ -350,6 +358,7 @@ class TestFromDictWithOutputFields:
 # Message.to_dict() with media
 # ---------------------------------------------------------------------------
 
+
 class TestToDictWithMedia:
     def test_images_serialized_to_dicts(self):
         img = MagicMock(spec=Image)
@@ -428,6 +437,7 @@ class TestToDictWithMedia:
 # Message.get_content_string() - additional edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestGetContentStringEdgeCases:
     def test_list_content_first_dict_has_text_key_with_none_value(self):
         # text key exists but value is None -> returns "" via .get("text", "")
@@ -452,6 +462,7 @@ class TestGetContentStringEdgeCases:
 # Message.content_is_valid() edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestContentIsValidEdgeCases:
     def test_zero_integer_content_is_not_valid(self):
         # content=0 -> len(0) raises TypeError -> caught by bool check
@@ -474,6 +485,7 @@ class TestContentIsValidEdgeCases:
 # ---------------------------------------------------------------------------
 # Message round-trip with complex media
 # ---------------------------------------------------------------------------
+
 
 class TestMessageRoundTripWithMedia:
     def test_roundtrip_with_audio_list(self):
@@ -501,6 +513,7 @@ class TestMessageRoundTripWithMedia:
 # Citations edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestCitationsEdgeCases:
     def test_citations_with_empty_url_list(self):
         c = Citations(urls=[])
@@ -527,6 +540,7 @@ class TestCitationsEdgeCases:
 # ---------------------------------------------------------------------------
 # Message extra fields (ConfigDict extra='allow')
 # ---------------------------------------------------------------------------
+
 
 class TestMessageExtraFields:
     def test_extra_field_stored(self):

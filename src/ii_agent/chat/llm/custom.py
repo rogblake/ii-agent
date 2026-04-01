@@ -7,7 +7,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 from litellm import acompletion
 
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
-from ii_agent.billing.usage.models import TokenUsage
+from ii_agent.billing.schemas import TokenUsage
 from ii_agent.chat.types import (
     ImageUrlContentPart,
     MessageRole,

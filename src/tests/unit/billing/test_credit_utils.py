@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from ii_agent.billing.credits.utils import credits_to_usd, usd_to_credits
+from ii_agent.billing.utils import credits_to_usd, usd_to_credits
 
 
 def test_usd_to_credits_contract():

@@ -2,13 +2,14 @@
 
 Covers:
 - IIAgent initialization, properties, and public API
-- IIAgent._validate_input / _initialize_session helpers
+- IIAgent._initialize_session helpers
 - MessageBuilder.get_user_message / get_system_message / get_run_messages
 - MessageBuilder.get_continue_run_messages
 - DelegationManager.find_sub_agent_by_id / get_sub_agents_description
 - DelegationManager.initialize_sub_agent
 - DelegationManager.get_delegate_task_function
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -24,6 +25,7 @@ pytestmark = pytest.mark.unit
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_model(system_role="system", user_role="user", assistant_role="assistant"):
     model = MagicMock()
     model.id = "test-model"
@@ -37,14 +39,19 @@ def _make_model(system_role="system", user_role="user", assistant_role="assistan
 
 def _make_agent(model=None, **kwargs):
     """Create an IIAgent with all external calls mocked."""
-    from ii_agent.agent.runtime.agents.agent import IIAgent
+    from ii_agent.agents.agent import IIAgent
 
     if model is None:
         model = _make_model()
 
     with (
-        patch("ii_agent.agent.runtime.agents.agent.ServiceContainer.create", return_value=MagicMock()),
-        patch("ii_agent.agent.runtime.agents.sandbox_provider.SandboxProvider.__init__", return_value=None),
+        patch(
+            "ii_agent.agents.agent.ServiceContainer.create", return_value=MagicMock()
+        ),
+        patch(
+            "ii_agent.agents.sandbox_provider.SandboxProvider.__init__",
+            return_value=None,
+        ),
     ):
         agent = IIAgent.__new__(IIAgent)
         # Set required fields manually to avoid ServiceContainer side effects
@@ -87,7 +94,7 @@ def _make_agent(model=None, **kwargs):
         agent._hook_executor = MagicMock()
         agent._sandbox_provider = MagicMock()
         agent._hitl_handler = MagicMock()
-        agent._delegation_manager = MagicMock()
+        agent._subagent_manager = MagicMock()
         agent._internal_lock = asyncio.Lock()
 
     return agent
@@ -97,13 +104,16 @@ def _make_agent(model=None, **kwargs):
 # IIAgent basic public API
 # ---------------------------------------------------------------------------
 
+
 class TestIIAgentPublicAPI:
     """Test IIAgent public API without running the model."""
 
     def test_set_id_uses_name_when_id_is_none(self):
         agent = _make_agent(name="MyAgent")
         agent.id = None
-        with patch("ii_agent.agent.runtime.agents.agent.generate_id_from_name", return_value="myagent-id"):
+        with patch(
+            "ii_agent.agents.agent.generate_id_from_name", return_value="myagent-id"
+        ):
             agent.set_id()
         assert agent.id == "myagent-id"
 
@@ -124,7 +134,7 @@ class TestIIAgentPublicAPI:
         assert agent.should_persist is False
 
     def test_add_tool_appends(self):
-        from ii_agent.agent.runtime.tools.function import Function
+        from ii_agent.agents.tools.function import Function
 
         agent = _make_agent()
         agent.tools = []
@@ -133,7 +143,7 @@ class TestIIAgentPublicAPI:
         assert fn in agent.tools
 
     def test_add_tool_initializes_empty_list(self):
-        from ii_agent.agent.runtime.tools.function import Function
+        from ii_agent.agents.tools.function import Function
 
         agent = _make_agent()
         agent.tools = None
@@ -142,7 +152,7 @@ class TestIIAgentPublicAPI:
         assert fn in agent.tools
 
     def test_set_tools_replaces_existing(self):
-        from ii_agent.agent.runtime.tools.function import Function
+        from ii_agent.agents.tools.function import Function
 
         agent = _make_agent()
         f1 = Function(name="f1", description="desc1")
@@ -164,7 +174,7 @@ class TestIIAgentPublicAPI:
         agent.sub_agents = []
         agent.add_sub_agent(sub)
         assert sub in agent.sub_agents
-        agent._delegation_manager.initialize_sub_agent.assert_called_once_with(sub)
+        agent._subagent_manager.initialize_sub_agent.assert_called_once_with(sub)
 
     def test_sandbox_property_delegates(self):
         agent = _make_agent()
@@ -177,9 +187,10 @@ class TestIIAgentPublicAPI:
         assert agent._sandbox_provider.sandbox == "new-sandbox"
 
     def test_as_tool_returns_base_agent_tool(self):
-        from ii_agent.agent.runtime.tools.base import BaseAgentTool
+        from ii_agent.agents.tools.base import BaseAgentTool
+
         agent = _make_agent()
-        with patch("ii_agent.agent.runtime.agents.agent.AgentAsTool") as mock_cls:
+        with patch("ii_agent.agents.agent.AgentAsTool") as mock_cls:
             mock_instance = MagicMock(spec=BaseAgentTool)
             mock_cls.return_value = mock_instance
             tool = agent.as_tool(name="my_agent")
@@ -188,65 +199,33 @@ class TestIIAgentPublicAPI:
     @pytest.mark.asyncio
     async def test_cancel_run_delegates_to_global(self):
         mock_cancel = AsyncMock(return_value=True)
-        with patch("ii_agent.agent.runtime.agents.agent.cancel_run_global", mock_cancel):
-            from ii_agent.agent.runtime.agents.agent import IIAgent
+        with patch("ii_agent.agents.agent.cancel_run_global", mock_cancel):
+            from ii_agent.agents.agent import IIAgent
+
             result = await IIAgent.cancel_run("run-123")
         assert result is True
         mock_cancel.assert_called_once_with("run-123")
 
-    def test_acontinue_run_raises_when_no_run_id_and_no_run_response(self):
+    @pytest.mark.asyncio
+    async def test_acontinue_run_raises_when_no_run_id_and_no_run_response(self):
         agent = _make_agent()
         with pytest.raises(ValueError, match="Either run_id or run_response must be provided"):
-            agent.acontinue_run(run_id=None, run_response=None)
+            await agent.acontinue_run(run_id=None, run_response=None)
 
-    def test_acontinue_run_raises_when_both_run_id_and_run_response(self):
-        from ii_agent.agent.runtime.run.agent import RunOutput
+    @pytest.mark.asyncio
+    async def test_acontinue_run_raises_when_both_run_id_and_run_response(self):
+        from ii_agent.agents.runs.agent import RunOutput
+
         agent = _make_agent()
         rr = RunOutput(run_id=str(uuid4()), session_id="s", user_id="u", model="m", agent_name="A")
         with pytest.raises(ValueError, match="Only one"):
-            agent.acontinue_run(run_id="some-run-id", run_response=rr)
-
-
-# ---------------------------------------------------------------------------
-# IIAgent._validate_input
-# ---------------------------------------------------------------------------
-
-class TestValidateInput:
-    """Test the _validate_input helper method."""
-
-    def test_string_passthrough(self):
-        agent = _make_agent()
-        result = agent._validate_input("hello world")
-        assert result == "hello world"
-
-    def test_none_passthrough(self):
-        agent = _make_agent()
-        result = agent._validate_input(None)
-        assert result is None
-
-    def test_message_passthrough(self):
-        from ii_agent.agent.runtime.models.message import Message
-        agent = _make_agent()
-        msg = Message(role="user", content="test")
-        result = agent._validate_input(msg)
-        assert result is msg
-
-    def test_dict_passthrough(self):
-        agent = _make_agent()
-        d = {"role": "user", "content": "hello"}
-        result = agent._validate_input(d)
-        assert result == d
-
-    def test_list_passthrough(self):
-        agent = _make_agent()
-        lst = ["hello", "world"]
-        result = agent._validate_input(lst)
-        assert result == lst
+            await agent.acontinue_run(run_id="some-run-id", run_response=rr)
 
 
 # ---------------------------------------------------------------------------
 # IIAgent._initialize_session
 # ---------------------------------------------------------------------------
+
 
 class TestInitializeSession:
     """Test the _initialize_session helper."""
@@ -273,6 +252,7 @@ class TestInitializeSession:
 # ---------------------------------------------------------------------------
 # IIAgent._initialize_session_state
 # ---------------------------------------------------------------------------
+
 
 class TestInitializeSessionState:
     """Test the _initialize_session_state helper."""
@@ -306,18 +286,25 @@ class TestInitializeSessionState:
 # IIAgent.__post_init__  (via actual construction)
 # ---------------------------------------------------------------------------
 
+
 class TestIIAgentPostInit:
     """Test that __post_init__ sets up collaborators correctly."""
 
     def test_tools_becomes_empty_list_when_none(self):
-        from ii_agent.agent.runtime.agents.agent import IIAgent
+        from ii_agent.agents.agent import IIAgent
 
         mock_model = _make_model()
 
         with (
-            patch("ii_agent.agent.runtime.agents.agent.ServiceContainer.create", return_value=MagicMock()),
-            patch("ii_agent.agent.runtime.agents.sandbox_provider.SandboxProvider.__init__", return_value=None),
-            patch("ii_agent.agent.runtime.agents.agent.NoOpSessionStore"),
+            patch(
+                "ii_agent.agents.agent.ServiceContainer.create",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "ii_agent.agents.sandbox_provider.SandboxProvider.__init__",
+                return_value=None,
+            ),
+            patch("ii_agent.agents.agent.NoOpSessionStore"),
         ):
             agent = object.__new__(IIAgent)
             agent.user_id = "u"
@@ -353,25 +340,28 @@ class TestIIAgentPostInit:
             agent.role = None
 
             with (
-                patch("ii_agent.agent.runtime.agents.agent.MessageBuilder"),
-                patch("ii_agent.agent.runtime.agents.agent.ToolManager"),
-                patch("ii_agent.agent.runtime.agents.agent.ResponseHandler"),
-                patch("ii_agent.agent.runtime.agents.agent.HookExecutor"),
-                patch("ii_agent.agent.runtime.agents.agent.SandboxProvider"),
-                patch("ii_agent.agent.runtime.agents.agent.HITLHandler"),
-                patch("ii_agent.agent.runtime.agents.agent.DelegationManager"),
+                patch("ii_agent.agents.agent.MessageBuilder"),
+                patch("ii_agent.agents.agent.ToolManager"),
+                patch("ii_agent.agents.agent.ResponseHandler"),
+                patch("ii_agent.agents.agent.HookExecutor"),
+                patch("ii_agent.agents.agent.SandboxProvider"),
+                patch("ii_agent.agents.agent.HITLHandler"),
+                patch("ii_agent.agents.agent.DelegationManager"),
             ):
                 agent.__post_init__()
 
         assert agent.tools == []
 
     def test_sub_agents_becomes_empty_list_when_none(self):
-        from ii_agent.agent.runtime.agents.agent import IIAgent
+        from ii_agent.agents.agent import IIAgent
 
         mock_model = _make_model()
 
         with (
-            patch("ii_agent.agent.runtime.agents.agent.ServiceContainer.create", return_value=MagicMock()),
+            patch(
+                "ii_agent.agents.agent.ServiceContainer.create",
+                return_value=MagicMock(),
+            ),
         ):
             agent = object.__new__(IIAgent)
             agent.user_id = "u"
@@ -407,13 +397,13 @@ class TestIIAgentPostInit:
             agent.role = None
 
             with (
-                patch("ii_agent.agent.runtime.agents.agent.MessageBuilder"),
-                patch("ii_agent.agent.runtime.agents.agent.ToolManager"),
-                patch("ii_agent.agent.runtime.agents.agent.ResponseHandler"),
-                patch("ii_agent.agent.runtime.agents.agent.HookExecutor"),
-                patch("ii_agent.agent.runtime.agents.agent.SandboxProvider"),
-                patch("ii_agent.agent.runtime.agents.agent.HITLHandler"),
-                patch("ii_agent.agent.runtime.agents.agent.DelegationManager"),
+                patch("ii_agent.agents.agent.MessageBuilder"),
+                patch("ii_agent.agents.agent.ToolManager"),
+                patch("ii_agent.agents.agent.ResponseHandler"),
+                patch("ii_agent.agents.agent.HookExecutor"),
+                patch("ii_agent.agents.agent.SandboxProvider"),
+                patch("ii_agent.agents.agent.HITLHandler"),
+                patch("ii_agent.agents.agent.DelegationManager"),
             ):
                 agent.__post_init__()
 
@@ -424,11 +414,13 @@ class TestIIAgentPostInit:
 # MessageBuilder
 # ---------------------------------------------------------------------------
 
+
 class TestMessageBuilderGetUserMessage:
     """Test MessageBuilder.get_user_message."""
 
     def _make_builder(self, system_role="system"):
-        from ii_agent.agent.runtime.agents.message_builder import MessageBuilder
+        from ii_agent.agents.models.builder import MessageBuilder
+
         model = _make_model(system_role=system_role)
         return MessageBuilder(model=model, system_message="System prompt")
 
@@ -440,7 +432,8 @@ class TestMessageBuilderGetUserMessage:
 
     @pytest.mark.asyncio
     async def test_none_input_with_images_returns_message_with_empty_content(self):
-        from ii_agent.agent.runtime.media import Image
+        from ii_agent.files.media import Image
+
         builder = self._make_builder()
         img = MagicMock(spec=Image)
         result = await builder.get_user_message(input=None, images=[img])
@@ -472,7 +465,8 @@ class TestMessageBuilderGetUserMessage:
 
     @pytest.mark.asyncio
     async def test_message_input_returns_same_message(self):
-        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agents.models.message import Message
+
         builder = self._make_builder()
         msg = Message(role="user", content="existing")
         result = await builder.get_user_message(input=msg)
@@ -511,7 +505,8 @@ class TestMessageBuilderGetSystemMessage:
 
     @pytest.mark.asyncio
     async def test_string_system_message_returns_message(self):
-        from ii_agent.agent.runtime.agents.message_builder import MessageBuilder
+        from ii_agent.agents.models.builder import MessageBuilder
+
         model = _make_model()
         builder = MessageBuilder(model=model, system_message="System instructions.")
         session = MagicMock()
@@ -521,8 +516,9 @@ class TestMessageBuilderGetSystemMessage:
 
     @pytest.mark.asyncio
     async def test_message_system_message_returned_as_is(self):
-        from ii_agent.agent.runtime.agents.message_builder import MessageBuilder
-        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agents.models.builder import MessageBuilder
+        from ii_agent.agents.models.message import Message
+
         model = _make_model()
         sys_msg = Message(role="system", content="Pre-built system message")
         builder = MessageBuilder(model=model, system_message=sys_msg)
@@ -532,7 +528,8 @@ class TestMessageBuilderGetSystemMessage:
 
     @pytest.mark.asyncio
     async def test_none_system_message_returns_none_content_message(self):
-        from ii_agent.agent.runtime.agents.message_builder import MessageBuilder
+        from ii_agent.agents.models.builder import MessageBuilder
+
         model = _make_model()
         builder = MessageBuilder(model=model, system_message=None)
         session = MagicMock()
@@ -551,7 +548,8 @@ class TestMessageBuilderGetRunMessages:
         return session
 
     def _make_run_output(self, summary=None):
-        from ii_agent.agent.runtime.run.agent import RunOutput
+        from ii_agent.agents.runs.agent import RunOutput
+
         ro = RunOutput(
             run_id=str(uuid4()),
             session_id="test-session",
@@ -564,7 +562,8 @@ class TestMessageBuilderGetRunMessages:
 
     @pytest.mark.asyncio
     async def test_builds_messages_with_string_input(self):
-        from ii_agent.agent.runtime.agents.message_builder import MessageBuilder
+        from ii_agent.agents.models.builder import MessageBuilder
+
         model = _make_model()
         builder = MessageBuilder(model=model, system_message="System message")
         session = self._make_session()
@@ -580,8 +579,9 @@ class TestMessageBuilderGetRunMessages:
 
     @pytest.mark.asyncio
     async def test_includes_history_messages_when_no_summary(self):
-        from ii_agent.agent.runtime.agents.message_builder import MessageBuilder
-        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agents.models.builder import MessageBuilder
+        from ii_agent.agents.models.message import Message
+
         model = _make_model()
         builder = MessageBuilder(model=model, system_message="System message")
         history_msg = Message(role="user", content="Previous message")
@@ -599,9 +599,9 @@ class TestMessageBuilderGetRunMessages:
 
     @pytest.mark.asyncio
     async def test_uses_summary_instead_of_history_when_run_has_summary(self):
-        from ii_agent.agent.runtime.agents.message_builder import MessageBuilder
-        from ii_agent.agent.runtime.models.message import Message
-        from ii_agent.agent.runtime.models.metrics import Metrics
+        from ii_agent.agents.models.builder import MessageBuilder
+        from ii_agent.agents.models.message import Message
+        from ii_agent.agents.models.metrics import Metrics
 
         model = _make_model()
         builder = MessageBuilder(model=model, system_message=None)
@@ -625,8 +625,9 @@ class TestMessageBuilderGetRunMessages:
 
     @pytest.mark.asyncio
     async def test_list_of_messages_added_as_input(self):
-        from ii_agent.agent.runtime.agents.message_builder import MessageBuilder
-        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agents.models.builder import MessageBuilder
+        from ii_agent.agents.models.message import Message
+
         model = _make_model()
         builder = MessageBuilder(model=model, system_message=None)
         session = self._make_session()
@@ -647,7 +648,8 @@ class TestMessageBuilderGetRunMessages:
 
     @pytest.mark.asyncio
     async def test_list_of_dicts_with_role_added_as_input(self):
-        from ii_agent.agent.runtime.agents.message_builder import MessageBuilder
+        from ii_agent.agents.models.builder import MessageBuilder
+
         model = _make_model()
         builder = MessageBuilder(model=model, system_message=None)
         session = self._make_session()
@@ -668,11 +670,13 @@ class TestMessageBuilderGetContinueRunMessages:
     """Test MessageBuilder.get_continue_run_messages."""
 
     def _make_builder(self):
-        from ii_agent.agent.runtime.agents.message_builder import MessageBuilder
+        from ii_agent.agents.models.builder import MessageBuilder
+
         return MessageBuilder(model=_make_model(), system_message="System")
 
     def test_extracts_last_user_message(self):
-        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agents.models.message import Message
+
         builder = self._make_builder()
         msgs = [
             Message(role="system", content="sys"),
@@ -685,7 +689,8 @@ class TestMessageBuilderGetContinueRunMessages:
         assert result.user_message.content == "second user"
 
     def test_extracts_system_message(self):
-        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agents.models.message import Message
+
         builder = self._make_builder()
         msgs = [
             Message(role="system", content="system-msg"),
@@ -696,14 +701,16 @@ class TestMessageBuilderGetContinueRunMessages:
         assert result.system_message.content == "system-msg"
 
     def test_no_user_message_returns_none_user_message(self):
-        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agents.models.message import Message
+
         builder = self._make_builder()
         msgs = [Message(role="system", content="sys")]
         result = builder.get_continue_run_messages(msgs)
         assert result.user_message is None
 
     def test_messages_list_preserved(self):
-        from ii_agent.agent.runtime.models.message import Message
+        from ii_agent.agents.models.message import Message
+
         builder = self._make_builder()
         msgs = [
             Message(role="user", content="u1"),
@@ -717,12 +724,14 @@ class TestMessageBuilderGetContinueRunMessages:
 # DelegationManager
 # ---------------------------------------------------------------------------
 
+
 class TestDelegationManagerFindSubAgent:
     """Test DelegationManager.find_sub_agent_by_id."""
 
     def _make_dm(self):
-        from ii_agent.agent.runtime.agents.delegation_manager import DelegationManager
-        return DelegationManager(session_store=None)
+        from ii_agent.agents.sub_agent import SubAgentManager
+
+        return SubAgentManager(session_store=None)
 
     def test_find_by_id(self):
         dm = self._make_dm()
@@ -769,8 +778,9 @@ class TestDelegationManagerGetSubAgentsDescription:
     """Test DelegationManager.get_sub_agents_description."""
 
     def _make_dm(self):
-        from ii_agent.agent.runtime.agents.delegation_manager import DelegationManager
-        return DelegationManager(session_store=None)
+        from ii_agent.agents.sub_agent import SubAgentManager
+
+        return SubAgentManager(session_store=None)
 
     def test_empty_list_returns_empty_string(self):
         dm = self._make_dm()
@@ -832,11 +842,11 @@ class TestDelegationManagerInitializeSubAgent:
     """Test DelegationManager.initialize_sub_agent."""
 
     def test_assigns_session_store_when_sub_agent_has_noop_store(self):
-        from ii_agent.agent.runtime.agents.delegation_manager import DelegationManager
-        from ii_agent.agent.runtime.agent_sessions.base import NoOpSessionStore
+        from ii_agent.agents.sub_agent import SubAgentManager
+        from ii_agent.agents.sessions.base import NoOpSessionStore
 
         real_store = MagicMock()
-        dm = DelegationManager(session_store=real_store)
+        dm = SubAgentManager(session_store=real_store)
 
         sub_agent = MagicMock()
         sub_agent.session_store = NoOpSessionStore()
@@ -845,10 +855,10 @@ class TestDelegationManagerInitializeSubAgent:
         assert sub_agent.session_store is real_store
 
     def test_does_not_overwrite_existing_real_store(self):
-        from ii_agent.agent.runtime.agents.delegation_manager import DelegationManager
+        from ii_agent.agents.sub_agent import SubAgentManager
 
         parent_store = MagicMock()
-        dm = DelegationManager(session_store=parent_store)
+        dm = SubAgentManager(session_store=parent_store)
 
         existing_store = MagicMock()
         sub_agent = MagicMock()
@@ -858,10 +868,10 @@ class TestDelegationManagerInitializeSubAgent:
         assert sub_agent.session_store is existing_store
 
     def test_assigns_when_sub_agent_has_none_store(self):
-        from ii_agent.agent.runtime.agents.delegation_manager import DelegationManager
+        from ii_agent.agents.sub_agent import SubAgentManager
 
         parent_store = MagicMock()
-        dm = DelegationManager(session_store=parent_store)
+        dm = SubAgentManager(session_store=parent_store)
 
         sub_agent = MagicMock()
         sub_agent.session_store = None
@@ -874,11 +884,13 @@ class TestDelegationManagerGetDelegateTaskFunction:
     """Test DelegationManager.get_delegate_task_function."""
 
     def _make_dm(self):
-        from ii_agent.agent.runtime.agents.delegation_manager import DelegationManager
-        return DelegationManager(session_store=None)
+        from ii_agent.agents.sub_agent import SubAgentManager
+
+        return SubAgentManager(session_store=None)
 
     def _make_run_output(self, run_id=None):
-        from ii_agent.agent.runtime.run.agent import RunOutput
+        from ii_agent.agents.runs.agent import RunOutput
+
         return RunOutput(
             run_id=run_id or str(uuid4()),
             session_id="sess-1",
@@ -893,7 +905,8 @@ class TestDelegationManagerGetDelegateTaskFunction:
         return session
 
     def _make_run_context(self, run_id=None):
-        from ii_agent.agent.runtime.run import RunContext
+        from ii_agent.agents.runs import RunContext
+
         return RunContext(
             run_id=run_id or str(uuid4()),
             session_id="sess-1",
@@ -901,7 +914,8 @@ class TestDelegationManagerGetDelegateTaskFunction:
         )
 
     def test_returns_function_for_specific_member(self):
-        from ii_agent.agent.runtime.tools.function import Function
+        from ii_agent.agents.tools.function import Function
+
         dm = self._make_dm()
         run_response = self._make_run_output()
         run_context = self._make_run_context()
@@ -927,7 +941,8 @@ class TestDelegationManagerGetDelegateTaskFunction:
         assert "sub_agent_task" in func.name
 
     def test_returns_function_for_all_members(self):
-        from ii_agent.agent.runtime.tools.function import Function
+        from ii_agent.agents.tools.function import Function
+
         dm = self._make_dm()
         run_response = self._make_run_output()
         run_context = self._make_run_context()

@@ -25,10 +25,11 @@ import {
     useAppDispatch,
     useAppSelector
 } from '@/state'
-import { BUILD_MODE, AGENT_TYPE } from '@/typings/agent'
+import { setCurrentQuestion } from '@/state/slice/workspace'
+import { BUILD_MODE, AGENT_TYPE, CommandType, ChatMessagePayload } from '@/typings/agent'
 import { useSessionManager } from '@/hooks/use-session-manager'
 import { useParams } from 'react-router'
-import { useAppEvents } from '@/hooks/use-app-events'
+import { useAppEventsContext } from '@/contexts/app-events-context'
 import { useQuestionHandlers } from '@/hooks/use-question-handlers'
 import AgentFiles from './agent-files'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -78,7 +79,7 @@ const ChatBox = ({
     const { sessionId } = useParams()
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
-    const { handleEvent, handleClickAction } = useAppEvents()
+    const { handleEvent, handleClickAction } = useAppEventsContext()
 
     const { isReplayMode, processAllEventsImmediately, isLoadingSession } =
         useSessionManager({
@@ -332,8 +333,8 @@ const ChatBox = ({
 
         // Send cancel message to the server
         sendMessage({
-            type: 'cancel',
-            content: {}
+            session_uuid: sessionId || '',
+            content: { command: CommandType.CANCEL }
         })
         // Set cancelling state - will be cleared when AGENT_RESPONSE_INTERRUPTED is received
         dispatch(setCancelling(true))
@@ -342,15 +343,17 @@ const ChatBox = ({
     const handleEditMessage = (newQuestion: string) => {
         if (!socket || !socket.connected) {
             toast.error(t('agent.chatBox.errors.socketNotOpenRetry'))
-            dispatch({ type: 'SET_LOADING', payload: false })
+            dispatch(setLoading(false))
             return
         }
 
+        // TODO: edit_query is not yet a registered BE command
         sendMessage({
-            type: 'edit_query',
+            session_uuid: sessionId || '',
             content: {
+                command: CommandType.QUERY,
                 text: newQuestion,
-                files: uploadedFiles?.map((file) => `.${file}`)
+                files: uploadedFiles?.map((file) => `.${file}`) ?? []
             }
         })
 
@@ -375,31 +378,32 @@ const ChatBox = ({
     const handleReviewResult = () => {
         if (!socket || !socket.connected) {
             toast.error(t('agent.chatBox.errors.socketNotOpenRetry'))
-            dispatch({ type: 'SET_LOADING', payload: false })
+            dispatch(setLoading(false))
             return
         }
         const { thinking_tokens, ...tool_args } = toolSettings
 
-        dispatch({ type: 'SET_LOADING', payload: true })
-        dispatch({ type: 'SET_COMPLETED', payload: false })
+        dispatch(setLoading(true))
 
         // Only send init_agent event if agent is not already initialized
         if (!isAgentInitialized) {
             sendMessage({
-                type: 'init_agent',
+                session_uuid: sessionId || '',
                 content: {
+                    command: CommandType.INIT_AGENT,
                     model_name: selectedModel,
                     tool_args,
                     thinking_tokens
-                }
+                } as ChatMessagePayload['content']
             })
         }
 
-        // Use memoized lastUserMessageContent instead of filtering messages
+        // TODO: review_result is not yet a registered BE command — send as query
         sendMessage({
-            type: 'review_result',
+            session_uuid: sessionId || '',
             content: {
-                user_input: lastUserMessageContent
+                command: CommandType.QUERY,
+                text: lastUserMessageContent
             }
         })
     }
@@ -1084,10 +1088,7 @@ const ChatBox = ({
                     isReplayMode={isReplayMode}
                     messagesEndRef={messagesEndRef}
                     setCurrentQuestion={(value) =>
-                        dispatch({
-                            type: 'SET_CURRENT_QUESTION',
-                            payload: value
-                        })
+                        dispatch(setCurrentQuestion(value))
                     }
                     handleKeyDown={handleKeyDown}
                     handleQuestionSubmit={handleQuestionSubmit}

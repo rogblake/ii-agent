@@ -34,6 +34,7 @@ import {
 } from '@/state'
 import {
     BUILD_STEP,
+    CommandType,
     ISession,
     QUESTION_MODE,
     TAB,
@@ -70,7 +71,7 @@ function AgentPageContent() {
     const [sessionData, setSessionData] = useState<ISession>()
     const [sessionError, setSessionError] = useState<string | null>(null)
     const [mobileChatTab, setMobileChatTab] = useState<MobileChatOption>('chat')
-    const { socket } = useSocketIOContext()
+    const { socket, sendMessage } = useSocketIOContext()
     const isRunning = useAppSelector(selectIsLoading)
     const isMobileChatVisible = useAppSelector(selectIsMobileChatVisible)
     // Use memoized selector for previewUrl to avoid subscribing to full messages array
@@ -126,7 +127,17 @@ function AgentPageContent() {
         previousResultUrlRef.current = previewUrl ?? ''
     }, [dispatch, isMobile, previewUrl, isMobileChatVisible])
 
-    // Single sandbox_status request for PROJECT and RESULT tabs.
+    const handleAwakeClick = useCallback(() => {
+        setIsAwakeLoading(true)
+        if (socket?.connected) {
+            sendMessage({
+                session_uuid: sessionId || '',
+                content: { command: CommandType.AWAKE_SANDBOX }
+            })
+        }
+    }, [socket, sendMessage, sessionId])
+
+    // Single sandbox_status request for both CODE and RESULT tabs.
     // AgentResult's duplicate effect is removed — both tabs need the same
     // status + vscode_url info from one response.
     useEffect(() => {
@@ -135,12 +146,21 @@ function AgentPageContent() {
             wsConnectionState === WebSocketConnectionState.CONNECTED &&
             socket
         ) {
-            socket.emit('chat_message', {
-                type: 'sandbox_status',
-                session_uuid: sessionId
+            if (activeTab === TAB.CODE) {
+                setIframeKey((prev) => prev + 1)
+            }
+            sendMessage({
+                session_uuid: sessionId || '',
+                content: { command: CommandType.SANDBOX_STATUS }
             })
         }
-    }, [activeTab, sessionId, socket, wsConnectionState])
+    }, [activeTab, sessionId, socket, sendMessage, wsConnectionState])
+
+    useEffect(() => {
+        if (isSandboxIframeAwake) {
+            setIsAwakeLoading(false)
+        }
+    }, [isSandboxIframeAwake])
 
     useEffect(() => {
         dispatch(setQuestionMode(QUESTION_MODE.AGENT))

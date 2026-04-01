@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.agent.runtime.tools.connectors.composio import (
+from ii_agent.agents.tools.connectors.composio import (
     ComposioAgentTool,
     ComposioActionTool,
     _to_dict,
@@ -16,6 +16,7 @@ from ii_agent.agent.runtime.tools.connectors.composio import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_composio_tool(**kwargs) -> ComposioAgentTool:
     defaults = {
@@ -29,7 +30,9 @@ def make_composio_tool(**kwargs) -> ComposioAgentTool:
     return ComposioAgentTool(**defaults)
 
 
-def make_action_tool(parent=None, action_name="GMAIL_SEND_EMAIL", description="Send email", params=None):
+def make_action_tool(
+    parent=None, action_name="GMAIL_SEND_EMAIL", description="Send email", params=None
+):
     if parent is None:
         parent = make_composio_tool()
     return ComposioActionTool(
@@ -43,6 +46,7 @@ def make_action_tool(parent=None, action_name="GMAIL_SEND_EMAIL", description="S
 # ---------------------------------------------------------------------------
 # _to_dict utility tests
 # ---------------------------------------------------------------------------
+
 
 class TestToDict:
     def test_dict_input_returned_as_is(self):
@@ -70,6 +74,7 @@ class TestToDict:
 # ---------------------------------------------------------------------------
 # ComposioAgentTool __init__ tests
 # ---------------------------------------------------------------------------
+
 
 class TestComposioAgentToolInit:
     def test_init_sets_all_attributes(self):
@@ -104,10 +109,11 @@ class TestComposioAgentToolInit:
 # _get_client lazy loading tests
 # ---------------------------------------------------------------------------
 
+
 class TestGetClient:
     def test_get_client_creates_composio_instance(self):
         tool = make_composio_tool()
-        with patch("ii_agent.agent.runtime.tools.connectors.composio.Composio") as MockComposio:
+        with patch("ii_agent.agents.tools.connectors.composio.Composio") as MockComposio:
             mock_instance = MagicMock()
             MockComposio.return_value = mock_instance
             client = tool._get_client()
@@ -116,7 +122,7 @@ class TestGetClient:
 
     def test_get_client_cached_on_second_call(self):
         tool = make_composio_tool()
-        with patch("ii_agent.agent.runtime.tools.connectors.composio.Composio") as MockComposio:
+        with patch("ii_agent.agents.tools.connectors.composio.Composio") as MockComposio:
             mock_instance = MagicMock()
             MockComposio.return_value = mock_instance
             client1 = tool._get_client()
@@ -129,6 +135,7 @@ class TestGetClient:
 # _get_actions tests
 # ---------------------------------------------------------------------------
 
+
 class TestGetActions:
     @pytest.mark.asyncio
     async def test_get_actions_from_cache_sets_internal_state(self):
@@ -136,7 +143,9 @@ class TestGetActions:
         tool = make_composio_tool()
         tool._actions = [{"name": "GMAIL_LIST", "description": "List", "parameters": {}}]
 
-        with patch("ii_agent.agent.runtime.tools.connectors.composio.ComposioCacheService") as MockCache:
+        with patch(
+            "ii_agent.agents.tools.connectors.composio.ComposioCacheService"
+        ) as MockCache:
             MockCache.get_toolkit_actions = AsyncMock()
             await tool._get_actions()
             MockCache.get_toolkit_actions.assert_not_called()
@@ -149,7 +158,9 @@ class TestGetActions:
         tool = make_composio_tool()
         cached = {"actions": [{"name": "GMAIL_LIST", "description": "List", "parameters": {}}]}
 
-        with patch("ii_agent.agent.runtime.tools.connectors.composio.ComposioCacheService") as MockCache:
+        with patch(
+            "ii_agent.agents.tools.connectors.composio.ComposioCacheService"
+        ) as MockCache:
             MockCache.get_toolkit_actions = AsyncMock(return_value=cached)
             await tool._get_actions()
 
@@ -167,9 +178,16 @@ class TestGetActions:
         mock_action.name = "GMAIL_SEND_EMAIL"
         mock_action.description = "Send email"
 
-        with patch("ii_agent.agent.runtime.tools.connectors.composio.ComposioCacheService") as MockCache, \
-             patch("ii_agent.agent.runtime.tools.connectors.composio.get_default_tools", return_value=[]), \
-             patch("ii_agent.agent.runtime.tools.connectors.composio.ToolkitService") as MockService:
+        with (
+            patch(
+                "ii_agent.agents.tools.connectors.composio.ComposioCacheService"
+            ) as MockCache,
+            patch(
+                "ii_agent.agents.tools.connectors.composio.get_default_tools",
+                return_value=[],
+            ),
+            patch("ii_agent.agents.tools.connectors.composio.ToolkitService") as MockService,
+        ):
             MockCache.get_toolkit_actions = AsyncMock(return_value=None)
             MockCache.set_toolkit_actions = AsyncMock()
             MockService.EXCEPT_TOOLKIT = {"gmail": []}
@@ -186,6 +204,7 @@ class TestGetActions:
 # ---------------------------------------------------------------------------
 # _extract_action_metadata tests
 # ---------------------------------------------------------------------------
+
 
 class TestExtractActionMetadata:
     def test_extract_from_dict_with_function_key(self):
@@ -233,6 +252,7 @@ class TestExtractActionMetadata:
 # _error_result tests
 # ---------------------------------------------------------------------------
 
+
 class TestErrorResult:
     def test_error_result_structure(self):
         tool = make_composio_tool()
@@ -250,6 +270,7 @@ class TestErrorResult:
 # ---------------------------------------------------------------------------
 # _parse_result tests
 # ---------------------------------------------------------------------------
+
 
 class TestParseResult:
     def test_parse_successful_result(self):
@@ -282,6 +303,7 @@ class TestParseResult:
 # _format_response tests
 # ---------------------------------------------------------------------------
 
+
 class TestFormatResponse:
     def test_format_response_with_items_list(self):
         tool = make_composio_tool()
@@ -301,6 +323,7 @@ class TestFormatResponse:
 # ---------------------------------------------------------------------------
 # _format_items_list tests
 # ---------------------------------------------------------------------------
+
 
 class TestFormatItemsList:
     def test_empty_items_returns_no_items_found(self):
@@ -338,6 +361,7 @@ class TestFormatItemsList:
 # should_confirm_execute tests
 # ---------------------------------------------------------------------------
 
+
 class TestShouldConfirmExecute:
     def test_always_returns_false(self):
         tool = make_composio_tool()
@@ -347,6 +371,7 @@ class TestShouldConfirmExecute:
 # ---------------------------------------------------------------------------
 # get_sub_tools tests
 # ---------------------------------------------------------------------------
+
 
 class TestGetSubTools:
     @pytest.mark.asyncio
@@ -392,6 +417,7 @@ class TestGetSubTools:
 # execute tests
 # ---------------------------------------------------------------------------
 
+
 class TestComposioAgentToolExecute:
     @pytest.mark.asyncio
     async def test_execute_requires_action_name(self):
@@ -407,13 +433,16 @@ class TestComposioAgentToolExecute:
         mock_client.tools.execute.return_value = {"successful": True, "data": {"status": "sent"}}
         tool._client = mock_client
 
-        result = await tool.execute({"action": "GMAIL_SEND_EMAIL", "params": {"to": "test@example.com"}})
+        result = await tool.execute(
+            {"action": "GMAIL_SEND_EMAIL", "params": {"to": "test@example.com"}}
+        )
         assert result.is_error is False
 
     @pytest.mark.asyncio
     async def test_execute_handles_tool_version_error(self):
         """Test that ToolVersionRequiredError is caught and converted to an error result."""
         from composio.exceptions import ToolVersionRequiredError
+
         tool = make_composio_tool()
         mock_client = MagicMock()
         # ToolVersionRequiredError takes no arguments (no-arg constructor)
@@ -438,6 +467,7 @@ class TestComposioAgentToolExecute:
 # ---------------------------------------------------------------------------
 # ComposioActionTool tests
 # ---------------------------------------------------------------------------
+
 
 class TestComposioActionToolInit:
     def test_init_sets_attributes(self):
@@ -534,8 +564,10 @@ class TestComposioActionToolExecute:
 
         result = await action_tool.execute({"to": "test@example.com"})
 
-        parent.execute.assert_awaited_once_with({
-            "action": "GMAIL_SEND_EMAIL",
-            "params": {"to": "test@example.com"},
-        })
+        parent.execute.assert_awaited_once_with(
+            {
+                "action": "GMAIL_SEND_EMAIL",
+                "params": {"to": "test@example.com"},
+            }
+        )
         assert result.llm_content == "ok"

@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
-from ii_agent.agent.runtime.tools.base import BaseAgentTool
-from ii_agent.agent.runtime.tools.connectors.github import GitHubAgentTool
+from ii_agent.agents.tools.base import BaseAgentTool
+from ii_agent.agents.tools.connectors.github import GitHubAgentTool
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +66,6 @@ async def load_connector_tools(
                 )
                 connector_tools.append(github_tool)
                 logger.info(f"Loaded GitHub tool for user {user_id}")
-
-            # Add more connectors here as they are implemented
-            # elif connector.connector_type == ConnectorTypeEnum.GOOGLE_DRIVE.value:
-            #     google_drive_tool = GoogleDriveAgentTool(...)
-            #     connector_tools.append(google_drive_tool)
 
         except Exception as e:
             logger.error(

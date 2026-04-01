@@ -25,7 +25,9 @@ class FakeAsyncResult:
 
 @pytest.mark.asyncio
 async def test_get_task_status_ready_success(monkeypatch):
-    monkeypatch.setattr(utils, "AsyncResult", lambda task_id, app=None: FakeAsyncResult(result={"ok": True}))
+    monkeypatch.setattr(
+        utils, "AsyncResult", lambda task_id, app=None: FakeAsyncResult(result={"ok": True})
+    )
 
     result = await utils.get_task_status("task-1")
 

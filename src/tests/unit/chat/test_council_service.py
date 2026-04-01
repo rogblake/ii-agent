@@ -15,9 +15,8 @@ from ii_agent.chat.types import (
     RunResponseOutput,
     TextContent,
 )
-from ii_agent.billing.usage.models import TokenUsage
+from ii_agent.billing.schemas import TokenUsage
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
-from ii_agent.core.llm.execution_service import LLMExecutionService
 
 pytestmark = pytest.mark.unit
 
@@ -60,25 +59,23 @@ def _make_response(content: str) -> RunResponseOutput:
     )
 
 
-def _make_execution_service(response_map: dict[str, str]) -> LLMExecutionService:
-    """Build a mock LLMExecutionService that returns canned responses by model."""
-    svc = LLMExecutionService(llm_billing=None, llm_invocation_repo=None)
+def _make_client_factory(response_map: dict[str, str]):
+    """Return a get_client replacement that produces fake clients keyed by model."""
 
-    original_send_once = svc.send_once
+    def _factory(config: LLMConfig):
+        model_id = config.model
+        client = AsyncMock()
+        if model_id in response_map:
+            client.send = AsyncMock(return_value=_make_response(response_map[model_id]))
+        else:
+            client.send = AsyncMock(return_value=_make_response(""))
+        return client
 
-    async def _mock_send_once(*, client, messages, billing_context=None, usage_key=None, **kwargs):
-        # Determine which model this is for from billing_context
-        model_id = billing_context.model_id if billing_context else None
-        if model_id and model_id in response_map:
-            return _make_response(response_map[model_id])
-        return _make_response("")
-
-    svc.send_once = _mock_send_once
-    return svc
+    return _factory
 
 
 @pytest.mark.asyncio
-async def test_stream_council_response_bills_all_models(monkeypatch):
+async def test_stream_council_response_completes_all_models(monkeypatch):
     monkeypatch.setattr(
         "ii_agent.chat.application.council_service.cancel.raise_if_cancelled",
         AsyncMock(return_value=None),
@@ -90,17 +87,13 @@ async def test_stream_council_response_bills_all_models(monkeypatch):
         "synth-1": "Combined",
     }
 
-    execution_service = _make_execution_service(response_map)
-    db = AsyncMock()
-
     with patch(
         "ii_agent.chat.application.council_service.get_client",
-        side_effect=lambda config: MagicMock(name=f"client-{config.model}"),
+        side_effect=_make_client_factory(response_map),
     ):
         events = [
             event
             async for event in CouncilService.stream_council_response(
-                db=db,
                 user_id="user-1",
                 messages=[_make_message()],
                 user_question="How should we solve this?",
@@ -113,7 +106,6 @@ async def test_stream_council_response_bills_all_models(monkeypatch):
                 },
                 run_id="run-123",
                 session_id="session-123",
-                llm_execution_service=execution_service,
             )
         ]
 
@@ -138,32 +130,26 @@ async def test_stream_council_response_handles_member_error(monkeypatch):
         AsyncMock(return_value=None),
     )
 
-    execution_service = LLMExecutionService(llm_billing=None, llm_invocation_repo=None)
-
-    call_count = 0
-
-    async def _mock_send_once(*, client, messages, billing_context=None, usage_key=None, **kwargs):
-        nonlocal call_count
-        model_id = billing_context.model_id if billing_context else None
+    def _error_factory(config: LLMConfig):
+        model_id = config.model
+        client = AsyncMock()
         if model_id == "member-1":
-            raise RuntimeError("provider boom")
-        if model_id == "member-2":
-            return _make_response("Stable answer")
-        if model_id == "synth-1":
-            return _make_response("Summary")
-        return _make_response("")
-
-    execution_service.send_once = _mock_send_once
-    db = AsyncMock()
+            client.send = AsyncMock(side_effect=RuntimeError("provider boom"))
+        elif model_id == "member-2":
+            client.send = AsyncMock(return_value=_make_response("Stable answer"))
+        elif model_id == "synth-1":
+            client.send = AsyncMock(return_value=_make_response("Summary"))
+        else:
+            client.send = AsyncMock(return_value=_make_response(""))
+        return client
 
     with patch(
         "ii_agent.chat.application.council_service.get_client",
-        side_effect=lambda config: MagicMock(name=f"client-{config.model}"),
+        side_effect=_error_factory,
     ):
         events = [
             event
             async for event in CouncilService.stream_council_response(
-                db=db,
                 user_id="user-1",
                 messages=[_make_message()],
                 user_question="How should we solve this?",
@@ -176,7 +162,6 @@ async def test_stream_council_response_handles_member_error(monkeypatch):
                 },
                 run_id="run-456",
                 session_id="session-123",
-                llm_execution_service=execution_service,
             )
         ]
 

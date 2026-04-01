@@ -1,9 +1,11 @@
 """Pydantic schemas (DTOs) for mcp_settings domain."""
 
 import json
+import uuid as _uuid
 from fastmcp.mcp_config import RemoteMCPServer, StdioMCPServer
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any, Union
+from uuid import UUID
 
 from ii_agent.core.logger import logger
 
@@ -11,9 +13,7 @@ from ii_agent.core.logger import logger
 class MCPMetadata(BaseModel):
     """Model for MCP Metadata"""
 
-    tool_type: str = Field(
-        ..., description="Type of MCP tool (e.g., 'codex', 'firebase', etc.)"
-    )
+    tool_type: str = Field(..., description="Type of MCP tool (e.g., 'codex', 'firebase', etc.)")
 
 
 class CodexMetadata(MCPMetadata):
@@ -21,17 +21,13 @@ class CodexMetadata(MCPMetadata):
 
     tool_type: str = Field(default="codex", description="Tool type is always 'codex'")
     auth_json: Dict[str, Any] = Field(..., description="Codex authentication JSON")
-    store_path: str = Field(
-        default="~/.codex", description="Path where Codex stores its data"
-    )
+    store_path: str = Field(default="~/.codex", description="Path where Codex stores its data")
 
 
 class ClaudeCodeMetadata(MCPMetadata):
     """Metadata specific to Claude Code MCP tool."""
 
-    tool_type: str = Field(
-        default="claude_code", description="Tool type is always 'claude_code'"
-    )
+    tool_type: str = Field(default="claude_code", description="Tool type is always 'claude_code'")
     auth_json: Dict[str, Any] = Field(
         ...,
         description="Claude Code authentication JSON (access_token, refresh_token, expires_at)",
@@ -44,12 +40,10 @@ class ClaudeCodeMetadata(MCPMetadata):
 class ComposioMetadata(MCPMetadata):
     """Metadata specific to Composio MCP tool."""
 
-    tool_type: str = Field(
-        default="composio", description="Tool type is always 'composio'"
-    )
+    tool_type: str = Field(default="composio", description="Tool type is always 'composio'")
     toolkit_slug: str = Field(..., description="Composio toolkit slug (e.g., 'gmail')")
     toolkit_name: str = Field(..., description="Composio toolkit display name")
-    profile_id: str = Field(..., description="Composio profile ID")
+    profile_id: UUID = Field(..., description="Composio profile ID")
 
 
 MCPMetadataType = Union[CodexMetadata, ClaudeCodeMetadata, ComposioMetadata, MCPMetadata]
@@ -114,23 +108,17 @@ class MCPServersConfig(BaseModel):
 class CodexConfigConfigure(BaseModel):
     """Request model for configuring Codex MCP."""
 
-    auth_json: Optional[Dict[str, Any]] = Field(
-        None, description="Codex authentication JSON"
-    )
+    auth_json: Optional[Dict[str, Any]] = Field(None, description="Codex authentication JSON")
     apikey: Optional[str] = Field(None, description="Connect to codex with apikey")
     model: Optional[str] = Field(None, description="Optional model to start codex with")
-    model_reasoning_effort: Optional[str] = Field(
-        None, description="reasoning effort of model"
-    )
+    model_reasoning_effort: Optional[str] = Field(None, description="reasoning effort of model")
     search: bool = Field(False, description="toggle search for codex")
 
 
 class ClaudeCodeConfigConfigure(BaseModel):
     """Request model for configuring Claude Code MCP."""
 
-    authorization_code: str = Field(
-        ..., description="OAuth authorization code from Claude"
-    )
+    authorization_code: str = Field(..., description="OAuth authorization code from Claude")
 
 
 class MCPSettingCreate(BaseModel):
@@ -143,19 +131,15 @@ class MCPSettingCreate(BaseModel):
 class MCPSettingUpdate(BaseModel):
     """Model for updating existing MCP settings."""
 
-    mcp_config: Optional[MCPServersConfig] = Field(
-        None, description="MCP configuration object"
-    )
+    mcp_config: Optional[MCPServersConfig] = Field(None, description="MCP configuration object")
     metadata: Optional[MCPMetadataType] = Field(None, description="Additional metadata")
-    is_active: Optional[bool] = Field(
-        None, description="Whether the MCP setting is active"
-    )
+    is_active: Optional[bool] = Field(None, description="Whether the MCP setting is active")
 
 
 class MCPSettingInfo(BaseModel):
     """Model for MCP setting information."""
 
-    id: str
+    id: UUID
     mcp_config: MCPServersConfig
     metadata: Optional[MCPMetadataType] = None
     is_active: bool
@@ -168,7 +152,7 @@ class MCPSettingList(BaseModel):
 
     settings: List[MCPSettingInfo]
 
-    def get_by_id(self, setting_id: str) -> Optional[MCPSettingInfo]:
+    def get_by_id(self, setting_id: UUID) -> Optional[MCPSettingInfo]:
         """Get MCP setting by ID."""
         return next(
             (setting for setting in self.settings if setting.id == setting_id),
@@ -189,11 +173,7 @@ class MCPSettingList(BaseModel):
 
         # Iterate through all active settings
         for setting in self.settings:
-            if (
-                setting.is_active
-                and setting.mcp_config
-                and setting.mcp_config.mcpServers
-            ):
+            if setting.is_active and setting.mcp_config and setting.mcp_config.mcpServers:
                 # Add or update servers from this setting
                 for server_name, server_config in setting.mcp_config.mcpServers.items():
                     # HACK:Skip codex-as-mcp since it's handled separately by register_codex()

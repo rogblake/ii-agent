@@ -14,7 +14,8 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.billing.types import BillingContextValue, BillingScope
+from ii_agent.chat.llm.factory import get_client
+from ii_agent.chat.llm.utils import make_message, run_tool_loop
 from ii_agent.chat.types import (
     Message,
     MessageRole,
@@ -33,12 +34,7 @@ from ii_agent.projects.design.tools import (
 )
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.config.settings import Settings
-from ii_agent.core.llm.execution_service import (
-    LLMBillingContext,
-    LLMExecutionService,
-)
 from ii_agent.core.logger import logger
-from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.projects.design.utils.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
     DESIGN_MODE_RUNTIME_SCRIPT,
@@ -72,14 +68,13 @@ from ii_agent.projects.design.prompts import (
     build_design_mode_iframe_plan_prompt,
     build_design_mode_style_change_prompt,
 )
-from ii_agent.agent.sandboxes.models import AgentSandbox
-from ii_agent.agent.sandboxes.service import SandboxService
-from ii_agent.agent.events.models import EventType, RealtimeEvent
-from ii_agent.agent.events.service import EventService
-from ii_agent.settings.llm.service import LLMSettingService, get_system_llm_config
+from ii_agent.agents.sandboxes.models import AgentSandbox
+from ii_agent.agents.sandboxes.service import SandboxService
+from ii_agent.realtime.events.app_events import AgentResponseEvent, AgentStatusUpdateEvent
+from ii_agent.settings.llm.service import ModelSettingService
 
 if TYPE_CHECKING:
-    from ii_agent.core.llm.billing_service import LLMBillingService
+    from ii_agent.realtime.events.repository import EventRepository as EventService
 
 ProgressCallback = Callable[..., Awaitable[None]]
 SummaryCallback = Callable[[str], Awaitable[str | None]]
@@ -97,17 +92,13 @@ class ProjectDesignService:
         repo: ProjectDesignRepository,
         sandbox_service: SandboxService,
         event_service: EventService | None = None,
-        llm_setting_service: LLMSettingService,
-        llm_execution_service: LLMExecutionService,
-        llm_billing_service: LLMBillingService | None,
+        llm_setting_service: ModelSettingService,
         config: Settings,
     ) -> None:
         self._repo = repo
         self._sandbox_service = sandbox_service
         self._event_service = event_service
         self._llm_setting_service = llm_setting_service
-        self._llm_execution_service = llm_execution_service
-        self._llm_billing_service = llm_billing_service
         self._config = config
 
     async def _get_session_for_request(
@@ -150,29 +141,18 @@ class ProjectDesignService:
         except Exception:
             sandbox_record = None
 
-        # Support sessions that point to a shared/forked sandbox via Session.sandbox_id.
-        session_sandbox_hint = str(getattr(session, "sandbox_id", "") or "").strip()
-        if not sandbox_record and session_sandbox_hint:
-            try:
-                sandbox_record = await self._sandbox_service.get_by_id(
-                    db,
-                    sandbox_id=uuid.UUID(session_sandbox_hint),
-                )
-            except Exception:
-                sandbox_record = None
-
-        if not sandbox_record and session_sandbox_hint:
+        # Support forked sessions that share parent's sandbox.
+        if not sandbox_record and session.parent_session_id:
             try:
                 sandbox_record = await self._sandbox_service.get_by_session_id(
                     db,
-                    session_id=uuid.UUID(session_sandbox_hint),
+                    session_id=session.parent_session_id,
                 )
             except Exception:
                 sandbox_record = None
 
         allowed = self._build_proxy_hostname_allow_check(
             session_public_url=getattr(session, "public_url", None),
-            session_sandbox_id=getattr(session, "sandbox_id", None),
             requested_hostname=requested_hostname,
             sandbox_record=sandbox_record,
         )
@@ -203,7 +183,7 @@ class ProjectDesignService:
             db, session_id=request.session_id, user_id=user_id, session=session
         )
         llm_config.temperature = 0.2
-        client = self._llm_execution_service.create_client(llm_config)
+        client = get_client(llm_config)
 
         prompt = build_design_mode_style_change_prompt(
             tag_name=request.element_info.tagName,
@@ -218,7 +198,7 @@ class ProjectDesignService:
         )
         design_mode_ai_change_tool = DesignModeAIChangeTool()
         try:
-            result = await self._llm_execution_service.run_tool_loop_until_final(
+            result = await run_tool_loop(
                 client=client,
                 session_id=request.session_id,
                 messages=messages,
@@ -228,15 +208,6 @@ class ProjectDesignService:
                     design_mode_ai_change_tool.name: design_mode_ai_change_tool,
                 },
                 max_loops=2,
-                billing_context=self._build_billing_context(
-                    db=db,
-                    user_id=user_id,
-                    session_id=request.session_id,
-                    llm_config=llm_config,
-                ),
-                usage_key_prefix=(
-                    f"design_ai_change:{request.session_id}:{get_or_generate_request_id()}"
-                ),
             )
             payload = result.final_payload
         except Exception as exc:
@@ -295,7 +266,7 @@ class ProjectDesignService:
         llm_config.temperature = 0.0
         if hasattr(llm_config, "thinking_tokens"):
             llm_config.thinking_tokens = 0
-        client = self._llm_execution_service.create_client(llm_config)
+        client = get_client(llm_config)
 
         snapshot_nodes = request.document_snapshot.nodes or []
         snapshot_desc = self._build_snapshot_desc(snapshot_nodes)
@@ -332,7 +303,7 @@ class ProjectDesignService:
         }
 
         try:
-            result = await self._llm_execution_service.run_tool_loop_until_final(
+            result = await run_tool_loop(
                 client=client,
                 session_id=request.session_id,
                 messages=messages,
@@ -346,15 +317,6 @@ class ProjectDesignService:
                 final_tool_name=design_mode_iframe_ai_plan_tool.name,
                 tool_registry=tool_registry,
                 max_loops=_IFRAME_MAX_TOOL_LOOPS,
-                billing_context=self._build_billing_context(
-                    db=db,
-                    user_id=user_id,
-                    session_id=request.session_id,
-                    llm_config=llm_config,
-                ),
-                usage_key_prefix=(
-                    f"design_iframe:{request.session_id}:{get_or_generate_request_id()}"
-                ),
             )
             payload = result.final_payload
         except Exception as exc:
@@ -573,21 +535,20 @@ class ProjectDesignService:
         user_id: str,
         session: Any,
     ) -> LLMConfig:
-        setting_id = getattr(session, "llm_setting_id", None)
+        setting_id = getattr(session, "model_setting_id", None)
         if isinstance(setting_id, str) and setting_id.strip():
             model_id = setting_id.strip()
             try:
                 resolved = await self._llm_setting_service.get_user_llm_config(
                     db,
-                    model_id=model_id,
+                    setting_id=model_id,
                     user_id=user_id,
                 )
                 return resolved.model_copy(deep=True)
             except Exception:
                 try:
-                    resolved = get_system_llm_config(
-                        model_id=model_id,
-                        config=self._config,
+                    resolved = await self._llm_setting_service.resolve_system_config(
+                        db, setting_id=model_id
                     )
                     return resolved.model_copy(deep=True)
                 except Exception:
@@ -597,46 +558,24 @@ class ProjectDesignService:
                         session_id,
                     )
 
-        if self._config.llm_configs:
-            fallback_id = (
-                "default"
-                if "default" in self._config.llm_configs
-                else next(iter(self._config.llm_configs.keys()))
+        # Fallback: use "default" system config from DB
+        try:
+            resolved = await self._llm_setting_service.resolve_system_config(
+                db, setting_id="default"
             )
-            resolved = get_system_llm_config(model_id=fallback_id, config=self._config)
             return resolved.model_copy(deep=True)
+        except ValueError:
+            return LLMConfig()
 
-        return LLMConfig()
-
-    def _build_llm_messages(self, *, session_id: str, user_prompt: str) -> list[Message]:
+    @staticmethod
+    def _build_llm_messages(*, session_id: str, user_prompt: str) -> list[Message]:
         return [
-            self._llm_execution_service.new_message(
+            make_message(
                 role=MessageRole.USER,
                 session_id=session_id,
                 parts=[TextContent(text=user_prompt)],
             )
         ]
-
-    def _build_billing_context(
-        self,
-        *,
-        db: AsyncSession,
-        user_id: str,
-        session_id: str,
-        llm_config: LLMConfig,
-    ) -> LLMBillingContext | None:
-        if not self._llm_billing_service:
-            return None
-        return LLMBillingContext(
-            scope=BillingScope.for_session(
-                user_id=user_id,
-                app_kind="chat",
-                session_id=session_id,
-                billing_context=BillingContextValue.PROJECT_DESIGN,
-            ),
-            llm_config=llm_config,
-            model_id=llm_config.model,
-        )
 
     @staticmethod
     def _tool_result_value(tool_result: ToolResult) -> Any:
@@ -709,7 +648,6 @@ class ProjectDesignService:
         self,
         *,
         session_public_url: Optional[str],
-        session_sandbox_id: Optional[str],
         requested_hostname: str,
         sandbox_record: Optional[AgentSandbox],
     ) -> Callable[[str], bool]:
@@ -726,7 +664,6 @@ class ProjectDesignService:
         if sandbox_record and isinstance(sandbox_record.provider_sandbox_id, str):
             provider_sandbox_id = sandbox_record.provider_sandbox_id.strip().lower()
 
-        session_sandbox = (session_sandbox_id or "").strip().lower()
         requested_port = self._extract_e2b_port_from_hostname(requested_hostname)
         expected_hostnames: set[str] = set()
         if requested_port and provider_sandbox_id:
@@ -740,8 +677,6 @@ class ProjectDesignService:
             if hn in expected_hostnames:
                 return True
             if provider_sandbox_id and self._hostname_matches_sandbox_id(hn, provider_sandbox_id):
-                return True
-            if session_sandbox and self._hostname_matches_sandbox_id(hn, session_sandbox):
                 return True
             return bool(allowed_public_hostname and hn == allowed_public_hostname)
 
@@ -1523,8 +1458,7 @@ class ProjectDesignService:
         session_id: uuid.UUID,
         summary: str,
     ) -> str:
-        sync_event = RealtimeEvent(
-            type=EventType.AGENT_RESPONSE,
+        sync_event = AgentResponseEvent(
             session_id=session_id,
             content={"text": summary},
         )
@@ -1558,8 +1492,7 @@ class ProjectDesignService:
             # Keep flat fields for compatibility with newer consumers.
             **progress_payload,
         }
-        progress_event = RealtimeEvent(
-            type=EventType.STATUS_UPDATE,
+        progress_event = AgentStatusUpdateEvent(
             session_id=session_id,
             content=content,
         )

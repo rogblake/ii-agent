@@ -2,21 +2,28 @@
 
 from __future__ import annotations
 
+import json
 import uuid
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from ii_agent.projects.design.exceptions import (
+    DesignProxyFetchError,
+    DesignProxyHostNotAllowedError,
     DesignSessionAccessDeniedError,
     DesignSessionNotFoundError,
     DesignValidationError,
 )
 from ii_agent.projects.design.schemas import (
+    AIChangeRequest,
     DesignStateRequest,
     ElementInfoRequest,
+    IframeAIPlanRequest,
     IframeDocumentSnapshotNode,
     StyleChange,
+    SyncRequest,
     SyncStateRequest,
 )
 from ii_agent.projects.design.service import ProjectDesignService
@@ -32,7 +39,7 @@ def _make_session(user_id: str = "user-1", session_id: str | None = None) -> Mag
     session.id = session_id or str(uuid.uuid4())
     session.user_id = user_id
     session.public_url = None
-    session.sandbox_id = None
+    session.parent_session_id = None
     session.llm_setting_id = None
     return session
 
@@ -42,8 +49,6 @@ def _make_service(**overrides) -> ProjectDesignService:
     sandbox_service = MagicMock()
     event_service = MagicMock()
     llm_setting_service = MagicMock()
-    llm_execution_service = MagicMock()
-    llm_billing_service = None
     config = MagicMock()
     config.llm_configs = {}  # Use a real empty dict
 
@@ -52,8 +57,6 @@ def _make_service(**overrides) -> ProjectDesignService:
         "sandbox_service": sandbox_service,
         "event_service": event_service,
         "llm_setting_service": llm_setting_service,
-        "llm_execution_service": llm_execution_service,
-        "llm_billing_service": llm_billing_service,
         "config": config,
     }
     kwargs.update(overrides)
@@ -269,7 +272,6 @@ class TestBuildProxyHostnameAllowCheck:
         sandbox_record.provider_sandbox_id = "sandbox123"
         is_allowed = svc._build_proxy_hostname_allow_check(
             session_public_url=None,
-            session_sandbox_id=None,
             requested_hostname="sandbox123.e2b.app",
             sandbox_record=sandbox_record,
         )
@@ -279,7 +281,6 @@ class TestBuildProxyHostnameAllowCheck:
         svc = _make_service()
         is_allowed = svc._build_proxy_hostname_allow_check(
             session_public_url="https://myapp.example.com",
-            session_sandbox_id=None,
             requested_hostname="myapp.example.com",
             sandbox_record=None,
         )
@@ -289,27 +290,15 @@ class TestBuildProxyHostnameAllowCheck:
         svc = _make_service()
         is_allowed = svc._build_proxy_hostname_allow_check(
             session_public_url="https://myapp.example.com",
-            session_sandbox_id=None,
             requested_hostname="evil.com",
             sandbox_record=None,
         )
         assert is_allowed("evil.com") is False
 
-    def test_allows_session_sandbox_id(self):
-        svc = _make_service()
-        is_allowed = svc._build_proxy_hostname_allow_check(
-            session_public_url=None,
-            session_sandbox_id="mysandbox",
-            requested_hostname="mysandbox.e2b.app",
-            sandbox_record=None,
-        )
-        assert is_allowed("mysandbox.e2b.app") is True
-
     def test_empty_hostname_rejected(self):
         svc = _make_service()
         is_allowed = svc._build_proxy_hostname_allow_check(
             session_public_url="https://myapp.com",
-            session_sandbox_id=None,
             requested_hostname="myapp.com",
             sandbox_record=None,
         )
@@ -524,7 +513,7 @@ class TestBuildSelectedSubtreeHint:
             selected_design_id="did-0",
             max_nodes=5,
         )
-        lines = [line for line in result.split("\n") if line.strip()]
+        lines = [l for l in result.split("\n") if l.strip()]
         assert len(lines) <= 5
 
 
@@ -547,6 +536,7 @@ class TestToolResultValue:
         assert result is None
 
     def test_falls_back_to_model_dump(self):
+        tool_result = MagicMock()
         output = MagicMock(spec=[])
         output.value = MagicMock()  # value attribute exists but...
         delattr(output, "value") if hasattr(output, "value") else None
@@ -578,55 +568,28 @@ class TestToolResultValue:
 # ---------------------------------------------------------------------------
 
 
-class TestBuildBillingContext:
-    def test_returns_none_when_no_billing_service(self):
-        svc = _make_service(llm_billing_service=None)
-        ctx = svc._build_billing_context(
-            db=AsyncMock(), user_id="u1", session_id="s1", llm_config=MagicMock()
-        )
-        assert ctx is None
-
-    def test_returns_billing_context_when_service_present(self):
-        from ii_agent.core.llm.execution_service import LLMBillingContext
-
-        billing_svc = MagicMock()
-        svc = _make_service(llm_billing_service=billing_svc)
-        llm_config = MagicMock()
-        llm_config.model = "gpt-4"
-
-        ctx = svc._build_billing_context(
-            db=AsyncMock(), user_id="u1", session_id="s1", llm_config=llm_config
-        )
-        assert ctx is not None
-        assert isinstance(ctx, LLMBillingContext)
-        assert ctx.scope.billing_context == "projectdesign"
-
-
 # ---------------------------------------------------------------------------
-# _build_llm_messages
+# _build_llm_messages (now a @staticmethod using make_message)
 # ---------------------------------------------------------------------------
 
 
 class TestBuildLlmMessages:
     def test_returns_single_user_message(self):
-        svc = _make_service()
-        svc._llm_execution_service.new_message = MagicMock(return_value=MagicMock())
-        messages = svc._build_llm_messages(session_id="sess-1", user_prompt="Hello world")
+        messages = ProjectDesignService._build_llm_messages(
+            session_id="sess-1", user_prompt="Hello world"
+        )
         assert len(messages) == 1
 
     def test_message_contains_prompt(self):
-        from ii_agent.chat.types import TextContent
+        from ii_agent.chat.types import TextContent, MessageRole
 
-        svc = _make_service()
-
-        mock_message = MagicMock()
-        svc._llm_execution_service.new_message = MagicMock(return_value=mock_message)
-        svc._build_llm_messages(session_id="sess-1", user_prompt="Design this")
-
-        svc._llm_execution_service.new_message.assert_called_once()
-        call_kwargs = svc._llm_execution_service.new_message.call_args
-        parts = call_kwargs[1]["parts"]
-        assert any(isinstance(p, TextContent) and p.text == "Design this" for p in parts)
+        messages = ProjectDesignService._build_llm_messages(
+            session_id="sess-1", user_prompt="Design this"
+        )
+        msg = messages[0]
+        assert msg.role == MessageRole.USER
+        assert msg.session_id == "sess-1"
+        assert any(isinstance(p, TextContent) and p.text == "Design this" for p in msg.parts)
 
 
 # ---------------------------------------------------------------------------

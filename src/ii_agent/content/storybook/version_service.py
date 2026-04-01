@@ -75,7 +75,7 @@ class StorybookVersionService:
             root_storybook_id=source.root_storybook_id or source.id,
             parent_storybook_id=source.id,
         )
-        new_storybook = await self._repo.create(db, new_storybook)
+        new_storybook = await self._repo.save(db, new_storybook)
 
         new_pages = []
         for page in source.pages or []:

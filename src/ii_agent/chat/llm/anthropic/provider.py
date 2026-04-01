@@ -35,14 +35,14 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
-from ii_agent.core.storage.locations import get_session_file_path
-from ii_agent.files.models import FileUpload
+from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.files.models import FileAsset, SessionAsset
 from ii_agent.sessions.models import Session
 from ii_agent.chat.providers.models import ChatProviderFile
-from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.billing.usage.models import TokenUsage
+from ii_agent.core.db import get_db_session_local
+from ii_agent.billing.schemas import TokenUsage
 from ii_agent.chat.prompts.anthropic_system_prompt import system_prompt_template
-from ii_agent.core.storage.client import storage
+from ii_agent.core.storage.client import get_storage
 from ii_agent.chat.base import (
     LLMClient,
 )
@@ -129,12 +129,12 @@ class AnthropicProvider(LLMClient):
             self.client = anthropic.AsyncAnthropic(**client_kwargs)
 
     async def _upload_single_file(
-        self, file_info: FileUpload
+        self, file_info: FileAsset
     ) -> Optional[FileResponseObject]:
         """Upload a single file to Anthropic Files API.
 
         Args:
-            file_info: FileUpload record containing file metadata
+            file_info: FileAsset record containing file metadata
 
         Returns:
             FileResponseObject with provider file ID, or None on failure
@@ -142,7 +142,7 @@ class AnthropicProvider(LLMClient):
         try:
             # Read file from storage backend
             file_content = await anyio.to_thread.run_sync(
-                storage.read, file_info.storage_path
+                get_storage().read, file_info.storage_path
             )
 
             # Anthropic SDK requires a Path object, so write to temp file
@@ -213,9 +213,9 @@ class AnthropicProvider(LLMClient):
                 pf.file_id: pf for pf in existing_result.scalars().all()
             }
 
-            # Get FileUpload records
+            # Get FileAsset records
             result = await db_session.execute(
-                select(FileUpload).where(FileUpload.id.in_(user_message.file_ids))
+                select(FileAsset).where(FileAsset.id.in_(user_message.file_ids))
             )
             file_uploads = result.scalars().all()
 
@@ -258,7 +258,7 @@ class AnthropicProvider(LLMClient):
 
             # Add existing files
             for file_id, pf in existing_provider_files.items():
-                # Find corresponding FileUpload for metadata
+                # Find corresponding FileAsset for metadata
                 file_upload = next((f for f in file_uploads if f.id == file_id), None)
                 if file_upload:
                     all_file_responses.append(
@@ -941,33 +941,31 @@ class AnthropicProvider(LLMClient):
                     content_type = file_metadata.mime_type
                     file_size = len(file_bytes)
 
-                    # Generate storage path
+                    # Generate storage path under user prefix
                     file_uuid = str(uuid.uuid4())
-                    storage_path = get_session_file_path(
-                        session_id=session_id,
-                        file_id=file_uuid,
-                        file_name=file_name,
-                    )
+                    ext = file_name.rsplit(".", 1)[-1] if "." in file_name else "bin"
+                    storage_path = path_resolver.user_file(user_id, file_uuid, ext)
 
                     # Create file-like object from bytes
                     file_obj_io = io.BytesIO(file_bytes)
 
                     # Store file in storage backend (GCS/local)
-                    await anyio.to_thread.run_sync(
-                        storage.write, file_obj_io, storage_path, content_type
-                    )
+                    await get_storage().write(storage_path, file_obj_io, content_type)
 
-                    # Create FileUpload record
-                    file_upload = FileUpload(
+                    # Create FileAsset record
+                    file_upload = FileAsset(
                         id=file_uuid,
                         user_id=user_id,
-                        session_id=session_id,
                         file_name=file_name,
                         file_size=file_size,
                         storage_path=storage_path,
                         content_type=content_type,
                     )
                     db_session.add(file_upload)
+                    # Link to session
+                    db_session.add(
+                        SessionAsset(session_id=session_id, asset_id=file_uuid)
+                    )
 
                     # Add to response list
                     file_objects.append(

@@ -1,4 +1,7 @@
-"""FastAPI dependencies for project design domain."""
+"""FastAPI dependencies for project design domain.
+
+Thin accessors that pull services from :class:`ApplicationContainer`.
+"""
 
 from __future__ import annotations
 
@@ -6,42 +9,39 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from ii_agent.core.config.settings import get_settings
-from ii_agent.core.llm.dependencies import (
-    LLMBillingServiceDep,
-    LLMExecutionServiceDep,
-)
-from ii_agent.agent.sandboxes.dependencies import SandboxServiceDep
-from ii_agent.sessions.dependencies import SessionRepositoryDep
-from ii_agent.settings.llm.dependencies import LLMSettingServiceDep
+from ii_agent.core.dependencies import ContainerDep
 from ii_agent.projects.design.repository import ProjectDesignRepository
 from ii_agent.projects.design.service import ProjectDesignService
+from ii_agent.sessions.dependencies import SessionRepositoryDep
+
+
+# ==================== Repository Dependencies ====================
 
 
 def get_project_design_repository(
     session_repo: SessionRepositoryDep,
 ) -> ProjectDesignRepository:
+    """Provide ProjectDesignRepository (composes SessionRepository)."""
     return ProjectDesignRepository(session_repo=session_repo)
 
 
-ProjectDesignRepositoryDep = Annotated[ProjectDesignRepository, Depends(get_project_design_repository)]
+ProjectDesignRepositoryDep = Annotated[
+    ProjectDesignRepository, Depends(get_project_design_repository)
+]
 
 
-def get_project_design_service(
-    design_repo: ProjectDesignRepositoryDep,
-    sandbox_service: SandboxServiceDep,
-    llm_setting_service: LLMSettingServiceDep,
-    llm_billing_service: LLMBillingServiceDep,
-    llm_execution_service: LLMExecutionServiceDep,
-) -> ProjectDesignService:
-    return ProjectDesignService(
-        repo=design_repo,
-        sandbox_service=sandbox_service,
-        llm_setting_service=llm_setting_service,
-        llm_billing_service=llm_billing_service,
-        llm_execution_service=llm_execution_service,
-        config=get_settings(),
-    )
+# ==================== Service Dependencies (container-backed) =============
 
 
-ProjectDesignServiceDep = Annotated[ProjectDesignService, Depends(get_project_design_service)]
+def _get_project_design_service(container: ContainerDep) -> ProjectDesignService:
+    return container.project_design_service
+
+
+ProjectDesignServiceDep = Annotated[ProjectDesignService, Depends(_get_project_design_service)]
+
+
+__all__ = [
+    "get_project_design_repository",
+    "ProjectDesignRepositoryDep",
+    "ProjectDesignServiceDep",
+]

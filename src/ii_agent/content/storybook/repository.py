@@ -8,14 +8,21 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from ii_agent.core.db.base import BaseRepository
 from ii_agent.content.storybook.models import Storybook, StorybookPage, StorybookPageLink
 
 
-class StorybookRepository:
-    """Data access layer for Storybook and StorybookPage models."""
+class StorybookRepository(BaseRepository[Storybook]):
+    """Data access layer for Storybook and StorybookPage models.
+
+    Inherits from BaseRepository: get_by_id (basic), save, update.
+    Overrides get_by_id to eager-load pages.
+    """
+
+    model = Storybook
 
     async def get_by_id(
-        self, db: AsyncSession, storybook_id: str
+        self, db: AsyncSession, storybook_id: Any
     ) -> Optional[Storybook]:
         """Get a storybook by ID, always eager-loading pages."""
         query = select(Storybook).where(Storybook.id == storybook_id).options(
@@ -33,13 +40,6 @@ class StorybookRepository:
         )
         result = await db.execute(query)
         return list(result.scalars().all())
-
-    async def create(self, db: AsyncSession, storybook: Storybook) -> Storybook:
-        """Persist a new storybook."""
-        db.add(storybook)
-        await db.flush()
-        await db.refresh(storybook)
-        return storybook
 
     async def create_page(
         self, db: AsyncSession, page: StorybookPage, storybook_id: str

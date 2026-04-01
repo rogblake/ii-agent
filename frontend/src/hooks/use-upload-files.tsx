@@ -27,26 +27,26 @@ export function useUploadFiles() {
     const dispatch = useAppDispatch()
     const workspaceInfo = useAppSelector(selectWorkspaceInfo)
 
-    // New upload function using signed URLs
+    // Upload function using signed URLs via /assets endpoints
     const uploadFileWithSignedUrl = useCallback(
         async (
             file: File,
             sessionId?: string
         ): Promise<{ fileUrl: string; fileId: string } | null> => {
             try {
-                // Step 1: Generate upload URL
-                const generateUrlResponse =
+                // Step 1: Request signed upload URL + create pending asset
+                const { asset_id, upload_url } =
                     await uploadService.generateUploadUrl({
-                        file_name: file.name,
+                        filename: file.name,
                         content_type: file.type || 'application/octet-stream',
-                        file_size: file.size
+                        size_bytes: file.size
                     })
 
-                // Step 2: Upload file to the signed URL using XMLHttpRequest
+                // Step 2: Upload file directly to signed URL
                 await new Promise<void>((resolve, reject) => {
                     const xhr = new XMLHttpRequest()
 
-                    xhr.open('PUT', generateUrlResponse.upload_url, true)
+                    xhr.open('PUT', upload_url, true)
                     xhr.setRequestHeader(
                         'Content-Type',
                         file.type || 'application/octet-stream'
@@ -82,18 +82,15 @@ export function useUploadFiles() {
                     xhr.send(file)
                 })
 
-                // Step 3: Call upload complete
-                const completeResponse = await uploadService.uploadComplete({
-                    id: generateUrlResponse.id,
-                    file_name: file.name,
-                    file_size: file.size,
-                    content_type: file.type || 'application/octet-stream',
-                    session_id: sessionId
-                })
+                // Step 3: Mark upload complete
+                const completeResponse = await uploadService.uploadComplete(
+                    asset_id,
+                    { session_id: sessionId }
+                )
 
                 return {
-                    fileUrl: completeResponse.file_url,
-                    fileId: generateUrlResponse.id
+                    fileUrl: completeResponse.url ?? '',
+                    fileId: asset_id
                 }
             } catch (error) {
                 console.error('Upload error:', error)

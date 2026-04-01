@@ -49,7 +49,7 @@ from openai.types.responses.response_output_text_param import (
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 
-from ii_agent.billing.usage.models import TokenUsage
+from ii_agent.billing.schemas import TokenUsage
 from ii_agent.chat.base import LLMClient
 from ii_agent.chat.providers.models import ChatProviderContainer, ChatProviderFile
 from ii_agent.chat.prompts.openai_system_prompt import template
@@ -81,10 +81,10 @@ from ii_agent.chat.types import (
     ToolCall,
 )
 from ii_agent.core.config.llm_config import APITypes, LLMConfig
-from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.core.storage.client import storage
-from ii_agent.core.storage.locations import get_session_file_path
-from ii_agent.files.models import FileUpload
+from ii_agent.core.db import get_db_session_local
+from ii_agent.core.storage.client import get_storage
+from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.files.models import FileAsset, SessionAsset
 
 logger = logging.getLogger(__name__)
 
@@ -266,11 +266,11 @@ class OpenAIProvider(LLMClient):
 
             return None
 
-    async def _upload_single_file(self, file_info: FileUpload) -> FileResponseObject:
+    async def _upload_single_file(self, file_info: FileAsset) -> FileResponseObject:
         """Upload a single file to OpenAI."""
         try:
             file_content = await anyio.to_thread.run_sync(
-                storage.read, file_info.storage_path
+                get_storage().read, file_info.storage_path
             )
             try:
                 file_obj = await self.client.files.create(
@@ -333,11 +333,11 @@ class OpenAIProvider(LLMClient):
             }
 
             result = await db_session.execute(
-                select(FileUpload).where(FileUpload.id.in_(user_message.file_ids))
+                select(FileAsset).where(FileAsset.id.in_(user_message.file_ids))
             )
-            file_uploads: List[FileUpload] = result.scalars().all()
+            file_uploads: List[FileAsset] = result.scalars().all()
 
-        files_to_upload: List[FileUpload] = [
+        files_to_upload: List[FileAsset] = [
             f for f in file_uploads if f.id not in existing_provider_files
         ]
 
@@ -649,7 +649,7 @@ class OpenAIProvider(LLMClient):
         session_id: str,
     ) -> ContainerFile:
         """
-        Download files from OpenAI container file citations and store them as FileUpload records.
+        Download files from OpenAI container file citations and store them as FileAsset records.
 
         Args:
             file_citations: List of AnnotationContainerFileCitation objects from OpenAI
@@ -704,37 +704,34 @@ class OpenAIProvider(LLMClient):
                     # Get bytes content directly (async read)
                     file_bytes = await file_content_response.aread()
 
-                    # Generate storage path
+                    # Generate storage path under user prefix
                     import io
                     import uuid
 
                     file_uuid = str(uuid.uuid4())
-                    storage_path = get_session_file_path(
-                        session_id=session_id,
-                        file_id=file_uuid,
-                        file_name=file_name,
-                    )
+                    ext = file_name.rsplit(".", 1)[-1] if "." in file_name else "bin"
+                    storage_path = path_resolver.user_file(user_id, file_uuid, ext)
 
-                    # Create file-like object from bytes (storage.write expects file-like object)
+                    # Create file-like object from bytes
                     file_obj_io = io.BytesIO(file_bytes)
 
-                    # Store file in our storage backend (blocking I/O operation)
-                    # Note: storage.write signature is write(content, path, content_type)
-                    await anyio.to_thread.run_sync(
-                        storage.write, file_obj_io, storage_path, content_type
-                    )
+                    # Store file in storage backend (async)
+                    await get_storage().write(storage_path, file_obj_io, content_type)
 
-                    # Create FileUpload record
-                    file_upload = FileUpload(
+                    # Create FileAsset record
+                    file_upload = FileAsset(
                         id=file_uuid,
                         user_id=user_id,
-                        session_id=session_id,
                         file_name=file_name,
                         file_size=len(file_bytes),
                         storage_path=storage_path,
                         content_type=content_type,
                     )
                     db_session.add(file_upload)
+                    # Link to session
+                    db_session.add(
+                        SessionAsset(session_id=session_id, asset_id=file_uuid)
+                    )
 
                     # Create FileResponseObject
                     file_response = FileResponseObject(
@@ -769,8 +766,8 @@ class OpenAIProvider(LLMClient):
         async with get_db_session_local() as db_session:
             now = datetime.now(timezone.utc)
             result = await db_session.execute(
-                select(ChatProviderFile, FileUpload)
-                .join(FileUpload, ChatProviderFile.file_id == FileUpload.id)
+                select(ChatProviderFile, FileAsset)
+                .join(FileAsset, ChatProviderFile.file_id == FileAsset.id)
                 .where(
                     ChatProviderFile.session_id == session_id,
                     ChatProviderFile.provider == APITypes.OPENAI.value,

@@ -1,62 +1,75 @@
 """SQLAlchemy models for llm_settings domain."""
 
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, BigInteger, Boolean, Float, ForeignKey, Index
-from sqlalchemy.dialects.postgresql import JSONB
-from datetime import datetime, timezone
-from typing import Optional, TYPE_CHECKING
 import uuid
 
-from ii_agent.core.db.base import Base, TimestampColumn
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Boolean, ForeignKey, Index, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from typing import Literal, Optional, TYPE_CHECKING
+
+from ii_agent.agents.types import Provider
+from ii_agent.core.db.base import Base
 
 if TYPE_CHECKING:
-    from ii_agent.auth.users.models import User
+    from ii_agent.users.models import User
     from ii_agent.sessions.models import Session
 
 
-class LLMSetting(Base):
-    """Database model for LLM model settings."""
+class ModelSetting(Base):
+    """Database model for LLM model settings.
 
-    __tablename__ = "llm_settings"
+    Columns:
+        model_id: Model identifier (e.g. "claude-sonnet-4-6", "gpt-4o").
+        provider: Provider name (e.g. "Anthropic", "OpenAI", "Google", "Custom").
+        encrypted_api_key: Encrypted API key for authentication.
+        base_url: Custom base URL for API endpoints.
+        display_name: Human-readable label shown in the UI.
+        configs: JSONB bag for provider-specific settings (temperature, thinking_tokens,
+                 max_retries, max_message_chars, vertex_region, azure_endpoint, etc.).
+        pricing: JSONB storing ModelPricing data (input/output/cache prices per million tokens).
+        config_type: "user" or "system" discriminator.
+        is_default: Whether this is the default model for the user/system.
+    """
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
+    __tablename__ = "model_settings"
+
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
     )
-    user_id: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("users.id", ondelete="CASCADE")
-    )
-    model: Mapped[str] = mapped_column(String)
-    api_type: Mapped[str] = mapped_column(String)
+    model_id: Mapped[str] = mapped_column(String)
+    provider: Mapped[Provider] = mapped_column(String)
     encrypted_api_key: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     base_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    max_retries: Mapped[int] = mapped_column(BigInteger, default=10)
-    max_message_chars: Mapped[int] = mapped_column(BigInteger, default=30000)
-    temperature: Mapped[float] = mapped_column(Float, default=1.0)
-    thinking_tokens: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    display_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    params: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    pricing: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    config_type: Mapped[Literal["system", "user"]] = mapped_column(String, default="user")
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
-    )
-    llm_metadata: Mapped[Optional[dict]] = mapped_column(
-        "metadata",
-        JSONB,
-        nullable=True
-    )
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="llm_settings")
-    sessions: Mapped[list["Session"]] = relationship("Session", back_populates="llm_setting")
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="model_settings")
+    sessions: Mapped[list["Session"]] = relationship("Session", back_populates="model_setting")
 
-    # Indexes
+    # Indexes & constraints
     __table_args__ = (
-        Index("idx_llm_settings_user_model", "user_id", "model"),
+        # User rows: one setting per (model_id, provider) per user
+        Index(
+            "uq_model_settings_user",
+            "model_id",
+            "provider",
+            "user_id",
+            unique=True,
+            postgresql_where=text("user_id IS NOT NULL"),
+        ),
+        # System rows: one setting per (model_id, provider) globally
+        Index(
+            "uq_model_settings_system",
+            "model_id",
+            "provider",
+            unique=True,
+            postgresql_where=text("user_id IS NULL"),
+        ),
     )

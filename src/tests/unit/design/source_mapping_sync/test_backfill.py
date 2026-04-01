@@ -26,6 +26,7 @@ from .conftest import make_element_context, make_style_change
 # _extract_anchor_snippets
 # ---------------------------------------------------------------------------
 
+
 class TestExtractAnchorSnippets:
     def test_text_content(self):
         ctx = make_element_context(text_content="Hello World")
@@ -86,6 +87,7 @@ class TestExtractAnchorSnippets:
 # _split_class_tokens
 # ---------------------------------------------------------------------------
 
+
 class TestSplitClassTokens:
     def test_whitespace_split(self):
         assert _split_class_tokens("foo bar baz") == ["foo", "bar", "baz"]
@@ -107,6 +109,7 @@ class TestSplitClassTokens:
 # _class_token_distinctiveness
 # ---------------------------------------------------------------------------
 
+
 class TestClassTokenDistinctiveness:
     def test_length(self):
         assert _class_token_distinctiveness("ab") < _class_token_distinctiveness("abcdefgh")
@@ -127,6 +130,7 @@ class TestClassTokenDistinctiveness:
 # ---------------------------------------------------------------------------
 # _upsert_data_design_id_attribute
 # ---------------------------------------------------------------------------
+
 
 class TestUpsertDataDesignIdAttribute:
     def test_add_to_tag(self):
@@ -152,7 +156,7 @@ class TestUpsertDataDesignIdAttribute:
         assert result is None
 
     def test_dynamic_expr_returns_none(self):
-        tag = '<div data-design-id={someVar}>'
+        tag = "<div data-design-id={someVar}>"
         result = _upsert_data_design_id_attribute(tag, "abc")
         assert result is None
 
@@ -169,6 +173,7 @@ class TestUpsertDataDesignIdAttribute:
 # ---------------------------------------------------------------------------
 # _find_best_opening_tag_by_class_tokens
 # ---------------------------------------------------------------------------
+
 
 class TestFindBestOpeningTagByClassTokens:
     def test_matching_class(self):
@@ -218,27 +223,34 @@ class TestFindBestOpeningTagByClassTokens:
         assert "data-design-id" not in tag
 
     def test_empty_content(self):
-        assert _find_best_opening_tag_by_class_tokens(
-            content="", class_name="x", class_tokens=["x"], preferred_tag_name=None
-        ) is None
+        assert (
+            _find_best_opening_tag_by_class_tokens(
+                content="", class_name="x", class_tokens=["x"], preferred_tag_name=None
+            )
+            is None
+        )
 
     def test_no_match(self):
         content = '<div className="other">text</div>'
-        assert _find_best_opening_tag_by_class_tokens(
-            content=content,
-            class_name="missing",
-            class_tokens=["missing"],
-            preferred_tag_name=None,
-        ) is None
+        assert (
+            _find_best_opening_tag_by_class_tokens(
+                content=content,
+                class_name="missing",
+                class_tokens=["missing"],
+                preferred_tag_name=None,
+            )
+            is None
+        )
 
 
 # ---------------------------------------------------------------------------
 # _find_best_component_callsite_opening_tag
 # ---------------------------------------------------------------------------
 
+
 class TestFindBestComponentCallsiteOpeningTag:
     def test_anchor_match(self):
-        content = '<Card>Hello World</Card>'
+        content = "<Card>Hello World</Card>"
         result = _find_best_component_callsite_opening_tag(
             content=content,
             component_name="Card",
@@ -249,7 +261,7 @@ class TestFindBestComponentCallsiteOpeningTag:
         assert tag.startswith("<Card")
 
     def test_prefer_more_hits(self):
-        content = '<Card>Hello</Card><Card>Hello World</Card>'
+        content = "<Card>Hello</Card><Card>Hello World</Card>"
         result = _find_best_component_callsite_opening_tag(
             content=content,
             component_name="Card",
@@ -260,26 +272,36 @@ class TestFindBestComponentCallsiteOpeningTag:
         assert result[0] > 0
 
     def test_no_anchors(self):
-        assert _find_best_component_callsite_opening_tag(
-            content="<Card>text</Card>",
-            component_name="Card",
-            anchors=[],
-        ) is None
+        assert (
+            _find_best_component_callsite_opening_tag(
+                content="<Card>text</Card>",
+                component_name="Card",
+                anchors=[],
+            )
+            is None
+        )
 
     def test_empty_content(self):
-        assert _find_best_component_callsite_opening_tag(
-            content="", component_name="Card", anchors=["x"]
-        ) is None
+        assert (
+            _find_best_component_callsite_opening_tag(
+                content="", component_name="Card", anchors=["x"]
+            )
+            is None
+        )
 
     def test_empty_component(self):
-        assert _find_best_component_callsite_opening_tag(
-            content="<Card>text</Card>", component_name="", anchors=["text"]
-        ) is None
+        assert (
+            _find_best_component_callsite_opening_tag(
+                content="<Card>text</Card>", component_name="", anchors=["text"]
+            )
+            is None
+        )
 
 
 # ---------------------------------------------------------------------------
 # _infer_component_name_before_index
 # ---------------------------------------------------------------------------
+
 
 class TestInferComponentNameBeforeIndex:
     def test_function_component(self):
@@ -308,6 +330,7 @@ class TestInferComponentNameBeforeIndex:
 # _build_line_start_offsets
 # ---------------------------------------------------------------------------
 
+
 class TestBuildLineStartOffsets:
     def test_single_line(self):
         assert _build_line_start_offsets("hello") == [0]
@@ -328,6 +351,7 @@ class TestBuildLineStartOffsets:
 # _pos_to_line_number
 # ---------------------------------------------------------------------------
 
+
 class TestPosToLineNumber:
     def test_first_line(self):
         assert _pos_to_line_number([0, 5, 10], 2) == 1
@@ -345,6 +369,7 @@ class TestPosToLineNumber:
 # ---------------------------------------------------------------------------
 # _find_best_opening_tag_near_source_location
 # ---------------------------------------------------------------------------
+
 
 class TestFindBestOpeningTagNearSourceLocation:
     def test_at_line(self):
@@ -379,14 +404,16 @@ class TestFindBestOpeningTagNearSourceLocation:
         assert result is None
 
     def test_empty_content(self):
-        assert _find_best_opening_tag_near_source_location(
-            content="", line_no=1, column_no=None
-        ) is None
+        assert (
+            _find_best_opening_tag_near_source_location(content="", line_no=1, column_no=None)
+            is None
+        )
 
 
 # ---------------------------------------------------------------------------
 # _backfill_design_id_in_source_from_class_name (async)
 # ---------------------------------------------------------------------------
+
 
 class TestBackfillFromClassName:
     async def test_exact_match_injects_id(self, fake_sandbox):
@@ -420,9 +447,12 @@ class TestBackfillFromClassName:
 # _backfill_design_id_in_source_from_react_source (async)
 # ---------------------------------------------------------------------------
 
+
 class TestBackfillFromReactSource:
     async def test_finds_tag_by_line(self, fake_sandbox):
-        file_content = "import React from 'react'\n\nfunction App() {\n  return <div>hello</div>\n}\n"
+        file_content = (
+            "import React from 'react'\n\nfunction App() {\n  return <div>hello</div>\n}\n"
+        )
         sb = fake_sandbox(files={"/workspace/src/App.tsx": file_content})
         ctx = make_element_context(
             react_source={"fileName": "src/App.tsx", "lineNumber": 4, "columnNumber": 10},
@@ -437,7 +467,9 @@ class TestBackfillFromReactSource:
         assert 'data-design-id="new-id"' in content
 
     async def test_missing_file_returns_none(self, fake_sandbox):
-        sb = fake_sandbox(command_outputs={"find /workspace -maxdepth 1": "", "find /workspace -type f": ""})
+        sb = fake_sandbox(
+            command_outputs={"find /workspace -maxdepth 1": "", "find /workspace -type f": ""}
+        )
         ctx = make_element_context(
             react_source={"fileName": "src/Missing.tsx", "lineNumber": 1},
             tag_name="div",
@@ -452,6 +484,7 @@ class TestBackfillFromReactSource:
 # ---------------------------------------------------------------------------
 # _backfill_design_id_in_source_from_text_search (async)
 # ---------------------------------------------------------------------------
+
 
 class TestBackfillFromTextSearch:
     async def test_finds_element(self, fake_sandbox):
@@ -485,6 +518,7 @@ class TestBackfillFromTextSearch:
 # ---------------------------------------------------------------------------
 # _backfill_design_id_in_source_from_component_callsite (async)
 # ---------------------------------------------------------------------------
+
 
 class TestBackfillFromCallsite:
     async def test_infers_component_and_finds_callsite(self, fake_sandbox):

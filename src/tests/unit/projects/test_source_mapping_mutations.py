@@ -145,9 +145,7 @@ class TestSanitizeSvgInnerForJsx:
         assert result == ""
 
     def test_full_svg_wrapper_stripped(self):
-        result = _sanitize_svg_inner_for_jsx(
-            "<svg viewBox='0 0 24 24'><path d='M1 2'/></svg>"
-        )
+        result = _sanitize_svg_inner_for_jsx("<svg viewBox='0 0 24 24'><path d='M1 2'/></svg>")
         assert result == "<path d='M1 2'/>"
 
     def test_self_closing_svg_returns_empty(self):
@@ -187,26 +185,26 @@ class TestSanitizeSvgInnerForJsx:
 
 class TestUpsertJsxAttributeIfMissing:
     def test_adds_attribute_to_opening_tag(self):
-        result = _upsert_jsx_attribute_if_missing('<div>', 'viewBox', '0 0 24 24')
+        result = _upsert_jsx_attribute_if_missing("<div>", "viewBox", "0 0 24 24")
         assert 'viewBox="0 0 24 24"' in result
 
     def test_does_not_add_if_already_present(self):
         tag = '<svg viewBox="0 0 24 24">'
-        result = _upsert_jsx_attribute_if_missing(tag, 'viewBox', '0 0 48 48')
+        result = _upsert_jsx_attribute_if_missing(tag, "viewBox", "0 0 48 48")
         assert result == tag
 
     def test_adds_to_self_closing_tag(self):
-        result = _upsert_jsx_attribute_if_missing('<img />', 'alt', 'image')
+        result = _upsert_jsx_attribute_if_missing("<img />", "alt", "image")
         assert 'alt="image"' in result
-        assert result.endswith(' />')
+        assert result.endswith(" />")
 
     def test_empty_tag_returns_unchanged(self):
-        result = _upsert_jsx_attribute_if_missing('', 'viewBox', '0 0 24 24')
-        assert result == ''
+        result = _upsert_jsx_attribute_if_missing("", "viewBox", "0 0 24 24")
+        assert result == ""
 
     def test_empty_attr_returns_unchanged(self):
-        result = _upsert_jsx_attribute_if_missing('<div>', '', 'value')
-        assert result == '<div>'
+        result = _upsert_jsx_attribute_if_missing("<div>", "", "value")
+        assert result == "<div>"
 
 
 # ---------------------------------------------------------------------------
@@ -384,9 +382,7 @@ class TestUpsertHtmlStyleDeclaration:
         assert "color" not in result
 
     def test_preserves_other_properties(self):
-        result = _upsert_html_style_declaration(
-            "color: red; font-size: 14px;", "color", "blue"
-        )
+        result = _upsert_html_style_declaration("color: red; font-size: 14px;", "color", "blue")
         assert "font-size: 14px" in result
 
     def test_empty_style_adds_property(self):
@@ -504,7 +500,7 @@ class TestUpsertJsxStyleAttribute:
         assert result is None
 
     def test_adds_to_self_closing_tag(self):
-        tag = '<input />'
+        tag = "<input />"
         result = _upsert_jsx_style_attribute(tag, "width", "100px")
         assert result is not None
         assert "width:" in result
@@ -695,8 +691,7 @@ class TestUpsertDesignModeCssOverride:
 class TestApplySwapChangeByDesignIds:
     def _make_two_elements(self, id_a: str, id_b: str) -> str:
         return (
-            f'<div data-design-id="{id_a}">First</div>\n'
-            f'<div data-design-id="{id_b}">Second</div>'
+            f'<div data-design-id="{id_a}">First</div>\n<div data-design-id="{id_b}">Second</div>'
         )
 
     def test_swaps_two_elements(self):
@@ -746,11 +741,7 @@ class TestApplySwapChangeByDesignIds:
 
     def test_returns_false_when_spans_overlap(self):
         # Nested elements cannot be swapped.
-        content = (
-            '<div data-design-id="outer">'
-            '<span data-design-id="inner">X</span>'
-            '</div>'
-        )
+        content = '<div data-design-id="outer"><span data-design-id="inner">X</span></div>'
         result, applied = _apply_swap_change_by_design_ids(
             content=content,
             file_path="test.tsx",
@@ -853,10 +844,7 @@ class TestApplyMoveChangeByDesignIds:
 
 class TestApplyMoveChangeByDesignIdAnchor:
     def _make_siblings(self) -> str:
-        return (
-            '<div data-design-id="a">A</div>\n'
-            '<div data-design-id="b">B</div>'
-        )
+        return '<div data-design-id="a">A</div>\n<div data-design-id="b">B</div>'
 
     def test_only_anchor_returns_true(self):
         content = '<div data-design-id="a">A</div>'
@@ -951,6 +939,7 @@ class TestExtractIconPayloadFromChange:
 
     def test_json_string_value(self):
         import json
+
         change = MagicMock()
         change.value = {"to": json.dumps({"name": "bell", "svg": "<circle />"})}
         name, svg = _extract_icon_payload_from_change(change)
@@ -1066,51 +1055,40 @@ class TestExtractItemIdFromIconDesignId:
 class TestUpsertLucideReactImportAddOnly:
     def test_adds_to_existing_lucide_import(self):
         content = "import { Zap } from 'lucide-react';\n"
-        result = _upsert_lucide_react_import_add_only(
-            content=content, new_icon_component="Bell"
-        )
+        result = _upsert_lucide_react_import_add_only(content=content, new_icon_component="Bell")
         assert "Bell" in result
         assert "Zap" in result
 
     def test_does_not_duplicate_existing_import(self):
         content = "import { Zap } from 'lucide-react';\n"
-        result = _upsert_lucide_react_import_add_only(
-            content=content, new_icon_component="Zap"
-        )
+        result = _upsert_lucide_react_import_add_only(content=content, new_icon_component="Zap")
         assert result.count("Zap") == 1
 
     def test_creates_new_lucide_import_when_none_exists(self):
         content = "import React from 'react';\n"
-        result = _upsert_lucide_react_import_add_only(
-            content=content, new_icon_component="Bell"
-        )
+        result = _upsert_lucide_react_import_add_only(content=content, new_icon_component="Bell")
         assert "from 'lucide-react'" in result
         assert "Bell" in result
 
     def test_adds_at_start_when_no_imports(self):
         content = "const x = 1;\n"
-        result = _upsert_lucide_react_import_add_only(
-            content=content, new_icon_component="Bell"
-        )
+        result = _upsert_lucide_react_import_add_only(content=content, new_icon_component="Bell")
         assert "from 'lucide-react'" in result
 
     def test_empty_content_returns_content_unchanged(self):
         # Empty content is treated as falsy and returned as-is.
-        result = _upsert_lucide_react_import_add_only(
-            content="", new_icon_component="Bell"
-        )
+        result = _upsert_lucide_react_import_add_only(content="", new_icon_component="Bell")
         assert result == ""
 
     def test_empty_icon_component_returns_unchanged(self):
         content = "import { Zap } from 'lucide-react';\n"
-        result = _upsert_lucide_react_import_add_only(
-            content=content, new_icon_component=""
-        )
+        result = _upsert_lucide_react_import_add_only(content=content, new_icon_component="")
         assert result == content
 
     def test_non_string_content_returns_unchanged(self):
         result = _upsert_lucide_react_import_add_only(
-            content=None, new_icon_component="Bell"  # type: ignore
+            content=None,
+            new_icon_component="Bell",  # type: ignore
         )
         assert result is None
 
@@ -1123,8 +1101,7 @@ class TestUpsertLucideReactImportAddOnly:
 class TestApplyIconChangeByDesignId:
     def _make_lucide_content(self, icon: str = "Zap", design_id: str = "icon-1") -> str:
         return (
-            f"import {{ {icon} }} from 'lucide-react';\n"
-            f'<{icon} data-design-id="{design_id}" />\n'
+            f"import {{ {icon} }} from 'lucide-react';\n<{icon} data-design-id=\"{design_id}\" />\n"
         )
 
     def test_replaces_lucide_icon_component(self):
@@ -1187,11 +1164,7 @@ class TestApplyIconChangeByDesignId:
         assert applied is False
 
     def test_replaces_svg_inner_content(self):
-        content = (
-            '<svg data-design-id="svg-1" viewBox="0 0 24 24">'
-            '<path d="M5 12h14"/>'
-            '</svg>'
-        )
+        content = '<svg data-design-id="svg-1" viewBox="0 0 24 24"><path d="M5 12h14"/></svg>'
         new_inner = '<circle cx="12" cy="12" r="10"/>'
         result, applied = _apply_icon_change_by_design_id(
             content=content,

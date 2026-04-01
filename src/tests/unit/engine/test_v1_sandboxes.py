@@ -1,4 +1,4 @@
-"""Unit tests for engine/sandboxes/e2b.py - E2BSandboxManager."""
+"""Unit tests for engine/sandboxes/e2b.py - E2BSandbox."""
 
 from __future__ import annotations
 
@@ -7,20 +7,21 @@ from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
 import pytest
 
-from ii_agent.agent.sandboxes.e2b import E2BSandboxManager, e2b_exception_handler
-from ii_agent.agent.sandboxes.exceptions import (
+from ii_agent.agents.sandboxes.e2b import E2BSandbox, e2b_exception_handler
+from ii_agent.agents.sandboxes.exceptions import (
     SandboxAuthenticationError,
     SandboxNotFoundException,
     SandboxNotInitializedError,
     SandboxOperationError,
     SandboxTimeoutException,
 )
-from ii_agent.agent.sandboxes.schemas import SandboxFileInfo, SandboxStatus, FileUpload
+from ii_agent.agents.sandboxes.schemas import SandboxFileInfo, SandboxStatus, FileUpload
 
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
+
 
 def _make_manager(
     sandbox_id: str = "sb-001",
@@ -28,8 +29,8 @@ def _make_manager(
     provider_sandbox_id: str = "e2b-abc",
     status: SandboxStatus = SandboxStatus.RUNNING,
     sandbox=None,
-) -> E2BSandboxManager:
-    return E2BSandboxManager(
+) -> E2BSandbox:
+    return E2BSandbox(
         sandbox_id=sandbox_id,
         session_id=session_id,
         provider_sandbox_id=provider_sandbox_id,
@@ -50,9 +51,10 @@ def _fake_sandbox():
 # Constructor & basic properties
 # ---------------------------------------------------------------------------
 
-class TestE2BSandboxManagerInit:
+
+class TestE2BSandboxInit:
     def test_default_status_is_not_initialized(self):
-        mgr = E2BSandboxManager(
+        mgr = E2BSandbox(
             sandbox_id="s1",
             session_id="se1",
             provider_sandbox_id="p1",
@@ -60,7 +62,7 @@ class TestE2BSandboxManagerInit:
         assert mgr.status == SandboxStatus.NOT_INITIALIZED
 
     def test_sandbox_is_none_by_default(self):
-        mgr = E2BSandboxManager(
+        mgr = E2BSandbox(
             sandbox_id="s1",
             session_id="se1",
             provider_sandbox_id="p1",
@@ -68,7 +70,7 @@ class TestE2BSandboxManagerInit:
         assert mgr.sandbox is None
 
     def test_metadata_defaults_to_empty_dict(self):
-        mgr = E2BSandboxManager(
+        mgr = E2BSandbox(
             sandbox_id="s1",
             session_id="se1",
             provider_sandbox_id="p1",
@@ -88,19 +90,20 @@ class TestE2BSandboxManagerInit:
 # _to_sandbox_state static method
 # ---------------------------------------------------------------------------
 
+
 class TestToSandboxState:
     def test_running_state(self):
         state = MagicMock()
         state.RUNNING = True
         state.PAUSED = False
-        result = E2BSandboxManager._to_sandbox_state(state)
+        result = E2BSandbox._to_sandbox_state(state)
         assert result == SandboxStatus.RUNNING
 
     def test_paused_state(self):
         state = MagicMock()
         state.RUNNING = False
         state.PAUSED = True
-        result = E2BSandboxManager._to_sandbox_state(state)
+        result = E2BSandbox._to_sandbox_state(state)
         assert result == SandboxStatus.PAUSED
 
     def test_unknown_state_raises_value_error(self):
@@ -108,12 +111,13 @@ class TestToSandboxState:
         state.RUNNING = False
         state.PAUSED = False
         with pytest.raises(ValueError, match="Unrecognize"):
-            E2BSandboxManager._to_sandbox_state(state)
+            E2BSandbox._to_sandbox_state(state)
 
 
 # ---------------------------------------------------------------------------
 # get_info
 # ---------------------------------------------------------------------------
+
 
 class TestGetInfo:
     @pytest.mark.asyncio
@@ -128,7 +132,9 @@ class TestGetInfo:
         sb.get_host.return_value = "abc.e2b.app"
         mgr = _make_manager(status=SandboxStatus.RUNNING, sandbox=sb)
 
-        with patch.object(mgr, "expose_port", new=AsyncMock(return_value="https://abc.e2b.app")) as mock_expose:
+        with patch.object(
+            mgr, "expose_port", new=AsyncMock(return_value="https://abc.e2b.app")
+        ) as mock_expose:
             info = await mgr.get_info()
         assert info.status == SandboxStatus.RUNNING
 
@@ -142,6 +148,7 @@ class TestGetInfo:
 # ---------------------------------------------------------------------------
 # _ensure_sandbox_connection
 # ---------------------------------------------------------------------------
+
 
 class TestEnsureSandboxConnection:
     @pytest.mark.asyncio
@@ -165,7 +172,7 @@ class TestEnsureSandboxConnection:
         fake_settings.sandbox.e2b_api_key = "key"
         fake_settings.sandbox.timeout_seconds = 3600
 
-        with patch("ii_agent.agent.sandboxes.e2b.get_settings", return_value=fake_settings):
+        with patch("ii_agent.agents.sandboxes.e2b.get_settings", return_value=fake_settings):
             await mgr._ensure_sandbox_connection()
 
         sb.get_info.assert_called_once()
@@ -174,6 +181,7 @@ class TestEnsureSandboxConnection:
 # ---------------------------------------------------------------------------
 # get_status
 # ---------------------------------------------------------------------------
+
 
 class TestGetStatus:
     @pytest.mark.asyncio
@@ -200,6 +208,7 @@ class TestGetStatus:
 # ---------------------------------------------------------------------------
 # pause
 # ---------------------------------------------------------------------------
+
 
 class TestPause:
     @pytest.mark.asyncio
@@ -236,6 +245,7 @@ class TestPause:
 # set_timeout
 # ---------------------------------------------------------------------------
 
+
 class TestSetTimeout:
     @pytest.mark.asyncio
     async def test_set_timeout_updates_expired_at(self):
@@ -256,6 +266,7 @@ class TestSetTimeout:
 # ---------------------------------------------------------------------------
 # run_command
 # ---------------------------------------------------------------------------
+
 
 class TestRunCommand:
     @pytest.mark.asyncio
@@ -305,6 +316,7 @@ class TestRunCommand:
 # ---------------------------------------------------------------------------
 # read_file / write_file / delete_file
 # ---------------------------------------------------------------------------
+
 
 class TestFileOperations:
     @pytest.mark.asyncio
@@ -369,6 +381,7 @@ class TestFileOperations:
 # ---------------------------------------------------------------------------
 # upload_file / download_file
 # ---------------------------------------------------------------------------
+
 
 class TestUploadDownload:
     @pytest.mark.asyncio
@@ -442,6 +455,7 @@ class TestUploadDownload:
 # create_directory
 # ---------------------------------------------------------------------------
 
+
 class TestCreateDirectory:
     @pytest.mark.asyncio
     async def test_create_directory_success(self):
@@ -480,6 +494,7 @@ class TestCreateDirectory:
 # expose_port / get_host
 # ---------------------------------------------------------------------------
 
+
 class TestExposePortGetHost:
     @pytest.mark.asyncio
     async def test_expose_port_returns_https_url(self):
@@ -508,6 +523,7 @@ class TestExposePortGetHost:
 # ---------------------------------------------------------------------------
 # e2b_exception_handler decorator
 # ---------------------------------------------------------------------------
+
 
 class TestE2bExceptionHandler:
     """The decorator correctly re-maps E2B exceptions to sandbox exceptions."""

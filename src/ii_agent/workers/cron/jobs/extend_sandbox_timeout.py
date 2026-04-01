@@ -11,11 +11,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.sessions.models import Session
-from ii_agent.core.db.manager import get_db_session_local
+from ii_agent.core.db import get_db_session_local
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
-    from ii_agent.agent.sandboxes.service import SandboxService
+    from ii_agent.agents.sandboxes.service import SandboxService
 
 # Constants
 TIMEOUT_EXTENSION_SECONDS = 7200  # 2 hours extension
@@ -27,8 +27,8 @@ class SandboxTimeoutExtender:
 
     def __init__(self, sandbox_service: Optional[SandboxService] = None):
         if sandbox_service is None:
-            from ii_agent.agent.sandboxes.service import SandboxService
-            from ii_agent.agent.sandboxes.repository import SandboxRepository
+            from ii_agent.agents.sandboxes.service import SandboxService
+            from ii_agent.agents.sandboxes.repository import SandboxRepository
             from ii_agent.core.config.settings import get_settings
             sandbox_service = SandboxService(
                 config=get_settings(),
@@ -37,10 +37,18 @@ class SandboxTimeoutExtender:
         self._sandbox_service = sandbox_service
 
     async def get_permanent_sessions(self, db: AsyncSession) -> List[Session]:
-        """Get all permanent sessions with sandbox IDs."""
+        """Get all permanent sessions that have an active sandbox."""
+        from ii_agent.agents.sandboxes.models import AgentSandbox
+        from ii_agent.agents.sandboxes.types import SandboxStatus
+
         result = await db.execute(
             select(Session).where(
-                Session.status == "permanent", Session.sandbox_id.isnot(None)
+                Session.status == "permanent",
+                Session.id.in_(
+                    select(AgentSandbox.session_id).where(
+                        AgentSandbox.status != SandboxStatus.DELETED
+                    )
+                ),
             )
         )
         return result.scalars().all()

@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Union
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -40,8 +41,8 @@ class StorybookPageCreate(StorybookPageBase):
 class StorybookPageInfo(StorybookPageBase):
     """Model for storybook page information."""
 
-    id: str
-    storybook_id: str
+    id: UUID
+    storybook_id: UUID
     html_content: Optional[str] = None
     audio_link: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
@@ -71,11 +72,11 @@ class StorybookCreate(StorybookBase):
 class StorybookInfo(StorybookBase):
     """Model for storybook information (without pages)."""
 
-    id: str
-    session_id: str
+    id: UUID
+    session_id: UUID
     version: int = 1
-    root_storybook_id: Optional[str] = None
-    parent_storybook_id: Optional[str] = None
+    root_storybook_id: Optional[UUID] = None
+    parent_storybook_id: Optional[UUID] = None
     style_json: Optional[Dict[str, Any]] = None
     page_count: int = 0
     created_at: Optional[datetime] = None
@@ -105,7 +106,7 @@ class PageRegenerateRequest(BaseModel):
 class StorybookListResponse(BaseModel):
     """Response model for list of storybooks."""
 
-    session_id: str
+    session_id: UUID
     storybooks: List[StorybookInfo]
     total: int
 
@@ -126,7 +127,7 @@ class StorybookProgressResponse(BaseModel):
     """Progress response for storybook generation."""
 
     type: Literal["storybook_progress"] = "storybook_progress"
-    storybook_id: str
+    storybook_id: UUID
     storybook_name: str
     total_pages: int
     completed_pages: int
@@ -153,7 +154,7 @@ class StorybookResultResponse(BaseModel):
     """Result response for completed storybook generation."""
 
     type: Literal["storybook"] = "storybook"
-    storybook_id: str
+    storybook_id: UUID
     storybook_name: str
     version: int = 1
     pages: List[StorybookResultPage] = Field(default_factory=list)
@@ -221,7 +222,7 @@ class PageChanges(BaseModel):
 class SaveEditsRequest(BaseModel):
     """Request model for saving storybook edits."""
 
-    storybook_id: str = Field(..., description="ID of the storybook being edited")
+    storybook_id: UUID = Field(..., description="ID of the storybook being edited")
     page_changes: List[PageChanges] = Field(
         ..., description="Changes for each modified page"
     )
@@ -238,7 +239,7 @@ class SaveEditsResponse(BaseModel):
 class VersionInfo(BaseModel):
     """Version information for a storybook."""
 
-    id: str = Field(..., description="Storybook ID for this version")
+    id: UUID = Field(..., description="Storybook ID for this version")
     version: int = Field(..., description="Version number")
     created_at: Optional[datetime] = Field(
         None, description="When this version was created"
@@ -276,7 +277,7 @@ class StorybookBackgroundUploadResponse(BaseModel):
 class AIRewriteRequest(BaseModel):
     """Request model for AI text rewrite."""
 
-    storybook_id: str = Field(..., description="ID of the storybook being edited")
+    storybook_id: UUID = Field(..., description="ID of the storybook being edited")
     content: str = Field(..., description="Current text content to rewrite")
     page_image_url: Optional[str] = Field(
         None, description="URL of the current page image for context"
@@ -297,7 +298,7 @@ class AIRewriteResponse(BaseModel):
 class AIGenerateBackgroundRequest(BaseModel):
     """Request model for AI background image generation."""
 
-    storybook_id: str = Field(..., description="ID of the storybook being edited")
+    storybook_id: UUID = Field(..., description="ID of the storybook being edited")
     prompt: str = Field(
         ..., description="Text prompt describing the background to generate"
     )
@@ -321,7 +322,7 @@ class AIGenerateBackgroundResponse(BaseModel):
 class AIRegenerateImageRequest(BaseModel):
     """Request model for AI image regeneration."""
 
-    storybook_id: str = Field(..., description="ID of the storybook being edited")
+    storybook_id: UUID = Field(..., description="ID of the storybook being edited")
     page_number: int = Field(..., description="Page number to regenerate", ge=1)
     prompt: str = Field(..., description="User prompt describing the update")
     reference_image_url: Optional[str] = Field(

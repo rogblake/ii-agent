@@ -18,25 +18,31 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from functools import partial
 
-from ii_agent.agent.runtime.tools.function import Function, FunctionCall, FunctionExecutionResult
+from ii_agent.agents.tools.function import Function, FunctionCall, FunctionExecutionResult
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def make_function(name="test_func", **kwargs) -> Function:
     return Function(name=name, **kwargs)
 
 
 def make_base_agent_tool(name="my_tool", description="Tool desc") -> MagicMock:
-    from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult
+    from ii_agent.agents.tools.base import BaseAgentTool, ToolResult
+
     tool = MagicMock(spec=BaseAgentTool)
     tool.name = name
     tool.description = description
     tool.display_name = name
     tool.tool_logo = None
-    tool.input_schema = {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
+    tool.input_schema = {
+        "type": "object",
+        "properties": {"query": {"type": "string"}},
+        "required": ["query"],
+    }
     tool.on_tool_start = None
     tool.on_tool_end = None
     tool.requires_sandbox = False
@@ -51,6 +57,7 @@ def make_base_agent_tool(name="my_tool", description="Tool desc") -> MagicMock:
 # ---------------------------------------------------------------------------
 # Function.from_callable deep tests
 # ---------------------------------------------------------------------------
+
 
 class TestFunctionFromCallableDeep:
     def test_simple_callable_creates_function(self):
@@ -187,6 +194,7 @@ class TestFunctionFromCallableDeep:
 # Function.from_tool deep tests
 # ---------------------------------------------------------------------------
 
+
 class TestFunctionFromToolDeep:
     def test_from_tool_creates_function(self):
         tool = make_base_agent_tool()
@@ -231,7 +239,8 @@ class TestFunctionFromToolDeep:
         assert getattr(fn, "_tool", None) is tool
 
     def test_from_tool_with_user_input_fields_generates_schema(self):
-        from ii_agent.agent.runtime.tools.base import BaseAgentTool
+        from ii_agent.agents.tools.base import BaseAgentTool
+
         tool = MagicMock(spec=BaseAgentTool)
         tool.name = "hitl_tool"
         tool.description = "HITL tool"
@@ -260,7 +269,8 @@ class TestFunctionFromToolDeep:
 
     @pytest.mark.asyncio
     async def test_tool_entrypoint_calls_execute(self):
-        from ii_agent.agent.runtime.tools.base import ToolResult
+        from ii_agent.agents.tools.base import ToolResult
+
         tool = make_base_agent_tool()
         expected_result = ToolResult(llm_content="success", user_display_content="done")
         tool.execute = AsyncMock(return_value=expected_result)
@@ -272,7 +282,8 @@ class TestFunctionFromToolDeep:
 
     @pytest.mark.asyncio
     async def test_tool_entrypoint_handles_exception(self):
-        from ii_agent.agent.runtime.tools.base import ToolResult
+        from ii_agent.agents.tools.base import ToolResult
+
         tool = make_base_agent_tool()
         tool.execute = AsyncMock(side_effect=RuntimeError("tool failed"))
 
@@ -283,7 +294,8 @@ class TestFunctionFromToolDeep:
         assert "Error" in result.llm_content
 
     def test_from_tool_with_none_input_schema_uses_default(self):
-        from ii_agent.agent.runtime.tools.base import BaseAgentTool
+        from ii_agent.agents.tools.base import BaseAgentTool
+
         tool = MagicMock(spec=BaseAgentTool)
         tool.name = "no_schema_tool"
         tool.description = "Tool"
@@ -307,6 +319,7 @@ class TestFunctionFromToolDeep:
 # Function.process_entrypoint deep tests
 # ---------------------------------------------------------------------------
 
+
 class TestFunctionProcessEntrypointDeep:
     def test_process_entrypoint_skips_when_no_entrypoint(self):
         fn = make_function()
@@ -322,11 +335,13 @@ class TestFunctionProcessEntrypointDeep:
         assert fn.parameters == {"type": "object", "properties": {}, "required": []}
 
     def test_process_entrypoint_with_strict_and_skip_flag(self):
-        fn = make_function(parameters={
-            "type": "object",
-            "properties": {"query": {"type": "string"}},
-            "required": [],
-        })
+        fn = make_function(
+            parameters={
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+                "required": [],
+            }
+        )
         fn.skip_entrypoint_processing = True
         fn.entrypoint = lambda: None
         fn.process_entrypoint(strict=True)
@@ -428,6 +443,7 @@ class TestFunctionProcessEntrypointDeep:
 # Function.model_copy deep tests
 # ---------------------------------------------------------------------------
 
+
 class TestFunctionModelCopyDeep:
     def test_shallow_copy_returns_different_instance(self):
         fn = make_function()
@@ -462,11 +478,13 @@ class TestFunctionModelCopyDeep:
         assert copy.post_hook is post_hook
 
     def test_deep_copy_deep_copies_parameters(self):
-        fn = make_function(parameters={
-            "type": "object",
-            "properties": {"q": {"type": "string"}},
-            "required": [],
-        })
+        fn = make_function(
+            parameters={
+                "type": "object",
+                "properties": {"q": {"type": "string"}},
+                "required": [],
+            }
+        )
         copy = fn.model_copy(deep=True)
         # Modifying copy's parameters should not affect original
         copy.parameters["properties"]["new_field"] = {"type": "string"}
@@ -496,6 +514,7 @@ class TestFunctionModelCopyDeep:
 # Function._wrap_callable deep tests
 # ---------------------------------------------------------------------------
 
+
 class TestFunctionWrapCallableDeep:
     def test_async_generator_not_wrapped(self):
         async def async_gen():
@@ -507,6 +526,7 @@ class TestFunctionWrapCallableDeep:
     def test_already_wrapped_not_re_wrapped(self):
         def already_wrapped():
             pass
+
         already_wrapped._wrapped_for_validation = True
 
         result = Function._wrap_callable(already_wrapped)
@@ -532,54 +552,63 @@ class TestFunctionWrapCallableDeep:
 # Function.process_schema_for_strict deep tests
 # ---------------------------------------------------------------------------
 
+
 class TestProcessSchemaForStrictDeep:
     def test_adds_additional_properties_false_to_root(self):
-        fn = make_function(parameters={
-            "type": "object",
-            "properties": {"q": {"type": "string"}},
-            "required": [],
-        })
+        fn = make_function(
+            parameters={
+                "type": "object",
+                "properties": {"q": {"type": "string"}},
+                "required": [],
+            }
+        )
         fn.process_schema_for_strict()
         assert fn.parameters.get("additionalProperties") is False
 
     def test_adds_additional_properties_false_to_nested_objects(self):
-        fn = make_function(parameters={
-            "type": "object",
-            "properties": {
-                "nested": {
-                    "type": "object",
-                    "properties": {"inner": {"type": "string"}},
-                }
-            },
-            "required": [],
-        })
+        fn = make_function(
+            parameters={
+                "type": "object",
+                "properties": {
+                    "nested": {
+                        "type": "object",
+                        "properties": {"inner": {"type": "string"}},
+                    }
+                },
+                "required": [],
+            }
+        )
         fn.process_schema_for_strict()
         nested_schema = fn.parameters["properties"]["nested"]
         assert nested_schema.get("additionalProperties") is False
 
     def test_marks_all_properties_as_required(self):
-        fn = make_function(parameters={
-            "type": "object",
-            "properties": {
-                "param_a": {"type": "string"},
-                "param_b": {"type": "integer"},
-            },
-            "required": [],
-        })
+        fn = make_function(
+            parameters={
+                "type": "object",
+                "properties": {
+                    "param_a": {"type": "string"},
+                    "param_b": {"type": "integer"},
+                },
+                "required": [],
+            }
+        )
         fn.process_schema_for_strict()
         assert "param_a" in fn.parameters["required"]
         assert "param_b" in fn.parameters["required"]
 
     def test_excludes_reserved_params_from_required(self):
-        fn = make_function(parameters={
-            "type": "object",
-            "properties": {
-                "agent": {"type": "string"},
-                "run_context": {"type": "string"},
-                "query": {"type": "string"},
-            },
-            "required": [],
-        })
+        fn = make_function(
+            parameters={
+                "type": "object",
+                "properties": {
+                    "agent": {"type": "string"},
+                    "run_context": {"type": "string"},
+                    "query": {"type": "string"},
+                },
+                "required": [],
+            }
+        )
         fn.process_schema_for_strict()
         # Reserved params should be excluded
         assert "agent" not in fn.parameters["required"]
@@ -587,29 +616,33 @@ class TestProcessSchemaForStrictDeep:
         assert "query" in fn.parameters["required"]
 
     def test_schema_without_type_gets_type_inferred(self):
-        fn = make_function(parameters={
-            "type": "object",
-            "properties": {
-                "param": {
-                    "properties": {"inner": {"type": "string"}},  # No type, but has properties
-                }
-            },
-            "required": [],
-        })
+        fn = make_function(
+            parameters={
+                "type": "object",
+                "properties": {
+                    "param": {
+                        "properties": {"inner": {"type": "string"}},  # No type, but has properties
+                    }
+                },
+                "required": [],
+            }
+        )
         fn.process_schema_for_strict()
         param_schema = fn.parameters["properties"]["param"]
         assert param_schema.get("type") == "object"
 
     def test_anyof_schema_not_given_type(self):
-        fn = make_function(parameters={
-            "type": "object",
-            "properties": {
-                "param": {
-                    "anyOf": [{"type": "string"}, {"type": "integer"}],
-                }
-            },
-            "required": [],
-        })
+        fn = make_function(
+            parameters={
+                "type": "object",
+                "properties": {
+                    "param": {
+                        "anyOf": [{"type": "string"}, {"type": "integer"}],
+                    }
+                },
+                "required": [],
+            }
+        )
         fn.process_schema_for_strict()
         # anyOf schema should not have type forcibly added
         param_schema = fn.parameters["properties"]["param"]
@@ -619,6 +652,7 @@ class TestProcessSchemaForStrictDeep:
 # ---------------------------------------------------------------------------
 # FunctionCall.get_call_str deep tests
 # ---------------------------------------------------------------------------
+
 
 class TestFunctionCallGetCallStrDeep:
     def test_no_arguments_returns_empty_call(self):
@@ -653,6 +687,7 @@ class TestFunctionCallGetCallStrDeep:
 # ---------------------------------------------------------------------------
 # FunctionCall._handle_pre_hook deep tests
 # ---------------------------------------------------------------------------
+
 
 class TestFunctionCallHandlePreHookDeep:
     def test_no_pre_hook_does_nothing(self):
@@ -723,7 +758,7 @@ class TestFunctionCallHandlePreHookDeep:
         fc._handle_pre_hook()  # Should not propagate exception
 
     def test_pre_hook_agent_run_exception_sets_error_and_raises(self):
-        from ii_agent.agent.runtime.exceptions import AgentRunException
+        from ii_agent.agents.exceptions import AgentRunException
 
         def hook():
             raise AgentRunException("run aborted")
@@ -739,6 +774,7 @@ class TestFunctionCallHandlePreHookDeep:
 # ---------------------------------------------------------------------------
 # FunctionCall._handle_post_hook deep tests
 # ---------------------------------------------------------------------------
+
 
 class TestFunctionCallHandlePostHookDeep:
     def test_no_post_hook_does_nothing(self):
@@ -775,6 +811,7 @@ class TestFunctionCallHandlePostHookDeep:
 # FunctionExecutionResult
 # ---------------------------------------------------------------------------
 
+
 class TestFunctionExecutionResultDeep:
     def test_success_status(self):
         result = FunctionExecutionResult(status="success", result="done")
@@ -788,7 +825,8 @@ class TestFunctionExecutionResultDeep:
         assert result.error == "something went wrong"
 
     def test_with_images(self):
-        from ii_agent.agent.runtime.media import Image
+        from ii_agent.files.media import Image
+
         img = Image(id="img-1", url="http://example.com/img.png")
         result = FunctionExecutionResult(status="success", images=[img])
         assert result.images is not None
@@ -814,12 +852,10 @@ class TestFunctionExecutionResultDeep:
 
 class TestFunctionCallBillingFinalizationDeep:
     @pytest.mark.asyncio
-    async def test_reserve_tool_billing_uses_from_tool_instance(self):
+    async def test_tool_billing_deduction_uses_from_tool_instance(self):
         from contextlib import asynccontextmanager
-        from ii_agent.agent.runtime.run.base import RunContext
-        from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult as BaseToolResult
-        from ii_agent.billing.reservations.types import BillingQuote, ReservationHold
-        from ii_agent.core.llm.billing_service import ReservedToolCall
+        from ii_agent.agents.runs.base import RunContext
+        from ii_agent.agents.tools.base import BaseAgentTool, ToolResult as BaseToolResult
 
         class _Tool(BaseAgentTool):
             name = "demo_tool"
@@ -832,21 +868,11 @@ class TestFunctionCallBillingFinalizationDeep:
                 return BaseToolResult(llm_content="ok", cost=0.2)
 
         tool = _Tool()
-        quote = BillingQuote(strategy="bounded", reserve_usd=0.2, max_usd=0.2)
-        tool.quote_cost = AsyncMock(return_value=quote)
-        reservation = ReservedToolCall(
-            hold=ReservationHold(
-                reservation_id="res-1",
-                idempotency_key="idem-1",
-                reserved_credits=1,
-                reserved_bonus_credits=0,
-                quoted_usd=0.2,
-                max_usd=0.2,
-            ),
-            quote=quote,
-        )
+        tool.quote_cost = AsyncMock(return_value=SimpleNamespace(
+            cost_usd=0.2,
+        ))
         llm_billing = SimpleNamespace(
-            reserve_tool_call=AsyncMock(return_value=reservation),
+            deduct_tool_call=AsyncMock(return_value=1.0),
         )
 
         function = Function.from_tool(tool)
@@ -876,16 +902,12 @@ class TestFunctionCallBillingFinalizationDeep:
             await fc._reserve_tool_billing()
 
         tool.quote_cost.assert_awaited_once_with({})
-        llm_billing.reserve_tool_call.assert_awaited_once()
-        assert fc.billing_reservation == reservation
 
     @pytest.mark.asyncio
-    async def test_successful_tool_settlement_failure_does_not_release_hold(self):
+    async def test_successful_tool_deduction_failure_is_logged(self):
         from contextlib import asynccontextmanager
-        from ii_agent.agent.runtime.run.base import RunContext
-        from ii_agent.agent.runtime.tools.base import BaseAgentTool, ToolResult as BaseToolResult
-        from ii_agent.billing.reservations.types import BillingQuote, ReservationHold
-        from ii_agent.core.llm.billing_service import ReservedToolCall
+        from ii_agent.agents.runs.base import RunContext
+        from ii_agent.agents.tools.base import BaseAgentTool, ToolResult as BaseToolResult
 
         class _Tool(BaseAgentTool):
             name = "demo_tool"
@@ -899,8 +921,7 @@ class TestFunctionCallBillingFinalizationDeep:
 
         tool = _Tool()
         llm_billing = SimpleNamespace(
-            settle_tool_call=AsyncMock(side_effect=RuntimeError("boom")),
-            release_tool_call=AsyncMock(),
+            deduct_tool_call=AsyncMock(side_effect=RuntimeError("boom")),
         )
 
         function = Function.from_tool(tool)
@@ -922,17 +943,6 @@ class TestFunctionCallBillingFinalizationDeep:
         fc = FunctionCall(
             function=function,
             arguments={},
-            billing_reservation=ReservedToolCall(
-                hold=ReservationHold(
-                    reservation_id="res-1",
-                    idempotency_key="idem-1",
-                    reserved_credits=1,
-                    reserved_bonus_credits=0,
-                    quoted_usd=0.2,
-                    max_usd=0.2,
-                ),
-                quote=BillingQuote(strategy="bounded", reserve_usd=0.2, max_usd=0.2),
-            ),
         )
 
         @asynccontextmanager
@@ -947,5 +957,3 @@ class TestFunctionCallBillingFinalizationDeep:
                     result=BaseToolResult(llm_content="ok", cost=0.2),
                 )
             )
-
-        llm_billing.release_tool_call.assert_not_awaited()

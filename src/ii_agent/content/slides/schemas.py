@@ -1,5 +1,7 @@
 """Pydantic schemas (DTOs) for slides domain."""
 
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from datetime import datetime
@@ -25,8 +27,8 @@ class SlideContentCreate(SlideContentBase):
 class SlideContentInfo(SlideContentBase):
     """Model for slide content information (used internally)."""
 
-    id: str
-    session_id: str
+    id: UUID
+    session_id: UUID
     metadata: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -64,6 +66,6 @@ class PresentationInfo(BaseModel):
 class PresentationListResponse(BaseModel):
     """Response model for list of presentations in session."""
 
-    session_id: str
+    session_id: UUID
     presentations: List[PresentationInfo]
     total: int

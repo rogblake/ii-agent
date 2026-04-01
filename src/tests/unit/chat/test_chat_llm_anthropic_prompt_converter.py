@@ -287,9 +287,7 @@ class TestConvertToolResultContent:
             name="tool",
             output=ArrayResultContent(
                 value=[
-                    ImageDataContentPart(
-                        media_type="image/png", data="base64imagedata"
-                    ),
+                    ImageDataContentPart(media_type="image/png", data="base64imagedata"),
                 ]
             ),
         )
@@ -306,9 +304,7 @@ class TestConvertToolResultContent:
             name="tool",
             output=ArrayResultContent(
                 value=[
-                    FileDataContentPart(
-                        mime_type="application/pdf", data="pdfdata"
-                    ),
+                    FileDataContentPart(mime_type="application/pdf", data="pdfdata"),
                 ]
             ),
         )
@@ -493,9 +489,7 @@ class TestConvertToAnthropicMessages:
         from ii_agent.chat.llm.anthropic.prompt_converter import convert_to_anthropic_messages
 
         msgs = [_user_message("test")]
-        _, anthropic_msgs, _ = convert_to_anthropic_messages(
-            msgs, "sys", enable_caching=False
-        )
+        _, anthropic_msgs, _ = convert_to_anthropic_messages(msgs, "sys", enable_caching=False)
         content = anthropic_msgs[0]["content"]
         for block in content:
             assert "cache_control" not in block
@@ -520,9 +514,7 @@ class TestConvertToAnthropicMessages:
             [TextContent(text="see this file")],
             file_ids=["internal-file-id"],
         )
-        _, anthropic_msgs, _ = convert_to_anthropic_messages(
-            [user_msg], "sys", provider_files=[pf]
-        )
+        _, anthropic_msgs, _ = convert_to_anthropic_messages([user_msg], "sys", provider_files=[pf])
         content = anthropic_msgs[0]["content"]
         # Should include file reference block
         file_refs = [c for c in content if c.get("source", {}).get("type") == "file"]
@@ -537,12 +529,8 @@ class TestConvertToAnthropicMessages:
         pf.provider_file_id = "pdf-provider-id"
         pf.content_type = "application/pdf"
 
-        user_msg = _make_message(
-            MessageRole.USER, [TextContent(text="pdf")], file_ids=["pdf-id"]
-        )
-        _, anthropic_msgs, _ = convert_to_anthropic_messages(
-            [user_msg], "sys", provider_files=[pf]
-        )
+        user_msg = _make_message(MessageRole.USER, [TextContent(text="pdf")], file_ids=["pdf-id"])
+        _, anthropic_msgs, _ = convert_to_anthropic_messages([user_msg], "sys", provider_files=[pf])
         content = anthropic_msgs[0]["content"]
         docs = [c for c in content if c.get("type") == "document"]
         assert len(docs) == 1
@@ -555,12 +543,8 @@ class TestConvertToAnthropicMessages:
         pf.provider_file_id = "csv-provider-id"
         pf.content_type = "text/csv"
 
-        user_msg = _make_message(
-            MessageRole.USER, [TextContent(text="data")], file_ids=["csv-id"]
-        )
-        _, anthropic_msgs, _ = convert_to_anthropic_messages(
-            [user_msg], "sys", provider_files=[pf]
-        )
+        user_msg = _make_message(MessageRole.USER, [TextContent(text="data")], file_ids=["csv-id"])
+        _, anthropic_msgs, _ = convert_to_anthropic_messages([user_msg], "sys", provider_files=[pf])
         content = anthropic_msgs[0]["content"]
         uploads = [c for c in content if c.get("type") == "container_upload"]
         assert len(uploads) == 1
@@ -583,5 +567,7 @@ class TestConvertToAnthropicMessages:
         asst_msg = _make_message(MessageRole.ASSISTANT, [rc])
         _, anthropic_msgs, _ = convert_to_anthropic_messages([_user_message(), asst_msg], "sys")
         asst_content = anthropic_msgs[1]["content"]
-        thinking_blocks = [c for c in asst_content if c.get("type") in ("thinking", "redacted_thinking")]
+        thinking_blocks = [
+            c for c in asst_content if c.get("type") in ("thinking", "redacted_thinking")
+        ]
         assert len(thinking_blocks) == 1

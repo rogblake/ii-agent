@@ -7,8 +7,8 @@ Models migrated from media/models.py:
 """
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ARRAY, String, BigInteger, ForeignKey, Index, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import ARRAY, BigInteger, ForeignKey, Index, String, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from datetime import datetime, timezone
 from typing import Optional, List, TYPE_CHECKING
 import uuid
@@ -25,13 +25,8 @@ class SlideContent(Base):
 
     __tablename__ = "slide_contents"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
-    session_id: Mapped[str] = mapped_column(
-        String,
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="CASCADE")
     )
     presentation_name: Mapped[str] = mapped_column(String, nullable=False)
@@ -80,13 +75,8 @@ class SlideVersion(Base):
 
     __tablename__ = "slide_versions"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
-    session_id: Mapped[str] = mapped_column(
-        String,
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="CASCADE")
     )
     presentation_name: Mapped[str] = mapped_column(String, nullable=False)
@@ -94,13 +84,13 @@ class SlideVersion(Base):
 
     # Version chain (like storybook versioning)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
-    root_version_id: Mapped[Optional[str]] = mapped_column(
-        String,
+    root_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("slide_versions.id", ondelete="SET NULL"),
         nullable=True
     )
-    parent_version_id: Mapped[Optional[str]] = mapped_column(
-        String,
+    parent_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("slide_versions.id", ondelete="SET NULL"),
         nullable=True
     )
@@ -156,11 +146,6 @@ class SlideTemplate(Base):
 
     __tablename__ = "slide_templates"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4()),
-    )
     slide_template_name: Mapped[str] = mapped_column(String, nullable=False)
     slide_content: Mapped[str] = mapped_column(String, nullable=False)
     slide_template_images: Mapped[Optional[List[str]]] = mapped_column(

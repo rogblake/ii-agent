@@ -1,9 +1,10 @@
+import type { ChatMessagePayload } from '@/typings/agent'
+import { CommandType } from '@/typings/agent'
+
 type PublishProjectParams = {
     vercelApiKey: string
-    sendMessage: (payload: {
-        type: string
-        content: Record<string, unknown>
-    }) => boolean
+    sendMessage: (payload: ChatMessagePayload) => boolean
+    sessionId: string
     projectName?: string
     projectPath?: string
     revision?: string
@@ -11,10 +12,8 @@ type PublishProjectParams = {
 }
 
 type PublishCloudRunParams = {
-    sendMessage: (payload: {
-        type: string
-        content: Record<string, unknown>
-    }) => boolean
+    sendMessage: (payload: ChatMessagePayload) => boolean
+    sessionId: string
     projectName?: string
     projectPath?: string
     revision?: string
@@ -25,6 +24,7 @@ class FullstackService {
     async publishProject({
         vercelApiKey,
         sendMessage,
+        sessionId,
         projectName,
         projectPath,
         revision,
@@ -51,8 +51,11 @@ class FullstackService {
         }
 
         const success = sendMessage({
-            type: 'publish',
-            content: payload
+            session_uuid: sessionId,
+            content: {
+                command: CommandType.PUBLISH_PROJECT,
+                ...payload
+            } as ChatMessagePayload['content']
         })
 
         if (!success) {
@@ -62,6 +65,7 @@ class FullstackService {
 
     async publishCloudRun({
         sendMessage,
+        sessionId,
         projectName,
         projectPath,
         revision,
@@ -86,8 +90,11 @@ class FullstackService {
         }
 
         const success = sendMessage({
-            type: 'publish_cloud_run',
-            content: payload
+            session_uuid: sessionId,
+            content: {
+                command: CommandType.PUBLISH_CLOUD_RUN,
+                ...payload
+            } as ChatMessagePayload['content']
         })
 
         if (!success) {

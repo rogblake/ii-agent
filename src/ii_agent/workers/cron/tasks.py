@@ -7,11 +7,12 @@ import uuid
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select
-from ii_agent.agent.events.models import EventType, RealtimeEvent
-from ii_agent.agent.events.repository import EventRepository
-from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.agent.runs.models import AgentRunTask, RunStatus
-from ii_agent.chat.runs.models import ChatRun, ChatRunStatus
+from ii_agent.realtime.events.app_events import AgentResponseInterruptedEvent, EventGroup
+from ii_agent.realtime.events.repository import EventRepository
+from ii_agent.core.db import get_db_session_local
+from ii_agent.tasks.models import RunTask
+from ii_agent.tasks.types import RunStatus
+from ii_agent.chat.messages.models import ChatMessage
 from ii_agent.core.logger import logger
 
 
@@ -21,7 +22,7 @@ scheduler = AsyncIOScheduler()
 
 async def cleanup_long_running_tasks():
     """
-    Clean up AgentRunTasks that have been running for more than 45 minutes.
+    Clean up RunTasks that have been running for more than 45 minutes.
     Marks them as system_interrupted instead of deleting.
     """
     try:
@@ -31,7 +32,7 @@ async def cleanup_long_running_tasks():
         batch_size = 20
         max_processed = 100
 
-        logger.info(f"Starting cleanup of AgentRunTasks older than {cutoff_time}")
+        logger.info(f"Starting cleanup of RunTasks older than {cutoff_time}")
 
         async with get_db_session_local() as db:
             while total_processed < max_processed:
@@ -39,12 +40,12 @@ async def cleanup_long_running_tasks():
                 # This ensures we don't block on locked rows and prevents concurrent updates
                 # Only select tasks that are currently in RUNNING status
                 stmt = (
-                    select(AgentRunTask)
+                    select(RunTask)
                     .where(
-                        AgentRunTask.created_at < cutoff_time,
-                        AgentRunTask.status == RunStatus.RUNNING,
+                        RunTask.created_at < cutoff_time,
+                        RunTask.status == RunStatus.RUNNING,
                     )
-                    .order_by(AgentRunTask.created_at.desc())
+                    .order_by(RunTask.created_at.desc())
                     .limit(batch_size)
                     .with_for_update(skip_locked=True)
                 )
@@ -53,7 +54,7 @@ async def cleanup_long_running_tasks():
                 tasks = result.scalars().all()
 
                 if not tasks:
-                    logger.info("No more stale AgentRunTasks found")
+                    logger.info("No more stale RunTasks found")
                     break
 
                 # Update each task - optimistic locking will be enforced on commit
@@ -62,15 +63,14 @@ async def cleanup_long_running_tasks():
                 event_repo = EventRepository()
                 for task in tasks:
                     # Update the task status - this will use optimistic locking via version column
-                    task.status = RunStatus.SYSTEM_INTERRUPTED
+                    task.status = RunStatus.FAILED
                     task.updated_at = datetime.now(timezone.utc)
                     # The version column will be automatically incremented by SQLAlchemy on commit
-                    event = RealtimeEvent(
+                    event = AgentResponseInterruptedEvent(
                         session_id=uuid.UUID(task.session_id),
-                        run_id=task.id,
-                        type=EventType.AGENT_RESPONSE_INTERRUPTED,
                         content={
-                            "message": "Agent run task was interrupted by system cleanup due to timeout."
+                            "message": "Agent run task was interrupted by system cleanup due to timeout.",
+                            "run_id": str(task.id) if task.id else None,
                         },
                     )
                     await event_repo.save(db, uuid.UUID(task.session_id), event)
@@ -79,7 +79,7 @@ async def cleanup_long_running_tasks():
 
                 total_processed += batch_count
                 logger.info(
-                    f"Marked {batch_count} stale AgentRunTasks as system_interrupted. "
+                    f"Marked {batch_count} stale RunTasks as system_interrupted. "
                     f"Total processed: {total_processed}/{max_processed}"
                 )
 
@@ -94,18 +94,18 @@ async def cleanup_long_running_tasks():
                     break
 
         logger.info(
-            f"Cleanup completed. Total AgentRunTasks marked as system_interrupted: {total_processed}"
+            f"Cleanup completed. Total RunTasks marked as system_interrupted: {total_processed}"
         )
 
     except Exception as e:
-        logger.opt(exception=True).error(f"Error during AgentRunTask cleanup: {e}")
+        logger.opt(exception=True).error(f"Error during RunTask cleanup: {e}")
         # Don't re-raise - we want the scheduler to continue running
 
 
-async def cleanup_long_running_chat_runs():
+async def cleanup_long_running_chat_messages():
     """
-    Clean up ChatRuns that have been running for more than 45 minutes.
-    Marks them as aborted.
+    Clean up incomplete assistant ChatMessages older than 45 minutes.
+    Marks them as finished (is_finished=True) so they don't block future operations.
     """
     try:
         cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=45)
@@ -113,39 +113,41 @@ async def cleanup_long_running_chat_runs():
         batch_size = 20
         max_processed = 100
 
-        logger.info(f"Starting cleanup of ChatRuns older than {cutoff_time}")
+        logger.info(f"Starting cleanup of incomplete ChatMessages older than {cutoff_time}")
 
         async with get_db_session_local() as db:
             while total_processed < max_processed:
                 stmt = (
-                    select(ChatRun)
+                    select(ChatMessage)
                     .where(
-                        ChatRun.created_at < cutoff_time,
-                        ChatRun.status == ChatRunStatus.RUNNING,
+                        ChatMessage.created_at < cutoff_time,
+                        ChatMessage.role == "assistant",
+                        ChatMessage.is_finished == False,  # noqa: E712
                     )
-                    .order_by(ChatRun.created_at.desc())
+                    .order_by(ChatMessage.created_at.desc())
                     .limit(batch_size)
                     .with_for_update(skip_locked=True)
                 )
 
                 result = await db.execute(stmt)
-                runs = result.scalars().all()
+                messages = result.scalars().all()
 
-                if not runs:
-                    logger.info("No more stale ChatRuns found")
+                if not messages:
+                    logger.info("No more stale incomplete ChatMessages found")
                     break
 
-                batch_count = len(runs)
+                batch_count = len(messages)
 
-                for run in runs:
-                    run.status = ChatRunStatus.ABORTED
-                    run.updated_at = datetime.now(timezone.utc)
+                for msg in messages:
+                    msg.is_finished = True
+                    msg.finish_reason = "timeout"
+                    msg.updated_at = datetime.now(timezone.utc)
 
                 await db.commit()
 
                 total_processed += batch_count
                 logger.info(
-                    f"Marked {batch_count} stale ChatRuns as aborted. "
+                    f"Marked {batch_count} stale ChatMessages as finished. "
                     f"Total processed: {total_processed}/{max_processed}"
                 )
 
@@ -155,16 +157,16 @@ async def cleanup_long_running_chat_runs():
                 if total_processed >= max_processed:
                     logger.info(
                         f"Reached max processed limit ({max_processed}). "
-                        "Remaining chat runs will be processed in next run."
+                        "Remaining messages will be processed in next run."
                     )
                     break
 
         logger.info(
-            f"Chat run cleanup completed. Total ChatRuns marked as aborted: {total_processed}"
+            f"Chat message cleanup completed. Total marked as finished: {total_processed}"
         )
 
     except Exception as e:
-        logger.opt(exception=True).error(f"Error during ChatRun cleanup: {e}")
+        logger.opt(exception=True).error(f"Error during ChatMessage cleanup: {e}")
 
 
 def start_scheduler():
@@ -177,16 +179,16 @@ def start_scheduler():
             cleanup_long_running_tasks,
             trigger=IntervalTrigger(minutes=40),
             id="cleanup_stale_agent_run_tasks",
-            name="Cleanup stale AgentRunTasks (older than 45 mins)",
+            name="Cleanup stale RunTasks (older than 45 mins)",
             replace_existing=True,
             max_instances=1,
         )
 
         scheduler.add_job(
-            cleanup_long_running_chat_runs,
+            cleanup_long_running_chat_messages,
             trigger=IntervalTrigger(minutes=40),
-            id="cleanup_stale_chat_runs",
-            name="Cleanup stale ChatRuns (older than 45 mins)",
+            id="cleanup_stale_chat_messages",
+            name="Cleanup stale incomplete ChatMessages (older than 45 mins)",
             replace_existing=True,
             max_instances=1,
         )

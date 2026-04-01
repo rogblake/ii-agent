@@ -12,18 +12,17 @@ For custom skills from GitHub:
 2. When activating, skill is downloaded from GCS and extracted to sandbox
 """
 
-import asyncio
 import io
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
-
-from ii_agent.settings.skills.builtin import BUILTIN_SKILLS_DIR
 from ii_agent.core.logger import logger
+from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.settings.skills.builtin import BUILTIN_SKILLS_DIR
 
 if TYPE_CHECKING:
-    from ii_agent.core.storage import BaseStorage
+    from ii_agent.core.storage.providers.base import StorageProvider
     from ii_agent.settings.skills.github import GitHubFile
 
 
@@ -73,23 +72,23 @@ def create_skill_zip_from_dir(skill_dir: Path) -> bytes:
 
 async def skill_exists(
     storage_uri: str,
-    storage: Optional["BaseStorage"] = None,
+    storage: "StorageProvider | None" = None,
 ) -> bool:
     """Check if skill exists at storage URI.
 
     Handles three types of storage URIs:
     - "builtin:{name}" -> Check local codebase
-    - "skills/{user_id}/{name}" -> Check GCS (requires storage param)
+    - "users/{user_id}/skills/{name}.zip" -> Check GCS (requires storage param)
     - "/absolute/path" -> Check local path (legacy)
 
     Args:
-        storage_uri: Storage URI (e.g., "builtin:pdf", "skills/user-123/my-skill")
+        storage_uri: Storage URI (e.g., "builtin:pdf", "users/user-123/skills/my-skill.zip")
         storage: GCS storage client (required for GCS-based skills)
 
     Returns:
         True if skill exists
     """
-    if storage_uri.startswith("skills/"):
+    if path_resolver.is_user_content(storage_uri):
         # GCS-based skill
         if storage is None:
             return False
@@ -105,7 +104,7 @@ async def copy_skill_to_sandbox(
     skill_name: str,
     sandbox,
     sandbox_base_path: str = "/workspace/.skills",
-    storage: Optional["BaseStorage"] = None,
+    storage: "StorageProvider | None" = None,
 ) -> str:
     """Zip skill directory and upload to sandbox, then extract.
 
@@ -114,13 +113,13 @@ async def copy_skill_to_sandbox(
 
     Handles three types of storage URIs:
     - "builtin:{name}" -> Load from local codebase
-    - "skills/{user_id}/{name}" -> Download from GCS (requires storage param)
+    - "users/{user_id}/skills/{name}.zip" -> Download from GCS (requires storage param)
     - "/absolute/path" -> Load from local path (legacy)
 
     Args:
-        storage_uri: Storage URI (e.g., "builtin:pdf", "skills/user-123/my-skill")
+        storage_uri: Storage URI (e.g., "builtin:pdf", "users/user-123/skills/my-skill.zip")
         skill_name: Name of the skill (used for sandbox directory)
-        sandbox: SandboxManager instance (e2b)
+        sandbox: Sandbox instance
         sandbox_base_path: Base path in sandbox for skills
         storage: GCS storage client (required for GCS-based skills)
 
@@ -135,8 +134,8 @@ async def copy_skill_to_sandbox(
         # Built-in skill from local codebase
         skill_dir = resolve_storage_uri(storage_uri)
         zip_content = create_skill_zip_from_dir(skill_dir)
-    elif storage_uri.startswith("skills/"):
-        # Custom skill from GCS (async to avoid blocking)
+    elif path_resolver.is_user_content(storage_uri):
+        # Custom skill from GCS
         if storage is None:
             raise ValueError(f"Storage client required for GCS-based skill: {storage_uri}")
         zip_content = await download_skill_zip_from_gcs(storage, storage_uri)
@@ -168,21 +167,6 @@ async def copy_skill_to_sandbox(
 # ============================================================
 
 
-def get_user_skill_storage_path(user_id: str, skill_name: str) -> str:
-    """Generate GCS storage path for a user's skill.
-
-    Format: skills/{user_id}/{skill_name}
-
-    Args:
-        user_id: User ID
-        skill_name: Skill name (kebab-case)
-
-    Returns:
-        Storage path (without gs:// prefix)
-    """
-    return f"skills/{user_id}/{skill_name}"
-
-
 def create_skill_zip_from_files(files: list["GitHubFile"]) -> bytes:
     """Create a zip file from a list of GitHubFile objects.
 
@@ -203,18 +187,8 @@ def create_skill_zip_from_files(files: list["GitHubFile"]) -> bytes:
     return zip_bytes
 
 
-def _sync_upload_to_gcs(
-    storage: "BaseStorage",
-    zip_content: bytes,
-    zip_path: str,
-) -> None:
-    """Synchronous GCS upload - to be run in thread pool."""
-    zip_buffer = io.BytesIO(zip_content)
-    storage.write(zip_buffer, zip_path, content_type="application/zip")
-
-
 async def upload_skill_to_gcs(
-    storage: "BaseStorage",
+    storage: "StorageProvider",
     user_id: str,
     skill_name: str,
     files: list["GitHubFile"],
@@ -228,93 +202,77 @@ async def upload_skill_to_gcs(
         files: List of GitHubFile objects to upload
 
     Returns:
-        Storage path where skill was uploaded (e.g., skills/{user_id}/{skill_name})
+        Storage path where skill was uploaded (e.g., users/{user_id}/skills/{skill_name}.zip)
     """
-    base_path = get_user_skill_storage_path(user_id, skill_name)
-    zip_path = f"{base_path}/skill.zip"
+    zip_path = path_resolver.user_skill(user_id, skill_name)
 
     # Create zip from files (CPU-bound, fast in memory)
     zip_content = create_skill_zip_from_files(files)
 
-    # Upload to GCS in thread pool to avoid blocking event loop
     try:
-        await asyncio.to_thread(_sync_upload_to_gcs, storage, zip_content, zip_path)
+        await storage.write(zip_path, io.BytesIO(zip_content), "application/zip")
     except Exception as e:
         logger.error(f"Failed to upload skill to GCS: {e}")
         raise
 
     logger.info(f"Uploaded skill '{skill_name}' to GCS ({len(zip_content)} bytes)")
 
-    return base_path
-
-
-def _sync_download_from_gcs(storage: "BaseStorage", zip_path: str) -> bytes:
-    """Synchronous GCS download - to be run in thread pool."""
-    zip_data = storage.read(zip_path)
-    return zip_data.read()
+    return zip_path
 
 
 async def download_skill_zip_from_gcs(
-    storage: "BaseStorage",
-    storage_path: str,
+    storage: "StorageProvider",
+    storage_uri: str,
 ) -> bytes:
     """Download skill zip from GCS.
 
     Args:
         storage: GCS storage client
-        storage_path: Path in GCS (e.g., skills/{user_id}/{skill_name})
+        storage_uri: Full storage path (e.g., users/{user_id}/skills/{skill_name}.zip)
 
     Returns:
         Zip file content as bytes
     """
-    zip_path = f"{storage_path}/skill.zip"
     try:
-        return await asyncio.to_thread(_sync_download_from_gcs, storage, zip_path)
+        data = await storage.read(storage_uri)
+        return data.read()
     except Exception as e:
         logger.error(f"Failed to download skill from GCS: {e}")
         raise
 
 
-def _sync_exists_in_gcs(storage: "BaseStorage", zip_path: str) -> bool:
-    """Synchronous GCS exists check - to be run in thread pool."""
-    return storage.is_exists(zip_path)
-
-
 async def skill_exists_in_gcs(
-    storage: "BaseStorage",
-    storage_path: str,
+    storage: "StorageProvider",
+    storage_uri: str,
 ) -> bool:
     """Check if skill zip exists in GCS.
 
     Args:
         storage: GCS storage client
-        storage_path: Path in GCS (e.g., skills/{user_id}/{skill_name})
+        storage_uri: Full storage path (e.g., users/{user_id}/skills/{skill_name}.zip)
 
     Returns:
         True if skill zip exists
     """
-    zip_path = f"{storage_path}/skill.zip"
-    return await asyncio.to_thread(_sync_exists_in_gcs, storage, zip_path)
+    return await storage.exists(storage_uri)
 
 
-def delete_skill_from_gcs(
-    storage: "BaseStorage",
-    storage_path: str,
+async def delete_skill_from_gcs(
+    storage: "StorageProvider",
+    storage_uri: str,
 ) -> bool:
     """Delete skill zip from GCS.
 
     Args:
         storage: GCS storage client
-        storage_path: Path in GCS (e.g., skills/{user_id}/{skill_name})
+        storage_uri: Full storage path (e.g., users/{user_id}/skills/{skill_name}.zip)
 
     Returns:
         True if deletion was successful
     """
-    zip_path = f"{storage_path}/skill.zip"
     try:
-        # GCS BaseStorage doesn't have delete, but we can use the client directly
-        # For now, just log - deletion can be implemented later if needed
-        logger.info(f"Skill deletion requested for {zip_path}")
+        await storage.delete(storage_uri)
+        logger.info(f"Deleted skill from GCS: {storage_uri}")
         return True
     except Exception as e:
         logger.error(f"Failed to delete skill from GCS: {e}")

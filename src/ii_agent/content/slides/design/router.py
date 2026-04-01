@@ -14,7 +14,7 @@ from ii_agent.content.slides.design.schemas import (
     SlideSyncBatchResponse,
 )
 
-router = APIRouter(prefix="/slides/design", tags=["Slide Design Mode"])
+router = APIRouter(prefix="/design", tags=["Slide Design Mode"])
 
 _HTML_HEADERS = {
     "Cache-Control": "no-store",

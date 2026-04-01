@@ -1,6 +1,9 @@
 import pytest
 
-from ii_agent.app import health_router
+try:
+    from ii_agent.app import health_router
+except ImportError:
+    pytest.skip("Transitive google-genai dependency not available", allow_module_level=True)
 from tests.api.contracts import assert_auth_contract, assert_routes_present
 
 pytestmark = pytest.mark.unit

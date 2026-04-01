@@ -9,23 +9,22 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from ii_agent.auth.dependencies import get_current_user
-from ii_agent.auth.users.dependencies import get_user_service
-from ii_agent.billing.credits.dependencies import get_credit_service
+from ii_agent.users.dependencies import _get_user_service
+from ii_agent.credits.dependencies import _get_credit_service
 from ii_agent.content.storybook.dependencies import (
-    get_storybook_ai_edit_service,
-    get_storybook_edit_service,
-    get_storybook_export_service,
-    get_storybook_service,
-    get_storybook_voice_service,
+    _get_storybook_ai_edit_service,
+    _get_storybook_edit_service,
+    _get_storybook_export_service,
+    _get_storybook_service,
+    _get_storybook_voice_service,
 )
 from ii_agent.content.storybook.router import router
 from ii_agent.core.dependencies import _db_session_dependency
-from ii_agent.core.llm.dependencies import get_llm_execution_service
 from ii_agent.core.middleware import ii_agent_error_handler
 from ii_agent.core.exceptions import IIAgentError, ValidationError
-from ii_agent.core.storage.dependencies import get_media_template_storage
-from ii_agent.sessions.dependencies import get_session_service
-from ii_agent.settings.llm.dependencies import get_llm_setting_service
+from ii_agent.core.storage.dependencies import _get_storage_service
+from ii_agent.sessions.dependencies import _get_session_service
+from ii_agent.settings.llm.dependencies import _get_llm_setting_service
 
 
 pytestmark = pytest.mark.unit
@@ -64,10 +63,8 @@ def _make_app(*, session_access: bool = True, export_bytes: bytes | None = b"pdf
             return {"id": session_id}
 
     class _EditService:
-        async def save_all_page_edits_with_billing(
-            self, db, *, storybook_id, user_id, page_changes, image_urls
-        ):
-            return storybook_detail
+        async def save_all_page_edits(self, db, storybook_id, page_changes, image_urls):
+            return storybook_detail, 0.0
 
         async def get_version_history(self, db, storybook_id):
             return []
@@ -119,8 +116,8 @@ def _make_app(*, session_access: bool = True, export_bytes: bytes | None = b"pdf
             return export_bytes if page_number == 1 else None
 
     class _CreditService:
-        async def require_billing_ok(self, db, user_id: str):
-            return None
+        async def deduct_and_track_session_usage(self, *args, **kwargs):
+            return True
 
     class _VoiceService:
         def get_generation_status(self, storybook):
@@ -143,17 +140,16 @@ def _make_app(*, session_access: bool = True, export_bytes: bytes | None = b"pdf
 
     app.dependency_overrides[_db_session_dependency] = _fake_db
     app.dependency_overrides[get_current_user] = _fake_user
-    app.dependency_overrides[get_storybook_service] = lambda: _StorybookService()
-    app.dependency_overrides[get_storybook_edit_service] = lambda: _EditService()
-    app.dependency_overrides[get_storybook_ai_edit_service] = lambda: _AIEditService()
-    app.dependency_overrides[get_storybook_export_service] = lambda: _ExportService()
-    app.dependency_overrides[get_storybook_voice_service] = lambda: _VoiceService()
-    app.dependency_overrides[get_credit_service] = lambda: _CreditService()
-    app.dependency_overrides[get_session_service] = lambda: _SessionService()
-    app.dependency_overrides[get_user_service] = lambda: SimpleNamespace()
-    app.dependency_overrides[get_llm_setting_service] = lambda: SimpleNamespace()
-    app.dependency_overrides[get_llm_execution_service] = lambda: SimpleNamespace()
-    app.dependency_overrides[get_media_template_storage] = lambda: _Storage()
+    app.dependency_overrides[_get_storybook_service] = lambda: _StorybookService()
+    app.dependency_overrides[_get_storybook_edit_service] = lambda: _EditService()
+    app.dependency_overrides[_get_storybook_ai_edit_service] = lambda: _AIEditService()
+    app.dependency_overrides[_get_storybook_export_service] = lambda: _ExportService()
+    app.dependency_overrides[_get_storybook_voice_service] = lambda: _VoiceService()
+    app.dependency_overrides[_get_credit_service] = lambda: _CreditService()
+    app.dependency_overrides[_get_session_service] = lambda: _SessionService()
+    app.dependency_overrides[_get_user_service] = lambda: SimpleNamespace()
+    app.dependency_overrides[_get_llm_setting_service] = lambda: SimpleNamespace()
+    app.dependency_overrides[_get_storage_service] = lambda: _Storage()
     return app
 
 

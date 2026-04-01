@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useParams } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -55,6 +56,7 @@ export const PublishButton = ({
     const publishedUrl = useAppSelector(selectPublished)
     const latestCheckpoint = useAppSelector(selectLatestCheckpoint)
     const { sendMessage } = useSocketIOContext()
+    const { sessionId } = useParams<{ sessionId: string }>()
 
     const [isPublishDialogOpen, setPublishDialogOpen] = useState(false)
     const [vercelApiKey, setVercelApiKey] = useState('')
@@ -127,6 +129,7 @@ export const PublishButton = ({
             await fullstackService.publishProject({
                 vercelApiKey: trimmedKey,
                 sendMessage,
+                sessionId: sessionId || '',
                 projectName: projectName.trim() || undefined,
                 projectPath: projectDirectory,
                 revision
@@ -170,6 +173,7 @@ export const PublishButton = ({
             dispatch(setPublished(null))
             await fullstackService.publishCloudRun({
                 sendMessage,
+                sessionId: sessionId || '',
                 projectName: projectName.trim() || undefined,
                 projectPath: projectDirectory,
                 revision

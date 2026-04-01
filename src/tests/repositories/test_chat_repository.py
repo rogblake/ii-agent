@@ -54,9 +54,7 @@ async def test_chat_message_repository_crud_pagination_and_mark_incomplete(
 
     listed = await repo.list_by_session(db_session, session.id, limit=10)
     after_id = await repo.list_after_id(db_session, session.id, msg1.id, limit=10)
-    after_timestamp = await repo.list_after_timestamp(
-        db_session, session.id, now, limit=10
-    )
+    after_timestamp = await repo.list_after_timestamp(db_session, session.id, now, limit=10)
     assert [m.id for m in listed] == [msg1.id, msg2.id, msg3.id]
     assert [m.id for m in after_id] == [msg2.id, msg3.id]
     assert [m.id for m in after_timestamp] == [msg2.id, msg3.id]

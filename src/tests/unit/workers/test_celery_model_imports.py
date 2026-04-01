@@ -1,4 +1,5 @@
 """Coverage tests for celery model import bootstrap."""
+
 from __future__ import annotations
 
 from unittest.mock import Mock

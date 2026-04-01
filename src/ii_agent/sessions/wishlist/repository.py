@@ -1,5 +1,6 @@
 """Repository layer for wishlist - data access only."""
 
+import uuid
 from typing import List, Optional
 
 from sqlalchemy import and_, delete, select
@@ -15,7 +16,7 @@ class WishlistRepository(BaseRepository[SessionWishlist]):
 
     model = SessionWishlist
 
-    async def get_user_wishlists(self, db: AsyncSession, user_id: str) -> List[SessionWishlist]:
+    async def get_user_wishlists(self, db: AsyncSession, user_id: uuid.UUID) -> List[SessionWishlist]:
         """Get all wishlist items for a user with session eager-loaded."""
         result = await db.execute(
             select(SessionWishlist)
@@ -26,7 +27,7 @@ class WishlistRepository(BaseRepository[SessionWishlist]):
         return list(result.scalars().all())
 
     async def get_by_user_and_session(
-        self, db: AsyncSession, user_id: str, session_id: str
+        self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID
     ) -> Optional[SessionWishlist]:
         """Get a wishlist item by user and session."""
         result = await db.execute(
@@ -46,7 +47,7 @@ class WishlistRepository(BaseRepository[SessionWishlist]):
         return wishlist_item
 
     async def delete_by_user_and_session(
-        self, db: AsyncSession, user_id: str, session_id: str
+        self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID
     ) -> bool:
         """Delete a wishlist item by user and session. Returns True if deleted."""
         result = await db.execute(

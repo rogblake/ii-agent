@@ -55,6 +55,7 @@ MULTI_HTML = (
 # sanitize_slide_presentation_name
 # ---------------------------------------------------------------------------
 
+
 class TestSanitizeSlidePresentationNameR4:
     def test_basic_name(self):
         assert sanitize_slide_presentation_name("My Slide") == "My_Slide"
@@ -105,6 +106,7 @@ class TestSanitizeSlidePresentationNameR4:
 # _find_tag_end
 # ---------------------------------------------------------------------------
 
+
 class TestFindTagEndR4:
     def test_simple_open_tag(self):
         text = "<div>"
@@ -153,6 +155,7 @@ class TestFindTagEndR4:
 # _extract_opening_tag_name
 # ---------------------------------------------------------------------------
 
+
 class TestExtractOpeningTagNameR4:
     def test_simple_div(self):
         assert _extract_opening_tag_name("<div>") == "div"
@@ -184,6 +187,7 @@ class TestExtractOpeningTagNameR4:
 # _extract_closing_tag_name
 # ---------------------------------------------------------------------------
 
+
 class TestExtractClosingTagNameR4:
     def test_simple_closing(self):
         assert _extract_closing_tag_name("</div>") == "div"
@@ -205,6 +209,7 @@ class TestExtractClosingTagNameR4:
 # ---------------------------------------------------------------------------
 # _is_html_tag_name
 # ---------------------------------------------------------------------------
+
 
 class TestIsHtmlTagNameR4:
     def test_valid_tag(self):
@@ -230,6 +235,7 @@ class TestIsHtmlTagNameR4:
 # _tag_name_matches
 # ---------------------------------------------------------------------------
 
+
 class TestTagNameMatchesR4:
     def test_same_tag(self):
         assert _tag_name_matches("div", "div") is True
@@ -250,6 +256,7 @@ class TestTagNameMatchesR4:
 # ---------------------------------------------------------------------------
 # _find_matching_closing_tag_end
 # ---------------------------------------------------------------------------
+
 
 class TestFindMatchingClosingTagEndR4:
     def test_simple_match(self):
@@ -279,6 +286,7 @@ class TestFindMatchingClosingTagEndR4:
 # ---------------------------------------------------------------------------
 # _parse_xpath
 # ---------------------------------------------------------------------------
+
 
 class TestParseXpathR4:
     def test_simple_path(self):
@@ -310,6 +318,7 @@ class TestParseXpathR4:
 # _strip_slide_deck_xpath_prefix
 # ---------------------------------------------------------------------------
 
+
 class TestStripSlideDeckXpathPrefixR4:
     def test_strips_valid_prefix(self):
         xpath = "/html/body/div/div/div/p"
@@ -340,6 +349,7 @@ class TestStripSlideDeckXpathPrefixR4:
 # _sanitize_css_value_for_html_attr
 # ---------------------------------------------------------------------------
 
+
 class TestSanitizeCssValueForHtmlAttrR4:
     def test_url_with_double_quotes_stripped(self):
         value = 'url("https://example.com/img.png")'
@@ -367,6 +377,7 @@ class TestSanitizeCssValueForHtmlAttrR4:
 # ---------------------------------------------------------------------------
 # _remove_css_property
 # ---------------------------------------------------------------------------
+
 
 class TestRemoveCssPropertyR4:
     def test_removes_color_property(self):
@@ -407,6 +418,7 @@ class TestRemoveCssPropertyR4:
 # _find_opening_tag_bounds_for_design_id
 # ---------------------------------------------------------------------------
 
+
 class TestFindOpeningTagBoundsForDesignIdR4:
     def test_finds_bounds_in_simple_html(self):
         result = _find_opening_tag_bounds_for_design_id(SIMPLE_HTML, "did-1")
@@ -434,6 +446,7 @@ class TestFindOpeningTagBoundsForDesignIdR4:
 # ---------------------------------------------------------------------------
 # _find_element_span_for_design_id
 # ---------------------------------------------------------------------------
+
 
 class TestFindElementSpanForDesignIdR4:
     def test_finds_span_in_simple_html(self):
@@ -471,6 +484,7 @@ class TestFindElementSpanForDesignIdR4:
 # apply_slide_style_change_with_status
 # ---------------------------------------------------------------------------
 
+
 class TestApplySlideStyleChangeWithStatusR4:
     def test_adds_new_style_to_element(self):
         html = '<div data-design-id="did-1">Text</div>'
@@ -479,14 +493,18 @@ class TestApplySlideStyleChangeWithStatusR4:
         assert "color: blue;" in result
 
     def test_updates_existing_style(self):
-        result, success = apply_slide_style_change_with_status(STYLED_HTML, "did-1", "color", "blue")
+        result, success = apply_slide_style_change_with_status(
+            STYLED_HTML, "did-1", "color", "blue"
+        )
         assert success is True
         assert "color: blue;" in result
         # Old color removed
         assert "color: red" not in result
 
     def test_preserves_other_styles(self):
-        result, success = apply_slide_style_change_with_status(STYLED_HTML, "did-1", "color", "blue")
+        result, success = apply_slide_style_change_with_status(
+            STYLED_HTML, "did-1", "color", "blue"
+        )
         assert "font-size: 16px" in result
 
     def test_returns_false_for_missing_id(self):
@@ -497,7 +515,9 @@ class TestApplySlideStyleChangeWithStatusR4:
 
     def test_camel_case_prop_converted_to_kebab(self):
         html = '<div data-design-id="did-1">Text</div>'
-        result, success = apply_slide_style_change_with_status(html, "did-1", "backgroundColor", "red")
+        result, success = apply_slide_style_change_with_status(
+            html, "did-1", "backgroundColor", "red"
+        )
         assert success is True
         assert "background-color: red;" in result
 
@@ -518,8 +538,12 @@ class TestApplySlideStyleChangeWithStatusR4:
         html = "<html><body><div><div><div><p>text</p></div></div></div></body></html>"
         xpath = "/html/body/div/div/div/p"
         result, success = apply_slide_style_change_with_status(
-            html, "missing-id", "color", "red",
-            xpath=xpath, slide_number=1,
+            html,
+            "missing-id",
+            "color",
+            "red",
+            xpath=xpath,
+            slide_number=1,
         )
         # May or may not succeed depending on structure, but should not raise
         assert isinstance(success, bool)
@@ -528,6 +552,7 @@ class TestApplySlideStyleChangeWithStatusR4:
 # ---------------------------------------------------------------------------
 # apply_slide_text_change_with_status
 # ---------------------------------------------------------------------------
+
 
 class TestApplySlideTextChangeWithStatusR4:
     def test_replaces_text_content(self):
@@ -564,6 +589,7 @@ class TestApplySlideTextChangeWithStatusR4:
 # ---------------------------------------------------------------------------
 # apply_slide_icon_change_with_status
 # ---------------------------------------------------------------------------
+
 
 class TestApplySlideIconChangeWithStatusR4:
     def test_replaces_svg_inner_content(self):
@@ -607,11 +633,7 @@ class TestApplySlideIconChangeWithStatusR4:
         assert success is False
 
     def test_wrapper_element_with_svg_inside(self):
-        html = (
-            '<div data-design-id="did-wrapper">'
-            '<svg><path d="M0 0"/></svg>'
-            '</div>'
-        )
+        html = '<div data-design-id="did-wrapper"><svg><path d="M0 0"/></svg></div>'
         icon_data = json.dumps({"name": "rocket", "svg": '<circle cx="12" cy="12" r="5"/>'})
         result, success = apply_slide_icon_change_with_status(html, "did-wrapper", icon_data)
         assert success is True
@@ -622,34 +644,27 @@ class TestApplySlideIconChangeWithStatusR4:
 # apply_slide_delete_change_with_status
 # ---------------------------------------------------------------------------
 
+
 class TestApplySlideDeleteChangeWithStatusR4:
     def test_deletes_element(self):
-        result, success = apply_slide_delete_change_with_status(
-            SIMPLE_HTML, design_id="did-1"
-        )
+        result, success = apply_slide_delete_change_with_status(SIMPLE_HTML, design_id="did-1")
         assert success is True
         assert 'data-design-id="did-1"' not in result
 
     def test_returns_false_for_missing_id(self):
-        result, success = apply_slide_delete_change_with_status(
-            SIMPLE_HTML, design_id="missing"
-        )
+        result, success = apply_slide_delete_change_with_status(SIMPLE_HTML, design_id="missing")
         assert success is False
         assert result == SIMPLE_HTML
 
     def test_deletes_from_multi_element_html(self):
-        result, success = apply_slide_delete_change_with_status(
-            MULTI_HTML, design_id="did-2"
-        )
+        result, success = apply_slide_delete_change_with_status(MULTI_HTML, design_id="did-2")
         assert success is True
         assert 'data-design-id="did-2"' not in result
         assert 'data-design-id="did-1"' in result
         assert 'data-design-id="did-3"' in result
 
     def test_deletes_nested_element(self):
-        result, success = apply_slide_delete_change_with_status(
-            NESTED_HTML, design_id="did-inner"
-        )
+        result, success = apply_slide_delete_change_with_status(NESTED_HTML, design_id="did-inner")
         assert success is True
         assert 'data-design-id="did-inner"' not in result
 
@@ -663,6 +678,7 @@ class TestApplySlideDeleteChangeWithStatusR4:
 # ---------------------------------------------------------------------------
 # apply_slide_swap_change_with_status
 # ---------------------------------------------------------------------------
+
 
 class TestApplySlideSwapChangeWithStatusR4:
     def test_swaps_two_elements(self):
@@ -707,6 +723,7 @@ class TestApplySlideSwapChangeWithStatusR4:
 # ---------------------------------------------------------------------------
 # apply_slide_move_change_with_status
 # ---------------------------------------------------------------------------
+
 
 class TestApplySlideMovecChangeWithStatusR4:
     def test_move_before_anchor(self):
@@ -766,6 +783,7 @@ class TestApplySlideMovecChangeWithStatusR4:
 # Convenience wrappers (apply_slide_*_change)
 # ---------------------------------------------------------------------------
 
+
 class TestConvenienceWrappersR4:
     def test_apply_slide_style_change_returns_string(self):
         html = '<div data-design-id="did-1">Text</div>'
@@ -786,7 +804,7 @@ class TestConvenienceWrappersR4:
     def test_apply_slide_delete_change_returns_string(self):
         result = apply_slide_delete_change(SIMPLE_HTML, design_id="did-1")
         assert isinstance(result, str)
-        assert 'did-1' not in result
+        assert "did-1" not in result
 
     def test_apply_slide_move_change_returns_string(self):
         result = apply_slide_move_change(MULTI_HTML, design_id="did-1", anchor="only")
@@ -795,5 +813,5 @@ class TestConvenienceWrappersR4:
     def test_apply_slide_swap_change_returns_string(self):
         result = apply_slide_swap_change(MULTI_HTML, design_id="did-1", target_design_id="did-2")
         assert isinstance(result, str)
-        assert 'did-1' in result
-        assert 'did-2' in result
+        assert "did-1" in result
+        assert "did-2" in result

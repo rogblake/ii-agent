@@ -49,7 +49,7 @@ from ii_agent.content.slides.design.schemas import (
     SlideSyncBatchRequest,
     SlideSyncBatchResponse,
 )
-from ii_agent.agent.sandboxes.service import SandboxService
+from ii_agent.agents.sandboxes.service import SandboxService
 
 ProgressCallback = Callable[..., Awaitable[None]]
 SummaryCallback = Callable[[str], Awaitable[str | None]]

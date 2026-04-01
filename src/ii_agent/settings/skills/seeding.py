@@ -16,7 +16,7 @@ async def ensure_builtin_skills_synced():
     if not _skills_synced:
         try:
             from ii_agent.settings.skills.loader import sync_builtin_to_db
-            from ii_agent.core.db.manager import get_db_session_local
+            from ii_agent.core.db import get_db_session_local
 
             async with get_db_session_local() as db_session:
                 count = await sync_builtin_to_db(db_session)

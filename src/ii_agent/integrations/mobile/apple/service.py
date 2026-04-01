@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import json
 
-from ii_agent.core.db.manager import get_db_session_local
+import uuid
+
+from ii_agent.core.db import get_db_session_local
 from ii_agent.integrations.mobile.apple.models import AppleAuthStateEnum, AppleCredential
 from ii_agent.integrations.mobile.apple.repository import AppleCredentialRepository
 from ii_agent.core.secrets.encryption import encryption_manager
@@ -19,7 +21,7 @@ class AppleCredentialService:
 
     async def save_or_update_credential(
         self,
-        user_id: str,
+        user_id: uuid.UUID,
         apple_id: str,
         auth_state: str,
         session_data: dict | None = None,
@@ -76,7 +78,7 @@ class AppleCredentialService:
 
     async def get_user_credential(
         self,
-        user_id: str,
+        user_id: uuid.UUID,
         apple_id: str | None = None,
     ) -> AppleCredential | None:
         async with get_db_session_local() as db:
@@ -90,7 +92,7 @@ class AppleCredentialService:
                 db.expunge(credential)
             return credential
 
-    async def get_active_session(self, user_id: str) -> AppleCredential | None:
+    async def get_active_session(self, user_id: uuid.UUID) -> AppleCredential | None:
         async with get_db_session_local() as db:
             credential = await self._repo.get_latest_authenticated_by_user(db, user_id)
             if not credential:
@@ -105,7 +107,7 @@ class AppleCredentialService:
             db.expunge(credential)
             return credential
 
-    async def delete_credential(self, user_id: str, apple_id: str) -> bool:
+    async def delete_credential(self, user_id: uuid.UUID, apple_id: str) -> bool:
         async with get_db_session_local() as db:
             credential = await self._repo.get_by_user_and_apple_id(db, user_id, apple_id)
             if not credential:
@@ -127,7 +129,7 @@ class AppleCredentialService:
         except json.JSONDecodeError:
             return None
 
-    async def update_auth_state(self, user_id: str, auth_state: str) -> bool:
+    async def update_auth_state(self, user_id: uuid.UUID, auth_state: str) -> bool:
         async with get_db_session_local() as db:
             credential = await self._repo.get_latest_by_user(db, user_id)
             if not credential:
@@ -138,7 +140,7 @@ class AppleCredentialService:
             await db.flush()
             return True
 
-    async def clear_session_password(self, user_id: str) -> bool:
+    async def clear_session_password(self, user_id: uuid.UUID) -> bool:
         async with get_db_session_local() as db:
             credential = await self._repo.get_latest_by_user(db, user_id)
             if not credential or not credential.encrypted_session_data:
@@ -161,7 +163,7 @@ class AppleCredentialService:
             await db.flush()
             return True
 
-    async def save_expo_token(self, user_id: str, expo_token: str) -> bool:
+    async def save_expo_token(self, user_id: uuid.UUID, expo_token: str) -> bool:
         async with get_db_session_local() as db:
             credential = await self._repo.get_latest_by_user(db, user_id)
 
@@ -185,7 +187,7 @@ class AppleCredentialService:
 
     async def save_app_specific_password(
         self,
-        user_id: str,
+        user_id: uuid.UUID,
         app_specific_password: str,
     ) -> bool:
         async with get_db_session_local() as db:
@@ -213,7 +215,7 @@ class AppleCredentialService:
 
     async def save_ios_credentials(
         self,
-        user_id: str,
+        user_id: uuid.UUID,
         bundle_identifier: str,
         p12_base64: str,
         p12_password: str,

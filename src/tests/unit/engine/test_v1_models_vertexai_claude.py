@@ -1,6 +1,6 @@
-"""Regression tests for ii_agent.agent.runtime.models.vertexai.claude."""
+"""Regression tests for ii_agent.agents.models.vertexai.claude."""
 
-from ii_agent.agent.runtime.models.vertexai.claude import Claude
+from ii_agent.agents.models.vertexai.claude import Claude
 from ii_agent.core.logger import logger
 
 

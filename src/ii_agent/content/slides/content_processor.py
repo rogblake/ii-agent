@@ -1,16 +1,19 @@
 """Slide content processor for replacing local file paths with permanent URLs."""
 
-import re
 import hashlib
-import mimetypes
-import requests
-from pathlib import Path
-from typing import Optional, Dict
 import logging
+import mimetypes
+import posixpath
+import re
+from pathlib import Path
+from typing import Dict, Optional
 from urllib.parse import unquote
 
-from ii_agent.core.storage.base import BaseStorage
-from ii_agent.agent.sandboxes.base import SandboxManager
+import httpx
+
+from ii_agent.agents.sandboxes import Sandbox
+from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.core.storage.providers.base import StorageProvider
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +23,8 @@ class SlideContentProcessor:
 
     def __init__(
         self,
-        storage: BaseStorage,
-        sandbox: SandboxManager,
+        storage: StorageProvider,
+        sandbox: Sandbox,
         url_cache: Optional[Dict[str, str]] = None,
     ):
         self.storage = storage
@@ -140,9 +143,9 @@ class SlideContentProcessor:
             )
 
             # Check if file already exists in storage (fast)
-            if self.storage.is_exists(storage_path):
+            if await self.storage.exists(storage_path):
                 logger.info(f"File already exists in storage: {storage_path}")
-                permanent_url = self.storage.get_permanent_url(storage_path)
+                permanent_url = self.storage.public_url(storage_path)
                 # Cache for session reuse
                 self.url_cache[content_hash] = permanent_url
                 return permanent_url
@@ -187,8 +190,6 @@ class SlideContentProcessor:
             else:
                 # Relative path - resolve relative to slide directory
                 # Use posixpath-style joining and normalization for sandbox paths
-                import posixpath
-
                 resolved = posixpath.join(slide_dir, file_path)
                 # Normalize path (remove . and .. components) using posixpath
                 normalized = posixpath.normpath(resolved)
@@ -211,11 +212,8 @@ class SlideContentProcessor:
         Returns:
             Storage path for the file
         """
-        # Get file extension
-        extension = local_path.suffix or ""
-
-        # Create storage path: slides/assets/{content_hash}{extension}
-        return f"slides/assets/{content_hash}{extension}"
+        ext = local_path.suffix.lstrip(".") or "bin"
+        return path_resolver.slide_asset(content_hash, ext)
 
     async def _upload_via_signed_url(
         self, file_content: bytes, storage_path: str, original_path: str
@@ -238,13 +236,13 @@ class SlideContentProcessor:
             )
 
             # Get upload signed URL
-            upload_url = self.storage.get_upload_signed_url(
-                storage_path, content_type, expiration_seconds=3600
+            upload_url = await self.storage.signed_upload_url(
+                storage_path, content_type, expiry_seconds=3600
             )
 
             # Upload content to signed URL
-            response = requests.put(
-                upload_url, data=file_content, headers={"Content-Type": content_type}
+            response = httpx.put(
+                upload_url, content=file_content, headers={"Content-Type": content_type}
             )
 
             if response.status_code not in (200, 201):
@@ -254,7 +252,7 @@ class SlideContentProcessor:
                 return None
 
             # Get permanent URL for the uploaded file
-            permanent_url = self.storage.get_permanent_url(storage_path)
+            permanent_url = self.storage.public_url(storage_path)
             return permanent_url
 
         except Exception as e:
@@ -274,8 +272,5 @@ class SlideContentProcessor:
         # Generate hash from file path for uniqueness
         path_hash = hashlib.md5(str(local_path).encode()).hexdigest()[:12]
 
-        # Get file extension
-        extension = local_path.suffix
-
-        # Create storage path: slides/assets/{hash}{extension}
-        return f"slides/assets/{path_hash}{extension}"
+        ext = local_path.suffix.lstrip(".") or "bin"
+        return path_resolver.slide_asset(path_hash, ext)

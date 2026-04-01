@@ -18,6 +18,7 @@ from ii_agent.chat.types import ErrorTextContent, TextResultContent
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_tool(
     github_token: str = "ghp_test_token",
     github_metadata: dict = None,
@@ -55,6 +56,7 @@ def _mock_http_error(status_code: int) -> httpx.HTTPStatusError:
 # Instantiation
 # ---------------------------------------------------------------------------
 
+
 class TestGitHubToolInit:
     def test_can_instantiate_with_token(self):
         tool = _make_tool()
@@ -73,7 +75,12 @@ class TestGitHubToolInit:
         assert tool._base_url == "https://api.github.com"
 
     def test_stores_default_repository(self):
-        repo = {"owner": "myorg", "name": "myrepo", "full_name": "myorg/myrepo", "default_branch": "main"}
+        repo = {
+            "owner": "myorg",
+            "name": "myrepo",
+            "full_name": "myorg/myrepo",
+            "default_branch": "main",
+        }
         tool = _make_tool(default_repository=repo)
         assert tool.default_repository == repo
 
@@ -86,9 +93,11 @@ class TestGitHubToolInit:
 # info()
 # ---------------------------------------------------------------------------
 
+
 class TestGitHubToolInfo:
     def test_info_returns_tool_info(self):
         from ii_agent.chat.tools.base import ToolInfo
+
         tool = _make_tool()
         info = tool.info()
         assert isinstance(info, ToolInfo)
@@ -104,11 +113,24 @@ class TestGitHubToolInfo:
         info = tool.info()
         actions = info.parameters["properties"]["action"]["enum"]
         expected_actions = [
-            "list_repos", "get_repo", "list_commits", "get_file",
-            "list_issues", "get_issue", "create_issue", "create_issue_comment",
-            "list_prs", "get_pr", "create_pr", "create_pr_comment",
-            "create_pr_review", "create_commit", "search_code",
-            "list_branches", "create_branch", "get_readme",
+            "list_repos",
+            "get_repo",
+            "list_commits",
+            "get_file",
+            "list_issues",
+            "get_issue",
+            "create_issue",
+            "create_issue_comment",
+            "list_prs",
+            "get_pr",
+            "create_pr",
+            "create_pr_comment",
+            "create_pr_review",
+            "create_commit",
+            "search_code",
+            "list_branches",
+            "create_branch",
+            "get_readme",
         ]
         for action in expected_actions:
             assert action in actions
@@ -128,6 +150,7 @@ class TestGitHubToolInfo:
 # ---------------------------------------------------------------------------
 # run() – no token
 # ---------------------------------------------------------------------------
+
 
 class TestGitHubToolRunNoToken:
     @pytest.mark.asyncio
@@ -149,6 +172,7 @@ class TestGitHubToolRunNoToken:
 # ---------------------------------------------------------------------------
 # run() – invalid input
 # ---------------------------------------------------------------------------
+
 
 class TestGitHubToolRunInvalidInput:
     @pytest.mark.asyncio
@@ -178,6 +202,7 @@ class TestGitHubToolRunInvalidInput:
 # ---------------------------------------------------------------------------
 # run() – default repository injection
 # ---------------------------------------------------------------------------
+
 
 class TestDefaultRepositoryInjection:
     @pytest.mark.asyncio
@@ -211,6 +236,7 @@ class TestDefaultRepositoryInjection:
 # ---------------------------------------------------------------------------
 # HTTP error handling
 # ---------------------------------------------------------------------------
+
 
 class TestGitHubToolHttpErrors:
     @pytest.mark.asyncio
@@ -250,7 +276,10 @@ class TestGitHubToolHttpErrors:
             call = _tool_call("list_repos")
             response = await tool.run(call)
         assert isinstance(response.output, ErrorTextContent)
-        assert "rate limit" in response.output.value.lower() or "permissions" in response.output.value.lower()
+        assert (
+            "rate limit" in response.output.value.lower()
+            or "permissions" in response.output.value.lower()
+        )
 
     @pytest.mark.asyncio
     async def test_returns_404_error_message(self):
@@ -282,6 +311,7 @@ class TestGitHubToolHttpErrors:
 # ---------------------------------------------------------------------------
 # _list_repos – response shaping
 # ---------------------------------------------------------------------------
+
 
 class TestListRepos:
     @pytest.mark.asyncio
@@ -315,13 +345,20 @@ class TestListRepos:
         await tool._list_repos(mock_client, {}, {"per_page": 500})
         call_kwargs = mock_client.get.call_args
         # per_page is passed in params
-        params = call_kwargs[1]["params"] if call_kwargs[1] else call_kwargs[0][1] if len(call_kwargs[0]) > 1 else {}
+        params = (
+            call_kwargs[1]["params"]
+            if call_kwargs[1]
+            else call_kwargs[0][1]
+            if len(call_kwargs[0]) > 1
+            else {}
+        )
         assert params.get("per_page", 500) <= 100
 
 
 # ---------------------------------------------------------------------------
 # _get_repo – validation
 # ---------------------------------------------------------------------------
+
 
 class TestGetRepo:
     @pytest.mark.asyncio
@@ -367,6 +404,7 @@ class TestGetRepo:
 # _get_file – directory vs file handling
 # ---------------------------------------------------------------------------
 
+
 class TestGetFile:
     @pytest.mark.asyncio
     async def test_raises_when_path_missing(self):
@@ -383,9 +421,7 @@ class TestGetFile:
         ]
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=_mock_response(dir_listing))
-        result = await tool._get_file(
-            mock_client, {}, {"owner": "u", "repo": "r", "path": "src"}
-        )
+        result = await tool._get_file(mock_client, {}, {"owner": "u", "repo": "r", "path": "src"})
         assert result["type"] == "directory"
         assert "contents" in result
 
@@ -415,6 +451,7 @@ class TestGetFile:
 # _list_issues – PR filtering
 # ---------------------------------------------------------------------------
 
+
 class TestListIssues:
     @pytest.mark.asyncio
     async def test_filters_out_pull_requests(self):
@@ -442,9 +479,7 @@ class TestListIssues:
         ]
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=_mock_response(issues))
-        result = await tool._list_issues(
-            mock_client, {}, {"owner": "u", "repo": "r"}
-        )
+        result = await tool._list_issues(mock_client, {}, {"owner": "u", "repo": "r"})
         assert len(result) == 1
         assert result[0]["number"] == 1
 
@@ -453,15 +488,14 @@ class TestListIssues:
 # _create_issue – validation
 # ---------------------------------------------------------------------------
 
+
 class TestCreateIssue:
     @pytest.mark.asyncio
     async def test_raises_when_title_missing(self):
         tool = _make_tool()
         mock_client = AsyncMock()
         with pytest.raises(ValueError, match="title"):
-            await tool._create_issue(
-                mock_client, {}, {"owner": "u", "repo": "r"}
-            )
+            await tool._create_issue(mock_client, {}, {"owner": "u", "repo": "r"})
 
     @pytest.mark.asyncio
     async def test_creates_issue_with_optional_fields(self):
@@ -500,6 +534,7 @@ class TestCreateIssue:
 # _create_pr – validation
 # ---------------------------------------------------------------------------
 
+
 class TestCreatePr:
     @pytest.mark.asyncio
     async def test_raises_when_head_missing(self):
@@ -527,6 +562,7 @@ class TestCreatePr:
 # ---------------------------------------------------------------------------
 # _search_code – validation
 # ---------------------------------------------------------------------------
+
 
 class TestSearchCode:
     @pytest.mark.asyncio
@@ -561,6 +597,7 @@ class TestSearchCode:
 # _list_branches
 # ---------------------------------------------------------------------------
 
+
 class TestListBranches:
     @pytest.mark.asyncio
     async def test_raises_when_owner_missing(self):
@@ -587,6 +624,7 @@ class TestListBranches:
 # ---------------------------------------------------------------------------
 # _get_readme – decoding
 # ---------------------------------------------------------------------------
+
 
 class TestGetReadme:
     @pytest.mark.asyncio
@@ -617,6 +655,7 @@ class TestGetReadme:
 # ---------------------------------------------------------------------------
 # _list_commits – shaping
 # ---------------------------------------------------------------------------
+
 
 class TestListCommits:
     @pytest.mark.asyncio

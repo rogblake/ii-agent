@@ -1,0 +1,119 @@
+# ii-agent Feature Configuration
+# Copy to settings.yaml and customize.
+# Secrets (API keys) go in .env, NOT here.
+
+app:
+  environment: local
+  cors_allowed_origins:
+    - http://localhost:1420
+    - http://localhost:3000
+  max_output_tokens_per_turn: 32000
+  max_turns: 200
+
+providers:
+  anthropic:
+    name: Anthropic
+    env_key: ANTHROPIC_API_KEY
+    required_for: [chat]
+  openai:
+    name: OpenAI
+    env_key: OPENAI_API_KEY
+    required_for: [enhance_prompt]
+  google:
+    name: Google
+    env_key: GOOGLE_API_KEY
+  e2b:
+    name: E2B
+    env_key: E2B_API_KEY
+    required_for: [sandbox]
+  stripe:
+    name: Stripe
+    env_key: STRIPE_API_KEY
+    required_for: [billing]
+
+features:
+  sandbox:
+    enabled: true
+    required_providers: [e2b]
+    required_keys_hint: [E2B_API_KEY]
+    config:
+      provider: e2b
+      template_id: base
+      timeout_seconds: 7200
+  billing:
+    enabled: false
+    required_providers: [stripe]
+    required_keys_hint: [STRIPE_API_KEY]
+  enhance_prompt:
+    enabled: true
+    required_providers: [openai]
+    required_keys_hint: [OPENAI_API_KEY]
+  researcher:
+    enabled: true
+    config:
+      model: anthropic/claude-sonnet-4-6
+
+tools:
+  web:
+    actions:
+      search:
+        provider: tavily
+        enabled: true
+        api_key_env: TAVILY_API_KEY
+      visit:
+        provider: built_in
+        enabled: true
+  media:
+    actions:
+      image_gen:
+        provider: fal
+        enabled: true
+        api_key_env: FAL_API_KEY
+
+models:
+  anthropic/claude-sonnet-4-6:
+    provider: anthropic
+    model_id: claude-sonnet-4-6
+    display_name: Claude Sonnet 4.6
+    sdk: anthropic
+    max_tokens: 64000
+    thinking_tokens: 32000
+    compact_token_threshold: 100000
+    pricing:
+      input_per_1m: 3.0
+      output_per_1m: 15.0
+  anthropic/claude-haiku-4-5:
+    provider: anthropic
+    model_id: claude-haiku-4-5-20251001
+    display_name: Claude Haiku 4.5
+    sdk: anthropic
+    max_tokens: 8192
+    pricing:
+      input_per_1m: 0.80
+      output_per_1m: 4.0
+
+media:
+  image:
+    fal_flux:
+      provider: fal
+      model: fal-ai/flux/schnell
+      enabled: true
+  video:
+    fal_kling:
+      provider: fal
+      model: fal-ai/kling-video/v1.6/pro
+      enabled: true
+
+auth:
+  jwt_algorithm: HS256
+  access_token_expire_minutes: 15
+  refresh_token_expire_days: 7
+  providers:
+    google:
+      enabled: false
+      client_id_env: GOOGLE_CLIENT_ID
+      client_secret_env: GOOGLE_CLIENT_SECRET
+    github:
+      enabled: false
+      client_id_env: GITHUB_CLIENT_ID
+      client_secret_env: GITHUB_CLIENT_SECRET

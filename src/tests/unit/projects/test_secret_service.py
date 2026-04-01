@@ -53,7 +53,9 @@ async def test_add_and_delete_secrets_apply_merge_semantics(settings_factory, mo
     )
 
     service = SecretService(project_repo=project_repo, config=settings_factory())
-    service.replace_session_project_secrets = AsyncMock(return_value=SimpleNamespace(id="project-1"))
+    service.replace_session_project_secrets = AsyncMock(
+        return_value=SimpleNamespace(id="project-1")
+    )
 
     session_id = uuid.uuid4()
 
@@ -79,7 +81,9 @@ async def test_add_and_delete_secrets_apply_merge_semantics(settings_factory, mo
 
 
 @pytest.mark.asyncio
-async def test_add_and_delete_secrets_fallback_when_decrypt_is_not_dict(settings_factory, monkeypatch):
+async def test_add_and_delete_secrets_fallback_when_decrypt_is_not_dict(
+    settings_factory, monkeypatch
+):
     project_repo = AsyncMock()
     project_repo.get_by_session_and_user.return_value = SimpleNamespace(
         secrets_json={"encrypted_data": "ignored"}
@@ -88,7 +92,9 @@ async def test_add_and_delete_secrets_fallback_when_decrypt_is_not_dict(settings
     monkeypatch.setattr(secret_service_module, "_decrypt_secrets_payload", lambda payload: ["bad"])
 
     service = SecretService(project_repo=project_repo, config=settings_factory())
-    service.replace_session_project_secrets = AsyncMock(return_value=SimpleNamespace(id="project-1"))
+    service.replace_session_project_secrets = AsyncMock(
+        return_value=SimpleNamespace(id="project-1")
+    )
 
     session_id = uuid.uuid4()
 

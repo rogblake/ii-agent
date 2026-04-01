@@ -30,6 +30,7 @@ class SecretKey(str, Enum):
     COMPOSIO_WEBHOOK_SECRET = "composio-webhook-secret"
     JWT_SECRET_KEY = "jwt-secret-key"
     ENCRYPTION_KEY = "encryption-key"
+    A2A_SANDBOX_API_KEY = "a2a-sandbox-api-key"
 
     def to_gcp_name(self, prefix: str = "ii-agent") -> str:
         """Get full GCP Secret Manager secret name.
@@ -69,6 +70,7 @@ LLM_SECRETS = {SecretKey.JWT_SECRET_KEY}
 
 TOOL_SERVER_SECRETS = {
     SecretKey.SANDBOX_E2B_API_KEY,
+    SecretKey.A2A_SANDBOX_API_KEY,
 }
 
 COMPOSIO_SECRETS = {

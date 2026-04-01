@@ -38,8 +38,8 @@ class SecretService:
     async def replace_session_project_secrets(
         self,
         db: AsyncSession,
-        session_id: str,
-        user_id: str,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
         secrets: Dict[str, Any],
     ) -> "Project":
         """Replace the session project secrets."""
@@ -57,8 +57,8 @@ class SecretService:
     async def get_session_project(
         self,
         db: AsyncSession,
-        session_id: str,
-        user_id: str,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> "Project":
         """Fetch the session project for a user."""
         project = await self._project_repo.get_by_session_and_user(
@@ -74,13 +74,13 @@ class SecretService:
         self,
         db: AsyncSession,
         session_id: uuid.UUID,
-        user_id: str,
+        user_id: uuid.UUID,
         secrets: Dict[str, Any],
     ) -> "Project":
         """Add or overwrite secrets for a session project without removing existing values."""
         project = await self.get_session_project(
             db,
-            session_id=str(session_id),
+            session_id=session_id,
             user_id=user_id,
         )
 
@@ -92,7 +92,7 @@ class SecretService:
 
         return await self.replace_session_project_secrets(
             db,
-            session_id=str(session_id),
+            session_id=session_id,
             user_id=user_id,
             secrets=merged,
         )
@@ -101,20 +101,20 @@ class SecretService:
         self,
         db: AsyncSession,
         session_id: uuid.UUID,
-        user_id: str,
+        user_id: uuid.UUID,
         secret_keys: list[str],
     ) -> "Project":
         """Delete specific secrets for a session project."""
         if not secret_keys:
             return await self.get_session_project(
                 db,
-                session_id=str(session_id),
+                session_id=session_id,
                 user_id=user_id,
             )
 
         project = await self.get_session_project(
             db,
-            session_id=str(session_id),
+            session_id=session_id,
             user_id=user_id,
         )
 
@@ -127,7 +127,7 @@ class SecretService:
 
         return await self.replace_session_project_secrets(
             db,
-            session_id=str(session_id),
+            session_id=session_id,
             user_id=user_id,
             secrets=existing_secrets,
         )

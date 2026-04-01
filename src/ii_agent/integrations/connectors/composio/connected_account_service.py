@@ -1,4 +1,5 @@
 """Composio Connected Account Service - manages user connections."""
+
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
 
@@ -6,29 +7,32 @@ from .client import ComposioClient
 
 from ii_agent.core.logger import logger
 
+
 def _to_dict(obj: Any) -> Dict[str, Any]:
     """Convert various object types to dictionary."""
     if obj is None:
         return {}
     if isinstance(obj, dict):
         return obj
-    if hasattr(obj, 'model_dump'):
+    if hasattr(obj, "model_dump"):
         return obj.model_dump()
-    if hasattr(obj, 'dict'):
+    if hasattr(obj, "dict"):
         return obj.dict()
-    if hasattr(obj, '__dict__'):
+    if hasattr(obj, "__dict__"):
         return obj.__dict__
     return {}
 
 
 class ConnectionState(BaseModel):
     """Connection state model."""
+
     auth_scheme: str = "OAUTH2"
     val: Dict[str, Any] = {}
 
 
 class ConnectedAccount(BaseModel):
     """Connected account model."""
+
     id: str
     status: str
     redirect_url: Optional[str] = None
@@ -48,20 +52,23 @@ class ConnectedAccountService:
     def _extract_connection_state(self, response: Any) -> ConnectionState:
         """Extract ConnectionState from Composio response."""
         # Try 'state' first (new API), then fall back to 'connection_data' or 'connectionData'
-        state_obj = getattr(response, 'state', None) or getattr(response, 'connection_data', None) or getattr(response, 'connectionData', None)
+        state_obj = (
+            getattr(response, "state", None)
+            or getattr(response, "connection_data", None)
+            or getattr(response, "connectionData", None)
+        )
 
         if not state_obj:
             return ConnectionState()
 
         data = _to_dict(state_obj)
-        val = _to_dict(data.get('val', {}))
+        val = _to_dict(data.get("val", {}))
 
-        return ConnectionState(
-            auth_scheme=data.get('auth_scheme', 'OAUTH2'),
-            val=val
-        )
+        return ConnectionState(auth_scheme=data.get("auth_scheme", "OAUTH2"), val=val)
 
-    def _build_state_val(self, initiation_fields: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    def _build_state_val(
+        self, initiation_fields: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
         """Build state value dict from initiation fields."""
         state_val = {"status": "INITIALIZING"}
 
@@ -107,18 +114,17 @@ class ConnectedAccountService:
             allow_multiple=True,
         )
 
-
         account = ConnectedAccount(
             id=connection_request.id,
             status=connection_request.status,
-            redirect_url=getattr(connection_request, 'redirect_url', None),
-            redirect_uri=getattr(connection_request, 'redirect_url', None),
+            redirect_url=getattr(connection_request, "redirect_url", None),
+            redirect_uri=getattr(connection_request, "redirect_url", None),
             connection_data=ConnectionState(
                 auth_scheme="OAUTH2",
                 val=self._build_state_val(initiation_fields),
             ),
             auth_config_id=auth_config_id,
-            user_id=user_id
+            user_id=user_id,
         )
 
         logger.debug(f"Successfully created connected account: {account.id}")
@@ -142,11 +148,11 @@ class ConnectedAccountService:
         return ConnectedAccount(
             id=response.id,
             status=response.status,
-            redirect_url=getattr(response, 'redirect_url', None),
-            redirect_uri=getattr(response, 'redirect_uri', None),
+            redirect_url=getattr(response, "redirect_url", None),
+            redirect_uri=getattr(response, "redirect_uri", None),
             connection_data=self._extract_connection_state(response),
-            auth_config_id=getattr(response, 'auth_config_id', ''),
-            user_id=getattr(response, 'user_id', '')
+            auth_config_id=getattr(response, "auth_config_id", ""),
+            user_id=getattr(response, "user_id", ""),
         )
 
     async def get_auth_status(self, connected_account_id: str) -> Dict[str, Any]:
@@ -167,7 +173,7 @@ class ConnectedAccountService:
         return {
             "status": account.status,
             "redirect_url": account.redirect_url,
-            "connection_data": account.connection_data.model_dump()
+            "connection_data": account.connection_data.model_dump(),
         }
 
     async def delete_connected_account(self, connected_account_id: str) -> bool:
@@ -203,10 +209,7 @@ class ConnectedAccountService:
         try:
             result = self.client.connected_accounts.enable(connected_account_id)
             logger.info(f"Successfully enabled connected account: {connected_account_id}")
-            return {
-                "success": True,
-                "message": "Account enabled successfully"
-            }
+            return {"success": True, "message": "Account enabled successfully"}
         except Exception as e:
             logger.error(f"Failed to enable connected account {connected_account_id}: {e}")
             raise
@@ -225,10 +228,7 @@ class ConnectedAccountService:
         try:
             result = self.client.connected_accounts.disable(connected_account_id)
             logger.info(f"Successfully disabled connected account: {connected_account_id}")
-            return {
-                "success": True,
-                "message": "Account disabled successfully"
-            }
+            return {"success": True, "message": "Account disabled successfully"}
         except Exception as e:
             logger.error(f"Failed to disable connected account {connected_account_id}: {e}")
             raise

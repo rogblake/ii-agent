@@ -66,7 +66,7 @@ class FileService {
     ): Promise<GenerateDownloadUrlsResponse> {
         const response =
             await axiosInstance.post<GenerateDownloadUrlsResponse>(
-                '/chat/files/download-urls',
+                '/v1/assets/download-urls',
                 { storage_paths: storagePaths }
             )
         return response.data

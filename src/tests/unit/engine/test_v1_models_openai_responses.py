@@ -23,20 +23,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.agent.runtime.models.openai.responses import OpenAIResponses
-from ii_agent.agent.runtime.models.message import Message
-from ii_agent.agent.runtime.models.metrics import Metrics
-from ii_agent.agent.runtime.models.response import ModelResponse
-from ii_agent.agent.runtime.exceptions import (
+from ii_agent.agents.models.openai.responses import OpenAIResponses
+from ii_agent.agents.models.message import Message
+from ii_agent.agents.models.metrics import Metrics
+from ii_agent.agents.models.response import ModelResponse
+from ii_agent.agents.exceptions import (
     ModelAuthenticationError,
     ModelProviderError,
 )
-from ii_agent.agent.types import Provider
+from ii_agent.agents.types import Provider
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_openai_responses(**kwargs) -> OpenAIResponses:
     m = OpenAIResponses(**kwargs)
@@ -87,6 +88,7 @@ def _make_api_response(outputs, usage=None, response_id="resp_123", error=None, 
 # 1. Defaults
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIResponsesDefaults:
     def test_default_id(self):
         assert OpenAIResponses().id == "gpt-4o"
@@ -129,6 +131,7 @@ class TestOpenAIResponsesDefaults:
 # 2. _using_reasoning_model
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIResponsesUsingReasoningModel:
     def test_gpt4o_is_not_reasoning(self):
         assert OpenAIResponses(id="gpt-4o")._using_reasoning_model() is False
@@ -149,6 +152,7 @@ class TestOpenAIResponsesUsingReasoningModel:
 # ---------------------------------------------------------------------------
 # 3. _set_reasoning_request_param
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIResponsesSetReasoningRequestParam:
     def test_sets_reasoning_key(self):
@@ -181,6 +185,7 @@ class TestOpenAIResponsesSetReasoningRequestParam:
 # ---------------------------------------------------------------------------
 # 4. _get_client_params
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIResponsesGetClientParams:
     def test_api_key_included(self):
@@ -226,6 +231,7 @@ class TestOpenAIResponsesGetClientParams:
 # ---------------------------------------------------------------------------
 # 5. get_request_params
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIResponsesGetRequestParams:
     def test_temperature_included(self):
@@ -296,16 +302,21 @@ class TestOpenAIResponsesGetRequestParams:
 # 6. _format_tool_params
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIResponsesFormatToolParams:
     def test_function_tool_reformatted(self):
         m = _make_openai_responses(api_key="key")
         tools = [
             {
                 "type": "function",
-                "function": {"name": "fn", "description": "desc", "parameters": {
-                    "type": "object",
-                    "properties": {"q": {"type": "string"}},
-                }},
+                "function": {
+                    "name": "fn",
+                    "description": "desc",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"q": {"type": "string"}},
+                    },
+                },
             }
         ]
         result = m._format_tool_params(messages=[], tools=tools)
@@ -344,6 +355,7 @@ class TestOpenAIResponsesFormatToolParams:
 # ---------------------------------------------------------------------------
 # 7. _format_messages
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIResponsesFormatMessages:
     def test_user_message_formatted(self):
@@ -397,7 +409,8 @@ class TestOpenAIResponsesFormatMessages:
 
     def test_user_with_files(self):
         from pathlib import Path
-        from ii_agent.agent.runtime.models.message import File
+        from ii_agent.agents.models.message import File
+
         m = _make_openai_responses(api_key="key")
         file_obj = File(filepath=Path("/tmp/doc.pdf"))
         msgs = [Message(role="user", content="See doc", files=[file_obj])]
@@ -442,6 +455,7 @@ class TestOpenAIResponsesFormatMessages:
 # ---------------------------------------------------------------------------
 # 8. _parse_provider_response
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIResponsesParseProviderResponse:
     def test_response_id_stored(self):
@@ -491,8 +505,12 @@ class TestOpenAIResponsesParseProviderResponse:
 
     def test_multiple_function_calls(self):
         m = _make_openai_responses(api_key="key")
-        fc1 = _make_response_output("function_call", id="fc_1", call_id="c1", name="fn1", arguments="{}")
-        fc2 = _make_response_output("function_call", id="fc_2", call_id="c2", name="fn2", arguments="{}")
+        fc1 = _make_response_output(
+            "function_call", id="fc_1", call_id="c1", name="fn1", arguments="{}"
+        )
+        fc2 = _make_response_output(
+            "function_call", id="fc_2", call_id="c2", name="fn2", arguments="{}"
+        )
         resp = _make_api_response([fc1, fc2], output_text="")
         mr = m._parse_provider_response(resp)
         assert len(mr.tool_calls) == 2
@@ -522,7 +540,9 @@ class TestOpenAIResponsesParseProviderResponse:
         annotation.url = "https://example.com"
         annotation.title = "Example"
         annotation.model_dump = MagicMock(return_value={"type": "url_citation"})
-        content_item = _make_response_output("output_text", text="Cited text", annotations=[annotation])
+        content_item = _make_response_output(
+            "output_text", text="Cited text", annotations=[annotation]
+        )
         msg_output = _make_response_output("message", content=[content_item])
         resp = _make_api_response([msg_output], output_text="Cited text")
         mr = m._parse_provider_response(resp)
@@ -554,6 +574,7 @@ class TestOpenAIResponsesParseProviderResponse:
 # ---------------------------------------------------------------------------
 # 9. _parse_provider_response_delta (streaming)
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIResponsesParseProviderResponseDelta:
     def _make_event(self, type_, **fields):
@@ -665,6 +686,7 @@ class TestOpenAIResponsesParseProviderResponseDelta:
 # 10. format_function_call_results
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIResponsesFormatFunctionCallResults:
     def test_appends_messages_with_tool_call_ids(self):
         m = _make_openai_responses(api_key="key")
@@ -687,10 +709,12 @@ class TestOpenAIResponsesFormatFunctionCallResults:
 # 11. ainvoke error handling
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIResponsesAinvokeErrors:
     @pytest.mark.asyncio
     async def test_rate_limit_error_raises_model_provider_error(self):
         from openai import RateLimitError
+
         m = _make_openai_responses(api_key="key")
         err = MagicMock(spec=RateLimitError)
         err.__class__ = RateLimitError
@@ -706,6 +730,7 @@ class TestOpenAIResponsesAinvokeErrors:
     @pytest.mark.asyncio
     async def test_api_connection_error_raises_model_provider_error(self):
         from openai import APIConnectionError
+
         m = _make_openai_responses(api_key="key")
         err = MagicMock(spec=APIConnectionError)
         err.__class__ = APIConnectionError
@@ -728,6 +753,7 @@ class TestOpenAIResponsesAinvokeErrors:
     @pytest.mark.asyncio
     async def test_httpx_timeout_raises_model_provider_error(self):
         import httpx
+
         m = _make_openai_responses(api_key="key")
         m.async_client.responses.create = AsyncMock(side_effect=httpx.TimeoutException("timed out"))
         msgs = [Message(role="user", content="hi")]
@@ -740,6 +766,7 @@ class TestOpenAIResponsesAinvokeErrors:
 # 12. ainvoke happy path
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIResponsesAinvokeHappyPath:
     @pytest.mark.asyncio
     async def test_ainvoke_returns_model_response(self):
@@ -747,7 +774,9 @@ class TestOpenAIResponsesAinvokeHappyPath:
 
         msg_output = _make_response_output(
             "message",
-            content=[_make_response_output("output_text", text="Hello from OpenAI!", annotations=[])],
+            content=[
+                _make_response_output("output_text", text="Hello from OpenAI!", annotations=[])
+            ],
         )
         resp = _make_api_response(
             [msg_output],

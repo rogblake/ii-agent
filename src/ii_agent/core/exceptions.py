@@ -38,10 +38,18 @@ class NotFoundError(IIAgentError):
     status_code = 404
 
 
+# Legacy alias used by middleware and older modules
+NotFoundException = NotFoundError
+
+
 class PermissionDeniedError(IIAgentError):
     """Permission denied."""
 
     status_code = 403
+
+
+# Legacy alias used by middleware and older modules
+PermissionException = PermissionDeniedError
 
 
 class ValidationError(IIAgentError):

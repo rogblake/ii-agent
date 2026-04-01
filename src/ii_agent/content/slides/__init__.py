@@ -1,6 +1,8 @@
 """Slides domain module."""
 
 from .models import SlideContent, SlideVersion
+from .repository import SlideContentRepository
+from .service import SlideService
 from .schemas import (
     SlideContentCreate,
     SlideContentInfo,
@@ -13,6 +15,10 @@ __all__ = [
     # Models
     "SlideContent",
     "SlideVersion",
+    # Repository
+    "SlideContentRepository",
+    # Service
+    "SlideService",
     # Schemas
     "SlideContentCreate",
     "SlideContentInfo",

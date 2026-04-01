@@ -7,13 +7,13 @@ pytestmark = pytest.mark.unit
 
 
 EXPECTED_ROUTES = {
-    ("GET", "/v1/chat/conversations/{session_id}/advanced-mode"),
-    ("POST", "/v1/chat/conversations/{session_id}/advanced-mode"),
-    ("POST", "/v1/chat/conversations"),
-    ("POST", "/v1/chat/conversations/{session_id}/stop"),
-    ("GET", "/v1/chat/conversations/{session_id}"),
-    ("GET", "/v1/chat/conversations/{session_id}/public"),
-    ("DELETE", "/v1/chat/conversation/{session_id}"),
+    ("GET", "/chat/conversations/{session_id}/advanced-mode"),
+    ("POST", "/chat/conversations/{session_id}/advanced-mode"),
+    ("POST", "/chat/conversations"),
+    ("POST", "/chat/conversations/{session_id}/stop"),
+    ("GET", "/chat/conversations/{session_id}"),
+    ("GET", "/chat/conversations/{session_id}/public"),
+    ("DELETE", "/chat/conversation/{session_id}"),
 }
 
 
@@ -24,6 +24,6 @@ def test_chat_router_routes_registered():
 def test_chat_router_auth_contract():
     assert_auth_contract(
         router,
-        protected=EXPECTED_ROUTES - {("GET", "/v1/chat/conversations/{session_id}/public")},
-        public={("GET", "/v1/chat/conversations/{session_id}/public")},
+        protected=EXPECTED_ROUTES - {("GET", "/chat/conversations/{session_id}/public")},
+        public={("GET", "/chat/conversations/{session_id}/public")},
     )

@@ -31,6 +31,7 @@ import {
     selectGroupedMessages,
     selectVisibleMessages,
     selectStreamingState,
+    setEditingMessage,
     useAppDispatch,
     useAppSelector
 } from '@/state'
@@ -318,7 +319,7 @@ const ChatMessage = ({
     )
 
     const handleSetEditingMessage = (message?: Message) => {
-        dispatch({ type: 'SET_EDITING_MESSAGE', payload: message })
+        dispatch(setEditingMessage(message))
     }
 
     const isThinkMessageExpanded = useCallback(

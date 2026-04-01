@@ -7,21 +7,21 @@ import {
 class WishlistService {
     async getWishlistSessions(): Promise<SessionWishlistResponse> {
         const response = await axiosInstance.get<SessionWishlistResponse>(
-            '/wishlist/sessions'
+            '/v1/sessions/wishlist'
         )
         return response.data
     }
 
     async addToWishlist(sessionId: string): Promise<WishlistActionResponse> {
         const response = await axiosInstance.post<WishlistActionResponse>(
-            `/wishlist/sessions/${sessionId}`
+            `/v1/sessions/wishlist/${sessionId}`
         )
         return response.data
     }
 
     async removeFromWishlist(sessionId: string): Promise<WishlistActionResponse> {
         const response = await axiosInstance.delete<WishlistActionResponse>(
-            `/wishlist/sessions/${sessionId}`
+            `/v1/sessions/wishlist/${sessionId}`
         )
         return response.data
     }

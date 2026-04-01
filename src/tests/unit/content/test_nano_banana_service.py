@@ -32,9 +32,7 @@ from ii_agent.content.slides.nano_banana.service import (
 class _FakeRepo:
     def __init__(self):
         self.validate_session_access = AsyncMock()
-        self.create_version = AsyncMock(
-            return_value=SimpleNamespace(id="ver-2", version=2)
-        )
+        self.create_version = AsyncMock(return_value=SimpleNamespace(id="ver-2", version=2))
         self.update_slide_content_image = AsyncMock()
         self.get_slide = AsyncMock(return_value=None)
         self.get_versions = AsyncMock(return_value=[])
@@ -223,9 +221,7 @@ async def test_remove_background_success_and_failure(monkeypatch):
 async def test_get_versions_and_revert_paths():
     repo = _FakeRepo()
     repo.get_slide = AsyncMock(
-        return_value=SimpleNamespace(
-            slide_content='<img src="https://example.com/current.png" />'
-        )
+        return_value=SimpleNamespace(slide_content='<img src="https://example.com/current.png" />')
     )
     repo.get_versions = AsyncMock(
         return_value=[

@@ -29,6 +29,7 @@ from ii_agent.projects.design.models import DesignSyncCounters
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_service(
     repo=None,
     sandbox_service=None,
@@ -75,6 +76,7 @@ def _style_change(
 # SlideDesignService instantiation
 # ---------------------------------------------------------------------------
 
+
 class TestSlideDesignServiceInit:
     def test_can_instantiate(self):
         service = _make_service()
@@ -90,6 +92,7 @@ class TestSlideDesignServiceInit:
 # _get_session_for_request
 # ---------------------------------------------------------------------------
 
+
 class TestGetSessionForRequest:
     @pytest.mark.asyncio
     async def test_raises_when_session_not_found(self):
@@ -98,9 +101,7 @@ class TestGetSessionForRequest:
         service = _make_service(repo=repo)
         db = MagicMock()
         with pytest.raises(DesignSessionNotFoundError):
-            await service._get_session_for_request(
-                db, session_id="s1", user_id="u1"
-            )
+            await service._get_session_for_request(db, session_id="s1", user_id="u1")
 
     @pytest.mark.asyncio
     async def test_raises_when_user_id_mismatch(self):
@@ -111,9 +112,7 @@ class TestGetSessionForRequest:
         service = _make_service(repo=repo)
         db = MagicMock()
         with pytest.raises(DesignSessionAccessDeniedError):
-            await service._get_session_for_request(
-                db, session_id="s1", user_id="u1"
-            )
+            await service._get_session_for_request(db, session_id="s1", user_id="u1")
 
     @pytest.mark.asyncio
     async def test_returns_session_when_valid(self):
@@ -123,15 +122,14 @@ class TestGetSessionForRequest:
         repo.get_session = AsyncMock(return_value=session)
         service = _make_service(repo=repo)
         db = MagicMock()
-        result = await service._get_session_for_request(
-            db, session_id="s1", user_id="u1"
-        )
+        result = await service._get_session_for_request(db, session_id="s1", user_id="u1")
         assert result is session
 
 
 # ---------------------------------------------------------------------------
 # get_slide_proxy_html
 # ---------------------------------------------------------------------------
+
 
 class TestGetSlideProxyHtml:
     @pytest.mark.asyncio
@@ -155,6 +153,7 @@ class TestGetSlideProxyHtml:
         repo.get_slide = AsyncMock(return_value=None)
         service = _make_service(repo=repo)
         from ii_agent.content.slides.design.exceptions import DesignSlideNotFoundError
+
         with pytest.raises(DesignSlideNotFoundError):
             await service.get_slide_proxy_html(
                 MagicMock(),
@@ -173,6 +172,7 @@ class TestGetSlideProxyHtml:
         repo.get_slide = AsyncMock(return_value=slide)
         service = _make_service(repo=repo)
         from ii_agent.content.slides.design.exceptions import DesignSlideNotFoundError
+
         with pytest.raises(DesignSlideNotFoundError):
             await service.get_slide_proxy_html(
                 MagicMock(),
@@ -190,12 +190,15 @@ class TestGetSlideProxyHtml:
         repo.get_session_for_user = AsyncMock(return_value=MagicMock())
         repo.get_slide = AsyncMock(return_value=slide)
         service = _make_service(repo=repo)
-        with patch(
-            "ii_agent.content.slides.design.service.sanitize_legacy_editable_artifacts",
-            side_effect=lambda h: h,
-        ), patch(
-            "ii_agent.content.slides.design.service.inject_runtime_script_only",
-            side_effect=lambda h: f"INJECTED:{h}",
+        with (
+            patch(
+                "ii_agent.content.slides.design.service.sanitize_legacy_editable_artifacts",
+                side_effect=lambda h: h,
+            ),
+            patch(
+                "ii_agent.content.slides.design.service.inject_runtime_script_only",
+                side_effect=lambda h: f"INJECTED:{h}",
+            ),
         ):
             result = await service.get_slide_proxy_html(
                 MagicMock(),
@@ -210,6 +213,7 @@ class TestGetSlideProxyHtml:
 # ---------------------------------------------------------------------------
 # apply_slide_sync_batch – counters and no-op on no changes
 # ---------------------------------------------------------------------------
+
 
 class TestApplySlideSyncBatch:
     @pytest.mark.asyncio
@@ -274,6 +278,7 @@ class TestApplySlideSyncBatch:
 # apply_slide_deck_sync_batch – empty changes short-circuit
 # ---------------------------------------------------------------------------
 
+
 class TestApplySlideDeckSyncBatch:
     @pytest.mark.asyncio
     async def test_returns_success_immediately_for_empty_changes(self):
@@ -308,9 +313,7 @@ class TestApplySlideDeckSyncBatch:
             changes=[change],
         )
         with pytest.raises(DesignSessionNotFoundError):
-            await service.apply_slide_deck_sync_batch(
-                MagicMock(), request=request, user_id="u1"
-            )
+            await service.apply_slide_deck_sync_batch(MagicMock(), request=request, user_id="u1")
 
     @pytest.mark.asyncio
     async def test_fails_changes_with_invalid_slide_number(self):
@@ -341,6 +344,7 @@ class TestApplySlideDeckSyncBatch:
 # ---------------------------------------------------------------------------
 # _apply_single_change – static method
 # ---------------------------------------------------------------------------
+
 
 class TestApplySingleChange:
     def test_returns_false_for_unknown_change_type(self):
@@ -422,14 +426,17 @@ class TestApplySingleChange:
 # _extract_slide_number – static method
 # ---------------------------------------------------------------------------
 
+
 class TestExtractSlideNumberStatic:
     def test_returns_slide_number_from_change(self):
         from ii_agent.projects.design.schemas import StyleChange
+
         change = StyleChange.model_validate(_style_change("d1", "style", slide_number=3))
         assert SlideDesignService._extract_slide_number(change) == 3
 
     def test_returns_zero_when_no_slide_number(self):
         from ii_agent.projects.design.schemas import StyleChange
+
         data = {
             "designId": "d1",
             "type": "style",
@@ -445,6 +452,7 @@ class TestExtractSlideNumberStatic:
 # ---------------------------------------------------------------------------
 # _parse_persisted_design_changes – static method
 # ---------------------------------------------------------------------------
+
 
 class TestParsePersistedDesignChanges:
     def test_returns_empty_for_non_list(self):
@@ -484,6 +492,7 @@ class TestParsePersistedDesignChanges:
 # _build_persisted_sync_result – summary generation
 # ---------------------------------------------------------------------------
 
+
 class TestBuildPersistedSyncResult:
     def test_success_summary_when_all_applied(self):
         service = _make_service()
@@ -496,6 +505,7 @@ class TestBuildPersistedSyncResult:
     def test_partial_summary_when_some_applied(self):
         service = _make_service()
         from ii_agent.projects.design.schemas import StyleChange
+
         remaining = [StyleChange.model_validate(_style_change("d1", "style"))]
         result = service._build_persisted_sync_result(
             total=3, applied=2, remaining_changes=remaining, errors=["err"], sandbox_error=None

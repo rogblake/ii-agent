@@ -99,20 +99,20 @@ async def _fake_db_cm():
 
 class TestSocketIOManagerInstantiation:
     def test_stores_sio(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.manager import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
         assert manager.sio is sio
 
     def test_set_container_stores_container(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.manager import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
         container = _mock_container()
 
-        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
+        with patch("ii_agent.realtime.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -127,7 +127,7 @@ class TestSocketIOManagerInstantiation:
 class TestSocketIOManagerShutdown:
     @pytest.mark.asyncio
     async def test_calls_sio_shutdown(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.socketio import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -148,7 +148,7 @@ class TestSocketIOManagerShutdown:
 class TestSocketIOManagerEmitHelpers:
     @pytest.mark.asyncio
     async def test_emit_chat_event_shape(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.socketio import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -161,7 +161,7 @@ class TestSocketIOManagerEmitHelpers:
 
     @pytest.mark.asyncio
     async def test_emit_error_wraps_chat_event(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.manager import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -172,7 +172,7 @@ class TestSocketIOManagerEmitHelpers:
 
     @pytest.mark.asyncio
     async def test_emit_system_event_includes_kwargs(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.manager import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -190,7 +190,7 @@ class TestSocketIOManagerEmitHelpers:
 
 class TestIsSessionOwner:
     def test_returns_true_for_owner(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.socketio import SocketIOManager
 
         manager = SocketIOManager(sio=FakeSio())
         session = MagicMock()
@@ -198,7 +198,7 @@ class TestIsSessionOwner:
         assert manager._is_session_owner("user-1", session) is True
 
     def test_returns_false_for_non_owner(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.manager import SocketIOManager
 
         manager = SocketIOManager(sio=FakeSio())
         session = MagicMock()
@@ -206,7 +206,7 @@ class TestIsSessionOwner:
         assert manager._is_session_owner("user-1", session) is False
 
     def test_compares_str_versions(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.manager import SocketIOManager
 
         manager = SocketIOManager(sio=FakeSio())
         session = MagicMock()
@@ -222,13 +222,13 @@ class TestIsSessionOwner:
 class TestLeaveCurrentSession:
     @pytest.mark.asyncio
     async def test_leaves_room_and_calls_store(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.manager import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
         await sio.enter_room("sid-1", "sess-abc")
 
-        with patch("ii_agent.agent.socket.socketio.session_store") as mock_store:
+        with patch("ii_agent.realtime.socketio.session_store") as mock_store:
             mock_store.remove_sid_from_session = AsyncMock()
             await manager._leave_current_session("sid-1", "sess-abc")
             mock_store.remove_sid_from_session.assert_called_once_with("sess-abc", "sid-1")
@@ -237,13 +237,13 @@ class TestLeaveCurrentSession:
 
     @pytest.mark.asyncio
     async def test_swallows_room_leave_exception(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         sio.leave_room = AsyncMock(side_effect=RuntimeError("leave failed"))
         manager = SocketIOManager(sio=sio)
 
-        with patch("ii_agent.agent.socket.socketio.session_store") as mock_store:
+        with patch("ii_agent.realtime.session_store") as mock_store:
             mock_store.remove_sid_from_session = AsyncMock()
             # Should not raise
             await manager._leave_current_session("sid-1", "sess-xyz")
@@ -257,12 +257,12 @@ class TestLeaveCurrentSession:
 class TestRequireSession:
     @pytest.mark.asyncio
     async def test_returns_none_when_no_session_uuid(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         manager = SocketIOManager(sio=FakeSio())
         container = _mock_container()
 
-        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
+        with patch("ii_agent.realtime.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -271,12 +271,12 @@ class TestRequireSession:
 
     @pytest.mark.asyncio
     async def test_returns_none_when_invalid_uuid(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.manager import SocketIOManager
 
         manager = SocketIOManager(sio=FakeSio())
         container = _mock_container()
 
-        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
+        with patch("ii_agent.realtime.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -285,7 +285,7 @@ class TestRequireSession:
 
     @pytest.mark.asyncio
     async def test_returns_session_when_valid(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.manager import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -295,9 +295,9 @@ class TestRequireSession:
         container.session_service.find_session_by_id_info = AsyncMock(return_value=fake_session)
 
         with (
-            patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory,
+            patch("ii_agent.realtime.CommandHandlerFactory") as mock_factory,
             patch(
-                "ii_agent.agent.socket.socketio.get_db_session_local",
+                "ii_agent.realtime.get_db_session_local",
                 return_value=_fake_db_cm(),
             ),
         ):
@@ -316,7 +316,7 @@ class TestRequireSession:
 class TestConnect:
     @pytest.mark.asyncio
     async def test_returns_false_when_no_auth(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         manager = SocketIOManager(sio=FakeSio())
         result = await manager.connect("sid-1", {}, None)
@@ -324,7 +324,7 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_returns_false_when_no_token_in_auth(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         manager = SocketIOManager(sio=FakeSio())
         result = await manager.connect("sid-1", {}, {"session_uuid": "something"})
@@ -332,12 +332,12 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_returns_true_with_valid_token(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
 
-        with patch("ii_agent.agent.socket.socketio.jwt_handler") as mock_jwt:
+        with patch("ii_agent.realtime.socketio.jwt_handler") as mock_jwt:
             mock_jwt.verify_access_token = MagicMock(return_value={"user_id": "u-1"})
             result = await manager.connect("sid-1", {}, {"token": "valid-jwt"})
 
@@ -347,11 +347,11 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_returns_false_when_jwt_returns_none(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         manager = SocketIOManager(sio=FakeSio())
 
-        with patch("ii_agent.agent.socket.socketio.jwt_handler") as mock_jwt:
+        with patch("ii_agent.realtime.socketio.jwt_handler") as mock_jwt:
             mock_jwt.verify_access_token = MagicMock(return_value=None)
             result = await manager.connect("sid-1", {}, {"token": "bad-jwt"})
 
@@ -359,11 +359,11 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_returns_false_on_jwt_exception(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         manager = SocketIOManager(sio=FakeSio())
 
-        with patch("ii_agent.agent.socket.socketio.jwt_handler") as mock_jwt:
+        with patch("ii_agent.realtime.socketio.jwt_handler") as mock_jwt:
             mock_jwt.verify_access_token = MagicMock(side_effect=Exception("verify failed"))
             result = await manager.connect("sid-1", {}, {"token": "erring-jwt"})
 
@@ -371,13 +371,13 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_stores_session_uuid_in_session(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
         sess_uuid = str(uuid.uuid4())
 
-        with patch("ii_agent.agent.socket.socketio.jwt_handler") as mock_jwt:
+        with patch("ii_agent.realtime.socketio.jwt_handler") as mock_jwt:
             mock_jwt.verify_access_token = MagicMock(return_value={"user_id": "u-1"})
             await manager.connect("sid-1", {}, {"token": "jwt", "session_uuid": sess_uuid})
 
@@ -392,14 +392,14 @@ class TestConnect:
 class TestDisconnect:
     @pytest.mark.asyncio
     async def test_leaves_session_on_disconnect(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
         await sio.save_session("sid-1", {"user_id": "u1", "session_id": "sess-1"})
         await sio.enter_room("sid-1", "sess-1")
 
-        with patch("ii_agent.agent.socket.socketio.session_store") as mock_store:
+        with patch("ii_agent.realtime.socketio.session_store") as mock_store:
             mock_store.remove_sid_from_session = AsyncMock()
             await manager.disconnect("sid-1")
 
@@ -407,7 +407,7 @@ class TestDisconnect:
 
     @pytest.mark.asyncio
     async def test_no_action_when_session_data_missing_session_id(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -417,7 +417,7 @@ class TestDisconnect:
 
     @pytest.mark.asyncio
     async def test_no_action_when_no_session_stored(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -433,13 +433,13 @@ class TestDisconnect:
 class TestJoinSession:
     @pytest.mark.asyncio
     async def test_disconnects_when_no_session_data(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
         container = _mock_container()
 
-        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
+        with patch("ii_agent.realtime.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -449,13 +449,13 @@ class TestJoinSession:
 
     @pytest.mark.asyncio
     async def test_disconnects_when_not_authenticated(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
         container = _mock_container()
 
-        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
+        with patch("ii_agent.realtime.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -465,13 +465,13 @@ class TestJoinSession:
 
     @pytest.mark.asyncio
     async def test_emits_error_for_invalid_uuid_format(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
         container = _mock_container()
 
-        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
+        with patch("ii_agent.realtime.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -485,7 +485,7 @@ class TestJoinSession:
 
     @pytest.mark.asyncio
     async def test_successful_join_enters_room(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -496,12 +496,12 @@ class TestJoinSession:
         container.session_service.get_or_create_session = AsyncMock(return_value=fake_session)
 
         with (
-            patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory,
+            patch("ii_agent.realtime.socketio.CommandHandlerFactory") as mock_factory,
             patch(
-                "ii_agent.agent.socket.socketio.get_db_session_local",
+                "ii_agent.realtime.socketio.get_db_session_local",
                 return_value=_fake_db_cm(),
             ),
-            patch("ii_agent.agent.socket.socketio.session_store") as mock_store,
+            patch("ii_agent.realtime.socketio.session_store") as mock_store,
         ):
             mock_factory.return_value = MagicMock()
             mock_store.add_sid_to_session = AsyncMock()
@@ -514,7 +514,7 @@ class TestJoinSession:
 
     @pytest.mark.asyncio
     async def test_join_session_denies_non_owner(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -527,9 +527,9 @@ class TestJoinSession:
         container.session_service.get_or_create_session = AsyncMock(return_value=fake_session)
 
         with (
-            patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory,
+            patch("ii_agent.realtime.socketio.CommandHandlerFactory") as mock_factory,
             patch(
-                "ii_agent.agent.socket.socketio.get_db_session_local",
+                "ii_agent.realtime.socketio.get_db_session_local",
                 return_value=_fake_db_cm(),
             ),
         ):
@@ -554,14 +554,14 @@ class TestJoinSession:
 class TestLeaveSession:
     @pytest.mark.asyncio
     async def test_leaves_room_when_session_id_present(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
         await sio.save_session("sid-1", {"user_id": "u1", "session_id": "sess-1"})
         await sio.enter_room("sid-1", "sess-1")
 
-        with patch("ii_agent.agent.socket.socketio.session_store") as mock_store:
+        with patch("ii_agent.realtime.socketio.session_store") as mock_store:
             mock_store.remove_sid_from_session = AsyncMock()
             await manager.leave_session("sid-1", {})
 
@@ -569,7 +569,7 @@ class TestLeaveSession:
 
     @pytest.mark.asyncio
     async def test_no_action_when_no_session_id_in_data(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -585,13 +585,13 @@ class TestLeaveSession:
 class TestChatMessage:
     @pytest.mark.asyncio
     async def test_emits_error_when_no_session_in_sio(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
         container = _mock_container()
 
-        with patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory:
+        with patch("ii_agent.realtime.socketio.CommandHandlerFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             manager.set_container(container)
 
@@ -601,7 +601,7 @@ class TestChatMessage:
 
     @pytest.mark.asyncio
     async def test_emits_error_when_session_not_found_in_db(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -609,9 +609,9 @@ class TestChatMessage:
         container.session_service.find_session_by_id_info = AsyncMock(return_value=None)
 
         with (
-            patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory,
+            patch("ii_agent.realtime.socketio.CommandHandlerFactory") as mock_factory,
             patch(
-                "ii_agent.agent.socket.socketio.get_db_session_local",
+                "ii_agent.realtime.socketio.get_db_session_local",
                 return_value=_fake_db_cm(),
             ),
         ):
@@ -628,7 +628,7 @@ class TestChatMessage:
 
     @pytest.mark.asyncio
     async def test_emits_error_when_user_does_not_own_session(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -640,9 +640,9 @@ class TestChatMessage:
         container.session_service.find_session_by_id_info = AsyncMock(return_value=fake_session)
 
         with (
-            patch("ii_agent.agent.socket.socketio.CommandHandlerFactory") as mock_factory,
+            patch("ii_agent.realtime.socketio.CommandHandlerFactory") as mock_factory,
             patch(
-                "ii_agent.agent.socket.socketio.get_db_session_local",
+                "ii_agent.realtime.socketio.get_db_session_local",
                 return_value=_fake_db_cm(),
             ),
         ):
@@ -659,7 +659,7 @@ class TestChatMessage:
 
     @pytest.mark.asyncio
     async def test_routes_to_handler_when_found(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.socketio import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -677,11 +677,11 @@ class TestChatMessage:
 
         with (
             patch(
-                "ii_agent.agent.socket.socketio.CommandHandlerFactory",
+                "ii_agent.realtime.socketio.CommandHandlerFactory",
                 return_value=mock_factory_inst,
             ),
             patch(
-                "ii_agent.agent.socket.socketio.get_db_session_local",
+                "ii_agent.realtime.socketio.get_db_session_local",
                 return_value=_fake_db_cm(),
             ),
         ):
@@ -697,7 +697,7 @@ class TestChatMessage:
 
     @pytest.mark.asyncio
     async def test_emits_error_for_unknown_message_type(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.socketio import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -713,11 +713,11 @@ class TestChatMessage:
 
         with (
             patch(
-                "ii_agent.agent.socket.socketio.CommandHandlerFactory",
+                "ii_agent.realtime.socketio.CommandHandlerFactory",
                 return_value=mock_factory_inst,
             ),
             patch(
-                "ii_agent.agent.socket.socketio.get_db_session_local",
+                "ii_agent.realtime.socketio.get_db_session_local",
                 return_value=_fake_db_cm(),
             ),
         ):
@@ -733,7 +733,7 @@ class TestChatMessage:
 
     @pytest.mark.asyncio
     async def test_emits_error_when_handler_raises(self):
-        from ii_agent.agent.socket.socketio import SocketIOManager
+        from ii_agent.realtime.socketio import SocketIOManager
 
         sio = FakeSio()
         manager = SocketIOManager(sio=sio)
@@ -751,11 +751,11 @@ class TestChatMessage:
 
         with (
             patch(
-                "ii_agent.agent.socket.socketio.CommandHandlerFactory",
+                "ii_agent.realtime.socketio.CommandHandlerFactory",
                 return_value=mock_factory_inst,
             ),
             patch(
-                "ii_agent.agent.socket.socketio.get_db_session_local",
+                "ii_agent.realtime.socketio.get_db_session_local",
                 return_value=_fake_db_cm(),
             ),
         ):

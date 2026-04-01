@@ -24,7 +24,11 @@ async def test_execute_tool_returns_unknown_tool_error():
 async def test_execute_tool_returns_tool_response():
     class FakeTool:
         async def run(self, call_input):
-            return SimpleNamespace(output=SimpleNamespace(model_dump=lambda: {"ok": True}, type="json", value={"ok": True}))
+            return SimpleNamespace(
+                output=SimpleNamespace(
+                    model_dump=lambda: {"ok": True}, type="json", value={"ok": True}
+                )
+            )
 
     registry = {"demo": FakeTool()}
 

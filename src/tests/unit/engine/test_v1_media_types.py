@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from ii_agent.agent.runtime.media.media import Audio, File, Image, Video
+from ii_agent.files.media import Audio, File, Image, Video
 
 
 # ---------------------------------------------------------------------------

@@ -17,13 +17,13 @@ from ii_agent.chat.types import (
     MediaReference,
 )
 from ii_agent.content.media.service import _generate_image
-from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.core.storage.client import media_storage, storage
+from ii_agent.core.db import get_db_session_local
+from ii_agent.core.storage.client import get_storage
 
 from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class ImageGenerationTool(BaseTool):
         self,
         session_id: str,
         *,
-        container: ServiceContainer,
+        container: ApplicationContainer,
         media_preferences: Optional[MediaPreferences] = None,
         image_aspect_ratio: Optional[str] = None,
         image_resolution: Optional[str] = None,
@@ -203,7 +203,7 @@ class ImageGenerationTool(BaseTool):
                 prompt=prompt,
                 aspect_ratio=aspect_ratio,
                 image_size=image_size,
-                session_id=str(session.id),
+                session_id=self.session_id,
                 user_api_key=user_api_key,
                 image_urls=resolved_file_urls or None,
                 model_name=model_name,
@@ -348,10 +348,7 @@ class ImageGenerationTool(BaseTool):
                 # Check if it's an image by content_type or storage_path pattern
                 is_image = (file.content_type and file.content_type.startswith("image/")) or (
                     file.storage_path
-                    and (
-                        file.storage_path.startswith(f"sessions/{self.session_id}/generated/")
-                        or "/uploads/" in file.storage_path
-                    )
+                    and ("/generated/" in file.storage_path or "/uploads/" in file.storage_path)
                 )
                 if is_image:
                     image_file_ids.append(str(file.id))
@@ -380,15 +377,12 @@ class ImageGenerationTool(BaseTool):
         ):
             return file_upload.storage_path
 
-        # AI-generated images from sessions/ path use media_storage (public bucket)
-        # User uploaded files use storage (private bucket)
-        storage_client = (
-            media_storage if file_upload.storage_path.startswith("sessions/") else storage
-        )
+        # All files use unified storage
+        storage_client = get_storage()
 
         try:
-            url = storage_client.get_download_signed_url(
-                file_upload.storage_path, expiration_seconds=300
+            url = await storage_client.signed_download_url(
+                file_upload.storage_path, expiry_seconds=300
             )
             if not url:
                 raise RuntimeError("Signed URL generation returned empty response")

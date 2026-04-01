@@ -17,8 +17,6 @@ class MediaTemplate(Base):
     """ORM model for the media_templates table (templates, mini-tools, genres)."""
 
     __tablename__ = "media_templates"
-
-    id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     preview: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     type: Mapped[Optional[str]] = mapped_column(String, nullable=True)

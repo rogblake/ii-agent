@@ -1,4 +1,4 @@
-"""Unit tests for ii_agent.agent.runtime.utils.json_schema utility functions."""
+"""Unit tests for ii_agent.agents.utils.json_schema utility functions."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Union
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.agent.runtime.utils.json_schema import (
+from ii_agent.agents.utils.json_schema import (
     get_json_schema,
     get_json_schema_for_arg,
     get_json_type_for_py_type,

@@ -45,7 +45,9 @@ def test_parse_connection_string_edge_cases(settings_factory):
 def test_fetch_table_names_sync_maps_sqlalchemy_error(monkeypatch):
     fake_engine = SimpleNamespace(dispose=MagicMock())
 
-    monkeypatch.setattr(database_service_module, "create_engine", lambda *args, **kwargs: fake_engine)
+    monkeypatch.setattr(
+        database_service_module, "create_engine", lambda *args, **kwargs: fake_engine
+    )
 
     def _raise(_engine):
         raise SQLAlchemyError("failed inspector")
@@ -61,7 +63,9 @@ def test_fetch_table_names_sync_maps_sqlalchemy_error(monkeypatch):
 def test_fetch_table_records_sync_maps_table_load_error(monkeypatch):
     fake_engine = SimpleNamespace(dispose=MagicMock())
 
-    monkeypatch.setattr(database_service_module, "create_engine", lambda *args, **kwargs: fake_engine)
+    monkeypatch.setattr(
+        database_service_module, "create_engine", lambda *args, **kwargs: fake_engine
+    )
 
     def _raise_table(*args, **kwargs):
         raise SQLAlchemyError("table load failed")

@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
 import logging
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.credits.service import CreditService
 from ii_agent.billing.exceptions import InsufficientCreditsError
-from ii_agent.billing.types import BillingResult
-from ii_agent.billing.reservations.service import CreditReservationService
-from ii_agent.billing.reservations.types import SourceDomain
-from ii_agent.billing.usage.service import UsageService
 from ii_agent.content.storybook.repository import StorybookRepository
 from ii_agent.content.storybook.schemas import (
     StorybookDetail,
@@ -21,12 +17,10 @@ from ii_agent.content.storybook.schemas import (
 from ii_agent.content.storybook.service import _storybook_to_detail
 from ii_agent.content.storybook.billing import (
     DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD,
-    build_storybook_request,
     build_storybook_scope,
-    run_storybook_sync_operation,
+    check_and_deduct_storybook_credits,
 )
 from ii_agent.core.config.settings import Settings
-from ii_agent.core.request_context import get_or_generate_request_id
 
 if TYPE_CHECKING:
     from ii_agent.content.storybook.service import StorybookService
@@ -139,14 +133,12 @@ class StorybookVoiceService:
         repo: StorybookRepository,
         storybook_service: StorybookService,
         config: Settings,
-        usage_service: UsageService,
-        reservation_service: CreditReservationService,
+        credit_service: CreditService,
     ) -> None:
         self._repo = repo
         self._storybook_service = storybook_service
         self._config = config
-        self._usage_service = usage_service
-        self._reservation_service = reservation_service
+        self._credit_service = credit_service
 
     async def generate_voiceover(
         self,
@@ -231,7 +223,8 @@ class StorybookVoiceService:
         idempotency_key: Optional[str] = None,
     ) -> StorybookVoiceOverResponse:
         """Generate voice-over and deduct credits in one service call."""
-        await self._usage_service.require_billing_ok(db, user_id)
+        if not await self._credit_service.has_sufficient_credits(db, user_id):
+            raise InsufficientCreditsError(available_credits=0.0, required_credits=0.0)
         source_storybook = await self._repo.get_by_id(db, storybook_id)
         if not source_storybook:
             return StorybookVoiceOverResponse(
@@ -265,63 +258,51 @@ class StorybookVoiceService:
                 force=force,
             )
 
-        request_id = get_or_generate_request_id()
-        operation_id = f"voice:{storybook_id}:{request_id}"
         scope = build_storybook_scope(
             user_id=user_id,
             session_id=resolved_session_id,
         )
-        request = build_storybook_request(
-            scope=scope,
-            namespace="storybook_voice",
-            operation_id=operation_id,
-            source_domain=SourceDomain.VOICE_GENERATION,
-            tool_name="storybook_voiceover",
-            reserve_usd=DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD * estimated_page_count,
-            metadata={
-                "storybook_id": storybook_id,
-                "voice_page_count_estimate": estimated_page_count,
-            },
-            explicit_idempotency_key=idempotency_key,
-        )
 
-        async def _execute_voice_generation() -> BillingResult[tuple[StorybookDetail | None, bool]]:
-            updated_storybook, generated_any, total_voice_cost_usd = await self.generate_voiceover(
-                db,
-                storybook_id=storybook_id,
-                user_id=user_id,
-                language_code=language_code,
-                force=force,
-            )
-            await db.commit()
-            return BillingResult(
-                value=(updated_storybook, generated_any),
-                actual_usd=Decimal(str(total_voice_cost_usd)),
-                usage_payload={
-                    "provider": None,
-                    "latency_ms": None,
-                    "cost_usd": total_voice_cost_usd,
-                    "tool_name": "storybook_voiceover",
-                    "storybook_id": storybook_id,
-                    "voice_page_count_estimate": estimated_page_count,
-                },
-            )
-
+        # 1. Check credits up-front
+        estimated_cost = DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD * estimated_page_count
         try:
-            updated_storybook, generated_any = await run_storybook_sync_operation(
-                reservation_service=self._reservation_service,
-                scope=scope,
-                request=request,
-                execute_fn=_execute_voice_generation,
-                release_reason="storybook_voice_failed",
-                settlement_error="storybook_voice_settle_exception",
+            has_credits = await self._credit_service.has_sufficient_credits(
+                db, user_id, float(estimated_cost)
             )
+            if not has_credits:
+                raise InsufficientCreditsError(
+                    available_credits=0.0,
+                    required_credits=float(estimated_cost),
+                )
         except InsufficientCreditsError:
             logger.warning("[Storybook Voice] Insufficient credits for user %s", user_id)
             return StorybookVoiceOverResponse(
                 success=False,
                 storybook=None,
                 error="Insufficient credits",
+            )
+
+        # 2. Execute the operation
+        updated_storybook, generated_any, total_voice_cost_usd = await self.generate_voiceover(
+            db,
+            storybook_id=storybook_id,
+            user_id=user_id,
+            language_code=language_code,
+            force=force,
+        )
+
+        # 3. Deduct actual cost
+        if total_voice_cost_usd > 0:
+            await check_and_deduct_storybook_credits(
+                db,
+                credit_service=self._credit_service,
+                scope=scope,
+                amount_usd=total_voice_cost_usd,
+                tool_name="storybook_voiceover",
+                metadata={
+                    "storybook_id": storybook_id,
+                    "voice_page_count_estimate": estimated_page_count,
+                },
             )
 
         return self._build_voiceover_response(

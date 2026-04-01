@@ -6,10 +6,11 @@ from typing import Any, List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.files.models import FileUpload
+from ii_agent.files.models import FileAsset, SessionAsset
 from ii_agent.chat.types import MediaReference
 from ii_agent.chat.api.schemas import AdvancedModeReference
-from ii_agent.core.storage.client import storage, media_storage
+from ii_agent.core.storage.client import get_storage
+from ii_agent.core.storage.path_resolver import path_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -48,44 +49,30 @@ class ReferenceResolver:
             return []
 
         result = await db_session.execute(
-            select(FileUpload).where(FileUpload.id.in_(file_ids))
+            select(FileAsset).where(FileAsset.id.in_(file_ids))
         )
         uploads = {upload.id: upload for upload in result.scalars().all()}
 
-        media_storage_paths = []
-        private_storage_paths = []
+        all_storage_paths: list[tuple[str, str]] = []
 
         for ref in references:
             file_id = ref.file_id if isinstance(ref, MediaReference) else ref.get("file_id")
             if file_id and file_id in uploads:
                 storage_path = uploads[file_id].storage_path
-
-                # Group by storage type
-                if storage_path and storage_path.startswith("sessions/"):
-                    media_storage_paths.append((file_id, storage_path))
-                else:
-                    private_storage_paths.append((file_id, storage_path))
+                if storage_path:
+                    all_storage_paths.append((file_id, storage_path))
 
         # Batch generate signed URLs for better performance
-        file_urls = {}
+        file_urls: dict[str, str | None] = {}
 
-        if media_storage_paths:
+        if all_storage_paths:
             try:
-                paths = [path for _, path in media_storage_paths]
-                urls = media_storage.get_download_signed_urls_batch(paths)
-                for (file_id, _), url in zip(media_storage_paths, urls):
+                paths = [path for _, path in all_storage_paths]
+                urls = await get_storage().signed_download_urls_batch(paths)
+                for (file_id, _), url in zip(all_storage_paths, urls):
                     file_urls[file_id] = url
             except Exception as e:
-                logger.error("Batch URL generation failed for media storage: %s", e, exc_info=True)
-
-        if private_storage_paths:
-            try:
-                paths = [path for _, path in private_storage_paths]
-                urls = storage.get_download_signed_urls_batch(paths)
-                for (file_id, _), url in zip(private_storage_paths, urls):
-                    file_urls[file_id] = url
-            except Exception as e:
-                logger.error("Batch URL generation failed for private storage: %s", e, exc_info=True)
+                logger.error("Batch URL generation failed: %s", e, exc_info=True)
 
         # Build final resolved references
         resolved: list[AdvancedModeReference] = []
@@ -123,14 +110,15 @@ class ReferenceResolver:
             List of file_ids for generated images
         """
         try:
-            # Query FileUpload table for generated images in this session
+            # Query FileAsset table for generated images in this session
             result = await db_session.execute(
-                select(FileUpload)
+                select(FileAsset)
+                .join(SessionAsset, SessionAsset.asset_id == FileAsset.id)
                 .where(
-                    FileUpload.session_id == session_id,
-                    FileUpload.storage_path.like(f"sessions/{session_id}/generated/%")
+                    SessionAsset.session_id == session_id,
+                    FileAsset.storage_path.like(path_resolver.user_generated_pattern())
                 )
-                .order_by(FileUpload.created_at.asc())
+                .order_by(FileAsset.created_at.asc())
             )
             generated_files = result.scalars().all()
 

@@ -13,17 +13,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.llm_config import APITypes
-from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.core.config.settings import get_settings
-from ii_agent.settings.llm.service import get_system_llm_config
+from ii_agent.core.db import get_db_session_local
+from ii_agent.settings.llm.schemas import ModelConfig
+from ii_agent.settings.llm.service import get_system_model_config_from_db
 from ii_agent.chat.providers.models import ChatProviderVectorStore
-from ii_agent.files.models import FileUpload
+from ii_agent.files.models import FileAsset
 from ii_agent.chat.vectorstore.base import (
     VectorStore,
     VectorStoreMetadata,
     VectorStoreFileObject,
 )
-from ii_agent.core.storage.client import storage
+from ii_agent.core.storage.client import get_storage
 
 logger = logging.getLogger(__name__)
 
@@ -45,15 +45,30 @@ class OpenAIVectorStore(VectorStore):
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",  # .pptx
     ]
 
-    def __init__(self):
-        self.llm_config = get_system_llm_config(model_id="default", config=get_settings())
+    def __init__(self) -> None:
+        self._llm_config: ModelConfig | None = None
+        self._client: AsyncOpenAI | None = None
         self.provider = APITypes.OPENAI.value
 
-        # Initialize OpenAI client
-        self.client = AsyncOpenAI(
-            api_key=self.llm_config.api_key.get_secret_value(),
-            base_url=self.llm_config.base_url if self.llm_config.base_url else None,
-        )
+    async def _get_client(self) -> AsyncOpenAI:
+        """Lazy-init the OpenAI client from the DB system config."""
+        if self._client is None:
+            async with get_db_session_local() as db:
+                self._llm_config = await get_system_model_config_from_db(
+                    db, model_id="default"
+                )
+            self._client = AsyncOpenAI(
+                api_key=self._llm_config.api_key.get_secret_value() if self._llm_config.api_key else "",
+                base_url=self._llm_config.base_url or None,
+            )
+        return self._client
+
+    @property
+    def llm_config(self) -> ModelConfig:
+        """Access LLM config (available after first _get_client call)."""
+        if self._llm_config is None:
+            raise RuntimeError("LLM config not initialized — call _get_client() first")
+        return self._llm_config
 
     async def retrieve(
         self, user_id: str, session_id: str
@@ -74,7 +89,8 @@ class OpenAIVectorStore(VectorStore):
             vector_store = await self._get_or_create_vector_store(db_session, user_id)
             await db_session.commit()
 
-        file_list_stores = await self.client.vector_stores.files.list(
+        client = await self._get_client()
+        file_list_stores = await client.vector_stores.files.list(
             vector_store_id=vector_store.vector_store_id, limit=50, order="desc"
         )
         # Return generic metadata as Pydantic model
@@ -95,7 +111,7 @@ class OpenAIVectorStore(VectorStore):
         Args:
             user_id: The user's ID
             session_id: The session ID
-            file_id: FileUpload ID to read from storage and upload to vector store
+            file_id: FileAsset ID to read from storage and upload to vector store
 
         Returns:
             True if successful, False otherwise
@@ -106,7 +122,7 @@ class OpenAIVectorStore(VectorStore):
                     db_session, user_id
                 )
                 result = await db_session.execute(
-                    select(FileUpload).where(FileUpload.id == file_id)
+                    select(FileAsset).where(FileAsset.id == file_id)
                 )
                 file_upload = result.scalar_one_or_none()
 
@@ -116,20 +132,21 @@ class OpenAIVectorStore(VectorStore):
 
             # Read file from storage (blocking operation, run in thread)
             file_content = await anyio.to_thread.run_sync(
-                storage.read, file_upload.storage_path
+                get_storage().read, file_upload.storage_path
             )
             if not file_content:
                 logger.error(f"Failed to read file {file_id} from storage")
                 return False
                 # Upload to OpenAI Files API
 
-            openai_file = await self.client.files.create(
+            client = await self._get_client()
+            openai_file = await client.files.create(
                 file=(file_upload.file_name, file_content),
                 purpose="assistants",
             )
 
             # Upload file directly to vector store with attributes
-            vector_store_file = await self.client.vector_stores.files.create_and_poll(
+            vector_store_file = await client.vector_stores.files.create_and_poll(
                 vector_store_id=vector_store.vector_store_id,
                 file_id=openai_file.id,
                 attributes={
@@ -163,7 +180,7 @@ class OpenAIVectorStore(VectorStore):
         Args:
             user_id: The user's ID
             session_id: The session ID
-            file_ids: List of FileUpload IDs to read from storage and upload to vector store
+            file_ids: List of FileAsset IDs to read from storage and upload to vector store
 
         Returns:
             List of VectorStoreFileObject with file metadata
@@ -178,7 +195,7 @@ class OpenAIVectorStore(VectorStore):
 
                 # Get all file upload records from database in one query
                 result = await db_session.execute(
-                    select(FileUpload).where(FileUpload.id.in_(file_ids))
+                    select(FileAsset).where(FileAsset.id.in_(file_ids))
                 )
                 file_uploads = result.scalars().all()
 
@@ -202,7 +219,7 @@ class OpenAIVectorStore(VectorStore):
 
                 # Read file from storage (blocking operation, run in thread)
                 file_content = await anyio.to_thread.run_sync(
-                    storage.read, file_upload.storage_path
+                    get_storage().read, file_upload.storage_path
                 )
                 if not file_content:
                     logger.warning(
@@ -211,7 +228,8 @@ class OpenAIVectorStore(VectorStore):
                     continue
 
                 # Upload to OpenAI Files API
-                openai_file = await self.client.files.create(
+                client = await self._get_client()
+                openai_file = await client.files.create(
                     file=(file_upload.file_name, file_content),
                     purpose="assistants",
                 )
@@ -231,7 +249,8 @@ class OpenAIVectorStore(VectorStore):
                 logger.debug("No files were successfully uploaded to OpenAI")
                 return []
             # Create batch with file IDs and attributes, then poll for completion
-            batch = await self.client.vector_stores.file_batches.create(
+            client = await self._get_client()
+            batch = await client.vector_stores.file_batches.create(
                 vector_store_id=vector_store.vector_store_id,
                 files=[
                     {
@@ -248,7 +267,7 @@ class OpenAIVectorStore(VectorStore):
                 ],
             )
 
-            batch = await self.client.vector_stores.file_batches.poll(
+            batch = await client.vector_stores.file_batches.poll(
                 batch_id=batch.id,
                 vector_store_id=vector_store.vector_store_id,
                 poll_interval_ms=100,
@@ -298,7 +317,8 @@ class OpenAIVectorStore(VectorStore):
 
         # Delete from provider
         try:
-            await self.client.vector_stores.delete(vector_store.vector_store_id)
+            client = await self._get_client()
+            await client.vector_stores.delete(vector_store.vector_store_id)
             logger.info(f"Deleted vector store from provider for user {user_id}")
         except Exception as e:
             logger.warning(
@@ -335,7 +355,8 @@ class OpenAIVectorStore(VectorStore):
                 )
 
             # Use OpenAI Responses API with file_search tool
-            response = await self.client.responses.create(
+            client = await self._get_client()
+            response = await client.responses.create(
                 model=self.llm_config.model,
                 tools=[
                     {
@@ -465,7 +486,8 @@ class OpenAIVectorStore(VectorStore):
     ) -> bool:
         """Check if vector store is expired or about to expire on OpenAI."""
         try:
-            vector_store = await self.client.vector_stores.retrieve(vector_store_id)
+            client = await self._get_client()
+            vector_store = await client.vector_stores.retrieve(vector_store_id)
 
             # Check if already marked as expired
             if vector_store.status == "expired":
@@ -496,7 +518,8 @@ class OpenAIVectorStore(VectorStore):
         """Create a new vector store on OpenAI."""
         try:
             # Create vector store with a name
-            vector_store = await self.client.vector_stores.create(
+            client = await self._get_client()
+            vector_store = await client.vector_stores.create(
                 name=f"vs_{user_id}",
                 expires_after={
                     "anchor": "last_active_at",

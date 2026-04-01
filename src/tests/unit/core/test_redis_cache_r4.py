@@ -15,9 +15,11 @@ pytestmark = pytest.mark.unit
 # MemoryEntityCache
 # ---------------------------------------------------------------------------
 
+
 class TestMemoryEntityCacheR4:
     def _make_cache(self, namespace: str = "test", max_size: int = 100):
         from ii_agent.core.redis.cache import MemoryEntityCache
+
         return MemoryEntityCache(namespace=namespace, max_size=max_size)
 
     @pytest.mark.asyncio
@@ -91,6 +93,7 @@ class TestMemoryEntityCacheR4:
     @pytest.mark.asyncio
     async def test_clear_removes_namespace_keys(self):
         from ii_agent.core.redis.cache import MemoryEntityCache
+
         cache = MemoryEntityCache(namespace="test")
         # Manually insert keys that match the clear pattern
         cache._cache["cache:test:key1"] = {"value": {"x": 1}, "expires_at": None}
@@ -157,11 +160,15 @@ class TestMemoryEntityCacheR4:
 # RedisEntityCache
 # ---------------------------------------------------------------------------
 
+
 class TestRedisEntityCacheR4:
     def _make_redis_cache(self, namespace: str = "test", default_ttl: int = 3600):
         from ii_agent.core.redis.cache import RedisEntityCache
+
         mock_redis = AsyncMock()
-        return RedisEntityCache(redis_client=mock_redis, namespace=namespace, default_ttl=default_ttl), mock_redis
+        return RedisEntityCache(
+            redis_client=mock_redis, namespace=namespace, default_ttl=default_ttl
+        ), mock_redis
 
     @pytest.mark.asyncio
     async def test_get_returns_parsed_json(self):
@@ -304,6 +311,7 @@ class TestRedisEntityCacheR4:
 
     def test_make_key_format(self):
         from ii_agent.core.redis.cache import RedisEntityCache
+
         mock_redis = AsyncMock()
         cache = RedisEntityCache(redis_client=mock_redis, namespace="testns")
         assert cache._make_key("thekey") == "testns:thekey"
@@ -313,14 +321,17 @@ class TestRedisEntityCacheR4:
 # EntityCache abstract base
 # ---------------------------------------------------------------------------
 
+
 class TestEntityCacheAbstractR4:
     def test_get_namespace(self):
         from ii_agent.core.redis.cache import MemoryEntityCache
+
         cache = MemoryEntityCache(namespace="ns1")
         assert cache.get_namespace() == "ns1"
 
     def test_make_key_prefix(self):
         from ii_agent.core.redis.cache import MemoryEntityCache
+
         cache = MemoryEntityCache(namespace="myns")
         assert cache._make_key("foo") == "myns:foo"
 
@@ -329,15 +340,18 @@ class TestEntityCacheAbstractR4:
 # create_entity_cache factory
 # ---------------------------------------------------------------------------
 
+
 class TestCreateEntityCacheR4:
     def test_creates_memory_cache_when_no_redis(self):
         from ii_agent.core.redis.cache import create_entity_cache, MemoryEntityCache
+
         with patch("ii_agent.core.redis.client.redis_client", None):
             cache = create_entity_cache(namespace="test", ttl=60)
         assert isinstance(cache, MemoryEntityCache)
 
     def test_creates_redis_cache_when_redis_available(self):
         from ii_agent.core.redis.cache import create_entity_cache, RedisEntityCache
+
         mock_redis = MagicMock()
         with patch("ii_agent.core.redis.client.redis_client", mock_redis):
             cache = create_entity_cache(namespace="test", ttl=60)

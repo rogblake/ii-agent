@@ -8,7 +8,7 @@ from typing import Optional, Any, TYPE_CHECKING
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.settings import Settings
-from ii_agent.core.storage.client import storage
+from ii_agent.core.storage.client import get_storage
 from ii_agent.chat.types import TextContent
 from ii_agent.chat.application.file_processor import process_files_for_message
 from ii_agent.chat.vectorstore import get_openai_vector_store
@@ -46,7 +46,7 @@ class ChatFileProcessor:
             processed_files = await process_files_for_message(
                 db_session=db,
                 file_ids=user_message.file_ids,
-                storage=storage,
+                storage=get_storage(),
                 session_id=session_id,
             )
 

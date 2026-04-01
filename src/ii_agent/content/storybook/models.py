@@ -7,8 +7,8 @@ Models migrated from media/models.py:
 """
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, BigInteger, Text, ForeignKey, Index
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import BigInteger, ForeignKey, Index, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 import uuid
@@ -25,24 +25,19 @@ class Storybook(Base):
 
     __tablename__ = "storybooks"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
-    session_id: Mapped[str] = mapped_column(
-        String,
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="CASCADE")
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     version: Mapped[int] = mapped_column(BigInteger, default=1)
-    root_storybook_id: Mapped[Optional[str]] = mapped_column(
-        String,
+    root_storybook_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("storybooks.id", ondelete="SET NULL"),
         nullable=True
     )
-    parent_storybook_id: Mapped[Optional[str]] = mapped_column(
-        String,
+    parent_storybook_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("storybooks.id", ondelete="SET NULL"),
         nullable=True
     )
@@ -77,7 +72,7 @@ class Storybook(Base):
     )
     parent: Mapped[Optional["Storybook"]] = relationship(
         "Storybook",
-        remote_side=[id],
+        remote_side="Storybook.id",
         foreign_keys=[parent_storybook_id],
         back_populates="versions",
     )
@@ -100,24 +95,31 @@ class StorybookPageLink(Base):
 
     __tablename__ = "storybook_page_links"
 
-    storybook_id: Mapped[str] = mapped_column(
-        String,
+    # Override Base.id — this table uses a composite PK instead
+    id: Mapped[None] = None  # type: ignore[assignment]
+
+    storybook_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("storybooks.id", ondelete="CASCADE"),
-        primary_key=True
+        primary_key=True,
     )
-    page_id: Mapped[str] = mapped_column(
-        String,
+    page_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("storybook_pages.id", ondelete="CASCADE"),
-        primary_key=True
+        primary_key=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        TimestampColumn,
+        default=lambda: datetime.now(timezone.utc),
     )
 
     storybook: Mapped["Storybook"] = relationship(
         "Storybook",
-        back_populates="page_links"
+        back_populates="page_links",
     )
     page: Mapped["StorybookPage"] = relationship(
         "StorybookPage",
-        back_populates="storybook_links"
+        back_populates="storybook_links",
     )
 
     __table_args__ = (
@@ -131,11 +133,6 @@ class StorybookPage(Base):
 
     __tablename__ = "storybook_pages"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
     page_number: Mapped[int] = mapped_column(BigInteger, nullable=False)
     image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     html_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

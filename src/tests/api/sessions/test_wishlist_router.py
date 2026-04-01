@@ -7,9 +7,9 @@ pytestmark = pytest.mark.unit
 
 
 EXPECTED_ROUTES = {
-    ("GET", "/wishlist/sessions"),
-    ("POST", "/wishlist/sessions/{session_id}"),
-    ("DELETE", "/wishlist/sessions/{session_id}"),
+    ("GET", "/wishlist"),
+    ("POST", "/wishlist/{session_id}"),
+    ("DELETE", "/wishlist/{session_id}"),
 }
 
 

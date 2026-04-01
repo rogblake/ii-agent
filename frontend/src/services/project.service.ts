@@ -10,14 +10,14 @@ import {
 class ProjectService {
     async getSessionProject(sessionId: string): Promise<ProjectDetails> {
         const response = await axiosInstance.get<ProjectDetails>(
-            `/project/${sessionId}`
+            `/v1/project/${sessionId}`
         )
         return response.data
     }
 
     async getProjectSecrets(sessionId: string): Promise<ProjectSecretsResponse> {
         const response = await axiosInstance.get<ProjectSecretsResponse>(
-            `/project/${sessionId}/secrets`
+            `/v1/project/${sessionId}/secrets`
         )
         return response.data
     }
@@ -27,7 +27,7 @@ class ProjectService {
         secrets: Record<string, unknown>
     ): Promise<ProjectSecretsResponse> {
         const response = await axiosInstance.post<ProjectSecretsResponse>(
-            `/project/${sessionId}/secrets`,
+            `/v1/project/${sessionId}/secrets`,
             { secrets }
         )
         return response.data
@@ -37,7 +37,7 @@ class ProjectService {
         projectId: string
     ): Promise<ProjectDatabaseSchemaResponse> {
         const response = await axiosInstance.get<ProjectDatabaseSchemaResponse>(
-            `/project/${projectId}/database/schema`
+            `/v1/project/${projectId}/database/schema`
         )
         return response.data
     }
@@ -47,7 +47,7 @@ class ProjectService {
         params: { table: string; limit?: number; offset?: number }
     ): Promise<ProjectDatabaseRecordsResponse> {
         const response = await axiosInstance.get<ProjectDatabaseRecordsResponse>(
-            `/project/${projectId}/database/records`,
+            `/v1/project/${projectId}/database/records`,
             { params }
         )
         return response.data
@@ -57,7 +57,7 @@ class ProjectService {
         projectId: string
     ): Promise<ProjectDeploymentResponse> {
         const response = await axiosInstance.get<ProjectDeploymentResponse>(
-            `/project/${projectId}/deployment`
+            `/v1/project/${projectId}/deployment`
         )
         return response.data
     }

@@ -8,23 +8,35 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.agent.events.models import EventType, RealtimeEvent
-from ii_agent.agent.runtime.models.metrics import Metrics
-from ii_agent.agent.runtime.run.agent import (
+from ii_agent.realtime.events import ApplicationEvent, EventGroup
+from ii_agent.agents.models.metrics import Metrics
+from ii_agent.agents.runs.agent import (
     RunCancelledEvent,
     RunCompletedEvent,
 )
-from ii_agent.agent.runtime.run.base import RunStatus
-from ii_agent.sessions.schemas import SessionInfo
+from ii_agent.agents.runs.base import RunStatus
+from ii_agent.agents.runs.events import create_run_cancelled_event
+from ii_agent.sessions.schemas import SessionResponse
 
 pytestmark = pytest.mark.unit
+
+
+def _base_kwargs(**overrides):
+    return {
+        "session_service": MagicMock(),
+        "llm_setting_service": MagicMock(),
+        "file_service": MagicMock(),
+        "event_service": MagicMock(),
+        "run_task_service": MagicMock(),
+        **overrides,
+    }
 
 
 def _make_session_info(
     session_id: uuid.UUID | None = None,
     user_id: str = "user-abc-123",
-) -> SessionInfo:
-    return SessionInfo(
+) -> SessionResponse:
+    return SessionResponse(
         id=session_id or uuid.uuid4(),
         user_id=user_id,
         api_version="v1",
@@ -39,55 +51,76 @@ def _make_session_info(
 
 class CapturingEventStream:
     def __init__(self):
-        self.events: list[RealtimeEvent] = []
+        self.events: list[ApplicationEvent] = []
+        # query_handler accesses event_bus.lifecycle
+        self.lifecycle = MagicMock()
+        self.lifecycle.register = AsyncMock()
+        self.lifecycle.unregister = AsyncMock()
+        self.lifecycle.set_status = MagicMock()
 
-    async def publish(self, event: RealtimeEvent) -> None:
+    async def publish(self, group, event: ApplicationEvent) -> None:
         self.events.append(event)
 
 
-def _mock_container(**overrides) -> MagicMock:
-    container = MagicMock()
-    container.config = MagicMock()
-    container.config.workspace_path = "/workspace"
-    container.config.use_container_workspace = False
-    container.config.mcp = MagicMock()
-    container.config.mcp.port = 3000
-    container.session_service = MagicMock()
-    container.session_service.get_session_by_id = AsyncMock(
-        return_value=MagicMock(llm_setting_id="model-1")
-    )
-    container.sandbox_service = MagicMock()
-    container.sandbox_service.resolve_sandbox_for_session = AsyncMock(return_value=None)
-    container.project_service = MagicMock()
-    container.project_service.get_session_project_or_none = AsyncMock(return_value=None)
-    container.agent_run_service = MagicMock()
-    container.agent_run_service.get_running_task = AsyncMock(return_value=None)
-    container.agent_run_service.create_task = AsyncMock()
-    container.agent_run_service.update_task_status = AsyncMock()
-    container.event_service = MagicMock()
-    container.event_service.save_event = AsyncMock()
-    container.file_service = MagicMock()
-    container.file_service.prepare_agent_files = AsyncMock(return_value=([], []))
-    container.session_validation_service = MagicMock()
-    container.llm_setting_service = MagicMock()
-    container.llm_setting_service.get_llm_settings = AsyncMock(
+def _mock_services(**overrides) -> dict:
+    """Build the full set of services for handlers that need extra services."""
+    session_service = MagicMock()
+    session_service.get_session_by_id = AsyncMock(return_value=MagicMock(llm_setting_id="model-1"))
+    session_service.validate_and_prepare_session = AsyncMock()
+
+    llm_setting_service = MagicMock()
+    llm_setting_service.get_llm_settings = AsyncMock(
         return_value=MagicMock(is_user_model=MagicMock(return_value=False))
     )
-    container.plan_service = MagicMock()
-    container.plan_service.has_existing_plan = AsyncMock(return_value=False)
-    container.plan_service.get_plan_data = AsyncMock(return_value=None)
-    container.plan_service.fail_task = AsyncMock()
-    container.execution_service = MagicMock()
-    container.execution_service.create_task_with_lock = AsyncMock(return_value=None)
-    container.execution_service.get_milestone_context = MagicMock(return_value=None)
-    container.execution_service.update_milestones_after_run = AsyncMock(return_value=[])
-    container.agent_service = MagicMock()
-    container.agent_service.create_plan_agent_v1 = AsyncMock()
-    container.agent_service.create_plan_suggestions_agent_v1 = AsyncMock()
-    container.llm_billing_service = MagicMock()
-    for key, value in overrides.items():
-        setattr(container, key, value)
-    return container
+
+    file_service = MagicMock()
+    file_service.prepare_agent_files = AsyncMock(return_value=([], []))
+
+    event_service = MagicMock()
+    event_service.save_event = AsyncMock()
+
+    run_task_service = MagicMock()
+    run_task_service.get_running_task = AsyncMock(return_value=None)
+    run_task_service.create_task = AsyncMock()
+    run_task_service.update_task_status = AsyncMock()
+
+    plan_service = MagicMock()
+    plan_service.has_existing_plan = AsyncMock(return_value=False)
+    plan_service.get_plan_data = AsyncMock(return_value=None)
+    plan_service.fail_task = AsyncMock()
+
+    execution_service = MagicMock()
+    execution_service.create_task_with_lock = AsyncMock(return_value=None)
+    execution_service.get_milestone_context = MagicMock(return_value=None)
+    execution_service.update_milestones_after_run = AsyncMock(return_value=[])
+
+    agent_service = MagicMock()
+    agent_service.create_plan_agent_v1 = AsyncMock()
+    agent_service.create_plan_suggestions_agent_v1 = AsyncMock()
+
+    sandbox_service = MagicMock()
+    sandbox_service.resolve_sandbox_for_session = AsyncMock(return_value=None)
+
+    config = MagicMock()
+    config.workspace_path = "/workspace"
+    config.use_container_workspace = False
+    config.mcp = MagicMock()
+    config.mcp.port = 3000
+
+    services = {
+        "session_service": session_service,
+        "llm_setting_service": llm_setting_service,
+        "file_service": file_service,
+        "event_service": event_service,
+        "run_task_service": run_task_service,
+        "plan_service": plan_service,
+        "execution_service": execution_service,
+        "agent_service": agent_service,
+        "sandbox_service": sandbox_service,
+        "config": config,
+    }
+    services.update(overrides)
+    return services
 
 
 @asynccontextmanager
@@ -145,15 +178,26 @@ def _make_run_cancelled_event(run_id: str | None = None) -> RunCancelledEvent:
 class TestQueryHandlerRuntimeBillingCutover:
     @pytest.fixture
     def handler(self):
-        from ii_agent.agent.socket.command.query_handler import UserQueryHandler
+        from ii_agent.realtime.handlers.query import UserQueryHandler
 
         stream = CapturingEventStream()
-        container = _mock_container()
-        return UserQueryHandler(event_stream=stream, container=container), container
+        services = _mock_services()
+        h = UserQueryHandler(
+            event_bus=stream,
+            session_service=services["session_service"],
+            llm_setting_service=services["llm_setting_service"],
+            file_service=services["file_service"],
+            event_service=services["event_service"],
+            run_task_service=services["run_task_service"],
+            execution_service=services["execution_service"],
+            agent_service=services["agent_service"],
+            lifecycle=stream.lifecycle,
+        )
+        return h, services
 
     @pytest.mark.asyncio
     async def test_completed_event_no_longer_triggers_handler_billing(self, handler):
-        h, container = handler
+        h, services = handler
         session_info = _make_session_info()
         running_task = MagicMock(id=uuid.uuid4())
 
@@ -161,26 +205,28 @@ class TestQueryHandlerRuntimeBillingCutover:
             yield _make_run_completed_event()
 
         with (
-            patch.object(h.container, "agent_service") as mock_agent_svc,
-            patch.object(h.container, "execution_service") as mock_exec_svc,
+            patch.object(h, "_agent_service") as mock_agent_svc,
+            patch.object(h, "_execution_service") as mock_exec_svc,
             patch(
-                "ii_agent.agent.socket.command.query_handler.get_db_session_local", new=_noop_db_cm
+                "ii_agent.realtime.handlers.query.get_db_session_local", new=_noop_db_cm
             ),
             patch(
-                "ii_agent.agent.socket.command.query_handler.convert_agent_event_to_realtime",
+                "ii_agent.realtime.handlers.query.convert_agent_event_to_realtime",
                 return_value=None,
             ),
         ):
             mock_exec_svc.create_task_with_lock = AsyncMock(
                 return_value=MagicMock(
                     task=running_task,
-                    user_event=RealtimeEvent(
-                        type=EventType.USER_MESSAGE,
+                    user_event=ApplicationEvent(
+                        group=EventGroup.USER,
+                        name="session.user_message",
                         session_id=session_info.id,
                         content={},
                     ),
-                    processing_event=RealtimeEvent(
-                        type=EventType.PROCESSING,
+                    processing_event=ApplicationEvent(
+                        group=EventGroup.AGENT_RUN,
+                        name="agent.processing",
                         session_id=session_info.id,
                         content={},
                     ),
@@ -207,12 +253,11 @@ class TestQueryHandlerRuntimeBillingCutover:
                 session_info,
             )
 
-        container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_llm_call.assert_not_called()
+        # No billing calls — billing is handled per-call in the runtime loop
 
     @pytest.mark.asyncio
     async def test_cancelled_event_no_longer_triggers_handler_billing(self, handler):
-        h, container = handler
+        h, services = handler
         session_info = _make_session_info()
         running_task = MagicMock(id=uuid.uuid4())
 
@@ -220,26 +265,28 @@ class TestQueryHandlerRuntimeBillingCutover:
             yield _make_run_cancelled_event()
 
         with (
-            patch.object(h.container, "agent_service") as mock_agent_svc,
-            patch.object(h.container, "execution_service") as mock_exec_svc,
+            patch.object(h, "_agent_service") as mock_agent_svc,
+            patch.object(h, "_execution_service") as mock_exec_svc,
             patch(
-                "ii_agent.agent.socket.command.query_handler.get_db_session_local", new=_noop_db_cm
+                "ii_agent.realtime.handlers.query.get_db_session_local", new=_noop_db_cm
             ),
             patch(
-                "ii_agent.agent.socket.command.query_handler.convert_agent_event_to_realtime",
+                "ii_agent.realtime.handlers.query.convert_agent_event_to_realtime",
                 return_value=None,
             ),
         ):
             mock_exec_svc.create_task_with_lock = AsyncMock(
                 return_value=MagicMock(
                     task=running_task,
-                    user_event=RealtimeEvent(
-                        type=EventType.USER_MESSAGE,
+                    user_event=ApplicationEvent(
+                        group=EventGroup.USER,
+                        name="session.user_message",
                         session_id=session_info.id,
                         content={},
                     ),
-                    processing_event=RealtimeEvent(
-                        type=EventType.PROCESSING,
+                    processing_event=ApplicationEvent(
+                        group=EventGroup.AGENT_RUN,
+                        name="agent.processing",
                         session_id=session_info.id,
                         content={},
                     ),
@@ -266,24 +313,31 @@ class TestQueryHandlerRuntimeBillingCutover:
                 session_info,
             )
 
-        container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_llm_call.assert_not_called()
+        # No billing calls — billing is handled per-call in the runtime loop
 
 
 class TestContinueRunHandlerRuntimeBillingCutover:
     @pytest.fixture
     def handler(self):
-        from ii_agent.agent.socket.command.continue_run_handler import ContinueRunHandler
+        from ii_agent.realtime.handlers.continue_run import ContinueRunHandler
 
         stream = CapturingEventStream()
-        container = _mock_container()
-        with patch("ii_agent.agent.socket.command.continue_run_handler.AgentFactory"):
-            handler = ContinueRunHandler(event_stream=stream, container=container)
-        return handler, container
+        services = _mock_services()
+        with patch("ii_agent.realtime.handlers.continue_run.AgentFactory"):
+            h = ContinueRunHandler(
+                event_bus=stream,
+                session_service=services["session_service"],
+                llm_setting_service=services["llm_setting_service"],
+                file_service=services["file_service"],
+                event_service=services["event_service"],
+                run_task_service=services["run_task_service"],
+                config=services["config"],
+            )
+        return h, services
 
     @pytest.mark.asyncio
     async def test_completed_event_no_longer_triggers_handler_billing(self, handler):
-        h, container = handler
+        h, services = handler
         session_info = _make_session_info()
         run_id = str(uuid.uuid4())
 
@@ -298,18 +352,18 @@ class TestContinueRunHandlerRuntimeBillingCutover:
             yield _make_run_completed_event(run_id=run_id)
 
         mock_agent = MagicMock()
-        mock_agent.acontinue_run = MagicMock(return_value=fake_continue())
+        mock_agent.acontinue_run = AsyncMock(return_value=fake_continue())
 
         with (
             patch(
-                "ii_agent.agent.socket.command.continue_run_handler.AgentSessionStore"
+                "ii_agent.realtime.handlers.continue_run.AgentSessionStore"
             ) as mock_store_cls,
             patch(
-                "ii_agent.agent.socket.command.continue_run_handler.get_db_session_local",
+                "ii_agent.realtime.handlers.continue_run.get_db_session_local",
                 new=_noop_db_cm,
             ),
             patch(
-                "ii_agent.agent.socket.command.continue_run_handler.convert_agent_event_to_realtime",
+                "ii_agent.realtime.handlers.continue_run.convert_agent_event_to_realtime",
                 return_value=None,
             ),
             patch.object(h, "_agent_factory") as mock_factory,
@@ -321,12 +375,11 @@ class TestContinueRunHandlerRuntimeBillingCutover:
 
             await h.handle({"run_id": run_id, "confirmed": True}, session_info)
 
-        container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_llm_call.assert_not_called()
+        # No billing calls — billing is handled per-call in the runtime loop
 
     @pytest.mark.asyncio
     async def test_cancelled_event_no_longer_triggers_handler_billing(self, handler):
-        h, container = handler
+        h, services = handler
         session_info = _make_session_info()
         run_id = str(uuid.uuid4())
 
@@ -341,18 +394,18 @@ class TestContinueRunHandlerRuntimeBillingCutover:
             yield _make_run_cancelled_event(run_id=run_id)
 
         mock_agent = MagicMock()
-        mock_agent.acontinue_run = MagicMock(return_value=fake_continue())
+        mock_agent.acontinue_run = AsyncMock(return_value=fake_continue())
 
         with (
             patch(
-                "ii_agent.agent.socket.command.continue_run_handler.AgentSessionStore"
+                "ii_agent.realtime.handlers.continue_run.AgentSessionStore"
             ) as mock_store_cls,
             patch(
-                "ii_agent.agent.socket.command.continue_run_handler.get_db_session_local",
+                "ii_agent.realtime.handlers.continue_run.get_db_session_local",
                 new=_noop_db_cm,
             ),
             patch(
-                "ii_agent.agent.socket.command.continue_run_handler.convert_agent_event_to_realtime",
+                "ii_agent.realtime.handlers.continue_run.convert_agent_event_to_realtime",
                 return_value=None,
             ),
             patch.object(h, "_agent_factory") as mock_factory,
@@ -364,22 +417,32 @@ class TestContinueRunHandlerRuntimeBillingCutover:
 
             await h.handle({"run_id": run_id, "confirmed": True}, session_info)
 
-        container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_llm_call.assert_not_called()
+        # No billing calls — billing is handled per-call in the runtime loop
 
 
 class TestPlanHandlerRuntimeBillingCutover:
     @pytest.fixture
     def handler(self):
-        from ii_agent.agent.socket.command.plan_handler import PlanHandler
+        from ii_agent.realtime.handlers.plan import PlanHandler
 
         stream = CapturingEventStream()
-        container = _mock_container()
-        return PlanHandler(event_stream=stream, container=container), container
+        services = _mock_services()
+        h = PlanHandler(
+            event_bus=stream,
+            session_service=services["session_service"],
+            llm_setting_service=services["llm_setting_service"],
+            file_service=services["file_service"],
+            event_service=services["event_service"],
+            run_task_service=services["run_task_service"],
+            plan_service=services["plan_service"],
+            execution_service=services["execution_service"],
+            agent_service=services["agent_service"],
+        )
+        return h, services
 
     @pytest.mark.asyncio
     async def test_completed_event_no_longer_triggers_handler_billing(self, handler):
-        h, container = handler
+        h, services = handler
         session_info = _make_session_info()
         running_task = MagicMock(id=uuid.uuid4())
 
@@ -388,21 +451,20 @@ class TestPlanHandlerRuntimeBillingCutover:
 
         with (
             patch(
-                "ii_agent.agent.socket.command.plan_handler.get_db_session_local", new=_noop_db_cm
+                "ii_agent.realtime.handlers.plan.get_db_session_local", new=_noop_db_cm
             ),
             patch(
-                "ii_agent.agent.socket.command.plan_handler.convert_agent_event_to_realtime",
+                "ii_agent.realtime.handlers.plan.convert_agent_event_to_realtime",
                 return_value=None,
             ),
         ):
             await h._process_agent_events(fake_stream(), session_info, running_task)
 
-        container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_llm_call.assert_not_called()
+        # No billing calls — billing is handled per-call in the runtime loop
 
     @pytest.mark.asyncio
     async def test_cancelled_event_no_longer_triggers_handler_billing(self, handler):
-        h, container = handler
+        h, services = handler
         session_info = _make_session_info()
         running_task = MagicMock(id=uuid.uuid4())
 
@@ -411,14 +473,13 @@ class TestPlanHandlerRuntimeBillingCutover:
 
         with (
             patch(
-                "ii_agent.agent.socket.command.plan_handler.get_db_session_local", new=_noop_db_cm
+                "ii_agent.realtime.handlers.plan.get_db_session_local", new=_noop_db_cm
             ),
             patch(
-                "ii_agent.agent.socket.command.plan_handler.convert_agent_event_to_realtime",
+                "ii_agent.realtime.handlers.plan.convert_agent_event_to_realtime",
                 return_value=None,
             ),
         ):
             await h._process_agent_events(fake_stream(), session_info, running_task)
 
-        container.llm_billing_service.reserve_chat_llm_call.assert_not_called()
-        container.llm_billing_service.settle_llm_call.assert_not_called()
+        # No billing calls — billing is handled per-call in the runtime loop

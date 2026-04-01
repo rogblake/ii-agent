@@ -15,6 +15,7 @@ Covers deeper branches not tested by existing test files:
 - OpenAIChat.format_function_call_results
 - _format_file_for_message with URL file
 """
+
 from __future__ import annotations
 
 import copy
@@ -26,22 +27,23 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.agent.runtime.models.openai.responses import OpenAIResponses
-from ii_agent.agent.runtime.models.openai.completions import OpenAIChat, _format_file_for_message
-from ii_agent.agent.runtime.models.message import Message
-from ii_agent.agent.runtime.models.metrics import Metrics
-from ii_agent.agent.runtime.models.response import ModelResponse
-from ii_agent.agent.runtime.exceptions import (
+from ii_agent.agents.models.openai.responses import OpenAIResponses
+from ii_agent.agents.models.openai.completions import OpenAIChat, _format_file_for_message
+from ii_agent.agents.models.message import Message
+from ii_agent.agents.models.metrics import Metrics
+from ii_agent.agents.models.response import ModelResponse
+from ii_agent.agents.exceptions import (
     ModelAuthenticationError,
     ModelProviderError,
 )
-from ii_agent.agent.runtime.media.media import File, Audio, Image
-from ii_agent.agent.types import Provider
+from ii_agent.files.media import File, Audio, Image
+from ii_agent.agents.types import Provider
 
 
 # ---------------------------------------------------------------------------
 # Helpers for OpenAIResponses
 # ---------------------------------------------------------------------------
+
 
 def _make_openai_responses(**kwargs) -> OpenAIResponses:
     m = OpenAIResponses(**kwargs)
@@ -90,6 +92,7 @@ def _make_api_response(outputs, usage=None, response_id="resp_123", error=None, 
 # Helpers for OpenAIChat
 # ---------------------------------------------------------------------------
 
+
 def _make_oai_chat(**kwargs) -> OpenAIChat:
     m = OpenAIChat(**kwargs)
     mock_async = MagicMock()
@@ -117,8 +120,14 @@ def _make_chat_usage(prompt=10, completion=20, total=30, reasoning=0):
     return u
 
 
-def _make_choice(finish_reason="stop", message_content="Hi", tool_calls=None,
-                 reasoning_content=None, audio_output=None, role="assistant"):
+def _make_choice(
+    finish_reason="stop",
+    message_content="Hi",
+    tool_calls=None,
+    reasoning_content=None,
+    audio_output=None,
+    role="assistant",
+):
     choice = MagicMock()
     choice.finish_reason = finish_reason
     msg = MagicMock()
@@ -148,6 +157,7 @@ def _make_completion(choices, usage=None, model="gpt-4o", completion_id="cmpl_12
 # ---------------------------------------------------------------------------
 # OpenAIResponses._format_messages() deeper paths
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIResponsesFormatMessagesDeep:
     def test_user_message_with_images(self):
@@ -192,6 +202,7 @@ class TestOpenAIResponsesFormatMessagesDeep:
 
     def test_user_message_with_files(self):
         from pathlib import Path
+
         m = _make_openai_responses(api_key="key")
         f = File(filepath=Path("/tmp/doc.pdf"))
         msgs = [Message(role="user", content="See doc", files=[f])]
@@ -227,6 +238,7 @@ class TestOpenAIResponsesFormatMessagesDeep:
 # OpenAIResponses._parse_provider_response() deeper paths
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIResponsesParseProviderResponseDeep:
     def test_empty_output_returns_response_with_role(self):
         m = _make_openai_responses(api_key="key")
@@ -241,7 +253,9 @@ class TestOpenAIResponsesParseProviderResponseDeep:
         annotation.file_id = "file_123"
         annotation.filename = "document.pdf"
         annotation.model_dump = MagicMock(return_value={"type": "file_citation"})
-        content_item = _make_response_output("output_text", text="Cited from file", annotations=[annotation])
+        content_item = _make_response_output(
+            "output_text", text="Cited from file", annotations=[annotation]
+        )
         msg_output = _make_response_output("message", content=[content_item])
         resp = _make_api_response([msg_output], output_text="Cited from file")
         # Should not crash, file citation doesn't add to URL citations
@@ -277,7 +291,9 @@ class TestOpenAIResponsesParseProviderResponseDeep:
         ann2.url = "https://source2.com"
         ann2.title = "Source 2"
         ann2.model_dump = MagicMock(return_value={"type": "url_citation"})
-        content_item = _make_response_output("output_text", text="Multiple citations", annotations=[ann1, ann2])
+        content_item = _make_response_output(
+            "output_text", text="Multiple citations", annotations=[ann1, ann2]
+        )
         msg_output = _make_response_output("message", content=[content_item])
         resp = _make_api_response([msg_output], output_text="Multiple citations")
         mr = m._parse_provider_response(resp)
@@ -288,6 +304,7 @@ class TestOpenAIResponsesParseProviderResponseDeep:
 # ---------------------------------------------------------------------------
 # OpenAIResponses._parse_provider_response_delta() deeper paths
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIResponsesParseProviderResponseDeltaDeep:
     def _make_event(self, type_, **fields):
@@ -348,6 +365,7 @@ class TestOpenAIResponsesParseProviderResponseDeltaDeep:
 # OpenAIResponses ainvoke_stream() tests
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIResponsesAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_happy_path(self):
@@ -387,6 +405,7 @@ class TestOpenAIResponsesAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_api_status_error_raises(self):
         from openai import APIStatusError
+
         m = _make_openai_responses(api_key="key")
 
         err = MagicMock(spec=APIStatusError)
@@ -404,10 +423,9 @@ class TestOpenAIResponsesAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_httpcore_error_raises(self):
         import httpcore
+
         m = _make_openai_responses(api_key="key")
-        m.async_client.responses.create = AsyncMock(
-            side_effect=httpcore.ReadError("read error")
-        )
+        m.async_client.responses.create = AsyncMock(side_effect=httpcore.ReadError("read error"))
         msgs = [Message(role="user", content="hi")]
         assistant = Message(role="assistant", content="")
         with pytest.raises(ModelProviderError):
@@ -418,6 +436,7 @@ class TestOpenAIResponsesAinvokeStream:
 # ---------------------------------------------------------------------------
 # OpenAIResponses deepcopy tests
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIResponsesDeepcopy:
     def test_deepcopy_clears_client(self):
@@ -449,6 +468,7 @@ class TestOpenAIResponsesDeepcopy:
 # ---------------------------------------------------------------------------
 # OpenAIChat._format_message() deeper paths
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIChatFormatMessageDeep:
     def test_message_with_audio_output(self):
@@ -507,6 +527,7 @@ class TestOpenAIChatFormatMessageDeep:
 # OpenAIChat._parse_provider_response() deeper paths
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIChatParseProviderResponseDeep:
     def test_audio_output_in_response(self):
         m = _make_oai_chat(api_key="key")
@@ -562,6 +583,7 @@ class TestOpenAIChatParseProviderResponseDeep:
 # OpenAIChat ainvoke_stream() tests
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIChatAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_happy_path(self):
@@ -616,6 +638,7 @@ class TestOpenAIChatAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_rate_limit_raises(self):
         from openai import RateLimitError
+
         m = _make_oai_chat(api_key="key")
         err = MagicMock(spec=RateLimitError)
         err.__class__ = RateLimitError
@@ -632,6 +655,7 @@ class TestOpenAIChatAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_api_connection_error_raises(self):
         from openai import APIConnectionError
+
         m = _make_oai_chat(api_key="key")
         err = MagicMock(spec=APIConnectionError)
         err.__class__ = APIConnectionError
@@ -660,6 +684,7 @@ class TestOpenAIChatAinvokeStream:
 # ---------------------------------------------------------------------------
 # OpenAIChat deepcopy tests
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIChatDeepcopy:
     def test_deepcopy_clears_client(self):
@@ -692,10 +717,16 @@ class TestOpenAIChatDeepcopy:
 # OpenAIChat.create_function_call_result tests
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIChatCreateFunctionCallResult:
     def _make_fc(self, name: str, call_id: str, args: dict):
-        from ii_agent.agent.runtime.tools.function import FunctionCall, Function
-        fn = Function(name=name, description=f"{name} function", parameters={"type": "object", "properties": {}})
+        from ii_agent.agents.tools.function import FunctionCall, Function
+
+        fn = Function(
+            name=name,
+            description=f"{name} function",
+            parameters={"type": "object", "properties": {}},
+        )
         return FunctionCall(function=fn, call_id=call_id, arguments=args)
 
     def test_successful_function_call_result(self):
@@ -735,10 +766,12 @@ class TestOpenAIChatCreateFunctionCallResult:
 # _format_file_for_message deeper paths
 # ---------------------------------------------------------------------------
 
+
 class TestFormatFileForMessageDeep:
     def test_file_with_url(self):
         # URL files should attempt fetch - mock the HTTP call
         import httpx
+
         file = File(url="https://example.com/doc.pdf")
         mock_response = MagicMock(spec=httpx.Response)
         mock_response.content = b"PDF content from URL"
@@ -765,6 +798,7 @@ class TestFormatFileForMessageDeep:
 # ---------------------------------------------------------------------------
 # OpenAIChat.get_request_params() deeper paths
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIChatGetRequestParamsDeep:
     def test_response_format_pydantic_model_does_not_crash(self):
@@ -817,6 +851,7 @@ class TestOpenAIChatGetRequestParamsDeep:
 # OpenAIResponses get_request_params() deeper paths
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIResponsesGetRequestParamsDeep:
     def test_reasoning_effort_with_none_effort(self):
         m = _make_openai_responses(api_key="key", id="o3-mini")
@@ -842,7 +877,11 @@ class TestOpenAIResponsesGetRequestParamsDeep:
             {"type": "web_search_preview"},
             {
                 "type": "function",
-                "function": {"name": "search", "description": "desc", "parameters": {"type": "object", "properties": {}}},
+                "function": {
+                    "name": "search",
+                    "description": "desc",
+                    "parameters": {"type": "object", "properties": {}},
+                },
             },
         ]
         params = m.get_request_params(tools=tools)

@@ -323,7 +323,9 @@ class TestValidateInlineImageSizes:
             id=_uuid_mod.uuid4(),
             session_id=_SESSION_ID,
             role=MessageRole.USER,
-            parts=[BinaryContent(data=large_data, mime_type="application/pdf", path="/tmp/big.pdf")],
+            parts=[
+                BinaryContent(data=large_data, mime_type="application/pdf", path="/tmp/big.pdf")
+            ],
         )
         provider._validate_inline_image_sizes([msg])  # Should not raise
 
@@ -410,9 +412,7 @@ class TestPrepareRequestParams:
     def test_skills_betas_added_when_has_skills(self):
         provider = self._make_provider()
         anthropic_options = {
-            "container": {
-                "skills": [{"type": "anthropic", "skill_id": "pdf", "version": "latest"}]
-            }
+            "container": {"skills": [{"type": "anthropic", "skill_id": "pdf", "version": "latest"}]}
         }
         # When has_skills=True, tools must be provided (even empty) to avoid
         # TypeError in _convert_tools (source bug: iterating over None)

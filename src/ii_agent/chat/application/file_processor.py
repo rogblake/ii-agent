@@ -9,9 +9,9 @@ from urllib.parse import urlparse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from ii_agent.files.models import FileUpload
+from ii_agent.files.models import FileAsset
 from ii_agent.chat.types import BinaryContent, TextContent
-from ii_agent.core.storage.client import media_storage
+from ii_agent.core.storage.client import get_storage
 from ii_agent.core.config.llm_config import APITypes
 from ii_agent.core.logger import logger
 
@@ -218,7 +218,7 @@ def compress_image_for_provider(
 
     # Detect HEIC via magic bytes when MIME type doesn't indicate it
     # (e.g. application/octet-stream or missing MIME type)
-    from ii_agent.agent.runtime.utils.heic import is_heic_format
+    from ii_agent.agents.utils.heic import is_heic_format
 
     is_heic = is_heic_format(mime_type=mime_type, image_bytes=file_bytes)
     if is_heic and mime_type not in ("image/heic", "image/heif"):
@@ -356,7 +356,7 @@ async def process_files_for_message(
     logger.info(f"[FILE_PROCESSOR] session={session_id}: Processing {len(file_ids)} files")
 
     # Load all files in one query
-    stmt = select(FileUpload).where(FileUpload.id.in_(file_ids))
+    stmt = select(FileAsset).where(FileAsset.id.in_(file_ids))
     result = await db_session.execute(stmt)
     file_uploads = result.scalars().all()
 
@@ -410,15 +410,9 @@ async def process_files_for_message(
                             or "application/octet-stream"
                         )
                 else:
-                    # Generated images from sessions/ path use media_storage (public bucket)
-                    # User uploaded files use storage (private bucket)
-                    storage_client = (
-                        media_storage
-                        if file_upload.storage_path.startswith("sessions/")
-                        else storage
-                    )
+                    # All files use unified storage
                     file_content = await anyio.to_thread.run_sync(
-                        storage_client.read, file_upload.storage_path
+                        get_storage().read, file_upload.storage_path
                     )
                     file_bytes = file_content.read()
                     file_content.close()
@@ -426,7 +420,7 @@ async def process_files_for_message(
 
                 # Correct generic MIME types for images detected by extension or magic bytes
                 if not mime_type or mime_type == "application/octet-stream":
-                    from ii_agent.agent.runtime.utils.heic import is_heic_format as _is_heic
+                    from ii_agent.agents.utils.heic import is_heic_format as _is_heic
 
                     if file_bytes and _is_heic(image_bytes=file_bytes):
                         mime_type = "image/heic"
@@ -557,13 +551,9 @@ async def process_files_for_message(
             try:
                 import anyio
 
-                # Generated images from sessions/ path use media_storage (public bucket)
-                # User uploaded files use storage (private bucket)
-                storage_client = (
-                    media_storage if file_upload.storage_path.startswith("sessions/") else storage
-                )
+                # All files use unified storage
                 file_content = await anyio.to_thread.run_sync(
-                    storage_client.read, file_upload.storage_path
+                    get_storage().read, file_upload.storage_path
                 )
 
                 # Extract text using ContentExtractorFactory

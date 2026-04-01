@@ -1,7 +1,7 @@
 import asyncio
 
 from ii_agent.workers.celery import tasks
-from ii_agent.billing.credits.utils import usd_to_credits
+from ii_agent.billing.utils import usd_to_credits
 
 
 def test_get_celery_loop_reuses_single_loop(monkeypatch):

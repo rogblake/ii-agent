@@ -78,7 +78,9 @@ def _make_provider(**kwargs):
         return AnthropicProvider(config)
 
 
-def _make_message(role: MessageRole, parts: List[Any] = None, file_ids: List[str] = None) -> Message:
+def _make_message(
+    role: MessageRole, parts: List[Any] = None, file_ids: List[str] = None
+) -> Message:
     return Message(
         id=uuid.uuid4(),
         session_id=_SESSION_ID,
@@ -130,7 +132,11 @@ class TestGroupIntoBlocksDeep:
         assert len(blocks[0].messages) == 2
 
     def test_complex_conversation_blocking(self):
-        from ii_agent.chat.llm.anthropic.prompt_converter import group_into_blocks, UserBlock, AssistantBlock
+        from ii_agent.chat.llm.anthropic.prompt_converter import (
+            group_into_blocks,
+            UserBlock,
+            AssistantBlock,
+        )
 
         tool_msg = _tool_result_message("c1", "tool", TextResultContent(value="result"))
         msgs = [
@@ -165,9 +171,11 @@ class TestConvertToolResultContentDeep:
         result = ToolResult(
             tool_call_id="c1",
             name="tool",
-            output=ArrayResultContent(value=[
-                FileDataContentPart(mime_type="text/csv", data="csvdata", filename="data.csv")
-            ]),
+            output=ArrayResultContent(
+                value=[
+                    FileDataContentPart(mime_type="text/csv", data="csvdata", filename="data.csv")
+                ]
+            ),
         )
         content, is_error = convert_tool_result_content(result)
         # Non-PDF files are skipped - content_parts should be empty, fallback to "No content"
@@ -199,7 +207,9 @@ class TestConvertToolResultContentDeep:
         from ii_agent.chat.llm.anthropic.prompt_converter import convert_tool_result_content
         from ii_agent.chat.types import StorybookPageResult
 
-        page = StorybookPageResult(page_number=1, image_url="https://example.com/img.png", text_content="Once upon a time")
+        page = StorybookPageResult(
+            page_number=1, image_url="https://example.com/img.png", text_content="Once upon a time"
+        )
         result = ToolResult(
             tool_call_id="c1",
             name="tool",
@@ -232,7 +242,9 @@ class TestConvertToAnthropicMessagesDeep:
         """BinaryContent with text/plain mime should become document block."""
         from ii_agent.chat.llm.anthropic.prompt_converter import convert_to_anthropic_messages
 
-        binary = BinaryContent(data=b"plain text content", mime_type="text/plain", path="/tmp/file.txt")
+        binary = BinaryContent(
+            data=b"plain text content", mime_type="text/plain", path="/tmp/file.txt"
+        )
         msg = _make_message(MessageRole.USER, [binary])
         _, anthropic_msgs, _ = convert_to_anthropic_messages([msg], "sys")
         content = anthropic_msgs[0]["content"]
@@ -284,12 +296,14 @@ class TestConvertToAnthropicMessagesDeep:
         code_result = ToolResult(
             tool_call_id="exec_1",
             name="code_execution",
-            output=JsonResultContent(value={
-                "type": "code_execution_result",
-                "stdout": "Hello World",
-                "stderr": "",
-                "return_code": 0,
-            }),
+            output=JsonResultContent(
+                value={
+                    "type": "code_execution_result",
+                    "stdout": "Hello World",
+                    "stderr": "",
+                    "return_code": 0,
+                }
+            ),
         )
         tool_msg = _make_message(MessageRole.TOOL, [code_result])
         msgs = [_user_message(), tool_msg]
@@ -308,11 +322,13 @@ class TestConvertToAnthropicMessagesDeep:
         bash_result = ToolResult(
             tool_call_id="bash_1",
             name="code_execution",
-            output=JsonResultContent(value={
-                "type": "bash_code_execution_result",
-                "stdout": "ls output",
-                "exit_code": 0,
-            }),
+            output=JsonResultContent(
+                value={
+                    "type": "bash_code_execution_result",
+                    "stdout": "ls output",
+                    "exit_code": 0,
+                }
+            ),
         )
         tool_msg = _make_message(MessageRole.TOOL, [bash_result])
         msgs = [_user_message(), tool_msg]
@@ -329,17 +345,21 @@ class TestConvertToAnthropicMessagesDeep:
         te_result = ToolResult(
             tool_call_id="te_1",
             name="code_execution",
-            output=JsonResultContent(value={
-                "type": "text_editor_code_execution_result",
-                "content": "file written",
-            }),
+            output=JsonResultContent(
+                value={
+                    "type": "text_editor_code_execution_result",
+                    "content": "file written",
+                }
+            ),
         )
         tool_msg = _make_message(MessageRole.TOOL, [te_result])
         msgs = [_user_message(), tool_msg]
         _, anthropic_msgs, _ = convert_to_anthropic_messages(msgs, "sys", enable_caching=False)
 
         combined = anthropic_msgs[0]["content"]
-        te_blocks = [b for b in combined if b.get("type") == "text_editor_code_execution_tool_result"]
+        te_blocks = [
+            b for b in combined if b.get("type") == "text_editor_code_execution_tool_result"
+        ]
         assert len(te_blocks) == 1
 
     def test_tool_result_unknown_code_execution_type_fallback(self):
@@ -349,10 +369,12 @@ class TestConvertToAnthropicMessagesDeep:
         unknown_result = ToolResult(
             tool_call_id="unk_1",
             name="code_execution",
-            output=JsonResultContent(value={
-                "type": "unknown_execution_type",
-                "data": "something",
-            }),
+            output=JsonResultContent(
+                value={
+                    "type": "unknown_execution_type",
+                    "data": "something",
+                }
+            ),
         )
         tool_msg = _make_message(MessageRole.TOOL, [unknown_result])
         msgs = [_user_message(), tool_msg]
@@ -439,9 +461,7 @@ class TestConvertToAnthropicMessagesDeep:
         msg = _make_message(
             MessageRole.USER, [TextContent(text="see this text")], file_ids=["txt-id"]
         )
-        _, anthropic_msgs, _ = convert_to_anthropic_messages(
-            [msg], "sys", provider_files=[pf]
-        )
+        _, anthropic_msgs, _ = convert_to_anthropic_messages([msg], "sys", provider_files=[pf])
         content = anthropic_msgs[0]["content"]
         docs = [c for c in content if c.get("type") == "document"]
         assert len(docs) == 1
@@ -468,9 +488,13 @@ class TestAnthropicProviderSendDeep:
         mock_response.usage.cache_creation_input_tokens = 0
         mock_response.usage.cache_read_input_tokens = 0
 
-        with patch("ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages") as mock_conv:
+        with patch(
+            "ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages"
+        ) as mock_conv:
             mock_conv.return_value = ("system", [], [])
-            with patch.object(provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)):
+            with patch.object(
+                provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)
+            ):
                 result = await provider.send(messages=[_user_message()])
 
         assert result.finish_reason == FinishReason.END_TURN
@@ -488,9 +512,13 @@ class TestAnthropicProviderSendDeep:
         mock_response.usage.cache_creation_input_tokens = 0
         mock_response.usage.cache_read_input_tokens = 0
 
-        with patch("ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages") as mock_conv:
+        with patch(
+            "ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages"
+        ) as mock_conv:
             mock_conv.return_value = ("system", [], [])
-            with patch.object(provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)):
+            with patch.object(
+                provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)
+            ):
                 result = await provider.send(messages=[_user_message()])
 
         assert result.finish_reason == FinishReason.MAX_TOKENS
@@ -508,9 +536,13 @@ class TestAnthropicProviderSendDeep:
         mock_response.usage.cache_creation_input_tokens = 0
         mock_response.usage.cache_read_input_tokens = 0
 
-        with patch("ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages") as mock_conv:
+        with patch(
+            "ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages"
+        ) as mock_conv:
             mock_conv.return_value = ("system", [], [])
-            with patch.object(provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)):
+            with patch.object(
+                provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)
+            ):
                 result = await provider.send(messages=[_user_message()])
 
         assert result.finish_reason == FinishReason.TOOL_USE
@@ -528,9 +560,13 @@ class TestAnthropicProviderSendDeep:
         mock_response.usage.cache_creation_input_tokens = 0
         mock_response.usage.cache_read_input_tokens = 0
 
-        with patch("ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages") as mock_conv:
+        with patch(
+            "ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages"
+        ) as mock_conv:
             mock_conv.return_value = ("system", [], [])
-            with patch.object(provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)):
+            with patch.object(
+                provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)
+            ):
                 result = await provider.send(messages=[_user_message()])
 
         assert result.finish_reason == FinishReason.PAUSE_TURN
@@ -548,9 +584,13 @@ class TestAnthropicProviderSendDeep:
         mock_response.usage.cache_creation_input_tokens = 0
         mock_response.usage.cache_read_input_tokens = 0
 
-        with patch("ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages") as mock_conv:
+        with patch(
+            "ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages"
+        ) as mock_conv:
             mock_conv.return_value = ("system", [], [])
-            with patch.object(provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)):
+            with patch.object(
+                provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)
+            ):
                 result = await provider.send(messages=[_user_message()])
 
         assert result.finish_reason == FinishReason.UNKNOWN
@@ -568,9 +608,13 @@ class TestAnthropicProviderSendDeep:
         mock_response.usage.cache_creation_input_tokens = 0
         mock_response.usage.cache_read_input_tokens = 0
 
-        with patch("ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages") as mock_conv:
+        with patch(
+            "ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages"
+        ) as mock_conv:
             mock_conv.return_value = ("system", [], [])
-            with patch.object(provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)):
+            with patch.object(
+                provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)
+            ):
                 result = await provider.send(messages=[_user_message()])
 
         assert result.finish_reason == FinishReason.END_TURN
@@ -589,9 +633,13 @@ class TestAnthropicProviderSendDeep:
         mock_response.usage.cache_creation_input_tokens = 200
         mock_response.usage.cache_read_input_tokens = 300
 
-        with patch("ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages") as mock_conv:
+        with patch(
+            "ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages"
+        ) as mock_conv:
             mock_conv.return_value = ("system", [], [])
-            with patch.object(provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)):
+            with patch.object(
+                provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)
+            ):
                 result = await provider.send(messages=[_user_message()])
 
         assert result.usage.cache_write_tokens == 200
@@ -628,9 +676,13 @@ class TestAnthropicProviderSendDeep:
 
         provider.upload_files = fake_upload
 
-        with patch("ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages") as mock_conv:
+        with patch(
+            "ii_agent.chat.llm.anthropic.provider.convert_to_anthropic_messages"
+        ) as mock_conv:
             mock_conv.return_value = ("system", [], [])
-            with patch.object(provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)):
+            with patch.object(
+                provider.client.beta.messages, "create", new=AsyncMock(return_value=mock_response)
+            ):
                 await provider.send(
                     messages=[user_msg_with_files, asst_msg, _user_message("Follow up")],
                     session_id=_SESSION_ID,
@@ -676,7 +728,9 @@ class TestAnthropicProviderStreamDeep:
 
         with patch.object(anthropic, "AsyncAnthropic", _FakeAsyncAnthropic):
             provider = AnthropicProvider(_make_llm_config())
-            with patch.object(provider, "_prepare_request_params", return_value=({}, [])) as mock_prepare:
+            with patch.object(
+                provider, "_prepare_request_params", return_value=({}, [])
+            ) as mock_prepare:
                 provider_options = {"anthropic": {"max_tokens": 321}}
                 events = [
                     event
@@ -700,9 +754,7 @@ class TestAnthropicProviderPrepareRequestParamsDeep:
         """When has_skills=True, should add all skill-related betas."""
         provider = _make_provider()
         anthropic_options = {
-            "container": {
-                "skills": [{"type": "anthropic", "skill_id": "pdf", "version": "latest"}]
-            }
+            "container": {"skills": [{"type": "anthropic", "skill_id": "pdf", "version": "latest"}]}
         }
         params, betas = provider._prepare_request_params(
             [_user_message()],
@@ -716,10 +768,12 @@ class TestAnthropicProviderPrepareRequestParamsDeep:
     def test_thinking_with_tools_adds_interleaved_thinking_beta(self):
         """Extended thinking with tools should add interleaved-thinking beta."""
         provider = _make_provider(thinking_tokens=2048)
-        tools = [{
-            "type": "function",
-            "function": {"name": "search", "description": "search", "parameters": {}}
-        }]
+        tools = [
+            {
+                "type": "function",
+                "function": {"name": "search", "description": "search", "parameters": {}},
+            }
+        ]
         params, betas = provider._prepare_request_params([_user_message()], tools=tools)
         assert "interleaved-thinking-2025-05-14" in betas
         assert "thinking" in params
@@ -735,10 +789,9 @@ class TestAnthropicProviderPrepareRequestParamsDeep:
     def test_temperature_not_set_when_thinking_enabled_with_tools(self):
         """Temperature should not be set when extended thinking is active."""
         provider = _make_provider(temperature=0.7, thinking_tokens=2048)
-        tools = [{
-            "type": "function",
-            "function": {"name": "tool", "description": "d", "parameters": {}}
-        }]
+        tools = [
+            {"type": "function", "function": {"name": "tool", "description": "d", "parameters": {}}}
+        ]
         params, _ = provider._prepare_request_params([_user_message()], tools=tools)
         assert "temperature" not in params
 
@@ -748,7 +801,7 @@ class TestAnthropicProviderPrepareRequestParamsDeep:
         anthropic_options = {
             "container": {
                 "id": "container-xyz",
-                "skills": [{"type": "anthropic", "skill_id": "pdf", "version": "latest"}]
+                "skills": [{"type": "anthropic", "skill_id": "pdf", "version": "latest"}],
             }
         }
         params, _ = provider._prepare_request_params(
@@ -1039,10 +1092,16 @@ class TestConvertToolsAnthropicDeep:
         """Tool's input_schema should match the function's parameters."""
         provider = _make_provider()
         params = {"type": "object", "properties": {"q": {"type": "string"}}, "required": ["q"]}
-        tools = [{
-            "type": "function",
-            "function": {"name": "search", "description": "search the web", "parameters": params},
-        }]
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "search",
+                    "description": "search the web",
+                    "parameters": params,
+                },
+            }
+        ]
         result = provider._convert_tools(tools)
         assert result[0]["input_schema"] == params
 

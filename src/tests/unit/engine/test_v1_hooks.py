@@ -1,4 +1,4 @@
-"""Unit tests for ii_agent.agent.runtime.hooks.decorator module.
+"""Unit tests for ii_agent.agents.hooks.decorator module.
 
 Tests cover:
 - _is_async_function() helper for sync/async/wrapped functions
@@ -19,8 +19,8 @@ from inspect import iscoroutinefunction
 
 import pytest
 
-from ii_agent.agent.runtime.hooks.decorator import _is_async_function
-import ii_agent.agent.runtime.hooks.decorator as decorator_module
+from ii_agent.agents.hooks.decorator import _is_async_function
+import ii_agent.agents.hooks.decorator as decorator_module
 
 
 # ---------------------------------------------------------------------------
@@ -135,7 +135,7 @@ class TestIsAsyncFunction:
 class TestHookDecoratorBare:
     def test_bare_hook_wraps_sync_function(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook
             def my_sync_hook():
@@ -145,7 +145,7 @@ class TestHookDecoratorBare:
 
     def test_bare_hook_preserves_function_name(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook
             def named_hook():
@@ -155,7 +155,7 @@ class TestHookDecoratorBare:
 
     def test_bare_hook_sets_run_in_background_false(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook
             def my_hook():
@@ -165,7 +165,7 @@ class TestHookDecoratorBare:
 
     def test_bare_hook_on_async_function_returns_coroutine(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook
             async def my_async_hook():
@@ -176,7 +176,7 @@ class TestHookDecoratorBare:
 
     def test_bare_hook_async_function_is_awaitable(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook
             async def my_async_hook():
@@ -187,7 +187,7 @@ class TestHookDecoratorBare:
 
     def test_bare_hook_passes_args_through(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook
             def my_hook(x, y):
@@ -197,7 +197,7 @@ class TestHookDecoratorBare:
 
     def test_bare_hook_passes_kwargs_through(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook
             def my_hook(*, message="default"):
@@ -207,7 +207,7 @@ class TestHookDecoratorBare:
 
     def test_bare_hook_wrapped_attribute_set(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook
             def my_hook():
@@ -225,7 +225,7 @@ class TestHookDecoratorBare:
 class TestHookDecoratorWithParens:
     def test_hook_with_empty_parens_wraps_sync_function(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook()
             def my_hook():
@@ -235,7 +235,7 @@ class TestHookDecoratorWithParens:
 
     def test_hook_with_parens_sets_run_in_background_false(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook()
             def my_hook():
@@ -245,7 +245,7 @@ class TestHookDecoratorWithParens:
 
     def test_hook_with_parens_preserves_function_name(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook()
             def named_hook():
@@ -255,7 +255,7 @@ class TestHookDecoratorWithParens:
 
     def test_hook_with_parens_async_function(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook()
             async def my_async_hook():
@@ -265,7 +265,7 @@ class TestHookDecoratorWithParens:
 
     def test_hook_with_parens_async_runs_correctly(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook()
             async def my_async_hook():
@@ -276,7 +276,7 @@ class TestHookDecoratorWithParens:
 
     def test_hook_with_parens_passes_args_through(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook()
             def my_hook(a, b, c=0):
@@ -293,7 +293,7 @@ class TestHookDecoratorWithParens:
 class TestHookDecoratorRunInBackground:
     def test_run_in_background_true_sets_attribute(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook(run_in_background=True)
             def bg_hook():
@@ -303,7 +303,7 @@ class TestHookDecoratorRunInBackground:
 
     def test_run_in_background_false_sets_attribute(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook(run_in_background=False)
             def fg_hook():
@@ -313,7 +313,7 @@ class TestHookDecoratorRunInBackground:
 
     def test_run_in_background_true_sync_function_still_callable(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook(run_in_background=True)
             def bg_hook(x):
@@ -323,7 +323,7 @@ class TestHookDecoratorRunInBackground:
 
     def test_run_in_background_true_async_function_still_awaitable(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook(run_in_background=True)
             async def bg_async_hook():
@@ -335,7 +335,7 @@ class TestHookDecoratorRunInBackground:
 
     def test_run_in_background_true_preserves_function_name(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook(run_in_background=True)
             def my_bg_hook():
@@ -346,7 +346,7 @@ class TestHookDecoratorRunInBackground:
     def test_stacking_hooks_or_logic_preserves_true(self):
         """When inner decorator sets run_in_background=True, outer with False keeps True."""
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook(run_in_background=False)
             @hook(run_in_background=True)
@@ -358,7 +358,7 @@ class TestHookDecoratorRunInBackground:
 
     def test_stacking_hooks_false_on_false_stays_false(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook(run_in_background=False)
             @hook(run_in_background=False)
@@ -369,7 +369,7 @@ class TestHookDecoratorRunInBackground:
 
     def test_run_in_background_true_preserves_wrapped_attribute(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             @hook(run_in_background=True)
             def my_hook():
@@ -386,7 +386,7 @@ class TestHookDecoratorRunInBackground:
 class TestShouldRunInBackground:
     def test_undecorated_function_returns_false(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import should_run_in_background
+            from ii_agent.agents.hooks.decorator import should_run_in_background
 
             def plain_func():
                 pass
@@ -395,7 +395,7 @@ class TestShouldRunInBackground:
 
     def test_decorated_with_run_in_background_true_returns_true(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook, should_run_in_background
+            from ii_agent.agents.hooks.decorator import hook, should_run_in_background
 
             @hook(run_in_background=True)
             def bg_hook():
@@ -405,7 +405,7 @@ class TestShouldRunInBackground:
 
     def test_decorated_with_run_in_background_false_returns_false(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook, should_run_in_background
+            from ii_agent.agents.hooks.decorator import hook, should_run_in_background
 
             @hook(run_in_background=False)
             def fg_hook():
@@ -415,7 +415,7 @@ class TestShouldRunInBackground:
 
     def test_bare_hook_returns_false(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook, should_run_in_background
+            from ii_agent.agents.hooks.decorator import hook, should_run_in_background
 
             @hook
             def bare_hook():
@@ -425,7 +425,7 @@ class TestShouldRunInBackground:
 
     def test_hook_with_empty_parens_returns_false(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook, should_run_in_background
+            from ii_agent.agents.hooks.decorator import hook, should_run_in_background
 
             @hook()
             def parens_hook():
@@ -435,7 +435,7 @@ class TestShouldRunInBackground:
 
     def test_function_with_manual_attr_true_returns_true(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import should_run_in_background
+            from ii_agent.agents.hooks.decorator import should_run_in_background
 
             def manually_marked():
                 pass
@@ -445,7 +445,7 @@ class TestShouldRunInBackground:
 
     def test_function_with_manual_attr_false_returns_false(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import should_run_in_background
+            from ii_agent.agents.hooks.decorator import should_run_in_background
 
             def manually_marked():
                 pass
@@ -456,7 +456,7 @@ class TestShouldRunInBackground:
     def test_wrapped_function_traverses_chain(self):
         """should_run_in_background traverses __wrapped__ chain to find attribute."""
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import should_run_in_background
+            from ii_agent.agents.hooks.decorator import should_run_in_background
 
             def base():
                 pass
@@ -472,7 +472,7 @@ class TestShouldRunInBackground:
 
     def test_async_undecorated_returns_false(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import should_run_in_background
+            from ii_agent.agents.hooks.decorator import should_run_in_background
 
             async def plain_async():
                 pass
@@ -481,7 +481,7 @@ class TestShouldRunInBackground:
 
     def test_async_decorated_run_in_background_true(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook, should_run_in_background
+            from ii_agent.agents.hooks.decorator import hook, should_run_in_background
 
             @hook(run_in_background=True)
             async def async_bg_hook():
@@ -491,7 +491,7 @@ class TestShouldRunInBackground:
 
     def test_lambda_returns_false(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import should_run_in_background
+            from ii_agent.agents.hooks.decorator import should_run_in_background
 
             fn = lambda: None
             assert should_run_in_background(fn) is False
@@ -505,7 +505,7 @@ class TestShouldRunInBackground:
 class TestHookInvalidKwargs:
     def test_invalid_kwarg_raises_value_error(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             with pytest.raises(ValueError, match="Invalid hook configuration arguments"):
 
@@ -515,7 +515,7 @@ class TestHookInvalidKwargs:
 
     def test_multiple_invalid_kwargs_raise_value_error(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             with pytest.raises(ValueError, match="Invalid hook configuration arguments"):
 
@@ -525,7 +525,7 @@ class TestHookInvalidKwargs:
 
     def test_valid_kwarg_does_not_raise(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             # Should not raise
             @hook(run_in_background=True)
@@ -534,7 +534,7 @@ class TestHookInvalidKwargs:
 
     def test_error_message_includes_valid_arguments(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             with pytest.raises(ValueError, match="run_in_background"):
 
@@ -544,7 +544,7 @@ class TestHookInvalidKwargs:
 
     def test_error_message_includes_invalid_kwarg_name(self):
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             with pytest.raises(ValueError, match="foo_bar"):
 
@@ -556,7 +556,7 @@ class TestHookInvalidKwargs:
         """ValueError is raised even when a positional arg (function) is also provided."""
         # When kwargs contains invalid keys, should raise ValueError regardless of args
         with _inject_constant():
-            from ii_agent.agent.runtime.hooks.decorator import hook
+            from ii_agent.agents.hooks.decorator import hook
 
             with pytest.raises(ValueError):
 
@@ -577,7 +577,7 @@ class TestHookConstantBug:
         in decorator.py but never defined at module level. Without injecting
         the constant, applying @hook raises NameError.
         """
-        import ii_agent.agent.runtime.hooks.decorator as dec
+        import ii_agent.agents.hooks.decorator as dec
 
         # Make sure the constant is NOT set on the module
         if hasattr(dec, "HOOK_RUN_IN_BACKGROUND_ATTR"):
@@ -600,12 +600,13 @@ class TestHookConstantBug:
         should_run_in_background() also fails with NameError when the constant
         is not defined, because it references HOOK_RUN_IN_BACKGROUND_ATTR.
         """
-        import ii_agent.agent.runtime.hooks.decorator as dec
+        import ii_agent.agents.hooks.decorator as dec
 
         if hasattr(dec, "HOOK_RUN_IN_BACKGROUND_ATTR"):
             delattr(dec, "HOOK_RUN_IN_BACKGROUND_ATTR")
 
         try:
+
             def plain_func():
                 pass
 

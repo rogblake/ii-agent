@@ -24,7 +24,7 @@ class ChatMessageRepository:
         return message
 
     async def list_by_session(
-        self, db: AsyncSession, session_id: str, limit: int = 50
+        self, db: AsyncSession, session_id: uuid.UUID, limit: int = 50
     ) -> List[ChatMessage]:
         """List messages for a session in chronological order."""
         result = await db.execute(
@@ -38,7 +38,7 @@ class ChatMessageRepository:
     async def list_after_id(
         self,
         db: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         after_message_id: uuid.UUID,
         limit: int = 1000,
     ) -> List[ChatMessage]:
@@ -56,7 +56,7 @@ class ChatMessageRepository:
     async def list_after_timestamp(
         self,
         db: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         after_timestamp: datetime,
         limit: int = 1000,
     ) -> List[ChatMessage]:
@@ -90,7 +90,7 @@ class ChatMessageRepository:
     async def get_history(
         self,
         db: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         limit: int = 50,
         before: Optional[str] = None,
     ) -> Tuple[List[ChatMessage], bool]:
@@ -117,7 +117,7 @@ class ChatMessageRepository:
         messages.reverse()
         return messages, has_more
 
-    async def delete_by_session(self, db: AsyncSession, session_id: str) -> int:
+    async def delete_by_session(self, db: AsyncSession, session_id: uuid.UUID) -> int:
         """Delete all messages in a session. Returns deleted count."""
         result = await db.execute(
             delete(ChatMessage).where(ChatMessage.session_id == session_id)
@@ -125,7 +125,7 @@ class ChatMessageRepository:
         await db.flush()
         return result.rowcount
 
-    async def get_last_by_session(self, db: AsyncSession, session_id: str) -> Optional[ChatMessage]:
+    async def get_last_by_session(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[ChatMessage]:
         """Get the most recent message in a session."""
         result = await db.execute(
             select(ChatMessage)
@@ -135,7 +135,38 @@ class ChatMessageRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_recent(self, db: AsyncSession, session_id: str, limit: int) -> List[ChatMessage]:
+    async def find_running_by_session(
+        self, db: AsyncSession, session_id: uuid.UUID
+    ) -> Optional[ChatMessage]:
+        """Find an incomplete assistant message (i.e. a 'running' chat turn)."""
+        result = await db.execute(
+            select(ChatMessage)
+            .where(
+                ChatMessage.session_id == session_id,
+                ChatMessage.role == "assistant",
+                ChatMessage.is_finished == False,  # noqa: E712
+            )
+            .order_by(ChatMessage.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_last_assistant_by_session(
+        self, db: AsyncSession, session_id: uuid.UUID
+    ) -> Optional[ChatMessage]:
+        """Get the most recent assistant message for a session."""
+        result = await db.execute(
+            select(ChatMessage)
+            .where(
+                ChatMessage.session_id == session_id,
+                ChatMessage.role == "assistant",
+            )
+            .order_by(ChatMessage.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_recent(self, db: AsyncSession, session_id: uuid.UUID, limit: int) -> List[ChatMessage]:
         """Get recent messages in chronological order."""
         result = await db.execute(
             select(ChatMessage)

@@ -32,7 +32,14 @@ def _build_service(config=None):
         connected_account_service=connected_account_service,
         mcp_server_service=mcp_server_service,
     )
-    return service, repo, toolkit_service, auth_config_service, connected_account_service, mcp_server_service
+    return (
+        service,
+        repo,
+        toolkit_service,
+        auth_config_service,
+        connected_account_service,
+        mcp_server_service,
+    )
 
 
 def _install_fake_config_toolkit(monkeypatch):
@@ -92,7 +99,14 @@ async def test_generate_unique_profile_name_returns_base_when_no_existing():
 
 @pytest.mark.asyncio
 async def test_integrate_toolkit_uses_existing_mcp_server_branch():
-    service, repo, toolkit_service, auth_config_service, connected_account_service, mcp_server_service = _build_service()
+    (
+        service,
+        repo,
+        toolkit_service,
+        auth_config_service,
+        connected_account_service,
+        mcp_server_service,
+    ) = _build_service()
 
     repo.find_pending_profile.return_value = None
     repo.check_existing_auth_config.return_value = "auth-existing"
@@ -134,7 +148,14 @@ async def test_integrate_toolkit_uses_existing_mcp_server_branch():
 
 @pytest.mark.asyncio
 async def test_integrate_toolkit_uses_new_mcp_server_branch():
-    service, repo, toolkit_service, auth_config_service, connected_account_service, mcp_server_service = _build_service()
+    (
+        service,
+        repo,
+        toolkit_service,
+        auth_config_service,
+        connected_account_service,
+        mcp_server_service,
+    ) = _build_service()
 
     repo.find_pending_profile.return_value = None
     repo.check_existing_auth_config.return_value = None

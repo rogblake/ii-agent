@@ -1,29 +1,21 @@
 """Storage configuration settings."""
 
 from typing import Literal, Optional
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
-# Type aliases
-StorageProvider = Literal["gcs", "local", "s3"]
+StorageProvider = Literal["gcs", "local", "minio"]
 
 
 class StorageSettings(BaseSettings):
-    """File storage configuration for various storage backends.
+    """Single-bucket storage configuration.
 
-    Environment variables use STORAGE_ prefix:
-        STORAGE_PROVIDER: Storage provider ("gcs", "local", "s3")
-        STORAGE_FILE_UPLOAD_PROJECT_ID: GCS project ID for file uploads
-        STORAGE_FILE_UPLOAD_BUCKET_NAME: GCS bucket name for file uploads
-        STORAGE_FILE_UPLOAD_SIZE_LIMIT: Maximum file upload size in bytes
-        STORAGE_CUSTOM_DOMAIN: Custom domain for file URLs
+    Environment variables use STORAGE_ prefix::
 
-    Example .env:
         STORAGE_PROVIDER=gcs
-        STORAGE_FILE_UPLOAD_PROJECT_ID=my-project
-        STORAGE_FILE_UPLOAD_BUCKET_NAME=my-bucket
-        STORAGE_FILE_UPLOAD_SIZE_LIMIT=104857600  # 100MB
+        STORAGE_PROJECT_ID=my-project
+        STORAGE_BUCKET_NAME=my-bucket
         STORAGE_CUSTOM_DOMAIN=files.example.com
     """
 
@@ -33,93 +25,88 @@ class StorageSettings(BaseSettings):
         extra="ignore",
     )
 
-    # Provider settings
     provider: StorageProvider = Field(
         default="gcs",
-        description="Storage provider (gcs, local, s3)",
+        description="Storage provider (gcs, local)",
     )
 
-    # File upload storage (main storage)
-    file_upload_project_id: Optional[str] = Field(
+    project_id: Optional[str] = Field(
         default=None,
-        description="GCS project ID for file uploads",
+        description="GCS project ID",
     )
 
-    file_upload_bucket_name: Optional[str] = Field(
+    bucket_name: Optional[str] = Field(
         default=None,
-        description="GCS bucket name for file uploads",
+        description="GCS bucket name",
+    )
+
+    custom_domain: Optional[str] = Field(
+        default=None,
+        description="Custom domain for permanent file URLs",
     )
 
     file_upload_size_limit: int = Field(
-        default=100 * 1024 * 1024,  # 100MB
+        default=100 * 1024 * 1024,
         description="Maximum file upload size in bytes",
         gt=0,
     )
 
-    # Avatar storage
-    avatar_project_id: Optional[str] = Field(
-        default=None,
-        description="GCS project ID for user avatars",
+    signed_url_ttl_seconds: int = Field(
+        default=7 * 24 * 3600,
+        description="Signed URL time-to-live in seconds (default 7 days)",
+        gt=0,
     )
 
-    avatar_bucket_name: Optional[str] = Field(
-        default=None,
-        description="GCS bucket name for user avatars",
-    )
-
-    # Slide assets storage (for presentations)
-    slide_assets_project_id: Optional[str] = Field(
-        default=None,
-        description="GCS project ID for slide assets",
-    )
-
-    slide_assets_bucket_name: Optional[str] = Field(
-        default=None,
-        description="GCS bucket name for slide assets",
-    )
-
-    # Media storage (images, videos, audio)
-    media_project_id: Optional[str] = Field(
-        default=None,
-        description="GCS project ID for media files",
-    )
-
-    media_bucket_name: Optional[str] = Field(
-        default=None,
-        description="GCS bucket name for media files",
-    )
-
-    # Custom domain for permanent URLs
-    custom_domain: Optional[str] = Field(
-        default=None,
-        description="Custom domain for permanent file URLs (e.g., 'files.yourdomain.com')",
-    )
-
-    # Local file store settings (for development)
-    file_store: str = Field(
-        default="local",
-        description="Local file store type",
-    )
-
-    file_store_path: str = Field(
-        default="~/.ii_agent",
+    # Local provider settings (development)
+    local_base_dir: str = Field(
+        default="~/.ii_agent/storage",
         description="Local file store path",
     )
 
-    def validate_for_provider(self) -> None:
-        """Validate configuration for the selected provider.
+    local_serve_url: str = Field(
+        default="http://localhost:8000/storage",
+        description="URL prefix for serving local files",
+    )
 
-        Raises:
-            ValueError: If required configuration is missing for the provider.
-        """
+    # MinIO provider settings
+    minio_endpoint: str = Field(
+        default="localhost:9000",
+        description="MinIO server endpoint (host:port)",
+    )
+
+    minio_access_key: str = Field(
+        default="minioadmin",
+        description="MinIO access key",
+    )
+
+    minio_secret_key: str = Field(
+        default="minioadmin",
+        description="MinIO secret key",
+    )
+
+    minio_secure: bool = Field(
+        default=False,
+        description="Use HTTPS for MinIO connections",
+    )
+
+    minio_region: str = Field(
+        default="us-east-1",
+        description="MinIO region",
+    )
+
+    def validate_for_provider(self) -> None:
+        """Validate required fields for the selected provider."""
         if self.provider == "gcs":
-            if not self.file_upload_project_id:
+            if not self.project_id:
                 raise ValueError(
-                    "GCS project ID is required when using GCS provider. "
-                    "Set STORAGE_FILE_UPLOAD_PROJECT_ID environment variable."
+                    "GCS project ID is required. Set STORAGE_PROJECT_ID."
                 )
-            if not self.file_upload_bucket_name:
+            if not self.bucket_name:
                 raise ValueError(
-                    "GCS bucket name is required when using GCS provider. "
-                    "Set STORAGE_FILE_UPLOAD_BUCKET_NAME environment variable."
+                    "GCS bucket name is required. Set STORAGE_BUCKET_NAME."
+                )
+        elif self.provider == "minio":
+            if not self.bucket_name:
+                raise ValueError(
+                    "MinIO bucket name is required. Set STORAGE_BUCKET_NAME."
                 )

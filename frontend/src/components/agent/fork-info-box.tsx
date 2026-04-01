@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import type { ForkInfo } from '@/typings/agent'
+import { CommandType } from '@/typings/agent'
 import { useSocketIOContext } from '@/contexts/websocket-context'
 import {
     selectSelectedModel,
@@ -54,8 +55,9 @@ export function ForkInfoBox({
 
         // Send start_fork command - backend will read fork_info and construct the prompt
         sendMessage({
-            type: 'start_fork',
+            session_uuid: _sessionId,
             content: {
+                command: CommandType.START_FORK,
                 model_id: llmSettingId || selectedModel,
                 source: llmSettingId ? 'user' : 'system',
                 agent_type: agentType,

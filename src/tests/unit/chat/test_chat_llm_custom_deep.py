@@ -282,9 +282,14 @@ class TestConvertMessagesToolDeep:
         """StorybookProgressContent should be serialized to JSON."""
         provider = _make_provider()
         output = StorybookProgressContent(
-            storybook_id="sb1", storybook_name="Story", total_pages=5,
-            completed_pages=3, current_page=3, status="generating",
-            generating_pages=[3, 4], error_message=None,
+            storybook_id="sb1",
+            storybook_name="Story",
+            total_pages=5,
+            completed_pages=3,
+            current_page=3,
+            status="generating",
+            generating_pages=[3, 4],
+            error_message=None,
         )
         tr = _make_tool_result("c1", "tool", output)
         msg = _tool_message([tr])
@@ -298,7 +303,9 @@ class TestConvertMessagesToolDeep:
         from ii_agent.chat.types import StorybookPageResult
 
         provider = _make_provider()
-        page = StorybookPageResult(page_number=1, image_url="https://example.com/p1.jpg", text_content="Page 1 text")
+        page = StorybookPageResult(
+            page_number=1, image_url="https://example.com/p1.jpg", text_content="Page 1 text"
+        )
         output = StorybookResultContent(storybook_id="sb2", storybook_name="Story 2", pages=[page])
         tr = _make_tool_result("c1", "tool", output)
         msg = _tool_message([tr])
@@ -311,10 +318,12 @@ class TestConvertMessagesToolDeep:
     def test_array_result_multiple_text_parts_joined(self):
         """Multiple TextContentParts in ArrayResult should be joined."""
         provider = _make_provider()
-        output = ArrayResultContent(value=[
-            TextContentPart(text="part 1"),
-            TextContentPart(text="part 2"),
-        ])
+        output = ArrayResultContent(
+            value=[
+                TextContentPart(text="part 1"),
+                TextContentPart(text="part 2"),
+            ]
+        )
         tr = _make_tool_result("c1", "tool", output)
         msg = _tool_message([tr])
         result = provider._convert_messages([msg])
@@ -336,9 +345,9 @@ class TestConvertMessagesToolDeep:
     def test_array_result_image_url_part_creates_string_content(self):
         """ImageUrlContentPart in ArrayResult should create string with URL."""
         provider = _make_provider()
-        output = ArrayResultContent(value=[
-            ImageUrlContentPart(url="https://example.com/generated.png")
-        ])
+        output = ArrayResultContent(
+            value=[ImageUrlContentPart(url="https://example.com/generated.png")]
+        )
         tr = _make_tool_result("c1", "tool", output)
         msg = _tool_message([tr])
         result = provider._convert_messages([msg])
@@ -349,9 +358,13 @@ class TestConvertMessagesToolDeep:
     def test_array_result_file_data_part_creates_file_string(self):
         """FileDataContentPart in ArrayResult should create string with filename."""
         provider = _make_provider()
-        output = ArrayResultContent(value=[
-            FileDataContentPart(mime_type="application/pdf", data="pdfdata64", filename="doc.pdf")
-        ])
+        output = ArrayResultContent(
+            value=[
+                FileDataContentPart(
+                    mime_type="application/pdf", data="pdfdata64", filename="doc.pdf"
+                )
+            ]
+        )
         tr = _make_tool_result("c1", "tool", output)
         msg = _tool_message([tr])
         result = provider._convert_messages([msg])
@@ -383,10 +396,12 @@ class TestCustomProviderSendDeep:
         """send() should pass tools to acompletion."""
         provider = _make_provider()
         msg = _user_message("Hello")
-        tools = [{
-            "type": "function",
-            "function": {"name": "search", "description": "search", "parameters": {}}
-        }]
+        tools = [
+            {
+                "type": "function",
+                "function": {"name": "search", "description": "search", "parameters": {}},
+            }
+        ]
 
         mock_response = MagicMock()
         mock_choice = MagicMock()
@@ -396,7 +411,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)) as mock_acomp:
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ) as mock_acomp:
             result = await provider.send([msg], tools=tools)
 
         call_kwargs = mock_acomp.call_args[1]
@@ -417,7 +434,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)) as mock_acomp:
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ) as mock_acomp:
             await provider.send([msg], tools=None)
 
         call_kwargs = mock_acomp.call_args[1]
@@ -437,7 +456,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = MagicMock(prompt_tokens=200, completion_tokens=100)
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         assert result.usage.prompt_tokens == 200
@@ -457,7 +478,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         assert result.finish_reason == FinishReason.ERROR
@@ -476,7 +499,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         assert result.finish_reason == FinishReason.MAX_TOKENS
@@ -495,7 +520,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         # Default to END_TURN for unknown reasons
@@ -516,7 +543,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)) as mock_acomp:
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ) as mock_acomp:
             await provider.send([msg])
 
         call_kwargs = mock_acomp.call_args[1]
@@ -537,7 +566,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)) as mock_acomp:
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ) as mock_acomp:
             await provider.send([msg])
 
         call_kwargs = mock_acomp.call_args[1]
@@ -558,7 +589,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)) as mock_acomp:
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ) as mock_acomp:
             await provider.send([msg])
 
         call_kwargs = mock_acomp.call_args[1]
@@ -578,7 +611,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         text_parts = [p for p in result.content if isinstance(p, TextContent)]
@@ -610,7 +645,9 @@ class TestCustomProviderSendDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         tool_calls = [p for p in result.content if isinstance(p, ToolCall)]
@@ -673,7 +710,9 @@ class TestCustomProviderStreamDeep:
             for chunk in chunks:
                 yield chunk
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -698,7 +737,9 @@ class TestCustomProviderStreamDeep:
             for chunk in chunks:
                 yield chunk
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -721,7 +762,9 @@ class TestCustomProviderStreamDeep:
             for chunk in chunks:
                 yield chunk
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -741,7 +784,9 @@ class TestCustomProviderStreamDeep:
             yield self._make_chunk(content="Hello")
             raise RuntimeError("Simulated API error")
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_error_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_error_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -765,7 +810,9 @@ class TestCustomProviderStreamDeep:
             for chunk in chunks:
                 yield chunk
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -789,7 +836,9 @@ class TestCustomProviderStreamDeep:
             yield empty_chunk
             yield finish_chunk
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -815,7 +864,9 @@ class TestCustomProviderStreamDeep:
             for chunk in chunks:
                 yield chunk
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -834,7 +885,9 @@ class TestCustomProviderStreamDeep:
 
         chunks = [
             self._make_tool_chunk(0, "call_1", "search", '{"q":'),  # Start of args
-            self._make_tool_chunk(0, None, None, '"test query"}'),   # Continuation (no name=None means continuation)
+            self._make_tool_chunk(
+                0, None, None, '"test query"}'
+            ),  # Continuation (no name=None means continuation)
             self._make_chunk(finish_reason="tool_calls"),
         ]
 
@@ -842,7 +895,9 @@ class TestCustomProviderStreamDeep:
             for chunk in chunks:
                 yield chunk
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -905,7 +960,9 @@ class TestEdgeCasesDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         text_parts = [p for p in result.content if isinstance(p, TextContent)]
@@ -926,7 +983,9 @@ class TestEdgeCasesDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         text_parts = [p for p in result.content if isinstance(p, TextContent)]
@@ -947,7 +1006,9 @@ class TestEdgeCasesDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         # Should produce empty content list or empty text content
@@ -972,7 +1033,9 @@ class TestEdgeCasesDeep:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         text_parts = [p for p in result.content if isinstance(p, TextContent)]

@@ -70,26 +70,32 @@ export interface ValidateFileResponse {
 }
 
 export interface GenerateUploadUrlRequest {
-    file_name: string
+    filename: string
     content_type: string
-    file_size: number
+    size_bytes?: number
 }
 
 export interface GenerateUploadUrlResponse {
-    id: string
+    asset_id: string
     upload_url: string
+    storage_path: string
 }
 
 export interface UploadCompleteRequest {
-    id: string
-    file_name: string
-    file_size: number
-    content_type: string
     session_id?: string
 }
 
 export interface UploadCompleteResponse {
-    file_url: string
+    id: string
+    filename: string
+    content_type: string | null
+    size_bytes: number | null
+    asset_type: string
+    source: string
+    upload_status: string
+    is_public: boolean
+    url: string | null
+    created_at: string | null
 }
 
 export type MediaLibrarySource = 'upload' | 'generated'

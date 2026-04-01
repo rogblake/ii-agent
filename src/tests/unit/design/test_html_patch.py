@@ -113,7 +113,7 @@ def test_apply_slide_icon_change_invalid_target_and_xpath():
 
 
 def test_apply_slide_delete_change_removes_block_with_newline():
-    html = "before\n  <div data-design-id=\"gone\">x</div>\nafter"
+    html = 'before\n  <div data-design-id="gone">x</div>\nafter'
     updated, ok = apply_slide_delete_change_with_status(html, design_id="gone")
 
     assert ok is True
@@ -122,10 +122,7 @@ def test_apply_slide_delete_change_removes_block_with_newline():
 
 
 def test_apply_slide_swap_change_success_and_overlap_guard():
-    html = (
-        '<div data-design-id="a">A</div>\n'
-        '<div data-design-id="b">B</div>'
-    )
+    html = '<div data-design-id="a">A</div>\n<div data-design-id="b">B</div>'
     updated, ok = apply_slide_swap_change_with_status(
         html,
         design_id="a",

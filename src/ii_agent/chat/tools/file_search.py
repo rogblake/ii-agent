@@ -7,8 +7,9 @@ from openai import AsyncOpenAI
 from openai.types.shared_params.comparison_filter import ComparisonFilter
 from openai.types.shared_params.compound_filter import CompoundFilter
 from ii_agent.chat.types import ErrorTextContent, JsonResultContent
-from ii_agent.core.config.settings import get_settings
-from ii_agent.settings.llm.service import get_system_llm_config
+from ii_agent.core.container import get_app_container
+from ii_agent.core.db import get_db_session_local
+from ii_agent.settings.llm.schemas import ModelConfig
 
 from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
 
@@ -29,17 +30,28 @@ class FileSearchTool(BaseTool):
         vector_store_id: str,
         user_id: str,
     ):
-        self.llm_config = get_system_llm_config(model_id="default", config=get_settings())
+        self._llm_config: ModelConfig | None = None
+        self._client: AsyncOpenAI | None = None
         self.vector_store_id = vector_store_id
         self.session_id = session_id
         self.user_id = user_id
         self._name = "file_search"
 
-        # Initialize OpenAI client
-        self.client = AsyncOpenAI(
-            api_key=self.llm_config.api_key.get_secret_value(),
-            base_url=self.llm_config.base_url if self.llm_config.base_url else None,
-        )
+    async def _get_client(self) -> AsyncOpenAI:
+        """Lazy-init the OpenAI client from the DB system config."""
+        if self._client is None:
+            model_setting_repo = ModelSettingRepository()
+            async with get_db_session_local() as db:
+                self._llm_config = await model_setting_repo.find_system_model_by_provider(
+                    db, provider="openai"
+                )
+            self._client = AsyncOpenAI(
+                api_key=self._llm_config.api_key.get_secret_value()
+                if self._llm_config.api_key
+                else "",
+                base_url=self._llm_config.base_url or None,
+            )
+        return self._client
 
     @property
     def name(self) -> str:
@@ -101,9 +113,7 @@ class FileSearchTool(BaseTool):
 
     def _build_filters(self, file_names: List[str] | None = None) -> CompoundFilter:
         """Build compound filters for the file search request."""
-        time_cutoff = (
-            datetime.now(timezone.utc).timestamp() - 24 * 60 * 60
-        )  # last 24 hours
+        time_cutoff = datetime.now(timezone.utc).timestamp() - 24 * 60 * 60  # last 24 hours
 
         logger.debug(
             f"Building filters with time_cutoff: {time_cutoff} (24h ago from {datetime.now(timezone.utc).timestamp()})"
@@ -143,14 +153,13 @@ class FileSearchTool(BaseTool):
             query = params["query"]
             file_names = params.get("file_names")  # Optional parameter
         except (json.JSONDecodeError, KeyError) as e:
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Invalid tool input: {e}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Invalid tool input: {e}"))
 
         try:
             # Get files from parent message
             filters = self._build_filters(file_names=file_names)
-            response = await self.client.vector_stores.search(
+            client = await self._get_client()
+            response = await client.vector_stores.search(
                 vector_store_id=self.vector_store_id,
                 query=query,
                 filters=filters,
@@ -170,6 +179,4 @@ class FileSearchTool(BaseTool):
 
         except Exception as e:
             logger.error(f"File search error: {e}", exc_info=True)
-            return ToolResponse(
-                output=ErrorTextContent(value=f"File search failed: {str(e)}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"File search failed: {str(e)}"))

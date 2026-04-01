@@ -1,131 +1,257 @@
 """Pydantic schemas (DTOs) for llm_settings domain."""
 
-from pydantic import BaseModel, SecretStr, Field
-from typing import Optional, Dict, Any, List
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from __future__ import annotations
+from enum import StrEnum
+
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from typing import Optional
+from uuid import UUID
+
+from ii_agent.core.config.llm_config import APITypes
+from ii_agent.settings.llm.types import ConfigType
+
+
+# ---------------------------------------------------------------------------
+# Nested JSONB schemas
+# ---------------------------------------------------------------------------
+
+
+class Provider(StrEnum):
+    OPENAI = "OpenAI"
+    ANTHROPIC = "Anthropic"
+    VERTEX_AI = "VertexAI"
+    GOOGLE = "Google"
+    AZURE = "Azure"
+    CEREBRAS = "Cerebras"
+    CUSTOM = "Custom"
+
+
+class ModelParams(BaseModel):
+    """Provider-specific settings stored in the ``configs`` JSONB column."""
+
+    max_retries: int = Field(default=3)
+    max_message_chars: int = Field(default=30000)
+    temperature: float = Field(default=0.0)
+    thinking_tokens: int = Field(default=16000)
+    # Vertex AI
+    vertex_region: str | None = None
+    vertex_project_id: str | None = None
+    # Azure
+    azure_endpoint: str | None = None
+    azure_api_version: str | None = None
+    # Flags
+    cot_model: bool = False
+
+
+class PricingInfo(BaseModel):
+    """Pricing stored in the ``pricing`` JSONB column."""
+
+    input_price_per_million: float = Field(
+        default=0.0, description="Price per million input tokens in USD"
+    )
+    output_price_per_million: float = Field(
+        default=0.0, description="Price per million output tokens in USD"
+    )
+    cache_write_price_per_million: float = Field(
+        default=0.0, description="Price per million cache write tokens"
+    )
+    cache_read_price_per_million: float = Field(
+        default=0.0, description="Price per million cache read tokens"
+    )
+
+
+class ModelConfig(BaseModel):
+    """Resolved model configuration for agent / LLM provider construction.
+
+    Built from a ``ModelSetting`` DB row.  Carries everything needed to
+    instantiate an LLM provider: credentials, endpoint, provider-specific
+    params, and pricing.
+    """
+
+    id: UUID
+    model_id: str
+    provider: str
+    api_key: SecretStr | None = None
+    base_url: str | None = None
+    display_name: str | None = None
+    params: ModelParams = Field(default_factory=ModelParams)
+    pricing: PricingInfo | None = None
+    config_type: ConfigType = ConfigType.SYSTEM
+
+    def is_user_model(self) -> bool:
+        """Return True when the config originates from a user-provided key."""
+        return self.config_type == ConfigType.USER
+
+    @property
+    def setting_id(self) -> str:
+        """Backward-compatible string ID used by callers that expect ``str``."""
+        return str(self.id)
+
+    # Convenience accessors that mirror legacy LLMConfig field names so that
+    # consumer code (agent factory, model utils) can migrate incrementally.
+    @property
+    def model(self) -> str:
+        return self.model_id
+
+    @property
+    def api_type(self) -> APITypes:
+        return _provider_to_api_type(self.provider)
+
+    @property
+    def temperature(self) -> float:
+        return self.params.temperature
+
+    @property
+    def max_retries(self) -> int:
+        return self.params.max_retries
+
+    @property
+    def max_message_chars(self) -> int:
+        return self.params.max_message_chars
+
+    @property
+    def thinking_tokens(self) -> int:
+        return self.params.thinking_tokens
+
+    @property
+    def vertex_region(self) -> str | None:
+        return self.params.vertex_region
+
+    @property
+    def vertex_project_id(self) -> str | None:
+        return self.params.vertex_project_id
+
+    @property
+    def azure_endpoint(self) -> str | None:
+        return self.params.azure_endpoint
+
+    @property
+    def azure_api_version(self) -> str | None:
+        return self.params.azure_api_version
+
+    @property
+    def cot_model(self) -> bool:
+        return self.params.cot_model
+
+
+# ---------------------------------------------------------------------------
+# Create / Update DTOs
+# ---------------------------------------------------------------------------
 
 
 class ModelSettingCreate(BaseModel):
-    """Model for creating/updating LLM model settings."""
+    """Input for creating / upserting an LLM model setting."""
 
-    model: str = Field(..., description="Model name (e.g., 'gpt-4', 'claude-3-opus')")
-    api_type: APITypes = Field(..., description="API type (openai, anthropic, gemini)")
+    model_id: str = Field(..., description="Model identifier (e.g. 'claude-sonnet-4-6')")
+    provider: str = Field(..., description="Provider name (Anthropic, OpenAI, Google, Custom)")
     api_key: str = Field(..., description="API key for the model")
-    base_url: Optional[str] = Field(None, description="Base URL for API endpoint")
-    max_retries: int = Field(default=10, description="Maximum number of retries")
-    max_message_chars: int = Field(
-        default=30000, description="Maximum message characters"
-    )
-    temperature: float = Field(default=0.0, description="Temperature for generation")
-    thinking_tokens: int = Field(default=16000, description="Number of thinking tokens")
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Additional metadata (Azure/Bedrock/Vertex config)"
-    )
+    base_url: str | None = Field(None, description="Base URL for API endpoint")
+    display_name: str | None = Field(None, description="Human-readable label")
+    configs: ModelParams | None = Field(None, description="Provider-specific settings")
+    pricing: PricingInfo | None = Field(None, description="Token pricing info")
+    config_type: ConfigType = Field(default=ConfigType.USER)
+    is_default: bool = Field(default=False)
+    is_active: bool = Field(default=True)
 
 
 class ModelSettingUpdate(BaseModel):
-    """Model for updating existing LLM model settings."""
+    """Input for partial-updating an existing LLM model setting."""
 
-    api_key: Optional[str] = Field(None, description="API key for the model")
-    base_url: Optional[str] = Field(None, description="Base URL for API endpoint")
-    max_retries: Optional[int] = Field(None, description="Maximum number of retries")
-    max_message_chars: Optional[int] = Field(
-        None, description="Maximum message characters"
-    )
-    temperature: Optional[float] = Field(None, description="Temperature for generation")
-    thinking_tokens: Optional[int] = Field(
-        None, description="Number of thinking tokens"
-    )
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
-    is_active: Optional[bool] = Field(None, description="Whether the model is active")
+    api_key: str | None = None
+    base_url: str | None = None
+    display_name: str | None = None
+    configs: ModelParams | None = None
+    pricing: PricingInfo | None = None
+    config_type: ConfigType | None = None
+    is_default: bool | None = None
+    is_active: bool | None = None
+
+
+# ---------------------------------------------------------------------------
+# Response DTOs
+# ---------------------------------------------------------------------------
 
 
 class ModelSettingInfo(BaseModel):
-    """Model for LLM model setting information (without sensitive data)."""
+    """LLM model setting response (no sensitive data)."""
 
-    id: str
-    model: str
-    api_type: APITypes
-    base_url: Optional[str] = None
-    max_retries: int
-    max_message_chars: int
-    temperature: float
-    thinking_tokens: int
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    model_id: str
+    provider: str
+    base_url: str | None = None
+    display_name: str | None = None
+    configs: ModelParams | None = None
+    pricing: PricingInfo | None = None
+    config_type: ConfigType
+    is_default: bool
     is_active: bool
     has_api_key: bool
     created_at: str
-    updated_at: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    updated_at: str | None = None
 
 
 class ModelSettingInfoWithKey(ModelSettingInfo):
-    """Model for LLM model setting information (with API key)."""
+    """LLM model setting response (includes decrypted API key)."""
 
-    api_key: Optional[str] = None
-
-    def to_llm_config(self) -> LLMConfig:
-        """Convert to LLMConfig."""
-        if not self.api_key:
-            raise ValueError("API key is required for LLMConfig conversion")
-
-        return LLMConfig(
-            setting_id=self.id,
-            model=self.model,
-            api_type=self.api_type,
-            api_key=SecretStr(self.api_key),
-            base_url=self.base_url,
-            max_retries=self.max_retries,
-            max_message_chars=self.max_message_chars,
-            temperature=self.temperature,
-            thinking_tokens=self.thinking_tokens,
-            # Extract Azure/Vertex settings from metadata if present
-            azure_endpoint=(
-                self.metadata.get("azure_endpoint") if self.metadata else None
-            ),
-            azure_api_version=(
-                self.metadata.get("azure_api_version") if self.metadata else None
-            ),
-            vertex_region=self.metadata.get("vertex_region") if self.metadata else None,
-            vertex_project_id=(
-                self.metadata.get("vertex_project_id") if self.metadata else None
-            ),
-            cot_model=self.metadata.get("cot_model", False) if self.metadata else False,
-            config_type="user",
-        )
+    api_key: str | None = None
 
 
 class ModelSettingList(BaseModel):
-    """Model for LLM model setting list response."""
+    """Wrapper for listing model settings."""
 
-    models: List[ModelSettingInfo]
+    models: list[ModelSettingInfo]
 
-    def get_by_id(self, model_id: str) -> Optional[ModelSettingInfo]:
-        """Get model setting by ID."""
+    def get_by_id(self, setting_id: str) -> ModelSettingInfo | None:
         return next(
-            (setting for setting in self.models if setting.id == model_id),
+            (s for s in self.models if str(s.id) == setting_id),
             None,
         )
 
-    def get_by_model(self, model_name: str) -> Optional[ModelSettingInfo]:
-        """Get model setting by model name."""
+    def get_by_model(self, model_id: str) -> ModelSettingInfo | None:
         return next(
-            (setting for setting in self.models if setting.model == model_name),
+            (s for s in self.models if s.model_id == model_id),
             None,
         )
+
+
+# ---------------------------------------------------------------------------
+# Unified model list (system + user)
+# ---------------------------------------------------------------------------
 
 
 class LLMModelInfo(BaseModel):
-    """Model for LLM model information."""
+    """Combined model info for the "all available models" endpoint."""
 
-    id: str
-    model: str
-    api_type: APITypes
-    description: Optional[str] = None
-    source: str = "system"  # 'system' or 'user'
-    base_url: Optional[str] = None
+    id: UUID
+    model_id: str
+    model: str = ""  # Alias for model_id, used by FE
+    provider: str
+    display_name: str | None = None
+    source: str = "system"
+    base_url: str | None = None
+    pricing: PricingInfo | None = None
 
 
 class LLMModelList(BaseModel):
-    """Model for LLM model list response."""
+    """Response for listing all available models."""
 
-    models: List[LLMModelInfo]
+    models: list[LLMModelInfo]
+
+
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
+
+_PROVIDER_TO_API_TYPE: dict[str, APITypes] = {
+    "anthropic": APITypes.ANTHROPIC,
+    "openai": APITypes.OPENAI,
+    "google": APITypes.GEMINI,
+    "custom": APITypes.CUSTOM,
+}
+
+
+def _provider_to_api_type(provider: str) -> APITypes:
+    """Map provider display name to APITypes enum for LLMConfig."""
+    return _PROVIDER_TO_API_TYPE.get(provider.lower(), APITypes.CUSTOM)

@@ -3,11 +3,11 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.auth.users.service import UserService
+from ii_agent.users.service import UserService
 from ii_agent.chat.application.chat_service import ChatService
 from ii_agent.sessions.service import SessionService
 from ii_agent.sessions.title_service import SessionTitleService
-from ii_agent.sessions.title_config import SessionTitleConfig
+from ii_agent.core.config.session_title import SessionTitleConfig
 
 pytestmark = pytest.mark.integration
 
@@ -46,6 +46,7 @@ class WaitlistRepo:
 class FakeCreditService:
     async def ensure_balance_exists(self, db, user_id, **kwargs):
         from decimal import Decimal
+
         credits = Decimal(str(kwargs.get("credits", 0)))
         bonus = Decimal(str(kwargs.get("bonus_credits", 0)))
         return (credits, bonus)
@@ -90,7 +91,7 @@ async def test_auth_session_chat_flow(settings_factory):
     session_service = SessionService(
         session_repo=SessionRepo(),
         event_repo=SimpleNamespace(),
-        agent_run_service=SimpleNamespace(),
+        run_task_service=SimpleNamespace(),
         file_store=SimpleNamespace(get_download_signed_url=lambda path: f"signed:{path}"),
         sandbox_repo=SimpleNamespace(),
         config=settings_factory(),
@@ -110,7 +111,6 @@ async def test_auth_session_chat_flow(settings_factory):
         message_history=SimpleNamespace(),
         message_service=SimpleNamespace(),
         session_repo=session_service._session_repo,
-        chat_run_service=SimpleNamespace(),
         llm_setting_service=SimpleNamespace(),
         credit_service=None,
         container=SimpleNamespace(),

@@ -79,6 +79,7 @@ def _make_provider(config: Optional[LLMConfig] = None):
 
 def _make_empty_container_file():
     from ii_agent.chat.llm.openai import ContainerFile
+
     return ContainerFile(container_id=None, files=[])
 
 
@@ -92,7 +93,9 @@ def _make_user_message(text: str = "Hello", file_ids: Optional[List[str]] = None
     )
 
 
-def _make_assistant_message(text: str = "Hi", tool_calls: Optional[List[ToolCall]] = None) -> Message:
+def _make_assistant_message(
+    text: str = "Hi", tool_calls: Optional[List[ToolCall]] = None
+) -> Message:
     parts = [TextContent(text=text)]
     if tool_calls:
         parts.extend(tool_calls)
@@ -126,6 +129,7 @@ class TestConvertToolsDeep:
     def test_code_interpreter_tool_added_when_enabled(self):
         provider = _make_provider()
         from ii_agent.chat.llm.openai import ContainerFile
+
         cf = ContainerFile(container_id="c1", files=[])
         result = provider._convert_tools(None, cf, is_code_interpreter_enabled=True)
         assert result is not None
@@ -134,9 +138,14 @@ class TestConvertToolsDeep:
 
     def test_code_interpreter_tool_includes_file_ids_when_present(self):
         from ii_agent.chat.llm.openai import ContainerFile, FileResponseObject
+
         provider = _make_provider()
         f = FileResponseObject(
-            id="f1", provider_file_id="pf1", provider="openai", content_type="text/csv", file_name="data.csv"
+            id="f1",
+            provider_file_id="pf1",
+            provider="openai",
+            content_type="text/csv",
+            file_name="data.csv",
         )
         cf = ContainerFile(container_id="c1", files=[f])
         result = provider._convert_tools(None, cf, is_code_interpreter_enabled=True)
@@ -146,9 +155,14 @@ class TestConvertToolsDeep:
 
     def test_code_interpreter_tool_no_file_ids_when_all_images(self):
         from ii_agent.chat.llm.openai import ContainerFile, FileResponseObject
+
         provider = _make_provider()
         f = FileResponseObject(
-            id="f1", provider_file_id="pf1", provider="openai", content_type="image/png", file_name="img.png"
+            id="f1",
+            provider_file_id="pf1",
+            provider="openai",
+            content_type="image/png",
+            file_name="img.png",
         )
         cf = ContainerFile(container_id="c1", files=[f])
         result = provider._convert_tools(None, cf, is_code_interpreter_enabled=True)
@@ -179,12 +193,16 @@ class TestConvertToolsDeep:
 
     def test_empty_tools_with_code_interpreter_returns_only_ci(self):
         provider = _make_provider()
-        result = provider._convert_tools([], _make_empty_container_file(), is_code_interpreter_enabled=True)
+        result = provider._convert_tools(
+            [], _make_empty_container_file(), is_code_interpreter_enabled=True
+        )
         assert any(t.get("type") == "code_interpreter" for t in result)
 
     def test_returns_none_when_no_tools_and_no_ci(self):
         provider = _make_provider()
-        result = provider._convert_tools([], _make_empty_container_file(), is_code_interpreter_enabled=False)
+        result = provider._convert_tools(
+            [], _make_empty_container_file(), is_code_interpreter_enabled=False
+        )
         assert result is None
 
 
@@ -319,7 +337,9 @@ class TestConvertMessagesAssistantDeep:
         )
         result = provider._convert_messages([msg], _make_empty_container_file())
         # Only function_call items, no message items with role="assistant"
-        text_messages = [m for m in result if m.get("type") == "message" and m.get("role") == "assistant"]
+        text_messages = [
+            m for m in result if m.get("type") == "message" and m.get("role") == "assistant"
+        ]
         assert len(text_messages) == 0
 
 
@@ -334,8 +354,9 @@ class TestConvertMessagesToolResultDeep:
     def test_image_url_content_part_in_array_result(self):
         provider = _make_provider()
         msg = _make_tool_result_message(
-            "c1", "tool",
-            ArrayResultContent(value=[ImageUrlContentPart(url="https://example.com/img.png")])
+            "c1",
+            "tool",
+            ArrayResultContent(value=[ImageUrlContentPart(url="https://example.com/img.png")]),
         )
         result = provider._convert_messages([msg], _make_empty_container_file())
         output = result[0]["output"]
@@ -345,12 +366,18 @@ class TestConvertMessagesToolResultDeep:
     def test_storybook_progress_content_converted(self):
         provider = _make_provider()
         msg = _make_tool_result_message(
-            "c1", "tool",
+            "c1",
+            "tool",
             StorybookProgressContent(
-                storybook_id="sb1", storybook_name="Book", total_pages=10,
-                completed_pages=5, current_page=5, status="generating",
-                generating_pages=[], error_message=None,
-            )
+                storybook_id="sb1",
+                storybook_name="Book",
+                total_pages=10,
+                completed_pages=5,
+                current_page=5,
+                status="generating",
+                generating_pages=[],
+                error_message=None,
+            ),
         )
         result = provider._convert_messages([msg], _make_empty_container_file())
         data = json.loads(result[0]["output"])
@@ -360,8 +387,7 @@ class TestConvertMessagesToolResultDeep:
     def test_storybook_result_content_converted(self):
         provider = _make_provider()
         msg = _make_tool_result_message(
-            "c1", "tool",
-            StorybookResultContent(storybook_id="sb2", storybook_name="B2", pages=[])
+            "c1", "tool", StorybookResultContent(storybook_id="sb2", storybook_name="B2", pages=[])
         )
         result = provider._convert_messages([msg], _make_empty_container_file())
         data = json.loads(result[0]["output"])
@@ -392,10 +418,15 @@ class TestConvertMessagesToolResultDeep:
     def test_tool_result_with_file_data_part(self):
         provider = _make_provider()
         msg = _make_tool_result_message(
-            "c1", "tool",
-            ArrayResultContent(value=[
-                FileDataContentPart(mime_type="application/pdf", data="pdfdata", filename="doc.pdf")
-            ])
+            "c1",
+            "tool",
+            ArrayResultContent(
+                value=[
+                    FileDataContentPart(
+                        mime_type="application/pdf", data="pdfdata", filename="doc.pdf"
+                    )
+                ]
+            ),
         )
         result = provider._convert_messages([msg], _make_empty_container_file())
         output = result[0]["output"]
@@ -405,10 +436,11 @@ class TestConvertMessagesToolResultDeep:
     def test_tool_result_with_image_data_part(self):
         provider = _make_provider()
         msg = _make_tool_result_message(
-            "c1", "tool",
-            ArrayResultContent(value=[
-                ImageDataContentPart(media_type="image/png", data="imgdata")
-            ])
+            "c1",
+            "tool",
+            ArrayResultContent(
+                value=[ImageDataContentPart(media_type="image/png", data="imgdata")]
+            ),
         )
         result = provider._convert_messages([msg], _make_empty_container_file())
         output = result[0]["output"]
@@ -423,13 +455,17 @@ class TestConvertMessagesToolResultDeep:
 
     def test_tool_result_json_result_serialized(self):
         provider = _make_provider()
-        msg = _make_tool_result_message("c1", "tool", JsonResultContent(value={"nested": {"key": "value"}}))
+        msg = _make_tool_result_message(
+            "c1", "tool", JsonResultContent(value={"nested": {"key": "value"}})
+        )
         result = provider._convert_messages([msg], _make_empty_container_file())
         assert json.loads(result[0]["output"]) == {"nested": {"key": "value"}}
 
     def test_tool_result_error_json_serialized(self):
         provider = _make_provider()
-        msg = _make_tool_result_message("c1", "tool", ErrorJsonContent(value={"error": "oops", "code": 500}))
+        msg = _make_tool_result_message(
+            "c1", "tool", ErrorJsonContent(value={"error": "oops", "code": 500})
+        )
         result = provider._convert_messages([msg], _make_empty_container_file())
         data = json.loads(result[0]["output"])
         assert data["error"] == "oops"
@@ -452,6 +488,7 @@ class TestOpenAIProviderSendDeep:
         text_part.text = "Hello, I'm ChatGPT!"
 
         from openai.types.responses import ResponseOutputText, ResponseOutputMessage
+
         text_part.__class__ = ResponseOutputText
 
         output_message = MagicMock()
@@ -463,8 +500,13 @@ class TestOpenAIProviderSendDeep:
         mock_response.status = "completed"
         mock_response.usage = None
 
-        with patch.object(provider.client.responses, "create", new=AsyncMock(return_value=mock_response)):
-            with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+        with patch.object(
+            provider.client.responses, "create", new=AsyncMock(return_value=mock_response)
+        ):
+            with patch(
+                "ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session",
+                new=AsyncMock(return_value=_make_empty_container_file()),
+            ):
                 result = await provider.send(
                     messages=[_make_user_message("Hello")],
                     session_id=_SESSION_ID,
@@ -487,8 +529,13 @@ class TestOpenAIProviderSendDeep:
         mock_response.status = "completed"
         mock_response.usage = None
 
-        with patch.object(provider.client.responses, "create", new=AsyncMock(return_value=mock_response)):
-            with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+        with patch.object(
+            provider.client.responses, "create", new=AsyncMock(return_value=mock_response)
+        ):
+            with patch(
+                "ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session",
+                new=AsyncMock(return_value=_make_empty_container_file()),
+            ):
                 result = await provider.send(
                     messages=[_make_user_message("Search for python")],
                     session_id=_SESSION_ID,
@@ -510,8 +557,13 @@ class TestOpenAIProviderSendDeep:
         mock_response.usage.input_tokens_details = MagicMock()
         mock_response.usage.input_tokens_details.cached_tokens = 10
 
-        with patch.object(provider.client.responses, "create", new=AsyncMock(return_value=mock_response)):
-            with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+        with patch.object(
+            provider.client.responses, "create", new=AsyncMock(return_value=mock_response)
+        ):
+            with patch(
+                "ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session",
+                new=AsyncMock(return_value=_make_empty_container_file()),
+            ):
                 result = await provider.send(
                     messages=[_make_user_message("Hello")],
                     session_id=_SESSION_ID,
@@ -530,8 +582,13 @@ class TestOpenAIProviderSendDeep:
         mock_response.status = "failed"
         mock_response.usage = None
 
-        with patch.object(provider.client.responses, "create", new=AsyncMock(return_value=mock_response)):
-            with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+        with patch.object(
+            provider.client.responses, "create", new=AsyncMock(return_value=mock_response)
+        ):
+            with patch(
+                "ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session",
+                new=AsyncMock(return_value=_make_empty_container_file()),
+            ):
                 result = await provider.send(
                     messages=[_make_user_message("Hello")],
                     session_id=_SESSION_ID,
@@ -548,8 +605,13 @@ class TestOpenAIProviderSendDeep:
         mock_response.status = "incomplete"
         mock_response.usage = None
 
-        with patch.object(provider.client.responses, "create", new=AsyncMock(return_value=mock_response)):
-            with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+        with patch.object(
+            provider.client.responses, "create", new=AsyncMock(return_value=mock_response)
+        ):
+            with patch(
+                "ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session",
+                new=AsyncMock(return_value=_make_empty_container_file()),
+            ):
                 result = await provider.send(
                     messages=[_make_user_message("Hello")],
                     session_id=_SESSION_ID,
@@ -566,8 +628,13 @@ class TestOpenAIProviderSendDeep:
         mock_response.status = "some_unknown_status"
         mock_response.usage = None
 
-        with patch.object(provider.client.responses, "create", new=AsyncMock(return_value=mock_response)):
-            with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+        with patch.object(
+            provider.client.responses, "create", new=AsyncMock(return_value=mock_response)
+        ):
+            with patch(
+                "ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session",
+                new=AsyncMock(return_value=_make_empty_container_file()),
+            ):
                 result = await provider.send(
                     messages=[_make_user_message("Hello")],
                     session_id=_SESSION_ID,
@@ -599,7 +666,10 @@ class TestOpenAIProviderSendDeep:
             return mock_response
 
         with patch.object(provider.client.responses, "create", new=capture_create):
-            with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+            with patch(
+                "ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session",
+                new=AsyncMock(return_value=_make_empty_container_file()),
+            ):
                 await provider.send(
                     messages=[system_msg, _make_user_message("Hello")],
                     session_id=_SESSION_ID,
@@ -619,8 +689,13 @@ class TestOpenAIProviderSendDeep:
         mock_response.status = "completed"
         mock_response.usage = None
 
-        with patch.object(provider.client.responses, "create", new=AsyncMock(return_value=mock_response)):
-            with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+        with patch.object(
+            provider.client.responses, "create", new=AsyncMock(return_value=mock_response)
+        ):
+            with patch(
+                "ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session",
+                new=AsyncMock(return_value=_make_empty_container_file()),
+            ):
                 result = await provider.send(
                     messages=[_make_user_message("Hello")],
                     session_id=_SESSION_ID,
@@ -644,6 +719,7 @@ class TestOpenAIProviderStreamDeep:
 
     def _mock_stream_events(self, events):
         """Create an async context manager mock that yields events."""
+
         async def async_gen():
             for e in events:
                 yield e
@@ -657,6 +733,7 @@ class TestOpenAIProviderStreamDeep:
     async def test_stream_text_delta_event(self):
         """Test that text delta events are properly emitted."""
         from ii_agent.chat.llm.openai import OpenAIProvider
+
         provider = self._make_streaming_provider()
 
         mock_text_delta = MagicMock()
@@ -674,7 +751,10 @@ class TestOpenAIProviderStreamDeep:
             yield mock_text_delta
             yield mock_done
 
-        with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+        with patch(
+            "ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session",
+            new=AsyncMock(return_value=_make_empty_container_file()),
+        ):
             with patch.object(provider.client.responses, "stream") as mock_stream_ctx:
                 stream_mock = MagicMock()
                 stream_mock.__aenter__ = AsyncMock(return_value=stream_mock)
@@ -715,7 +795,10 @@ class TestOpenAIProviderStreamDeep:
             # Build a minimal response to avoid exceptions
             raise RuntimeError("stop early")
 
-        with patch("ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session", new=AsyncMock(return_value=_make_empty_container_file())):
+        with patch(
+            "ii_agent.chat.llm.openai.OpenAIProvider._get_files_within_session",
+            new=AsyncMock(return_value=_make_empty_container_file()),
+        ):
             with patch.object(provider.client.responses, "stream") as mock_stream:
                 mock_ctx = MagicMock()
                 mock_ctx.__aenter__ = AsyncMock(side_effect=RuntimeError("intentional stop"))
@@ -724,7 +807,11 @@ class TestOpenAIProviderStreamDeep:
 
                 try:
                     async for _ in provider.stream(
-                        messages=[_make_user_message("Hello"), asst_msg, _make_user_message("Next")],
+                        messages=[
+                            _make_user_message("Hello"),
+                            asst_msg,
+                            _make_user_message("Next"),
+                        ],
                         session_id=_SESSION_ID,
                     ):
                         pass
@@ -753,6 +840,7 @@ class TestDownloadFileCitationsDeep:
         result = await provider._download_file_citations([], "session-123")
 
         from ii_agent.chat.llm.openai import ContainerFile
+
         assert isinstance(result, ContainerFile)
         assert result.files == []
         assert result.container_id is None
@@ -793,13 +881,18 @@ class TestContainerFileEdgeCases:
 
     def _make_file(self, content_type: str, provider_file_id: str):
         from ii_agent.chat.llm.openai import FileResponseObject
+
         return FileResponseObject(
-            id="f1", provider_file_id=provider_file_id, provider="openai",
-            content_type=content_type, file_name="file"
+            id="f1",
+            provider_file_id=provider_file_id,
+            provider="openai",
+            content_type=content_type,
+            file_name="file",
         )
 
     def test_mixed_content_types(self):
         from ii_agent.chat.llm.openai import ContainerFile
+
         cf = ContainerFile(
             container_id="c1",
             files=[
@@ -824,16 +917,15 @@ class TestContainerFileEdgeCases:
 
     def test_no_container_id(self):
         from ii_agent.chat.llm.openai import ContainerFile
+
         cf = ContainerFile(container_id=None, files=[])
         assert cf.container_id is None
 
     def test_application_pdf_excluded_from_container_files(self):
         """application/pdf should be excluded from container file IDs (endswith pdf)."""
         from ii_agent.chat.llm.openai import ContainerFile
-        cf = ContainerFile(
-            container_id="c1",
-            files=[self._make_file("application/pdf", "pdf-id")]
-        )
+
+        cf = ContainerFile(container_id="c1", files=[self._make_file("application/pdf", "pdf-id")])
         assert "pdf-id" not in cf.get_container_file_ids()
         assert "pdf-id" in cf.get_pdf_file_ids()
 
@@ -846,13 +938,16 @@ class TestContainerFileEdgeCases:
 class TestGetContentTypeDeep:
     """Additional coverage for _get_content_type."""
 
-    @pytest.mark.parametrize("filename,expected_contains", [
-        ("report.tex", "tex"),
-        ("document.doc", "msword"),
-        ("code.js", "javascript"),
-        ("Code.JS", "javascript"),
-        ("MY_FILE.PY", "python"),
-    ])
+    @pytest.mark.parametrize(
+        "filename,expected_contains",
+        [
+            ("report.tex", "tex"),
+            ("document.doc", "msword"),
+            ("code.js", "javascript"),
+            ("Code.JS", "javascript"),
+            ("MY_FILE.PY", "python"),
+        ],
+    )
     def test_extensions(self, filename, expected_contains):
         provider = _make_provider()
         result = provider._get_content_type(filename)
@@ -878,6 +973,7 @@ class TestGetContentTypeDeep:
 class TestOpenAIResponseParamsDeep:
     def test_all_optional_fields_none_excluded(self):
         from ii_agent.chat.llm.openai import OpenAIResponseParams
+
         params = OpenAIResponseParams(model="gpt-4", input="hi")
         d = params.to_dict(exclude_none=True)
         assert "instructions" not in d
@@ -888,18 +984,21 @@ class TestOpenAIResponseParamsDeep:
 
     def test_reasoning_field_included(self):
         from ii_agent.chat.llm.openai import OpenAIResponseParams
+
         params = OpenAIResponseParams(model="gpt-4", input="hi", reasoning={"effort": "high"})
         d = params.to_dict()
         assert d["reasoning"] == {"effort": "high"}
 
     def test_previous_response_id_included(self):
         from ii_agent.chat.llm.openai import OpenAIResponseParams
+
         params = OpenAIResponseParams(model="gpt-4", input="hi", previous_response_id="resp_123")
         d = params.to_dict()
         assert d["previous_response_id"] == "resp_123"
 
     def test_max_output_tokens_included(self):
         from ii_agent.chat.llm.openai import OpenAIResponseParams
+
         params = OpenAIResponseParams(model="gpt-4", input="hi", max_output_tokens=500)
         d = params.to_dict()
         assert d["max_output_tokens"] == 500

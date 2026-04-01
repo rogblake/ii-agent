@@ -44,7 +44,7 @@ class MediaService {
         data: GenerateReferenceImageRequest
     ): Promise<GenerateReferenceImageResponse> {
         const response = await axiosInstance.post<GenerateReferenceImageResponse>(
-            '/media/reference-image',
+            '/v1/media/reference-image',
             data
         )
         return response.data
@@ -52,13 +52,13 @@ class MediaService {
 
     async getVideoModels(): Promise<VideoModelsResponse> {
         const response =
-            await axiosInstance.get<VideoModelsResponse>('/media/models/video')
+            await axiosInstance.get<VideoModelsResponse>('/v1/media/models/video')
         return response.data
     }
 
     async getImageModels(): Promise<ImageModelsResponse> {
         const response =
-            await axiosInstance.get<ImageModelsResponse>('/media/models/image')
+            await axiosInstance.get<ImageModelsResponse>('/v1/media/models/image')
         return response.data
     }
 

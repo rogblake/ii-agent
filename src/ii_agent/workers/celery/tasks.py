@@ -10,16 +10,10 @@ from typing import Any, Optional
 from celery import shared_task
 from sqlalchemy import select
 
-from ii_agent.billing.types import (
-    BillingContextValue,
-    BillingResult,
-    BillingScope,
-)
-from ii_agent.content.storybook.billing import finalize_storybook_async_operation
 from ii_agent.workers.celery.decorators import with_task_context
 from ii_agent.workers.celery.manager import get_celery_container
 from ii_agent.workers.celery.utils import queue_task
-from ii_agent.billing.credits.utils import usd_to_credits
+from ii_agent.billing.utils import usd_to_credits
 from ii_agent.core.logger import logger
 from ii_agent.core.redis import cancel
 

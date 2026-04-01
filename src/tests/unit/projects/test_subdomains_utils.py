@@ -22,6 +22,7 @@ from ii_agent.projects.subdomains.utils import (
 # validate_subdomain
 # ---------------------------------------------------------------------------
 
+
 class TestValidateSubdomain:
     """Tests for the validate_subdomain() helper function."""
 
@@ -159,6 +160,7 @@ class TestValidateSubdomain:
 # CloudflareKVConfig
 # ---------------------------------------------------------------------------
 
+
 class TestCloudflareKVConfig:
     """Tests for CloudflareKVConfig.from_env()."""
 
@@ -219,6 +221,7 @@ class TestCloudflareKVConfig:
 # ---------------------------------------------------------------------------
 # CloudflareKVService helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_config() -> CloudflareKVConfig:
     return CloudflareKVConfig(
@@ -375,7 +378,9 @@ class TestCloudflareKVServiceCreateSubdomain:
         svc = _make_service()
         mock_client = AsyncMock()
         mock_client.get.return_value = _fake_response(404)
-        mock_client.put.return_value = _fake_response(422, {"errors": [{"message": "quota exceeded"}]})
+        mock_client.put.return_value = _fake_response(
+            422, {"errors": [{"message": "quota exceeded"}]}
+        )
         svc._client = mock_client
 
         result = await svc.create_subdomain("myapp", "https://cloud.run")
@@ -517,7 +522,12 @@ class TestCloudflareKVServiceUpdateSubdomain:
     async def test_update_subdomain_preserves_existing_project_id(self):
         svc = _make_service()
         mock_client = AsyncMock()
-        existing = {"cloud_run_url": "old", "project_id": "orig-proj", "user_id": "u1", "created_at": "2024-01-01T00:00:00Z"}
+        existing = {
+            "cloud_run_url": "old",
+            "project_id": "orig-proj",
+            "user_id": "u1",
+            "created_at": "2024-01-01T00:00:00Z",
+        }
         mock_client.get.return_value = _fake_response(200, existing)
         mock_client.put.return_value = _fake_response(200)
         svc._client = mock_client

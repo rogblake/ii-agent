@@ -1,6 +1,6 @@
 import pytest
 
-from ii_agent.billing.credits.router import router
+from ii_agent.billing.router import router
 from tests.api.contracts import assert_auth_contract, assert_routes_present
 
 pytestmark = pytest.mark.unit
@@ -8,7 +8,8 @@ pytestmark = pytest.mark.unit
 
 EXPECTED_ROUTES = {
     ("GET", "/credits/balance"),
-    ("GET", "/credits/usage"),
+    ("GET", "/credits/history"),
+    ("GET", "/credits/usage/{session_id}"),
 }
 
 

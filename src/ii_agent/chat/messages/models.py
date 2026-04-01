@@ -5,9 +5,8 @@ from typing import Optional
 import uuid
 
 from sqlalchemy import ARRAY, BigInteger, Boolean, Float, ForeignKey, Index, String, Text
-from sqlalchemy import UUID
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from ii_agent.core.db.base import Base, TimestampColumn
 
@@ -24,10 +23,10 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    session_id: Mapped[str] = mapped_column(
-        String,
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -65,7 +64,7 @@ class ChatMessage(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
     parent_message_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        PG_UUID(as_uuid=True),
+        UUID(as_uuid=True),
         ForeignKey("chat_messages.id", ondelete="SET NULL"),
         nullable=True,
     )  # Link to parent message (user message for assistant responses)
@@ -89,13 +88,8 @@ class ChatSummary(Base):
 
     __tablename__ = "chat_summaries"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
-    session_id: Mapped[str] = mapped_column(
-        String,
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="CASCADE")
     )
 
@@ -112,8 +106,8 @@ class ChatSummary(Base):
     model_id: Mapped[str] = mapped_column(String)
 
     # Chaining for recursive compression
-    parent_summary_id: Mapped[Optional[str]] = mapped_column(
-        String,
+    parent_summary_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("chat_summaries.id"),
         nullable=True
     )

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.chat.messages.models import ChatMessage
 from ii_agent.chat.messages.repository import ChatMessageRepository
 from ii_agent.files.repository import FileRepository
-from ii_agent.billing.usage.models import TokenUsage
+from ii_agent.billing.schemas import TokenUsage
 from ii_agent.chat.api.schemas import (
     ChatMessageResponse,
     FileAttachmentResponse,

@@ -15,10 +15,12 @@ pytestmark = pytest.mark.unit
 # LLMSettingRepository
 # ---------------------------------------------------------------------------
 
+
 class TestLLMSettingRepositoryR4:
     def _make_repo(self):
-        from ii_agent.settings.llm.repository import LLMSettingRepository
-        return LLMSettingRepository()
+        from ii_agent.settings.llm.repository import ModelSettingRepository
+
+        return ModelSettingRepository()
 
     @pytest.mark.asyncio
     async def test_get_by_id_and_user_returns_setting(self):
@@ -28,7 +30,7 @@ class TestLLMSettingRepositoryR4:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_setting
         mock_db.execute = AsyncMock(return_value=mock_result)
-        result = await repo.get_by_id_and_user(mock_db, "setting-1", "user-1")
+        result = await repo.find_by_id_and_user_id(mock_db, "setting-1", "user-1")
         assert result is mock_setting
 
     @pytest.mark.asyncio
@@ -38,7 +40,7 @@ class TestLLMSettingRepositoryR4:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute = AsyncMock(return_value=mock_result)
-        result = await repo.get_by_id_and_user(mock_db, "missing", "user-1")
+        result = await repo.find_by_id_and_user_id(mock_db, "missing", "user-1")
         assert result is None
 
     @pytest.mark.asyncio
@@ -49,7 +51,7 @@ class TestLLMSettingRepositoryR4:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_setting
         mock_db.execute = AsyncMock(return_value=mock_result)
-        result = await repo.get_by_model_and_user(mock_db, "gpt-4", "user-1")
+        result = await repo.find_by_model_and_user(mock_db, "gpt-4", "user-1")
         assert result is mock_setting
 
     @pytest.mark.asyncio
@@ -59,7 +61,7 @@ class TestLLMSettingRepositoryR4:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute = AsyncMock(return_value=mock_result)
-        result = await repo.get_by_model_and_user(mock_db, "nonexistent-model", "user-1")
+        result = await repo.find_by_model_and_user(mock_db, "nonexistent-model", "user-1")
         assert result is None
 
     @pytest.mark.asyncio
@@ -72,11 +74,11 @@ class TestLLMSettingRepositoryR4:
         mock_scalars.all.return_value = mock_settings
         mock_result.scalars.return_value = mock_scalars
         mock_db.execute = AsyncMock(return_value=mock_result)
-        result = await repo.list_by_user(mock_db, "user-1")
+        result = await repo.find_all_by_user(mock_db, "user-1")
         assert len(result) == 2
 
     @pytest.mark.asyncio
-    async def test_list_by_user_with_api_type_filter(self):
+    async def test_list_by_user_with_provider_filter(self):
         repo = self._make_repo()
         mock_db = AsyncMock()
         mock_result = MagicMock()
@@ -84,7 +86,7 @@ class TestLLMSettingRepositoryR4:
         mock_scalars.all.return_value = []
         mock_result.scalars.return_value = mock_scalars
         mock_db.execute = AsyncMock(return_value=mock_result)
-        result = await repo.list_by_user(mock_db, "user-1", api_type="openai")
+        result = await repo.find_all_by_user(mock_db, "user-1", provider="openai")
         assert isinstance(result, list)
 
     @pytest.mark.asyncio
@@ -103,9 +105,11 @@ class TestLLMSettingRepositoryR4:
 # MCPSettingRepository
 # ---------------------------------------------------------------------------
 
+
 class TestMCPSettingRepositoryR4:
     def _make_repo(self):
         from ii_agent.settings.mcp.repository import MCPSettingRepository
+
         return MCPSettingRepository()
 
     @pytest.mark.asyncio
@@ -205,10 +209,12 @@ class TestMCPSettingRepositoryR4:
 # FileSettingsStore
 # ---------------------------------------------------------------------------
 
+
 class TestFileSettingsStoreR4:
     @pytest.mark.asyncio
     async def test_load_returns_none_when_file_not_found(self):
         from ii_agent.settings.llm.store.file_settings_store import FileSettingsStore
+
         mock_storage = MagicMock()
         mock_storage.read = MagicMock(side_effect=FileNotFoundError("not found"))
         store = FileSettingsStore(file_store=mock_storage, path="settings.json")
@@ -219,6 +225,7 @@ class TestFileSettingsStoreR4:
     async def test_load_returns_persisted_settings(self):
         from ii_agent.settings.llm.store.file_settings_store import FileSettingsStore
         from ii_agent.settings.llm.persisted_settings import PersistedSettings
+
         data = PersistedSettings()
         json_str = data.model_dump_json(context={"expose_secrets": True})
         mock_storage = MagicMock()
@@ -232,6 +239,7 @@ class TestFileSettingsStoreR4:
     async def test_store_writes_json_to_storage(self):
         from ii_agent.settings.llm.store.file_settings_store import FileSettingsStore
         from ii_agent.settings.llm.persisted_settings import PersistedSettings
+
         mock_storage = MagicMock()
         mock_storage.write = MagicMock()
         store = FileSettingsStore(file_store=mock_storage, path="settings.json")
@@ -248,26 +256,34 @@ class TestFileSettingsStoreR4:
     @pytest.mark.asyncio
     async def test_get_instance_returns_store(self):
         from ii_agent.settings.llm.store.file_settings_store import FileSettingsStore
-        with patch("ii_agent.settings.llm.store.file_settings_store.default_storage") as mock_storage:
+
+        with patch(
+            "ii_agent.settings.llm.store.file_settings_store.default_storage"
+        ) as mock_storage:
             store = await FileSettingsStore.get_instance(config=MagicMock(), user_id="user-1")
         assert isinstance(store, FileSettingsStore)
 
     @pytest.mark.asyncio
     async def test_get_instance_no_user_id(self):
         from ii_agent.settings.llm.store.file_settings_store import FileSettingsStore
-        with patch("ii_agent.settings.llm.store.file_settings_store.default_storage") as mock_storage:
+
+        with patch(
+            "ii_agent.settings.llm.store.file_settings_store.default_storage"
+        ) as mock_storage:
             store = await FileSettingsStore.get_instance(config=MagicMock(), user_id=None)
         assert isinstance(store, FileSettingsStore)
 
     @pytest.mark.asyncio
     async def test_call_sync_from_async_runs_function(self):
         from ii_agent.settings.llm.store.file_settings_store import call_sync_from_async
+
         result = await call_sync_from_async(lambda x: x * 2, 5)
         assert result == 10
 
     @pytest.mark.asyncio
     async def test_call_sync_from_async_with_exception(self):
         from ii_agent.settings.llm.store.file_settings_store import call_sync_from_async
+
         with pytest.raises(ValueError, match="test error"):
             await call_sync_from_async(lambda: (_ for _ in ()).throw(ValueError("test error")))
 
@@ -276,9 +292,11 @@ class TestFileSettingsStoreR4:
 # MCP schema tests
 # ---------------------------------------------------------------------------
 
+
 class TestMCPSchemasR4:
     def test_validate_metadata_codex(self):
         from ii_agent.settings.mcp.schemas import validate_metadata, CodexMetadata
+
         metadata = {"tool_type": "codex", "auth_json": {"token": "abc"}}
         result = validate_metadata(metadata)
         assert isinstance(result, CodexMetadata)
@@ -286,6 +304,7 @@ class TestMCPSchemasR4:
 
     def test_validate_metadata_codex_with_json_string(self):
         from ii_agent.settings.mcp.schemas import validate_metadata, CodexMetadata
+
         metadata = {"tool_type": "codex", "auth_json": '{"token": "abc"}'}
         result = validate_metadata(metadata)
         assert isinstance(result, CodexMetadata)
@@ -293,12 +312,14 @@ class TestMCPSchemasR4:
 
     def test_validate_metadata_codex_invalid_json_raises(self):
         from ii_agent.settings.mcp.schemas import validate_metadata
+
         metadata = {"tool_type": "codex", "auth_json": "not-valid-json{"}
         with pytest.raises(ValueError, match="Invalid JSON"):
             validate_metadata(metadata)
 
     def test_validate_metadata_claude_code(self):
         from ii_agent.settings.mcp.schemas import validate_metadata, ClaudeCodeMetadata
+
         metadata = {
             "tool_type": "claude_code",
             "auth_json": {"access_token": "token", "refresh_token": "rt", "expires_at": 9999},
@@ -308,6 +329,7 @@ class TestMCPSchemasR4:
 
     def test_validate_metadata_composio(self):
         from ii_agent.settings.mcp.schemas import validate_metadata, ComposioMetadata
+
         metadata = {
             "tool_type": "composio",
             "toolkit_slug": "gmail",
@@ -319,6 +341,7 @@ class TestMCPSchemasR4:
 
     def test_validate_metadata_unknown_type_returns_base(self):
         from ii_agent.settings.mcp.schemas import validate_metadata, MCPMetadata
+
         metadata = {"tool_type": "some_custom_type"}
         result = validate_metadata(metadata)
         assert isinstance(result, MCPMetadata)
@@ -326,16 +349,19 @@ class TestMCPSchemasR4:
 
     def test_validate_metadata_empty_raises(self):
         from ii_agent.settings.mcp.schemas import validate_metadata
+
         with pytest.raises(ValueError, match="cannot be empty"):
             validate_metadata({})
 
     def test_validate_metadata_none_raises(self):
         from ii_agent.settings.mcp.schemas import validate_metadata
+
         with pytest.raises(ValueError, match="cannot be empty"):
             validate_metadata(None)  # type: ignore
 
     def test_mcp_setting_list_get_combined_active_config(self):
         from ii_agent.settings.mcp.schemas import MCPSettingList, MCPSettingInfo, MCPServersConfig
+
         setting = MagicMock(spec=MCPSettingInfo)
         setting.id = "s-1"
         setting.is_active = True
@@ -348,6 +374,7 @@ class TestMCPSchemasR4:
     def test_mcp_setting_list_skips_codex_as_mcp(self):
         from ii_agent.settings.mcp.schemas import MCPSettingList, MCPSettingInfo, MCPServersConfig
         from fastmcp.mcp_config import RemoteMCPServer
+
         setting = MagicMock(spec=MCPSettingInfo)
         setting.id = "s-1"
         setting.is_active = True
@@ -361,6 +388,7 @@ class TestMCPSchemasR4:
 
     def test_mcp_setting_list_get_by_id(self):
         from ii_agent.settings.mcp.schemas import MCPSettingList, MCPSettingInfo, MCPServersConfig
+
         setting = MagicMock(spec=MCPSettingInfo)
         setting.id = "target-id"
         lst = MCPSettingList(settings=[setting])
@@ -369,6 +397,7 @@ class TestMCPSchemasR4:
 
     def test_mcp_setting_list_get_by_id_returns_none_when_missing(self):
         from ii_agent.settings.mcp.schemas import MCPSettingList
+
         lst = MCPSettingList(settings=[])
         result = lst.get_by_id("missing")
         assert result is None
@@ -378,20 +407,24 @@ class TestMCPSchemasR4:
 # LLM schema tests
 # ---------------------------------------------------------------------------
 
+
 class TestLLMSchemasR4:
     def test_model_setting_info_with_key_to_llm_config(self):
-        from ii_agent.settings.llm.schemas import ModelSettingInfoWithKey
+        from ii_agent.settings.llm.schemas import ModelSettingInfoWithKey, ModelParams
         from ii_agent.core.config.llm_config import LLMConfig
+
         info = ModelSettingInfoWithKey(
             id="setting-1",
-            model="gpt-4",
-            api_type="openai",
+            model_id="gpt-4",
+            provider="openai",
             base_url=None,
-            max_retries=3,
-            max_message_chars=10000,
-            temperature=0.0,
-            thinking_tokens=0,
-            is_active=True,
+            display_name=None,
+            configs=ModelParams(
+                max_retries=3, max_message_chars=10000, temperature=0.0, thinking_tokens=0
+            ),
+            pricing=None,
+            config_type="user",
+            is_default=True,
             has_api_key=True,
             created_at="2024-01-01T00:00:00Z",
             api_key="sk-test-key",
@@ -401,17 +434,20 @@ class TestLLMSchemasR4:
         assert config.model == "gpt-4"
 
     def test_model_setting_info_with_key_no_api_key_raises(self):
-        from ii_agent.settings.llm.schemas import ModelSettingInfoWithKey
+        from ii_agent.settings.llm.schemas import ModelSettingInfoWithKey, ModelParams
+
         info = ModelSettingInfoWithKey(
             id="setting-1",
-            model="gpt-4",
-            api_type="openai",
+            model_id="gpt-4",
+            provider="openai",
             base_url=None,
-            max_retries=3,
-            max_message_chars=10000,
-            temperature=0.0,
-            thinking_tokens=0,
-            is_active=True,
+            display_name=None,
+            configs=ModelParams(
+                max_retries=3, max_message_chars=10000, temperature=0.0, thinking_tokens=0
+            ),
+            pricing=None,
+            config_type="user",
+            is_default=True,
             has_api_key=False,
             created_at="2024-01-01T00:00:00Z",
             api_key=None,
@@ -421,6 +457,7 @@ class TestLLMSchemasR4:
 
     def test_model_setting_list_get_by_id(self):
         from ii_agent.settings.llm.schemas import ModelSettingList, ModelSettingInfo
+
         info = MagicMock(spec=ModelSettingInfo)
         info.id = "setting-1"
         lst = ModelSettingList(models=[info])
@@ -429,39 +466,44 @@ class TestLLMSchemasR4:
 
     def test_model_setting_list_get_by_id_missing_returns_none(self):
         from ii_agent.settings.llm.schemas import ModelSettingList
+
         lst = ModelSettingList(models=[])
         assert lst.get_by_id("missing") is None
 
     def test_model_setting_list_get_by_model(self):
         from ii_agent.settings.llm.schemas import ModelSettingList, ModelSettingInfo
+
         info = MagicMock(spec=ModelSettingInfo)
-        info.model = "gpt-4"
+        info.model_id = "gpt-4"
         lst = ModelSettingList(models=[info])
         result = lst.get_by_model("gpt-4")
         assert result is info
 
-    def test_model_setting_info_with_key_with_metadata_azure(self):
-        from ii_agent.settings.llm.schemas import ModelSettingInfoWithKey
+    def test_model_setting_info_with_key_with_azure_configs(self):
+        from ii_agent.settings.llm.schemas import ModelSettingInfoWithKey, ModelParams
         from ii_agent.core.config.llm_config import LLMConfig
-        # Azure OpenAI uses api_type="custom" since "azure_openai" is not a valid APITypes value.
-        # Azure-specific settings are stored in metadata and extracted by to_llm_config().
+
+        # Azure-specific settings are now stored in configs JSONB
         info = ModelSettingInfoWithKey(
             id="setting-1",
-            model="gpt-4",
-            api_type="custom",
+            model_id="gpt-4",
+            provider="custom",
             base_url=None,
-            max_retries=3,
-            max_message_chars=10000,
-            temperature=0.0,
-            thinking_tokens=0,
-            is_active=True,
+            display_name=None,
+            configs=ModelParams(
+                max_retries=3,
+                max_message_chars=10000,
+                temperature=0.0,
+                thinking_tokens=0,
+                azure_endpoint="https://myazure.openai.azure.com",
+                azure_api_version="2024-02-01",
+            ),
+            pricing=None,
+            config_type="user",
+            is_default=True,
             has_api_key=True,
             created_at="2024-01-01T00:00:00Z",
             api_key="sk-azure-key",
-            metadata={
-                "azure_endpoint": "https://myazure.openai.azure.com",
-                "azure_api_version": "2024-02-01",
-            },
         )
         config = info.to_llm_config()
         assert config.azure_endpoint == "https://myazure.openai.azure.com"

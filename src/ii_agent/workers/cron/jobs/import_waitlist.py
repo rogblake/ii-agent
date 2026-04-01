@@ -13,8 +13,8 @@ from typing import Iterable
 from sqlalchemy import select
 
 from ii_agent.core.logger import logger
-from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.auth.models import WaitlistEntry
+from ii_agent.core.db import get_db_session_local
+from ii_agent.users.models import WaitlistEntry
 
 _TZ_SUFFIX_RE = re.compile(r"([+-]\d{2})(?![:\d])$")
 

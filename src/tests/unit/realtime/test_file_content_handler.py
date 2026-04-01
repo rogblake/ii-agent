@@ -6,16 +6,15 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from ii_agent.agent.events.models import EventType
-from ii_agent.agent.socket.command.file_content_handler import FileContentHandler
+from ii_agent.realtime.events.app_events import FileContentEvent
+from ii_agent.realtime.handlers.file_content_handler import FileContentHandler
 
 pytestmark = pytest.mark.unit
 
 
 @pytest.mark.asyncio
 async def test_file_content_handler_emits_service_payload():
-    event_stream = MagicMock()
-    event_stream.publish = AsyncMock()
+    pubsub = AsyncMock()
 
     container = MagicMock()
     container.workspace_explorer_service.read_file = AsyncMock(
@@ -30,17 +29,18 @@ async def test_file_content_handler_emits_service_payload():
         }
     )
 
-    handler = FileContentHandler(event_stream=event_stream, container=container)
+    handler = FileContentHandler(pubsub=pubsub, container=container)
     session_info = SimpleNamespace(id=uuid.uuid4())
 
-    await handler.handle({"path": "/workspace/photo.avif"}, session_info)
+    await handler.dispatch({"path": "/workspace/photo.avif"}, session_info)
 
     container.workspace_explorer_service.read_file.assert_awaited_once_with(
         session_info=session_info,
         path="/workspace/photo.avif",
     )
-    published_event = event_stream.publish.await_args.args[0]
-    assert published_event.type == EventType.FILE_CONTENT
+    pubsub.publish.assert_awaited_once()
+    published_event = pubsub.publish.await_args.args[0]
+    assert isinstance(published_event, FileContentEvent)
     assert published_event.content == {
         "path": "/workspace/photo.avif",
         "content": None,

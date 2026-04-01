@@ -1,9 +1,13 @@
 """Pydantic schemas (DTOs) for sessions domain."""
 
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, Dict, Any, List, Literal
+
+from ii_agent.agents.types import AgentType
+from ii_agent.sessions.types import AppKind, SessionState
+from ii_agent.settings.llm.schemas import ModelConfig
 
 
 class SessionCreate(BaseModel):
@@ -18,7 +22,7 @@ class SessionUpdate(BaseModel):
     """Model for updating a session."""
 
     name: Optional[str] = None
-    status: Optional[str] = Field(None, pattern="^(pending|active|pause)$")
+    status: Optional[SessionState] = None
     settings: Optional[Dict[str, Any]] = None
     is_public: Optional[bool] = None
 
@@ -27,26 +31,38 @@ class SessionInfo(BaseModel):
     """Model for session information."""
 
     id: UUID
-    user_id: str
+    user_id: UUID
     api_version: Optional[str] = None
     name: Optional[str] = None
-    status: str
-    sandbox_id: Optional[str] = None
+    status: SessionState
     workspace_dir: str
     is_public: bool
     public_url: Optional[str] = None
     token_usage: Optional[Dict[str, Any]] = None
     settings: Optional[Dict[str, Any]] = None
-    project_id: Optional[str] = None
+    project_id: Optional[UUID] = None
     created_at: str
     updated_at: Optional[str] = None
     last_message_at: Optional[str] = None
-    agent_type: Optional[str] = None
-    app_kind: str = "agent"
+    agent_type: Optional[AgentType] = None
+    app_kind: AppKind = AppKind.AGENT
     title_pending: bool = False
+    model_setting_id: Optional[UUID] = None
+    session_metadata: Optional[Dict[str, Any]] = None
 
 
-class SessionList(BaseModel):
+class ValidatedSessionResult(BaseModel):
+    """Result of session validation before an agent run."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    is_valid: bool
+    session_info: Optional[SessionInfo] = None
+    llm_config: Optional[ModelConfig] = None
+    error_code: Optional[str] = None
+
+
+class SessionResponse(BaseModel):
     """Model for session list response."""
 
     sessions: List[SessionInfo]
@@ -68,20 +84,10 @@ class SessionStats(BaseModel):
     average_session_duration: Optional[float] = None
 
 
-class TokenUsage(BaseModel):
-    """Model for token usage tracking."""
-
-    input_tokens: int = 0
-    output_tokens: int = 0
-    total_tokens: int = 0
-    cost_usd: float = 0.0
-    model: Optional[str] = None
-
-
 class SessionPlan(BaseModel):
     """Model for session execution plan."""
 
-    id: str
+    id: UUID
     title: str
     description: str
     steps: List[Dict[str, Any]]
@@ -93,7 +99,7 @@ class SessionPlan(BaseModel):
 class SessionFile(BaseModel):
     """Model for session file."""
 
-    id: str
+    id: UUID
     name: str
     size: int
     content_type: str
@@ -103,7 +109,7 @@ class SessionFile(BaseModel):
 class SessionMilestoneUpdate(BaseModel):
     """Model for updating milestones in a session plan."""
 
-    id: str
+    id: UUID
     content: str
     status: Literal["pending", "in_progress", "completed"] = "pending"
     details: Optional[str] = None
@@ -123,26 +129,26 @@ class SessionPlanUpdate(BaseModel):
 class BulkDeleteRequest(BaseModel):
     """Request for bulk deleting sessions."""
 
-    session_ids: List[str] = Field(..., min_length=1, max_length=50)
+    session_ids: List[UUID] = Field(..., min_length=1, max_length=50)
 
 
 class BulkDeleteResponse(BaseModel):
     """Response for bulk delete."""
 
-    deleted_ids: List[str]
-    failed_ids: List[str]
+    deleted_ids: List[UUID]
+    failed_ids: List[UUID]
 
 
 # ==================== Fork ====================
 
 
-class ForkType(str, Enum):
+class ForkType(StrEnum):
     """Fork type - defines source → target transformation."""
 
     RESEARCH_TO_WEBSITE = "research_to_website"
 
 
-class SandboxMode(str, Enum):
+class SandboxMode(StrEnum):
     """How to handle sandbox for forked session."""
 
     SHARE = "share"
@@ -162,19 +168,18 @@ class ForkSessionRequest(BaseModel):
     fork_type: ForkType
     sandbox_mode: SandboxMode = SandboxMode.SHARE
     context: ForkContext
-    llm_setting_id: Optional[str] = None
+    model_setting_id: Optional[UUID] = None
 
 
 class ForkSessionResponse(BaseModel):
     """Response for fork endpoint."""
 
-    session_id: str
-    parent_session_id: str
+    session_id: UUID
+    parent_session_id: UUID
     name: str
     agent_type: str
-    sandbox_id: Optional[str] = None
     sandbox_mode: SandboxMode
-    llm_setting_id: Optional[str] = None
+    model_setting_id: Optional[UUID] = None
 
 
 # ==================== Fork Validation ====================
@@ -198,3 +203,44 @@ def validate_fork_source(fork_type: ForkType, source_agent_type: Optional[str]) 
     if source_agent_type is None:
         return False
     return source_agent_type in FORK_TYPE_VALID_SOURCES.get(fork_type, [])
+
+
+# ==================== Event Schemas ====================
+
+
+class SessionEventDetail(BaseModel):
+    """Event detail returned by the session events service method."""
+
+    id: Optional[UUID] = None
+    session_id: Optional[UUID] = None
+    created_at: str
+    type: str
+    content: Dict[str, Any]
+    workspace_dir: str
+    run_id: Optional[UUID] = None
+
+
+class EventInfo(BaseModel):
+    """Single event entry returned from session events endpoint.
+
+    ``name`` is the dotted event name (e.g. ``"agent.response"``) used
+    by the FE as the dispatch discriminator.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    id: Optional[UUID] = None
+    name: Optional[str] = None
+    event_type: Optional[str] = None
+    event_group: Optional[str] = None
+    content: Optional[Dict[str, Any]] = None
+    created_at: Optional[str] = None
+    run_id: Optional[str] = None
+    session_id: Optional[str] = None
+
+
+class EventResponse(BaseModel):
+    """Response for GET /sessions/{session_id}/events."""
+
+    events: List[EventInfo] = Field(default_factory=list)
+    run_status: Optional[str] = None

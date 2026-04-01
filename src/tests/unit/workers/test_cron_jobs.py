@@ -171,8 +171,12 @@ class TestRunAllJobs:
             executed.append("job2")
 
         jobs = [
-            CronJobSpec(name="job1", schedule="* * * * *", task=task1, command="cmd1", status="active"),
-            CronJobSpec(name="job2", schedule="* * * * *", task=task2, command="cmd2", status="active"),
+            CronJobSpec(
+                name="job1", schedule="* * * * *", task=task1, command="cmd1", status="active"
+            ),
+            CronJobSpec(
+                name="job2", schedule="* * * * *", task=task2, command="cmd2", status="active"
+            ),
         ]
 
         with patch("ii_agent.workers.cron.cron_jobs.CRON_JOBS", jobs):

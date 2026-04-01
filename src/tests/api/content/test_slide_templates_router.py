@@ -7,9 +7,9 @@ pytestmark = pytest.mark.unit
 
 
 EXPECTED_ROUTES = {
-    ("GET", "/slide-templates"),
-    ("GET", "/slide-templates/{template_id}"),
-    ("POST", "/slide-templates"),
+    ("GET", "/templates"),
+    ("GET", "/templates/{template_id}"),
+    ("POST", "/templates"),
 }
 
 
@@ -20,9 +20,9 @@ def test_slide_templates_router_routes_registered():
 def test_slide_templates_router_auth_contract():
     assert_auth_contract(
         router,
-        protected={("POST", "/slide-templates")},
+        protected={("POST", "/templates")},
         public={
-            ("GET", "/slide-templates"),
-            ("GET", "/slide-templates/{template_id}"),
+            ("GET", "/templates"),
+            ("GET", "/templates/{template_id}"),
         },
     )

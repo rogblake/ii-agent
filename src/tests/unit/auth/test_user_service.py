@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from ii_agent.auth.users.exceptions import UserDisabledException
-from ii_agent.auth.users.service import UserService
+from ii_agent.users.exceptions import UserDisabledException
+from ii_agent.users.service import UserService
 
 
 class FakeUserRepo:
@@ -65,6 +65,7 @@ class FakeCreditService:
 
     async def ensure_balance_exists(self, db, user_id, **kwargs):
         from decimal import Decimal
+
         credits = Decimal(str(kwargs.get("credits", 0)))
         bonus = Decimal(str(kwargs.get("bonus_credits", 0)))
         self.ensured.append((user_id, credits, bonus))

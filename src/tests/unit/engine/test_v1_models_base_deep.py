@@ -16,18 +16,19 @@ Covers previously untested branches:
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, List
+from typing import Any, AsyncIterator, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.agent.runtime.models.base import MessageData, Model, _handle_agent_exception
-from ii_agent.agent.runtime.models.message import Message
-from ii_agent.agent.runtime.models.metrics import Metrics
-from ii_agent.agent.runtime.models.response import ModelResponse
-from ii_agent.agent.runtime.exceptions import AgentRunException, ModelProviderError
-from ii_agent.agent.runtime.tools.function import Function
+from ii_agent.agents.models.base import MessageData, Model, _handle_agent_exception
+from ii_agent.agents.models.message import Message
+from ii_agent.agents.models.metrics import Metrics
+from ii_agent.agents.models.response import ModelResponse
+from ii_agent.agents.exceptions import AgentRunException, ModelProviderError
+from ii_agent.agents.tools.function import Function
 from ii_agent.core.logger import logger
 
 
@@ -125,7 +126,7 @@ class TestModelBillingFinalizationDeep:
 
         model = _ConcreteModel()
         llm_billing = MagicMock()
-        llm_billing.settle_llm_call = AsyncMock(side_effect=RuntimeError("boom"))
+        llm_billing.settle_agent_llm_call = AsyncMock(side_effect=RuntimeError("boom"))
         llm_billing.release_llm_call = AsyncMock()
         model.llm_billing_service = llm_billing
 
@@ -292,7 +293,7 @@ class TestModelToDict:
         assert "name" not in d
 
     def test_get_provider_returns_provider_when_set(self):
-        from ii_agent.agent.types import Provider
+        from ii_agent.agents.types import Provider
 
         m = _ConcreteModel(id="gpt-4", name="Test", provider=Provider.OPENAI)
         assert m.get_provider() == Provider.OPENAI

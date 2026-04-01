@@ -1,27 +1,39 @@
-"""Database base utilities.
+"""Database infrastructure.
 
-This module provides core database infrastructure.
-Models should be imported directly from their domain modules.
+Usage::
 
-Import pattern:
-    # For base utilities
-    from ii_agent.core.db import Base, TimestampColumn
-
-    # For session context manager
-    from ii_agent.core.db.manager import get_db_session_local
-
-    # For models - import from domain modules
-    from ii_agent.sessions import Session
-    from ii_agent.billing import BillingTransaction
-    from ii_agent.auth.users.models import User
+    from ii_agent.core.db import Base, TimestampColumn, AsyncSession
+    from ii_agent.core.db import get_db_session_local, get_engine, shutdown_engine
+    from ii_agent.core.db import BaseRepository
 """
 
-from ii_agent.core.db.base import Base, TimestampColumn, get_session_factory
-from ii_agent.core.db.repository import BaseRepository
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ii_agent.core.db.base import (
+    Base,
+    BaseRepository,
+    TimestampColumn,
+    get_db,
+    get_db_session_local,
+    get_engine,
+    get_session_factory,
+    run_migrations,
+    shutdown_engine,
+)
 
 __all__ = [
+    # ORM
     "Base",
-    "BaseRepository",
     "TimestampColumn",
+    "AsyncSession",
+    # Repository
+    "BaseRepository",
+    # Engine & session
+    "get_engine",
     "get_session_factory",
+    "get_db_session_local",
+    "get_db",
+    "shutdown_engine",
+    # Migrations
+    "run_migrations",
 ]

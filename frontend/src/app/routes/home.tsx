@@ -24,7 +24,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import UserProfileDropdown from '@/components/user-profile-dropdown'
 import { ENABLE_BETA } from '@/constants/features'
 import { useAuth } from '@/contexts/auth-context'
-import { useAppEvents } from '@/hooks/use-app-events'
+import { useAppEventsContext } from '@/contexts/app-events-context'
 import { useChat } from '@/hooks/use-chat-query'
 import { useGitHub } from '@/hooks/use-github'
 import { useGoogleDrive } from '@/hooks/use-google-drive'
@@ -47,7 +47,7 @@ import { QUESTION_MODE } from '@/typings/agent'
 function HomePageContent() {
     const { t } = useTranslation()
     const dispatch = useAppDispatch()
-    const { handleEvent } = useAppEvents()
+    const { handleEvent } = useAppEventsContext()
     const { user, isLoading } = useAuth()
     const { theme, setTheme } = useTheme()
     const navigate = useNavigate()

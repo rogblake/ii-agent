@@ -8,28 +8,45 @@ from fastapi import APIRouter, Query
 
 from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.core.exceptions import InternalError
-from ii_agent.agent.dependencies import AgentRunServiceDep
-from ii_agent.chat.runs.dependencies import ChatRunServiceDep
+from ii_agent.sessions.dependencies import RunTaskServiceDep
+from ii_agent.chat.api.dependencies import ChatMessageRepositoryDep
 from ii_agent.files.dependencies import FileServiceDep
 from ii_agent.sessions.dependencies import SessionForkServiceDep, SessionServiceDep
-from ii_agent.sessions.exceptions import SessionNotFoundError, SessionValidationError
+from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.schemas import (
     BulkDeleteRequest,
     BulkDeleteResponse,
     ForkSessionRequest,
     ForkSessionResponse,
     SessionInfo,
-    SessionList,
+    SessionResponse,
     SessionFile,
     SessionPlanUpdate,
     SessionUpdate,
 )
-from ii_agent.agent.socket.schemas import EventInfo, EventResponse
+from ii_agent.sessions.schemas import EventInfo, EventResponse, SessionEventDetail
 from ii_agent.sessions.models import AppKind
+from ii_agent.sessions.pin.router import router as pin_router
+
+
+def _build_event_info(e: "SessionEventDetail", session_id: uuid.UUID) -> EventInfo:
+    """Convert a service-layer event detail into the API response model."""
+    return EventInfo(
+        id=e.id,
+        name=e.type,
+        event_type=e.type,
+        content=e.content,
+        created_at=e.created_at,
+        run_id=str(e.run_id) if e.run_id is not None else None,
+        session_id=str(session_id),
+    )
+from ii_agent.sessions.wishlist.router import router as wishlist_router
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
+router.include_router(pin_router)
+router.include_router(wishlist_router)
 
 
 @router.post("/bulk-delete", response_model=BulkDeleteResponse)
@@ -41,51 +58,45 @@ async def bulk_delete_sessions(
 ) -> BulkDeleteResponse:
     """Bulk soft delete sessions by list of IDs."""
     deleted_ids, failed_ids = await session_service.bulk_soft_delete_sessions(
-        db, payload.session_ids, str(current_user.id)
+        db, payload.session_ids, current_user.id
     )
     return BulkDeleteResponse(deleted_ids=deleted_ids, failed_ids=failed_ids)
 
 
 @router.get("/{session_id}", response_model=SessionInfo)
 async def get_session(
-    session_id: str,
+    session_id: uuid.UUID,
     db: DBSession,
     current_user: CurrentUser,
     session_service: SessionServiceDep,
 ) -> SessionInfo:
     """Get detailed information for a specific session."""
-    session_data = await session_service.get_session_details(
-        db, session_id, str(current_user.id)
-    )
+    session_data = await session_service.get_session_details(db, session_id, current_user.id)
 
     if not session_data:
         raise SessionNotFoundError(f"Session {session_id} not found or access denied")
 
-    return SessionInfo(**session_data)
+    return session_data
 
 
-@router.get("", response_model=SessionList)
+@router.get("", response_model=SessionResponse)
 async def list_sessions(
     db: DBSession,
     current_user: CurrentUser,
     session_service: SessionServiceDep,
-    query: Optional[str] = Query(
-        None, description="Search term to filter sessions by name"
-    ),
+    query: Optional[str] = Query(None, description="Search term to filter sessions by name"),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-    public_only: bool = Query(
-        False, description="If true, return only public sessions"
-    ),
+    public_only: bool = Query(False, description="If true, return only public sessions"),
     session_type: Optional[Literal["agent", "chat"]] = Query(
         None,
         description="Filter by session type: 'chat' for chat sessions only, 'agent' for non-chat sessions",
     ),
-) -> SessionList:
+) -> SessionResponse:
     """List sessions for the current user with optional search and pagination."""
     sessions_data, total = await session_service.get_user_sessions(
         db,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         search_term=query,
         page=page,
         per_page=per_page,
@@ -93,43 +104,37 @@ async def list_sessions(
         session_type=session_type,
     )
 
-    sessions = [SessionInfo(**session) for session in sessions_data]
-
-    return SessionList(sessions=sessions, total=total, page=page, per_page=per_page)
+    return SessionResponse(sessions=sessions_data, total=total, page=page, per_page=per_page)
 
 
 @router.get("/{session_id}/events", response_model=EventResponse)
 async def get_session_events(
-    session_id: str,
+    session_id: uuid.UUID,
     db: DBSession,
     current_user: CurrentUser,
     session_service: SessionServiceDep,
-    agent_run_service: AgentRunServiceDep,
-    chat_run_service: ChatRunServiceDep,
+    run_task_service: RunTaskServiceDep,
+    chat_message_repo: ChatMessageRepositoryDep,
 ) -> EventResponse:
     """Get all events for a specific session."""
-    session_data = await session_service.get_session_details(
-        db, session_id, str(current_user.id)
-    )
+    session_data = await session_service.get_session_details(db, session_id, current_user.id)
 
     if not session_data:
         raise SessionNotFoundError(f"Session {session_id} not found or access denied")
 
     events_raw = await session_service.get_session_events_with_details(db, session_id)
-    events = [EventInfo(**event) for event in events_raw]
+    events = [_build_event_info(e, session_id) for e in events_raw]
 
     run_status = None
     try:
-        if session_data.get("app_kind") == AppKind.CHAT:
-            last_run = await chat_run_service.get_last_by_session_id(
-                db, uuid.UUID(session_id)
-            )
+        if session_data.app_kind == AppKind.CHAT:
+            last_msg = await chat_message_repo.get_last_assistant_by_session(db, session_id)
+            if last_msg:
+                run_status = "completed" if last_msg.is_finished else "running"
         else:
-            last_run = await agent_run_service.get_last_by_session_id(
-                db, uuid.UUID(session_id)
-            )
-        if last_run:
-            run_status = last_run.status
+            last_run = await run_task_service.get_last_by_session_id(db, session_id)
+            if last_run:
+                run_status = last_run.status
     except Exception as e:
         logger.warning(f"Failed to get run status for session {session_id}: {e}")
 
@@ -138,16 +143,14 @@ async def get_session_events(
 
 @router.get("/{session_id}/files", response_model=list[SessionFile])
 async def get_session_files(
-    session_id: str,
+    session_id: uuid.UUID,
     db: DBSession,
     current_user: CurrentUser,
     session_service: SessionServiceDep,
     file_service: FileServiceDep,
 ):
     """Get all files for a specific session."""
-    session_data = await session_service.get_session_details(
-        db, session_id, str(current_user.id)
-    )
+    session_data = await session_service.get_session_details(db, session_id, current_user.id)
 
     if not session_data:
         raise SessionNotFoundError(f"Session {session_id} not found or access denied")
@@ -167,15 +170,13 @@ async def get_session_files(
 
 @router.post("/{session_id}/publish")
 async def publish_session(
-    session_id: str,
+    session_id: uuid.UUID,
     db: DBSession,
     current_user: CurrentUser,
     session_service: SessionServiceDep,
 ) -> dict:
     """Set a session as public."""
-    success = await session_service.set_session_public(
-        db, session_id, str(current_user.id), True
-    )
+    success = await session_service.set_session_public(db, session_id, current_user.id, True)
 
     if not success:
         raise SessionNotFoundError(f"Session {session_id} not found or access denied")
@@ -185,15 +186,13 @@ async def publish_session(
 
 @router.post("/{session_id}/unpublish")
 async def unpublish_session(
-    session_id: str,
+    session_id: uuid.UUID,
     db: DBSession,
     current_user: CurrentUser,
     session_service: SessionServiceDep,
 ) -> dict:
     """Set a session as private."""
-    success = await session_service.set_session_public(
-        db, session_id, str(current_user.id), False
-    )
+    success = await session_service.set_session_public(db, session_id, current_user.id, False)
 
     if not success:
         raise SessionNotFoundError(f"Session {session_id} not found or access denied")
@@ -201,119 +200,60 @@ async def unpublish_session(
     return {"message": f"Session {session_id} unpublished successfully"}
 
 
-@router.get("/{session_id}/public", response_model=SessionInfo)
-async def get_public_session(
-    session_id: str,
-    db: DBSession,
-    session_service: SessionServiceDep,
-) -> SessionInfo:
-    """Get detailed information for a public session without authentication."""
-    session_data = await session_service.get_public_session_details(db, session_id)
-
-    if not session_data:
-        raise SessionNotFoundError(f"Session {session_id} not found or not public")
-
-    return SessionInfo(**session_data)
-
-
-@router.get("/{session_id}/public/events", response_model=EventResponse)
-async def get_public_session_events(
-    session_id: str,
-    db: DBSession,
-    session_service: SessionServiceDep,
-    agent_run_service: AgentRunServiceDep,
-    chat_run_service: ChatRunServiceDep,
-) -> EventResponse:
-    """Get all events for a public session without authentication."""
-    session_data = await session_service.get_public_session_details(db, session_id)
-
-    if not session_data:
-        raise SessionNotFoundError(f"Session {session_id} not found or not public")
-
-    events_raw = await session_service.get_session_events_with_details(db, session_id)
-    events = [EventInfo(**event) for event in events_raw]
-
-    run_status = None
-    try:
-        if session_data.get("app_kind") == AppKind.CHAT:
-            last_run = await chat_run_service.get_last_by_session_id(
-                db, uuid.UUID(session_id)
-            )
-        else:
-            last_run = await agent_run_service.get_last_by_session_id(
-                db, uuid.UUID(session_id)
-            )
-        if last_run:
-            run_status = last_run.status
-    except Exception as e:
-        logger.warning(f"Failed to get run status for session {session_id}: {e}")
-
-    return EventResponse(events=events, run_status=run_status)
-
-
 @router.delete("/{session_id}")
 async def delete_session(
-    session_id: str,
+    session_id: uuid.UUID,
     db: DBSession,
     current_user: CurrentUser,
     session_service: SessionServiceDep,
 ) -> dict:
-    """Delete a session by setting its deleted_at timestamp."""
-    await session_service.soft_delete_session(db, session_id, str(current_user.id))
+    """Soft delete a session by setting is_deleted flag."""
+    await session_service.soft_delete_session(db, session_id, current_user.id)
     return {"message": f"Session {session_id} deleted successfully"}
 
 
 @router.post("/{session_id}/fork", response_model=ForkSessionResponse)
 async def fork_session(
-    session_id: str,
+    session_id: uuid.UUID,
     payload: ForkSessionRequest,
     db: DBSession,
     current_user: CurrentUser,
     fork_service: SessionForkServiceDep,
 ) -> ForkSessionResponse:
     """Fork a session to create a new child session with inherited context."""
-    return await fork_service.fork_session(
-        db, session_id, str(current_user.id), payload
-    )
+    return await fork_service.fork_session(db, session_id, current_user.id, payload)
 
 
 @router.patch("/{session_id}", response_model=SessionInfo)
 async def update_session(
-    session_id: str,
+    session_id: uuid.UUID,
     payload: SessionUpdate,
     db: DBSession,
     current_user: CurrentUser,
     session_service: SessionServiceDep,
 ) -> SessionInfo:
     """Update session metadata (name, status, etc.)."""
-    session_data = await session_service.get_session_details(
-        db, session_id, str(current_user.id)
-    )
+    session_data = await session_service.get_session_details(db, session_id, current_user.id)
 
     if not session_data:
         raise SessionNotFoundError(f"Session {session_id} not found or access denied")
 
-    try:
-        session_uuid = uuid.UUID(session_id)
-    except ValueError as exc:
-        raise SessionValidationError("Invalid session_id") from exc
-
     if payload.name is not None:
-        await session_service.update_session_name(db, session_uuid, payload.name)
+        await session_service.update_session_name(db, session_id, payload.name)
 
     updated_session = await session_service.get_session_details(
-        db, session_id, str(current_user.id)
+        db, session_id, current_user.id
     )
 
     if not updated_session:
         raise InternalError("Failed to fetch updated session")
 
-    return SessionInfo(**updated_session)
+    return updated_session
 
 
 @router.patch("/{session_id}/plan")
 async def update_session_plan(
-    session_id: str,
+    session_id: uuid.UUID,
     payload: SessionPlanUpdate,
     db: DBSession,
     current_user: CurrentUser,
@@ -323,8 +263,63 @@ async def update_session_plan(
     await session_service.update_session_plan(
         db,
         session_id=session_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         summary=payload.summary,
         milestones=[m.model_dump() for m in payload.milestones],
     )
     return {"message": "Plan updated successfully"}
+
+
+# ---------------------------------------------------------------------------
+# Public endpoints (served under /v1/public/sessions)
+# ---------------------------------------------------------------------------
+
+public_router = APIRouter(prefix="/sessions", tags=["Sessions Public"])
+
+
+@public_router.get("/{session_id}", response_model=SessionInfo)
+async def get_public_session(
+    session_id: uuid.UUID,
+    db: DBSession,
+    session_service: SessionServiceDep,
+) -> SessionInfo:
+    """Get detailed information for a public session without authentication."""
+    session_data = await session_service.get_public_session_details(db, session_id)
+
+    if not session_data:
+        raise SessionNotFoundError(f"Session {session_id} not found or not public")
+
+    return session_data
+
+
+@public_router.get("/{session_id}/events", response_model=EventResponse)
+async def get_public_session_events(
+    session_id: uuid.UUID,
+    db: DBSession,
+    session_service: SessionServiceDep,
+    run_task_service: RunTaskServiceDep,
+    chat_message_repo: ChatMessageRepositoryDep,
+) -> EventResponse:
+    """Get all events for a public session without authentication."""
+    session_data = await session_service.get_public_session_details(db, session_id)
+
+    if not session_data:
+        raise SessionNotFoundError(f"Session {session_id} not found or not public")
+
+    events_raw = await session_service.get_session_events_with_details(db, session_id)
+    events = [_build_event_info(e, session_id) for e in events_raw]
+
+    run_status = None
+    try:
+        if session_data.app_kind == AppKind.CHAT:
+            last_msg = await chat_message_repo.get_last_assistant_by_session(db, session_id)
+            if last_msg:
+                run_status = "completed" if last_msg.is_finished else "running"
+        else:
+            last_run = await run_task_service.get_last_by_session_id(db, session_id)
+            if last_run:
+                run_status = last_run.status
+    except Exception as e:
+        logger.warning(f"Failed to get run status for session {session_id}: {e}")
+
+    return EventResponse(events=events, run_status=run_status)

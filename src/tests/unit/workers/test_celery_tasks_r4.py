@@ -15,6 +15,7 @@ pytestmark = pytest.mark.unit
 # Pure helper functions - no I/O
 # ---------------------------------------------------------------------------
 
+
 class TestSceneBasePageNumber:
     def test_scene_zero_always_returns_one(self):
         from ii_agent.workers.celery.tasks import _scene_base_page_number
@@ -209,10 +210,10 @@ class TestRunAsync:
             _run_async(coro())
 
 
-
 # ---------------------------------------------------------------------------
 # _generate_storybook_page_async - payload validation
 # ---------------------------------------------------------------------------
+
 
 class TestGenerateStorybookPageAsyncPayload:
     @pytest.mark.asyncio
@@ -316,7 +317,9 @@ class TestGenerateStorybookPageAsyncPayload:
                 "ii_agent.content.storybook.repository.StorybookRepository",
                 return_value=mock_repo,
             ),
-            patch("ii_agent.workers.celery.tasks.cancel.is_cancelled", AsyncMock(return_value=True)),
+            patch(
+                "ii_agent.workers.celery.tasks.cancel.is_cancelled", AsyncMock(return_value=True)
+            ),
         ):
             result = await _generate_storybook_page_async(
                 {"storybook_id": "sb-1", "scene_index": 0}, "task-1"
@@ -327,6 +330,7 @@ class TestGenerateStorybookPageAsyncPayload:
 # ---------------------------------------------------------------------------
 # storybook_generate_page (Celery task)
 # ---------------------------------------------------------------------------
+
 
 class TestStorybookGeneratePage:
     def test_task_returns_failed_on_exception(self):
@@ -351,6 +355,7 @@ class TestStorybookGeneratePage:
 # ---------------------------------------------------------------------------
 # _create_storybook_tool_error and _create_storybook_tool_result - skipped early returns
 # ---------------------------------------------------------------------------
+
 
 class TestCreateStorybookToolErrorResult:
     @pytest.mark.asyncio

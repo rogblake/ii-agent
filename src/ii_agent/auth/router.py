@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import json
 import secrets
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse, urlencode
@@ -12,30 +13,99 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi_sso.sso.google import GoogleSSO
 from itsdangerous import URLSafeSerializer, BadSignature
 
-from ii_agent.auth.oidc_verify import (
-    verify_id_token_pyjwt,
-    verify_at_hash_if_present,
-)
 from ii_agent.auth.dependencies import DBSession, CurrentUser, SettingsDep
-from ii_agent.auth.schemas import TokenResponse
+from ii_agent.auth.exceptions import AuthException, InvalidTokenException
 from ii_agent.auth.jwt_handler import jwt_handler
-from ii_agent.auth.templates import render_auth_callback_html
+from ii_agent.auth.oidc_verify import verify_id_token_pyjwt, verify_at_hash_if_present
+from ii_agent.auth.schemas import TokenResponse
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.exceptions import BadGatewayError, InternalError, ValidationError
-from ii_agent.auth.exceptions import InvalidTokenException
-from ii_agent.auth.users.schemas import UserPublic
-from ii_agent.auth.users.dependencies import UserServiceDep
-from ii_agent.billing.customers.dependencies import BillingCustomerServiceDep
-from ii_agent.billing.customers.service import EffectiveBillingProfile
-
+from ii_agent.users.dependencies import UserServiceDep
+from ii_agent.users.schemas import UserPublic
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
 
 II_STATE_SESSION_KEY = "ii_oauth_state"
 II_CODE_VERIFIER_SESSION_KEY = "ii_code_verifier"
 II_RETURN_TO_SESSION_KEY = "ii_return_to"
 II_RETURN_URL_SESSION_KEY = "ii_return_url"
+
+# ---------------------------------------------------------------------------
+# Auth callback HTML template (inlined from templates.py — single consumer)
+# ---------------------------------------------------------------------------
+
+_AUTH_CALLBACK_HTML = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>II Login</title>
+</head>
+<body>
+<script>
+  (function() {
+    const payload = %s;
+    const targetOrigin = %s;
+    const redirectUrl = %s;
+    const message = { type: 'ii-auth-success', payload };
+    const fallbackOrigin = (() => {
+      if (targetOrigin) return targetOrigin;
+      try {
+        if (redirectUrl) return new URL(redirectUrl).origin;
+      } catch (e) {}
+      return window.location.origin;
+    })();
+
+    function redirectWithHash() {
+      if (!redirectUrl) return;
+      try {
+        const url = new URL(redirectUrl);
+        url.hash = 'ii-auth=' + encodeURIComponent(JSON.stringify(payload));
+        window.location.replace(url.toString());
+      } catch (e) {
+        window.location.replace(redirectUrl);
+      }
+    }
+
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(message, fallbackOrigin || '*');
+        window.close();
+        return;
+      }
+    } catch (err) {
+      console.error('postMessage to opener failed', err);
+    }
+
+    if (redirectUrl) {
+      redirectWithHash();
+      return;
+    }
+
+    document.body.innerHTML = '<p>Login successful. You can close this window.</p>';
+  })();
+</script>
+</body>
+</html>
+"""
+
+
+def _render_auth_callback_html(
+    token_payload: dict,
+    return_origin: Optional[str],
+    return_url: Optional[str],
+) -> str:
+    """Render the OAuth callback HTML that posts tokens back to the opener."""
+    return _AUTH_CALLBACK_HTML % (
+        json.dumps(token_payload),
+        json.dumps(return_origin or ""),
+        json.dumps(return_url or ""),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
 
 
 def _get_serializer(salt: str = "ii-state") -> URLSafeSerializer:
@@ -90,26 +160,6 @@ def _make_token_payload(user_id: str, email: str, role: str) -> dict:
     }
 
 
-def _serialize_user_public(
-    current_user: Any,
-    billing_profile: EffectiveBillingProfile,
-) -> UserPublic:
-    """Serialize a user with effective billing state from the new billing domain."""
-    return UserPublic(
-        id=str(current_user.id),
-        email=str(current_user.email),
-        role=str(current_user.role),
-        first_name=str(current_user.first_name or ""),
-        last_name=str(current_user.last_name or ""),
-        avatar=current_user.avatar,
-        subscription_status=billing_profile.subscription_status,
-        subscription_plan=billing_profile.subscription_plan,
-        subscription_billing_cycle=billing_profile.subscription_billing_cycle,
-        subscription_current_period_end=billing_profile.subscription_current_period_end,
-        language=str(current_user.language or "en"),
-    )
-
-
 async def _exchange_code_for_token(
     code: str, code_verifier: Optional[str]
 ) -> Dict[str, Any]:
@@ -159,6 +209,11 @@ async def _fetch_userinfo_if_enabled(
     if resp.status_code != 200:
         raise BadGatewayError(f"userinfo failed: {resp.text}")
     return resp.json()
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
 
 
 @router.get("/oauth/ii/login")
@@ -284,7 +339,7 @@ async def ii_callback(
     return_origin = request.session.pop(II_RETURN_TO_SESSION_KEY, None)
     return_url = request.session.pop(II_RETURN_URL_SESSION_KEY, None)
 
-    html_content = render_auth_callback_html(token_payload, return_origin, return_url)
+    html_content = _render_auth_callback_html(token_payload, return_origin, return_url)
     return HTMLResponse(content=html_content)
 
 
@@ -363,7 +418,6 @@ async def google_callback(
     async with google_sso:
         user_info = await google_sso.verify_and_process(request)
     if not user_info:
-        from ii_agent.auth.exceptions import AuthException
         raise AuthException("Failed to get user info from Google SSO")
 
     email = (user_info.email or "").strip().lower()
@@ -402,11 +456,18 @@ async def google_callback(
 async def reader_user_me(
     db: DBSession,
     current_user: CurrentUser,
-    billing_customer_service: BillingCustomerServiceDep,
 ) -> UserPublic:
-    billing_profile = await billing_customer_service.get_effective_profile(
-        db,
-        user_id=current_user.id,
-        provider="stripe",
+
+    return UserPublic(
+        id=str(current_user.id),
+        email=str(current_user.email),
+        role=str(current_user.role),
+        first_name=str(current_user.first_name or ""),
+        last_name=str(current_user.last_name or ""),
+        avatar=current_user.avatar,
+        subscription_status=current_user.subscription_status,
+        subscription_plan=current_user.subscription_plan,
+        subscription_billing_cycle=current_user.subscription_billing_cycle,
+        subscription_current_period_end=current_user.subscription_current_period_end,
+        language=str(current_user.language or "en"),
     )
-    return _serialize_user_public(current_user, billing_profile)

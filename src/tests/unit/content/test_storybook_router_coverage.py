@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.core.exceptions import PaymentRequiredError, ValidationError
 from ii_agent.content.storybook.exceptions import (
     StorybookAccessDeniedError,
@@ -272,7 +271,8 @@ async def test_save_storybook_edits_validation_and_cost_handling():
     session_service = AsyncMock()
     session_service.get_session_details.return_value = {"id": "session-1"}
     edit_service = AsyncMock()
-    usage_service = AsyncMock()
+    credit_service = AsyncMock()
+    credit_service.has_sufficient_credits = AsyncMock(return_value=True)
     db = AsyncMock()
     db.rollback = AsyncMock()
 
@@ -284,7 +284,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
         _user(),
         service,
         edit_service,
-        usage_service,
+        credit_service,
         session_service,
         db,
     )
@@ -298,14 +298,17 @@ async def test_save_storybook_edits_validation_and_cost_handling():
         _user(),
         service,
         edit_service,
-        usage_service,
+        credit_service,
         session_service,
         db,
     )
     assert result.success is False
     assert result.error == "No changes to save"
 
-    edit_service.save_all_page_edits_with_billing.return_value = _session("sb-2", "session-1")
+    edit_service.save_all_page_edits.return_value = (
+        _session("sb-2", "session-1"),
+        0.0,
+    )
     edit_request.page_changes = [SimpleNamespace(changes=None, image_url=None, page_number=1)]
     result = await save_storybook_edits(
         "sb-1",
@@ -313,7 +316,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
         _user(),
         service,
         edit_service,
-        usage_service,
+        credit_service,
         session_service,
         db,
     )
@@ -323,20 +326,23 @@ async def test_save_storybook_edits_validation_and_cost_handling():
     edit_request.page_changes = [
         SimpleNamespace(changes=[SimpleNamespace()], image_url=None, page_number=1)
     ]
-    edit_service.save_all_page_edits_with_billing.return_value = _session("sb-2", "session-1")
     result = await save_storybook_edits(
         "sb-1",
         edit_request,
         _user(),
         service,
         edit_service,
-        usage_service,
+        credit_service,
         session_service,
         db,
     )
     assert result.success is True
 
-    edit_service.save_all_page_edits_with_billing.side_effect = InsufficientCreditsError()
+    edit_service.save_all_page_edits.return_value = (
+        _session("sb-3", "session-1"),
+        1.0,
+    )
+    credit_service.has_sufficient_credits = AsyncMock(return_value=False)
     with pytest.raises(PaymentRequiredError):
         await save_storybook_edits(
             "sb-1",
@@ -344,7 +350,7 @@ async def test_save_storybook_edits_validation_and_cost_handling():
             _user(),
             service,
             edit_service,
-            usage_service,
+            credit_service,
             session_service,
             db,
         )

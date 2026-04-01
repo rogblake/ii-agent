@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -15,7 +16,7 @@ class DeploymentsRepository(BaseRepository[ProjectDeployment]):
     model = ProjectDeployment
 
     async def get_latest_deployment(
-        self, db: AsyncSession, project_id: str, provider: Optional[str] = None
+        self, db: AsyncSession, project_id: uuid.UUID, provider: Optional[str] = None
     ) -> Optional[ProjectDeployment]:
         query = select(ProjectDeployment).where(ProjectDeployment.project_id == project_id)
         if provider:
@@ -26,7 +27,7 @@ class DeploymentsRepository(BaseRepository[ProjectDeployment]):
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_max_version(self, db: AsyncSession, project_id: str) -> int:
+    async def get_max_version(self, db: AsyncSession, project_id: uuid.UUID) -> int:
         result = await db.execute(
             select(func.coalesce(func.max(ProjectDeployment.version), 0)).where(
                 ProjectDeployment.project_id == project_id

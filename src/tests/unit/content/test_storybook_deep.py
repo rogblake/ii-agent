@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.content.storybook.edit_service import StorybookEditService
-from ii_agent.content.storybook.router import _format_content_disposition
+from ii_agent.content.storybook.edit_service import (
+    STORYBOOK_INLINE_EDIT_SCRIPT,
+    StorybookEditService,
+)
 from ii_agent.content.storybook.schemas import DesignChange
+from ii_agent.content.storybook.router import _format_content_disposition
 
 
 # ---------------------------------------------------------------------------
@@ -26,11 +29,7 @@ def _now():
 def _make_edit_service(repo=None, version_service=None) -> StorybookEditService:
     repo = repo or MagicMock()
     version_service = version_service or MagicMock()
-    return StorybookEditService(
-        repo=repo,
-        version_service=version_service,
-        reservation_service=MagicMock(),
-    )
+    return StorybookEditService(repo=repo, version_service=version_service)
 
 
 def _change(
@@ -241,7 +240,7 @@ class TestApplyChangesToHtml:
         ) as mock_fn:
             mock_fn.return_value = (html, True)
             change = _change("d1", "style", prop="color", value="blue")
-            await svc.apply_changes_to_html(html, [change])
+            result = await svc.apply_changes_to_html(html, [change])
         mock_fn.assert_called_once()
 
     @pytest.mark.asyncio

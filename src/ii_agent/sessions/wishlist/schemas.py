@@ -2,20 +2,20 @@
 
 from datetime import datetime
 from typing import List
-from pydantic import BaseModel
+from uuid import UUID
+from pydantic import BaseModel, ConfigDict
 
 
 class SessionWishlistItem(BaseModel):
     """Model for a wishlist item."""
 
-    id: str
-    session_id: str
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    session_id: UUID
     session_name: str | None
     created_at: datetime
     last_message_at: datetime | None
-
-    class Config:
-        from_attributes = True
 
 
 class SessionWishlistResponse(BaseModel):
@@ -30,4 +30,4 @@ class WishlistActionResponse(BaseModel):
 
     success: bool
     message: str
-    session_id: str
+    session_id: UUID

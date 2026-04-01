@@ -20,7 +20,7 @@ from .schemas import (
 )
 
 router = APIRouter(
-    prefix="/slides/nano-banana",
+    prefix="/nano-banana",
     tags=["Slide Design Mode - Nano Banana"],
 )
 

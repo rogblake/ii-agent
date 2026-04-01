@@ -14,9 +14,11 @@ pytestmark = pytest.mark.unit
 # ProjectRepository tests
 # ---------------------------------------------------------------------------
 
+
 class TestProjectRepositoryR4:
     def _make_repo(self):
         from ii_agent.projects.repository import ProjectRepository
+
         return ProjectRepository()
 
     @pytest.mark.asyncio
@@ -144,9 +146,11 @@ class TestProjectRepositoryR4:
 # SessionRepository tests
 # ---------------------------------------------------------------------------
 
+
 class TestSessionRepositoryR4:
     def _make_repo(self):
         from ii_agent.sessions.repository import SessionRepository
+
         return SessionRepository()
 
     @pytest.mark.asyncio
@@ -237,24 +241,16 @@ class TestSessionRepositoryR4:
         result = await repo.get_non_deleted_by_ids(mock_db, ["s1", "s2"])
         assert len(result) == 2
 
-    @pytest.mark.asyncio
-    async def test_get_sandbox_id_returns_value(self):
-        repo = self._make_repo()
-        mock_db = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = "sandbox-abc"
-        mock_db.execute = AsyncMock(return_value=mock_result)
-        result = await repo.get_sandbox_id(mock_db, "session-1")
-        assert result == "sandbox-abc"
-
 
 # ---------------------------------------------------------------------------
 # WishlistRepository tests
 # ---------------------------------------------------------------------------
 
+
 class TestWishlistRepositoryR4:
     def _make_repo(self):
         from ii_agent.sessions.wishlist.repository import WishlistRepository
+
         return WishlistRepository()
 
     @pytest.mark.asyncio
@@ -328,9 +324,11 @@ class TestWishlistRepositoryR4:
 # SessionWishlistService tests
 # ---------------------------------------------------------------------------
 
+
 class TestSessionWishlistServiceR4:
     def _make_service(self):
         from ii_agent.sessions.wishlist.service import SessionWishlistService
+
         wishlist_repo = MagicMock()
         session_repo = MagicMock()
         config = MagicMock()
@@ -381,6 +379,7 @@ class TestSessionWishlistServiceR4:
     @pytest.mark.asyncio
     async def test_add_to_wishlist_raises_when_session_not_found(self):
         from ii_agent.sessions.exceptions import SessionNotFoundError
+
         svc = self._make_service()
         svc._session_repo.get_by_id = AsyncMock(return_value=None)
         with pytest.raises(SessionNotFoundError):
@@ -389,6 +388,7 @@ class TestSessionWishlistServiceR4:
     @pytest.mark.asyncio
     async def test_add_to_wishlist_raises_when_wrong_user(self):
         from ii_agent.sessions.exceptions import SessionNotFoundError
+
         svc = self._make_service()
         mock_session = MagicMock()
         mock_session.user_id = "other-user"
@@ -429,14 +429,17 @@ class TestSessionWishlistServiceR4:
 # Subdomain utils
 # ---------------------------------------------------------------------------
 
+
 class TestSubdomainUtilsR4:
     def test_reserved_subdomains_is_set(self):
         from ii_agent.projects.subdomains.utils import RESERVED_SUBDOMAINS
+
         assert isinstance(RESERVED_SUBDOMAINS, (set, frozenset))
         assert len(RESERVED_SUBDOMAINS) > 0
 
     def test_common_names_are_reserved(self):
         from ii_agent.projects.subdomains.utils import RESERVED_SUBDOMAINS
+
         common = {"www", "api", "admin"}
         overlap = common & RESERVED_SUBDOMAINS
         assert len(overlap) > 0, f"Expected some overlap with {common}, got none"

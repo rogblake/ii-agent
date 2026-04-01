@@ -1,7 +1,7 @@
 import pytest
 
-from ii_agent.auth.users.exceptions import WaitlistDeniedException
-from ii_agent.auth.users.service import UserService
+from ii_agent.users.exceptions import WaitlistDeniedException
+from ii_agent.users.service import UserService
 
 
 class _Repo:

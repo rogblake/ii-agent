@@ -1,159 +1,106 @@
 """SQLAlchemy models for sessions domain.
 
-Models migrated from core/db/models.py:
-- SessionStateEnum
-- Session
-
 ChatSummary (formerly ConversationSummary) has been moved to ii_agent.chat.models (only used by chat).
 """
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, BigInteger, Boolean, ForeignKey, Index, UUID
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, String
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
-from enum import Enum
 import uuid
 
+from ii_agent.agents.types import AgentType
 from ii_agent.core.db.base import Base, TimestampColumn
+from ii_agent.sessions.types import AppKind, SessionState
 
 # Forward references for relationships
 if TYPE_CHECKING:
-    from ii_agent.auth.users.models import User
-    from ii_agent.settings.llm.models import LLMSetting
+    from ii_agent.users.models import User
+    from ii_agent.settings.llm.models import ModelSetting
     from ii_agent.projects.models import Project
-    from ii_agent.agent.events.models import AgentUIEvent
-    from ii_agent.files.models import FileUpload
+    from ii_agent.realtime.events.models import ApplicationEvent
+    from ii_agent.files.models import FileAsset
     from ii_agent.content.slides.models import SlideContent, SlideVersion
     from ii_agent.content.storybook.models import Storybook
     from ii_agent.sessions.wishlist.models import SessionWishlist
     from ii_agent.sessions.pin.models import SessionPin
     from ii_agent.projects.databases.models import ProjectDatabase
 
-
-class SessionStateEnum(str, Enum):
-    """Enum for session state values."""
-
-    PENDING = "pending"
-    ACTIVE = "active"
-    PAUSE = "pause"
-
-
-class AppKind(str, Enum):
-    """Application kind for sessions."""
-
-    AGENT = "agent"
-    CHAT = "chat"
-
-
 class Session(Base):
     """Database model for agent sessions."""
 
     __tablename__ = "sessions"
 
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
-    user_id: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("users.id", ondelete="CASCADE")
-    )
-    sandbox_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     version: Mapped[int] = mapped_column(BigInteger, default=0)
-    llm_setting_id: Mapped[Optional[str]] = mapped_column(
-        String,
-        ForeignKey("llm_settings.id"),
-        nullable=True
+    model_setting_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("model_settings.id"), nullable=True
     )
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    status: Mapped[str] = mapped_column(String, default="active")
-    agent_state_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    state_storage_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    agent_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    app_kind: Mapped[str] = mapped_column(String, nullable=False, default=AppKind.AGENT, server_default=AppKind.AGENT)
+    status: Mapped[SessionState] = mapped_column(String, default=SessionState.ACTIVE)
+    agent_type: Mapped[Optional[AgentType]] = mapped_column(String, nullable=True)
+    app_kind: Mapped[AppKind] = mapped_column(
+        String, nullable=False, default=AppKind.AGENT, server_default=AppKind.AGENT
+    )
     public_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, default=False)
     api_version: Mapped[str] = mapped_column(String, default="v0")
-    parent_session_id: Mapped[Optional[str]] = mapped_column(
-        String,
-        ForeignKey("sessions.id"),
-        nullable=True
+    parent_session_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=True
     )
 
     # Session metadata
     session_metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
     # Timestamps
-    last_message_at: Mapped[Optional[datetime]] = mapped_column(
-        TimestampColumn,
-        nullable=True
-    )
+    last_message_at: Mapped[Optional[datetime]] = mapped_column(TimestampColumn, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
         TimestampColumn,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
-        TimestampColumn,
-        nullable=True
-    )
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     # Relationships (using string references)
     user: Mapped["User"] = relationship("User", back_populates="sessions")
-    llm_setting: Mapped[Optional["LLMSetting"]] = relationship(
-        "LLMSetting",
-        back_populates="sessions"
+    model_setting: Mapped[Optional["ModelSetting"]] = relationship(
+        "ModelSetting", back_populates="sessions"
     )
     project: Mapped[Optional["Project"]] = relationship(
-        "Project",
-        back_populates="session",
-        uselist=False
+        "Project", back_populates="session", uselist=False
     )
-    events: Mapped[list["AgentUIEvent"]] = relationship(
-        "AgentUIEvent",
-        back_populates="session",
-        cascade="all, delete-orphan"
+    events: Mapped[list["ApplicationEvent"]] = relationship(
+        "ApplicationEvent",
+        primaryjoin="Session.id == foreign(ApplicationEvent.session_id)",
+        cascade="all, delete-orphan",
+        viewonly=True,
     )
-    file_uploads: Mapped[list["FileUpload"]] = relationship(
-        "FileUpload",
-        back_populates="session",
-        cascade="all, delete-orphan"
-    )
+    # NOTE: Files are linked via SessionAsset many-to-many, not direct FK.
+    # Access session files via FileRepository.get_by_session_id() instead.
     slide_contents: Mapped[list["SlideContent"]] = relationship(
-        "SlideContent",
-        back_populates="session",
-        cascade="all, delete-orphan"
+        "SlideContent", back_populates="session", cascade="all, delete-orphan"
     )
     slide_versions: Mapped[list["SlideVersion"]] = relationship(
-        "SlideVersion",
-        back_populates="session",
-        cascade="all, delete-orphan"
+        "SlideVersion", back_populates="session", cascade="all, delete-orphan"
     )
     storybooks: Mapped[list["Storybook"]] = relationship(
-        "Storybook",
-        back_populates="session",
-        cascade="all, delete-orphan"
+        "Storybook", back_populates="session", cascade="all, delete-orphan"
     )
     wishlisted_by: Mapped[list["SessionWishlist"]] = relationship(
-        "SessionWishlist",
-        back_populates="session",
-        cascade="all, delete-orphan"
+        "SessionWishlist", back_populates="session", cascade="all, delete-orphan"
     )
     pinned_by: Mapped[list["SessionPin"]] = relationship(
-        "SessionPin",
-        back_populates="session",
-        cascade="all, delete-orphan"
+        "SessionPin", back_populates="session", cascade="all, delete-orphan"
     )
     databases: Mapped[list["ProjectDatabase"]] = relationship(
-        "ProjectDatabase",
-        back_populates="session",
-        cascade="all, delete-orphan"
+        "ProjectDatabase", back_populates="session", cascade="all, delete-orphan"
     )
 
     # Indexes
@@ -161,6 +108,7 @@ class Session(Base):
         Index("idx_sessions_user_id", "user_id"),
         Index("idx_sessions_status", "status"),
         Index("idx_sessions_created_at", "created_at"),
+        Index("idx_sessions_model_setting_id", "model_setting_id"),
     )
 
     __mapper_args__ = {"version_id_col": version}
@@ -168,7 +116,6 @@ class Session(Base):
     def get_workspace_dir(self) -> str:
         """Get the workspace directory for this session."""
         from ii_agent.core.config.settings import get_settings
+
         settings = get_settings()
         return f"{settings.workspace_path}/{self.id}"
-
-

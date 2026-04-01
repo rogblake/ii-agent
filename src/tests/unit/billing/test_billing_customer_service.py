@@ -9,9 +9,14 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from ii_agent.billing.customers.models import BillingCustomer
-from ii_agent.billing.customers.repository import BillingCustomerRepository
-from ii_agent.billing.customers.service import BillingCustomerService
+pytest.skip(
+    "BillingCustomerService was removed during billing refactoring",
+    allow_module_level=True,
+)
+
+from ii_agent.billing.customers.models import BillingCustomer  # noqa: E402
+from ii_agent.billing.customers.repository import BillingCustomerRepository  # noqa: E402
+from ii_agent.billing.customers.service import BillingCustomerService  # noqa: E402
 
 pytestmark = pytest.mark.unit
 
@@ -57,10 +62,7 @@ class FakeCustomerRepo:
             SimpleNamespace(**data)
             for (_, data_provider), data in self.customers.items()
             if data_provider == provider
-            and (
-                not status_values
-                or data.get("subscription_status") in status_values
-            )
+            and (not status_values or data.get("subscription_status") in status_values)
             and (
                 subscription_billing_cycle is None
                 or data.get("subscription_billing_cycle") == subscription_billing_cycle
@@ -107,9 +109,7 @@ async def test_get_or_create_creates_new_customer():
     repo = FakeCustomerRepo()
     svc = _make_service(repo)
 
-    result = await svc.get_or_create(
-        None, user_id=_USER_ID, external_customer_id=_CUSTOMER_ID
-    )
+    result = await svc.get_or_create(None, user_id=_USER_ID, external_customer_id=_CUSTOMER_ID)
 
     assert result.user_id == _USER_ID
     assert result.external_customer_id == _CUSTOMER_ID
@@ -128,9 +128,7 @@ async def test_get_or_create_returns_existing_customer():
     }
     svc = _make_service(repo)
 
-    result = await svc.get_or_create(
-        None, user_id=_USER_ID, external_customer_id=_CUSTOMER_ID
-    )
+    result = await svc.get_or_create(None, user_id=_USER_ID, external_customer_id=_CUSTOMER_ID)
 
     assert result.id == "existing-id"
     assert len(repo.created) == 0

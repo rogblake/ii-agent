@@ -7,11 +7,11 @@ pytestmark = pytest.mark.unit
 
 
 EXPECTED_ROUTES = {
-    ("POST", "/user-settings/skills/github"),
-    ("GET", "/user-settings/skills"),
-    ("GET", "/user-settings/skills/{skill_id}"),
-    ("PATCH", "/user-settings/skills/{skill_id}/toggle"),
-    ("DELETE", "/user-settings/skills/{skill_id}"),
+    ("POST", "/skills/github"),
+    ("GET", "/skills"),
+    ("GET", "/skills/{skill_id}"),
+    ("PATCH", "/skills/{skill_id}/toggle"),
+    ("DELETE", "/skills/{skill_id}"),
 }
 
 

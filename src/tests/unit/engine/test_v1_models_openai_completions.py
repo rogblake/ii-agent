@@ -22,23 +22,24 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.agent.runtime.models.openai.completions import (
+from ii_agent.agents.models.openai.completions import (
     OpenAIChat,
     _format_file_for_message,
 )
-from ii_agent.agent.runtime.models.message import Message
-from ii_agent.agent.runtime.models.metrics import Metrics
-from ii_agent.agent.runtime.models.response import ModelResponse
-from ii_agent.agent.runtime.exceptions import (
+from ii_agent.agents.models.message import Message
+from ii_agent.agents.models.metrics import Metrics
+from ii_agent.agents.models.response import ModelResponse
+from ii_agent.agents.exceptions import (
     ModelAuthenticationError,
     ModelProviderError,
 )
-from ii_agent.agent.runtime.media.media import File
+from ii_agent.files.media import File
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_oai_chat(**kwargs) -> OpenAIChat:
     m = OpenAIChat(**kwargs)
@@ -69,8 +70,14 @@ def _make_usage(prompt=10, completion=20, total=30, reasoning=0):
     return u
 
 
-def _make_choice(finish_reason="stop", message_content="Hi", tool_calls=None,
-                 reasoning_content=None, audio_output=None, role="assistant"):
+def _make_choice(
+    finish_reason="stop",
+    message_content="Hi",
+    tool_calls=None,
+    reasoning_content=None,
+    audio_output=None,
+    role="assistant",
+):
     choice = MagicMock()
     choice.finish_reason = finish_reason
     msg = MagicMock()
@@ -107,8 +114,9 @@ def _make_chunk(choices, usage=None):
     return chunk
 
 
-def _make_chunk_choice(delta_content=None, delta_tool_calls=None, finish_reason=None,
-                       delta_reasoning=None):
+def _make_chunk_choice(
+    delta_content=None, delta_tool_calls=None, finish_reason=None, delta_reasoning=None
+):
     choice = MagicMock()
     choice.finish_reason = finish_reason
     delta = MagicMock()
@@ -123,6 +131,7 @@ def _make_chunk_choice(delta_content=None, delta_tool_calls=None, finish_reason=
 # ---------------------------------------------------------------------------
 # 1. _format_file_for_message
 # ---------------------------------------------------------------------------
+
 
 class TestFormatFileForMessage:
     def test_none_returns_none_for_external_only_file(self):
@@ -165,6 +174,7 @@ class TestFormatFileForMessage:
 # ---------------------------------------------------------------------------
 # 2. OpenAIChat defaults
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIChatDefaults:
     def test_default_id(self):
@@ -210,6 +220,7 @@ class TestOpenAIChatDefaults:
 # 3. _get_client_params
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIChatGetClientParams:
     def test_api_key_included(self):
         m = OpenAIChat(api_key="sk-test")
@@ -252,6 +263,7 @@ class TestOpenAIChatGetClientParams:
 # ---------------------------------------------------------------------------
 # 4. get_request_params
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIChatGetRequestParams:
     def test_temperature_included(self):
@@ -319,6 +331,7 @@ class TestOpenAIChatGetRequestParams:
 # 5. _format_message
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIChatFormatMessage:
     def test_user_message_formatted(self):
         m = _make_oai_chat(api_key="key")
@@ -376,7 +389,8 @@ class TestOpenAIChatFormatMessage:
         assert result.get("tool_calls") is not None
 
     def test_message_with_files_appends_paths(self):
-        from ii_agent.agent.runtime.models.message import File as MessageFile
+        from ii_agent.agents.models.message import File as MessageFile
+
         m = _make_oai_chat(api_key="key")
         file_obj = MessageFile(filepath=Path("/tmp/report.pdf"))
         msg = Message(role="user", content="See attached", files=[file_obj])
@@ -384,7 +398,8 @@ class TestOpenAIChatFormatMessage:
         assert "Attached files" in result["content"]
 
     def test_message_with_images_adds_image_content(self):
-        from ii_agent.agent.runtime.media import Image
+        from ii_agent.files.media import Image
+
         m = _make_oai_chat(api_key="key")
         img = Image(url="https://example.com/img.png", mime_type="image/png")
         msg = Message(role="user", content="Look!", images=[img])
@@ -398,7 +413,8 @@ class TestOpenAIChatFormatMessage:
         assert result["role"] == "human"
 
     def test_audio_output_sets_audio_field(self):
-        from ii_agent.agent.runtime.media.media import Audio
+        from ii_agent.files.media import Audio
+
         m = _make_oai_chat(api_key="key")
         audio_output = Audio(id="audio_123", content=b"audio bytes")
         msg = Message(role="assistant", content="", audio_output=audio_output)
@@ -410,6 +426,7 @@ class TestOpenAIChatFormatMessage:
 # ---------------------------------------------------------------------------
 # 6. _parse_provider_response
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIChatParseProviderResponse:
     def test_role_set_to_assistant(self):
@@ -496,6 +513,7 @@ class TestOpenAIChatParseProviderResponse:
 # 7. _parse_provider_response_delta (streaming)
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIChatParseProviderResponseDelta:
     def _stream_state(self):
         return {
@@ -571,6 +589,7 @@ class TestOpenAIChatParseProviderResponseDelta:
 # 8. Tool message formatting (OpenAIChat uses _format_message for tool results)
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIChatToolMessageFormatting:
     def test_tool_message_formatted_with_tool_call_id(self):
         m = _make_oai_chat(api_key="key")
@@ -605,10 +624,12 @@ class TestOpenAIChatToolMessageFormatting:
 # 9. ainvoke error handling
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIChatAinvokeErrors:
     @pytest.mark.asyncio
     async def test_rate_limit_error_raises_model_provider_error(self):
         from openai import RateLimitError
+
         m = _make_oai_chat(api_key="key")
         err = MagicMock(spec=RateLimitError)
         err.__class__ = RateLimitError
@@ -624,6 +645,7 @@ class TestOpenAIChatAinvokeErrors:
     @pytest.mark.asyncio
     async def test_api_connection_error_raises_model_provider_error(self):
         from openai import APIConnectionError
+
         m = _make_oai_chat(api_key="key")
         err = MagicMock(spec=APIConnectionError)
         err.__class__ = APIConnectionError
@@ -648,9 +670,7 @@ class TestOpenAIChatAinvokeErrors:
     @pytest.mark.asyncio
     async def test_generic_exception_raises_model_provider_error(self):
         m = _make_oai_chat(api_key="key")
-        m.async_client.chat.completions.create = AsyncMock(
-            side_effect=RuntimeError("unexpected")
-        )
+        m.async_client.chat.completions.create = AsyncMock(side_effect=RuntimeError("unexpected"))
         msgs = [Message(role="user", content="hi")]
         assistant = Message(role="assistant", content="")
         with pytest.raises(ModelProviderError):
@@ -659,6 +679,7 @@ class TestOpenAIChatAinvokeErrors:
     @pytest.mark.asyncio
     async def test_httpx_timeout_raises_model_provider_error(self):
         import httpx
+
         m = _make_oai_chat(api_key="key")
         m.async_client.chat.completions.create = AsyncMock(
             side_effect=httpx.TimeoutException("timed out")
@@ -671,6 +692,7 @@ class TestOpenAIChatAinvokeErrors:
     @pytest.mark.asyncio
     async def test_httpx_stream_error_raises_model_provider_error(self):
         import httpx
+
         m = _make_oai_chat(api_key="key")
         m.async_client.chat.completions.create = AsyncMock(
             side_effect=httpx.StreamError("stream broke")
@@ -684,6 +706,7 @@ class TestOpenAIChatAinvokeErrors:
 # ---------------------------------------------------------------------------
 # 10. ainvoke happy path
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAIChatAinvokeHappyPath:
     @pytest.mark.asyncio

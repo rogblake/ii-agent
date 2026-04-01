@@ -16,7 +16,7 @@ from ii_agent.chat.tools.base import BaseTool
 from ii_agent.chat.media.modes.base import BaseModeStrategy
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 
 class BaseMediaHandler(ABC):
@@ -53,7 +53,7 @@ class BaseMediaHandler(ABC):
         session_id: str,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
-        container: ServiceContainer,
+        container: ApplicationContainer,
     ) -> List[BaseTool]:
         """
         Create configured tool instances for this media type.

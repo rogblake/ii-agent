@@ -40,6 +40,7 @@ from ii_agent.integrations.connectors.exceptions import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _mock_settings(secret: str = "test-session-secret"):
     settings = MagicMock()
     settings.oauth.session_secret_key = secret
@@ -55,6 +56,7 @@ def _make_fake_user(user_id: str = "user-1"):
 # ---------------------------------------------------------------------------
 # _create_state_token
 # ---------------------------------------------------------------------------
+
 
 class TestCreateStateToken:
     def test_returns_non_empty_string(self):
@@ -91,6 +93,7 @@ class TestCreateStateToken:
 # ---------------------------------------------------------------------------
 # _verify_state_token
 # ---------------------------------------------------------------------------
+
 
 class TestVerifyStateToken:
     def test_valid_token_returns_data(self):
@@ -135,6 +138,7 @@ class TestVerifyStateToken:
 # ---------------------------------------------------------------------------
 # Response model validation
 # ---------------------------------------------------------------------------
+
 
 class TestResponseModels:
     def test_connector_auth_url_response_valid(self):
@@ -193,6 +197,7 @@ class TestResponseModels:
 # get_google_drive_auth_url (endpoint logic)
 # ---------------------------------------------------------------------------
 
+
 class TestGetGoogleDriveAuthUrl:
     @pytest.mark.asyncio
     async def test_returns_auth_url_response(self):
@@ -217,7 +222,9 @@ class TestGetGoogleDriveAuthUrl:
         from ii_agent.integrations.connectors.exceptions import ConnectorConfigError
 
         with (
-            patch.object(_router_module.ConnectorFactory, "create", side_effect=ValueError("bad config")),
+            patch.object(
+                _router_module.ConnectorFactory, "create", side_effect=ValueError("bad config")
+            ),
             patch.object(_router_module, "get_settings", return_value=_mock_settings()),
         ):
             user = _make_fake_user("user-1")
@@ -228,6 +235,7 @@ class TestGetGoogleDriveAuthUrl:
 # ---------------------------------------------------------------------------
 # google_drive_callback (endpoint logic)
 # ---------------------------------------------------------------------------
+
 
 class TestGoogleDriveCallback:
     @pytest.mark.asyncio
@@ -246,8 +254,12 @@ class TestGoogleDriveCallback:
             token = _create_state_token("user-1", "google_drive")
             request = ConnectorCallbackRequest(code="auth_code", state=token)
 
-            with patch.object(_router_module, "_verify_state_token", return_value={"user_id": "user-1"}):
-                result = await google_drive_callback(request=request, db=AsyncMock(), current_user=user)
+            with patch.object(
+                _router_module, "_verify_state_token", return_value={"user_id": "user-1"}
+            ):
+                result = await google_drive_callback(
+                    request=request, db=AsyncMock(), current_user=user
+                )
 
         assert result["success"] is True
 
@@ -256,6 +268,7 @@ class TestGoogleDriveCallback:
 # get_github_auth_url (endpoint logic)
 # ---------------------------------------------------------------------------
 
+
 class TestGetGithubAuthUrl:
     @pytest.mark.asyncio
     async def test_returns_github_auth_url(self):
@@ -263,7 +276,9 @@ class TestGetGithubAuthUrl:
         from ii_agent.integrations.connectors.github import GitHubConnector
 
         mock_connector = MagicMock(spec=GitHubConnector)
-        mock_connector.get_auth_url = AsyncMock(return_value="https://github.com/login/oauth/authorize?...")
+        mock_connector.get_auth_url = AsyncMock(
+            return_value="https://github.com/login/oauth/authorize?..."
+        )
 
         with (
             patch.object(_router_module.ConnectorFactory, "create", return_value=mock_connector),
@@ -294,6 +309,7 @@ class TestGetGithubAuthUrl:
 # get_github_status
 # ---------------------------------------------------------------------------
 
+
 class TestGetGithubStatus:
     @pytest.mark.asyncio
     async def test_returns_status_response(self):
@@ -319,6 +335,7 @@ class TestGetGithubStatus:
 # ---------------------------------------------------------------------------
 # disconnect_github
 # ---------------------------------------------------------------------------
+
 
 class TestDisconnectGithub:
     @pytest.mark.asyncio
@@ -353,6 +370,7 @@ class TestDisconnectGithub:
 # disconnect_google_drive
 # ---------------------------------------------------------------------------
 
+
 class TestDisconnectGoogleDrive:
     @pytest.mark.asyncio
     async def test_disconnects_successfully(self):
@@ -386,13 +404,17 @@ class TestDisconnectGoogleDrive:
 # get_github_app_config
 # ---------------------------------------------------------------------------
 
+
 class TestGetGithubAppConfig:
     @pytest.mark.asyncio
     async def test_returns_app_config(self):
         from ii_agent.integrations.connectors.router import get_github_app_config
         from ii_agent.integrations.connectors.github import GitHubConnector
 
-        app_config = {"app_name": "ii-agent", "installation_url": "https://github.com/apps/ii-agent"}
+        app_config = {
+            "app_name": "ii-agent",
+            "installation_url": "https://github.com/apps/ii-agent",
+        }
         mock_connector = MagicMock(spec=GitHubConnector)
         mock_connector.get_app_config = AsyncMock(return_value=app_config)
 
@@ -416,6 +438,7 @@ class TestGetGithubAppConfig:
 # ---------------------------------------------------------------------------
 # get_github_repositories
 # ---------------------------------------------------------------------------
+
 
 class TestGetGithubRepositories:
     @pytest.mark.asyncio

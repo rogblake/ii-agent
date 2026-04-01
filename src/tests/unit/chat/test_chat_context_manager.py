@@ -21,6 +21,7 @@ from ii_agent.chat.types import Message, MessageRole, TextContent
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_message(
     role: MessageRole = MessageRole.USER,
     text: str = "hello",
@@ -78,6 +79,7 @@ def _make_llm_config(model: str = "gpt-5") -> MagicMock:
 # CONTEXT_WINDOWS constants
 # ---------------------------------------------------------------------------
 
+
 class TestContextWindows:
     def test_default_fallback_exists(self):
         assert "__default__" in CONTEXT_WINDOWS
@@ -92,6 +94,7 @@ class TestContextWindows:
 # ---------------------------------------------------------------------------
 # ContextWindowManager._find_last_user_message
 # ---------------------------------------------------------------------------
+
 
 class TestFindLastUserMessage:
     def test_returns_minus_one_for_empty(self):
@@ -137,6 +140,7 @@ class TestFindLastUserMessage:
 # ContextWindowManager.load_context_for_llm
 # ---------------------------------------------------------------------------
 
+
 class TestLoadContextForLlm:
     @pytest.mark.asyncio
     async def test_returns_messages_without_summary(self):
@@ -147,7 +151,9 @@ class TestLoadContextForLlm:
         ]
 
         with (
-            patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)),
+            patch.object(
+                ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)
+            ),
             patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
         ):
             mock_svc = MagicMock()
@@ -167,7 +173,9 @@ class TestLoadContextForLlm:
         messages = [_make_message(MessageRole.USER, "New message")]
 
         with (
-            patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=summary)),
+            patch.object(
+                ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=summary)
+            ),
             patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
         ):
             mock_svc = MagicMock()
@@ -189,7 +197,9 @@ class TestLoadContextForLlm:
         messages = [_make_message(MessageRole.USER, "latest")]
 
         with (
-            patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=summary)),
+            patch.object(
+                ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=summary)
+            ),
             patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
         ):
             mock_svc = MagicMock()
@@ -207,6 +217,7 @@ class TestLoadContextForLlm:
 # ContextWindowManager.compress_context_if_needed
 # ---------------------------------------------------------------------------
 
+
 class TestCompressContextIfNeeded:
     @pytest.mark.asyncio
     async def test_returns_unchanged_when_under_threshold(self):
@@ -214,7 +225,9 @@ class TestCompressContextIfNeeded:
         llm_config = _make_llm_config()
         messages = [_make_message(tokens=100) for _ in range(5)]
 
-        with patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)):
+        with patch.object(
+            ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)
+        ):
             result = await ContextWindowManager.compress_context_if_needed(
                 db_session=db,
                 messages=messages,
@@ -240,8 +253,14 @@ class TestCompressContextIfNeeded:
         new_summary.created_at = datetime.now(timezone.utc)
 
         with (
-            patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)),
-            patch.object(ContextWindowManager, "create_chained_summary", new=AsyncMock(return_value=new_summary)),
+            patch.object(
+                ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)
+            ),
+            patch.object(
+                ContextWindowManager,
+                "create_chained_summary",
+                new=AsyncMock(return_value=new_summary),
+            ),
         ):
             result = await ContextWindowManager.compress_context_if_needed(
                 db_session=db,
@@ -263,7 +282,9 @@ class TestCompressContextIfNeeded:
         msg.id = uuid.uuid4()
         messages = [msg]
 
-        with patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)):
+        with patch.object(
+            ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)
+        ):
             result = await ContextWindowManager.compress_context_if_needed(
                 db_session=db,
                 messages=messages,
@@ -280,6 +301,7 @@ class TestCompressContextIfNeeded:
 # ContextWindowManager.check_and_summarize_after_response
 # ---------------------------------------------------------------------------
 
+
 class TestCheckAndSummarizeAfterResponse:
     @pytest.mark.asyncio
     async def test_does_not_summarize_when_under_threshold(self):
@@ -288,9 +310,13 @@ class TestCheckAndSummarizeAfterResponse:
         messages = [_make_message(tokens=100) for _ in range(5)]
 
         with (
-            patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)),
+            patch.object(
+                ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)
+            ),
             patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
-            patch.object(ContextWindowManager, "create_chained_summary", new=AsyncMock()) as mock_summarize,
+            patch.object(
+                ContextWindowManager, "create_chained_summary", new=AsyncMock()
+            ) as mock_summarize,
         ):
             mock_svc = MagicMock()
             mock_svc.list_by_session = AsyncMock(return_value=messages)
@@ -318,9 +344,15 @@ class TestCheckAndSummarizeAfterResponse:
         new_summary.created_at = datetime.now(timezone.utc)
 
         with (
-            patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)),
+            patch.object(
+                ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)
+            ),
             patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
-            patch.object(ContextWindowManager, "create_chained_summary", new=AsyncMock(return_value=new_summary)) as mock_summarize,
+            patch.object(
+                ContextWindowManager,
+                "create_chained_summary",
+                new=AsyncMock(return_value=new_summary),
+            ) as mock_summarize,
         ):
             mock_svc = MagicMock()
             mock_svc.list_by_session = AsyncMock(return_value=messages)
@@ -345,9 +377,13 @@ class TestCheckAndSummarizeAfterResponse:
         messages = [msg]
 
         with (
-            patch.object(ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)),
+            patch.object(
+                ContextWindowManager, "_get_active_summary", new=AsyncMock(return_value=None)
+            ),
             patch("ii_agent.chat.application.context_service.MessageService") as mock_svc_cls,
-            patch.object(ContextWindowManager, "create_chained_summary", new=AsyncMock()) as mock_summarize,
+            patch.object(
+                ContextWindowManager, "create_chained_summary", new=AsyncMock()
+            ) as mock_summarize,
         ):
             mock_svc = MagicMock()
             mock_svc.list_by_session = AsyncMock(return_value=messages)
@@ -366,6 +402,7 @@ class TestCheckAndSummarizeAfterResponse:
 # ---------------------------------------------------------------------------
 # SummarizationService._build_conversation_text
 # ---------------------------------------------------------------------------
+
 
 class TestBuildConversationText:
     def test_includes_user_text(self):
@@ -407,6 +444,7 @@ class TestBuildConversationText:
 # SummarizationService._create_fallback_summary
 # ---------------------------------------------------------------------------
 
+
 class TestCreateFallbackSummary:
     def test_returns_tuple_of_text_and_tokens(self):
         messages = [_make_message(tokens=50) for _ in range(3)]
@@ -446,6 +484,7 @@ class TestCreateFallbackSummary:
 # SummarizationService.generate_summary
 # ---------------------------------------------------------------------------
 
+
 class TestGenerateSummary:
     @pytest.mark.asyncio
     async def test_calls_provider_send(self):
@@ -458,7 +497,10 @@ class TestGenerateSummary:
         response.usage = MagicMock(total_tokens=30)
         mock_provider.send = AsyncMock(return_value=response)
 
-        with patch("ii_agent.chat.application.context_service.LLMProviderFactory.create_provider", return_value=mock_provider):
+        with patch(
+            "ii_agent.chat.application.context_service.LLMProviderFactory.create_provider",
+            return_value=mock_provider,
+        ):
             summary, tokens = await SummarizationService.generate_summary(
                 messages=messages,
                 llm_config=llm_config,
@@ -479,7 +521,10 @@ class TestGenerateSummary:
         mock_provider = MagicMock()
         mock_provider.send = AsyncMock(side_effect=Exception("send error"))
 
-        with patch("ii_agent.chat.application.context_service.LLMProviderFactory.create_provider", return_value=mock_provider):
+        with patch(
+            "ii_agent.chat.application.context_service.LLMProviderFactory.create_provider",
+            return_value=mock_provider,
+        ):
             summary, tokens = await SummarizationService.generate_summary(
                 messages=messages,
                 llm_config=llm_config,
@@ -501,7 +546,10 @@ class TestGenerateSummary:
         response.usage = MagicMock(total_tokens=20)
         mock_provider.send = AsyncMock(return_value=response)
 
-        with patch("ii_agent.chat.application.context_service.LLMProviderFactory.create_provider", return_value=mock_provider):
+        with patch(
+            "ii_agent.chat.application.context_service.LLMProviderFactory.create_provider",
+            return_value=mock_provider,
+        ):
             summary, _ = await SummarizationService.generate_summary(
                 messages=messages,
                 llm_config=llm_config,
@@ -522,6 +570,7 @@ class TestGenerateSummary:
 # ContextWindowManager.create_chained_summary
 # ---------------------------------------------------------------------------
 
+
 class TestCreateChainedSummary:
     @pytest.mark.asyncio
     async def test_creates_summary_with_no_parent(self):
@@ -535,8 +584,14 @@ class TestCreateChainedSummary:
         mock_summary.parent_summary_id = None
 
         with (
-            patch.object(SummarizationService, "generate_summary", new=AsyncMock(return_value=("Summary text", 50))),
-            patch("ii_agent.chat.application.context_service.ChatSummary", return_value=mock_summary),
+            patch.object(
+                SummarizationService,
+                "generate_summary",
+                new=AsyncMock(return_value=("Summary text", 50)),
+            ),
+            patch(
+                "ii_agent.chat.application.context_service.ChatSummary", return_value=mock_summary
+            ),
         ):
             summary = await ContextWindowManager.create_chained_summary(
                 db_session=db,
@@ -565,8 +620,14 @@ class TestCreateChainedSummary:
         mock_summary.parent_summary_id = parent.id
 
         with (
-            patch.object(SummarizationService, "generate_summary", new=AsyncMock(return_value=("Chained summary", 30))),
-            patch("ii_agent.chat.application.context_service.ChatSummary", return_value=mock_summary),
+            patch.object(
+                SummarizationService,
+                "generate_summary",
+                new=AsyncMock(return_value=("Chained summary", 30)),
+            ),
+            patch(
+                "ii_agent.chat.application.context_service.ChatSummary", return_value=mock_summary
+            ),
         ):
             summary = await ContextWindowManager.create_chained_summary(
                 db_session=db,
@@ -591,8 +652,14 @@ class TestCreateChainedSummary:
         mock_summary.compression_ratio = 4.0
 
         with (
-            patch.object(SummarizationService, "generate_summary", new=AsyncMock(return_value=("Summary", 50))),
-            patch("ii_agent.chat.application.context_service.ChatSummary", return_value=mock_summary),
+            patch.object(
+                SummarizationService,
+                "generate_summary",
+                new=AsyncMock(return_value=("Summary", 50)),
+            ),
+            patch(
+                "ii_agent.chat.application.context_service.ChatSummary", return_value=mock_summary
+            ),
         ):
             summary = await ContextWindowManager.create_chained_summary(
                 db_session=db,

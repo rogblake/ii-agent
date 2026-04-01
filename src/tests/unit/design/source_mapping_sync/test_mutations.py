@@ -47,6 +47,7 @@ from .conftest import make_style_change
 # Delete
 # ---------------------------------------------------------------------------
 
+
 class TestApplyDeleteChangeByDesignId:
     def test_deletes_element(self):
         content = '<div data-design-id="rm">remove me</div>'
@@ -93,6 +94,7 @@ class TestApplyDeleteChangeByDesignId:
 # ---------------------------------------------------------------------------
 # Icon helpers
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeLucideIconName:
     def test_basic(self):
@@ -146,7 +148,9 @@ class TestSanitizeSvgInnerForJsx:
         assert result == ""
 
     def test_multiple_replacements(self):
-        result = _sanitize_svg_inner_for_jsx('<path stroke-linecap="round" stroke-linejoin="round" />')
+        result = _sanitize_svg_inner_for_jsx(
+            '<path stroke-linecap="round" stroke-linejoin="round" />'
+        )
         assert "strokeLinecap" in result
         assert "strokeLinejoin" in result
 
@@ -207,8 +211,11 @@ class TestApplyIconChangeByDesignId:
     def test_lucide_component_replacement(self):
         content = "import { Zap } from 'lucide-react'\n<Zap data-design-id=\"icon1\" />"
         result, ok = _apply_icon_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="icon1",
-            icon_name="bell", svg_inner=None,
+            content=content,
+            file_path="f.tsx",
+            design_id="icon1",
+            icon_name="bell",
+            svg_inner=None,
         )
         assert ok is True
         assert "<Bell" in result
@@ -217,8 +224,11 @@ class TestApplyIconChangeByDesignId:
     def test_same_icon_noop(self):
         content = '<Zap data-design-id="icon1" />'
         result, ok = _apply_icon_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="icon1",
-            icon_name="Zap", svg_inner=None,
+            content=content,
+            file_path="f.tsx",
+            design_id="icon1",
+            icon_name="Zap",
+            svg_inner=None,
         )
         assert ok is True
         assert result == content
@@ -226,8 +236,11 @@ class TestApplyIconChangeByDesignId:
     def test_svg_inner_replacement(self):
         content = '<svg data-design-id="icon1"><path d="old" /></svg>'
         result, ok = _apply_icon_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="icon1",
-            icon_name=None, svg_inner='<path d="new" />',
+            content=content,
+            file_path="f.tsx",
+            design_id="icon1",
+            icon_name=None,
+            svg_inner='<path d="new" />',
         )
         assert ok is True
         assert 'path d="new"' in result
@@ -235,24 +248,33 @@ class TestApplyIconChangeByDesignId:
     def test_not_found(self):
         content = "<div>text</div>"
         result, ok = _apply_icon_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="missing",
-            icon_name="bell", svg_inner=None,
+            content=content,
+            file_path="f.tsx",
+            design_id="missing",
+            icon_name="bell",
+            svg_inner=None,
         )
         assert ok is False
 
     def test_missing_icon_name_for_component(self):
         content = '<Zap data-design-id="icon1" />'
         result, ok = _apply_icon_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="icon1",
-            icon_name=None, svg_inner=None,
+            content=content,
+            file_path="f.tsx",
+            design_id="icon1",
+            icon_name=None,
+            svg_inner=None,
         )
         assert ok is False
 
     def test_self_closing_svg_with_inner(self):
         content = '<svg data-design-id="icon1" />'
         result, ok = _apply_icon_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="icon1",
-            icon_name=None, svg_inner='<path d="x" />',
+            content=content,
+            file_path="f.tsx",
+            design_id="icon1",
+            icon_name=None,
+            svg_inner='<path d="x" />',
         )
         assert ok is True
         assert "<svg" in result
@@ -261,8 +283,11 @@ class TestApplyIconChangeByDesignId:
     def test_svg_wrapper_fallback(self):
         content = '<div data-design-id="icon1"><svg><path d="old" /></svg></div>'
         result, ok = _apply_icon_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="icon1",
-            icon_name=None, svg_inner='<path d="new" />',
+            content=content,
+            file_path="f.tsx",
+            design_id="icon1",
+            icon_name=None,
+            svg_inner='<path d="new" />',
         )
         assert ok is True
         assert 'path d="new"' in result
@@ -270,8 +295,11 @@ class TestApplyIconChangeByDesignId:
     def test_icon_with_closing_tag(self):
         content = "import { Zap } from 'lucide-react'\n<Zap data-design-id=\"icon1\">child</Zap>"
         result, ok = _apply_icon_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="icon1",
-            icon_name="bell", svg_inner=None,
+            content=content,
+            file_path="f.tsx",
+            design_id="icon1",
+            icon_name="bell",
+            svg_inner=None,
         )
         assert ok is True
         assert "</Bell>" in result
@@ -279,17 +307,23 @@ class TestApplyIconChangeByDesignId:
 
 class TestApplyIconChangeByItemIdAssignment:
     def test_id_before_icon(self):
-        content = 'import { Shield } from \'lucide-react\'\nconst items = [{ id: "feature-1", icon: Shield }]'
+        content = "import { Shield } from 'lucide-react'\nconst items = [{ id: \"feature-1\", icon: Shield }]"
         result, ok = _apply_icon_change_by_item_id_assignment(
-            content=content, file_path="f.tsx", item_id="feature-1", icon_name="bell",
+            content=content,
+            file_path="f.tsx",
+            item_id="feature-1",
+            icon_name="bell",
         )
         assert ok is True
         assert "Bell" in result
 
     def test_icon_before_id(self):
-        content = 'import { Shield } from \'lucide-react\'\nconst items = [{ icon: Shield, id: "feature-1" }]'
+        content = "import { Shield } from 'lucide-react'\nconst items = [{ icon: Shield, id: \"feature-1\" }]"
         result, ok = _apply_icon_change_by_item_id_assignment(
-            content=content, file_path="f.tsx", item_id="feature-1", icon_name="bell",
+            content=content,
+            file_path="f.tsx",
+            item_id="feature-1",
+            icon_name="bell",
         )
         assert ok is True
         assert "Bell" in result
@@ -297,7 +331,10 @@ class TestApplyIconChangeByItemIdAssignment:
     def test_same_icon(self):
         content = 'const items = [{ id: "f1", icon: Bell }]'
         result, ok = _apply_icon_change_by_item_id_assignment(
-            content=content, file_path="f.tsx", item_id="f1", icon_name="bell",
+            content=content,
+            file_path="f.tsx",
+            item_id="f1",
+            icon_name="bell",
         )
         assert ok is True
         assert result == content
@@ -305,13 +342,19 @@ class TestApplyIconChangeByItemIdAssignment:
     def test_not_found(self):
         content = "const items = []"
         result, ok = _apply_icon_change_by_item_id_assignment(
-            content=content, file_path="f.tsx", item_id="missing", icon_name="bell",
+            content=content,
+            file_path="f.tsx",
+            item_id="missing",
+            icon_name="bell",
         )
         assert ok is False
 
     def test_empty_content(self):
         result, ok = _apply_icon_change_by_item_id_assignment(
-            content="", file_path="f.tsx", item_id="x", icon_name="bell",
+            content="",
+            file_path="f.tsx",
+            item_id="x",
+            icon_name="bell",
         )
         assert ok is False
 
@@ -319,7 +362,8 @@ class TestApplyIconChangeByItemIdAssignment:
 class TestExtractIconPayloadFromChange:
     def test_dict_value(self):
         change = make_style_change(
-            type="attribute", property="icon",
+            type="attribute",
+            property="icon",
             value={"to": {"name": "bell", "svg": "<path />"}},
         )
         name, svg = _extract_icon_payload_from_change(change)
@@ -328,8 +372,10 @@ class TestExtractIconPayloadFromChange:
 
     def test_json_string(self):
         import json
+
         change = make_style_change(
-            type="attribute", property="icon",
+            type="attribute",
+            property="icon",
             value={"to": json.dumps({"name": "zap"})},
         )
         name, svg = _extract_icon_payload_from_change(change)
@@ -337,7 +383,8 @@ class TestExtractIconPayloadFromChange:
 
     def test_plain_string(self):
         change = make_style_change(
-            type="attribute", property="icon",
+            type="attribute",
+            property="icon",
             value={"to": "brick-wall"},
         )
         name, svg = _extract_icon_payload_from_change(change)
@@ -346,7 +393,8 @@ class TestExtractIconPayloadFromChange:
 
     def test_svg_markup(self):
         change = make_style_change(
-            type="attribute", property="icon",
+            type="attribute",
+            property="icon",
             value={"to": "<path d='x' />"},
         )
         name, svg = _extract_icon_payload_from_change(change)
@@ -366,7 +414,8 @@ class TestExtractIconPayloadFromChange:
 
     def test_dict_with_only_name(self):
         change = make_style_change(
-            type="attribute", property="icon",
+            type="attribute",
+            property="icon",
             value={"to": {"name": "bell"}},
         )
         name, svg = _extract_icon_payload_from_change(change)
@@ -377,7 +426,8 @@ class TestExtractIconPayloadFromChange:
 class TestExtractIconNameFromChange:
     def test_returns_name(self):
         change = make_style_change(
-            type="attribute", property="icon",
+            type="attribute",
+            property="icon",
             value={"to": "bell"},
         )
         assert _extract_icon_name_from_change(change) == "bell"
@@ -407,12 +457,16 @@ class TestExtractItemIdFromIconDesignId:
 # Move / Swap
 # ---------------------------------------------------------------------------
 
+
 class TestApplyMoveChangeByDesignIds:
     def test_move_before(self):
         content = '<div data-design-id="a">A</div><div data-design-id="b">B</div>'
         result, ok = _apply_move_change_by_design_ids(
-            content=content, file_path="f.tsx", design_id="b",
-            target_design_id="a", mode="before",
+            content=content,
+            file_path="f.tsx",
+            design_id="b",
+            target_design_id="a",
+            mode="before",
         )
         assert ok is True
         assert result.index("B") < result.index("A")
@@ -420,8 +474,11 @@ class TestApplyMoveChangeByDesignIds:
     def test_move_after(self):
         content = '<div data-design-id="a">A</div><div data-design-id="b">B</div>'
         result, ok = _apply_move_change_by_design_ids(
-            content=content, file_path="f.tsx", design_id="a",
-            target_design_id="b", mode="after",
+            content=content,
+            file_path="f.tsx",
+            design_id="a",
+            target_design_id="b",
+            mode="after",
         )
         assert ok is True
         assert result.index("A") > result.index("B")
@@ -429,8 +486,11 @@ class TestApplyMoveChangeByDesignIds:
     def test_same_id(self):
         content = '<div data-design-id="a">A</div>'
         result, ok = _apply_move_change_by_design_ids(
-            content=content, file_path="f.tsx", design_id="a",
-            target_design_id="a", mode="before",
+            content=content,
+            file_path="f.tsx",
+            design_id="a",
+            target_design_id="a",
+            mode="before",
         )
         assert ok is True
         assert result == content
@@ -438,24 +498,33 @@ class TestApplyMoveChangeByDesignIds:
     def test_invalid_mode(self):
         content = '<div data-design-id="a">A</div><div data-design-id="b">B</div>'
         _, ok = _apply_move_change_by_design_ids(
-            content=content, file_path="f.tsx", design_id="a",
-            target_design_id="b", mode="invalid",
+            content=content,
+            file_path="f.tsx",
+            design_id="a",
+            target_design_id="b",
+            mode="invalid",
         )
         assert ok is False
 
     def test_source_not_found(self):
         content = '<div data-design-id="b">B</div>'
         _, ok = _apply_move_change_by_design_ids(
-            content=content, file_path="f.tsx", design_id="missing",
-            target_design_id="b", mode="before",
+            content=content,
+            file_path="f.tsx",
+            design_id="missing",
+            target_design_id="b",
+            mode="before",
         )
         assert ok is False
 
     def test_target_not_found(self):
         content = '<div data-design-id="a">A</div>'
         _, ok = _apply_move_change_by_design_ids(
-            content=content, file_path="f.tsx", design_id="a",
-            target_design_id="missing", mode="before",
+            content=content,
+            file_path="f.tsx",
+            design_id="a",
+            target_design_id="missing",
+            mode="before",
         )
         assert ok is False
 
@@ -464,7 +533,9 @@ class TestApplyMoveChangeByDesignIdAnchor:
     def test_before_anchor(self):
         content = '<div data-design-id="a">A</div><div data-design-id="b">B</div>'
         result, ok = _apply_move_change_by_design_id_anchor(
-            content=content, file_path="f.tsx", design_id="b",
+            content=content,
+            file_path="f.tsx",
+            design_id="b",
             anchor="before:a",
         )
         assert ok is True
@@ -473,7 +544,9 @@ class TestApplyMoveChangeByDesignIdAnchor:
     def test_after_anchor(self):
         content = '<div data-design-id="a">A</div><div data-design-id="b">B</div>'
         result, ok = _apply_move_change_by_design_id_anchor(
-            content=content, file_path="f.tsx", design_id="a",
+            content=content,
+            file_path="f.tsx",
+            design_id="a",
             anchor="after:b",
         )
         assert ok is True
@@ -481,7 +554,9 @@ class TestApplyMoveChangeByDesignIdAnchor:
     def test_only_anchor(self):
         content = '<div data-design-id="a">A</div>'
         result, ok = _apply_move_change_by_design_id_anchor(
-            content=content, file_path="f.tsx", design_id="a",
+            content=content,
+            file_path="f.tsx",
+            design_id="a",
             anchor="only",
         )
         assert ok is True
@@ -490,14 +565,18 @@ class TestApplyMoveChangeByDesignIdAnchor:
     def test_invalid_anchor(self):
         content = '<div data-design-id="a">A</div>'
         _, ok = _apply_move_change_by_design_id_anchor(
-            content=content, file_path="f.tsx", design_id="a",
+            content=content,
+            file_path="f.tsx",
+            design_id="a",
             anchor="invalid",
         )
         assert ok is False
 
     def test_empty_anchor(self):
         _, ok = _apply_move_change_by_design_id_anchor(
-            content="<div>x</div>", file_path="f.tsx", design_id="a",
+            content="<div>x</div>",
+            file_path="f.tsx",
+            design_id="a",
             anchor="",
         )
         assert ok is False
@@ -507,8 +586,10 @@ class TestApplySwapChangeByDesignIds:
     def test_swap(self):
         content = '<div data-design-id="a">A</div><div data-design-id="b">B</div>'
         result, ok = _apply_swap_change_by_design_ids(
-            content=content, file_path="f.tsx",
-            design_id="a", target_design_id="b",
+            content=content,
+            file_path="f.tsx",
+            design_id="a",
+            target_design_id="b",
         )
         assert ok is True
         assert result.index("B") < result.index("A")
@@ -516,32 +597,40 @@ class TestApplySwapChangeByDesignIds:
     def test_same_element(self):
         content = '<div data-design-id="a">A</div>'
         result, ok = _apply_swap_change_by_design_ids(
-            content=content, file_path="f.tsx",
-            design_id="a", target_design_id="a",
+            content=content,
+            file_path="f.tsx",
+            design_id="a",
+            target_design_id="a",
         )
         assert ok is True
 
     def test_not_found(self):
         content = '<div data-design-id="a">A</div>'
         _, ok = _apply_swap_change_by_design_ids(
-            content=content, file_path="f.tsx",
-            design_id="a", target_design_id="missing",
+            content=content,
+            file_path="f.tsx",
+            design_id="a",
+            target_design_id="missing",
         )
         assert ok is False
 
     def test_source_not_found(self):
         content = '<div data-design-id="b">B</div>'
         _, ok = _apply_swap_change_by_design_ids(
-            content=content, file_path="f.tsx",
-            design_id="missing", target_design_id="b",
+            content=content,
+            file_path="f.tsx",
+            design_id="missing",
+            target_design_id="b",
         )
         assert ok is False
 
     def test_overlapping_spans(self):
         content = '<div data-design-id="outer"><span data-design-id="inner">x</span></div>'
         _, ok = _apply_swap_change_by_design_ids(
-            content=content, file_path="f.tsx",
-            design_id="outer", target_design_id="inner",
+            content=content,
+            file_path="f.tsx",
+            design_id="outer",
+            target_design_id="inner",
         )
         assert ok is False
 
@@ -550,12 +639,16 @@ class TestApplySwapChangeByDesignIds:
 # Text
 # ---------------------------------------------------------------------------
 
+
 class TestApplyTextChangeByDesignId:
     def test_replaces_text(self):
         content = '<h1 data-design-id="t1">Hello World</h1>'
         result, ok = _apply_text_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="t1",
-            old_text="Hello World", new_text="New Title",
+            content=content,
+            file_path="f.tsx",
+            design_id="t1",
+            old_text="Hello World",
+            new_text="New Title",
         )
         assert ok is True
         assert "New Title" in result
@@ -564,40 +657,55 @@ class TestApplyTextChangeByDesignId:
     def test_already_in_sync(self):
         content = '<h1 data-design-id="t1">New Title</h1>'
         result, ok = _apply_text_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="t1",
-            old_text="Old", new_text="New Title",
+            content=content,
+            file_path="f.tsx",
+            design_id="t1",
+            old_text="Old",
+            new_text="New Title",
         )
         assert ok is True
 
     def test_not_found(self):
         content = '<h1 data-design-id="t1">text</h1>'
         _, ok = _apply_text_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="missing",
-            old_text="text", new_text="new",
+            content=content,
+            file_path="f.tsx",
+            design_id="missing",
+            old_text="text",
+            new_text="new",
         )
         assert ok is False
 
     def test_empty_old_text(self):
         content = '<h1 data-design-id="t1">text</h1>'
         _, ok = _apply_text_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="t1",
-            old_text="", new_text="new",
+            content=content,
+            file_path="f.tsx",
+            design_id="t1",
+            old_text="",
+            new_text="new",
         )
         assert ok is False
 
     def test_old_text_not_in_window(self):
         content = '<h1 data-design-id="t1">different</h1>'
         _, ok = _apply_text_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="t1",
-            old_text="missing text", new_text="new",
+            content=content,
+            file_path="f.tsx",
+            design_id="t1",
+            old_text="missing text",
+            new_text="new",
         )
         assert ok is False
 
     def test_replaces_first_occurrence_only(self):
         content = '<div data-design-id="t1">aaa aaa</div>'
         result, ok = _apply_text_change_by_design_id(
-            content=content, file_path="f.tsx", design_id="t1",
-            old_text="aaa", new_text="bbb",
+            content=content,
+            file_path="f.tsx",
+            design_id="t1",
+            old_text="aaa",
+            new_text="bbb",
         )
         assert ok is True
         assert "bbb" in result
@@ -606,6 +714,7 @@ class TestApplyTextChangeByDesignId:
 # ---------------------------------------------------------------------------
 # Style: CSS helpers
 # ---------------------------------------------------------------------------
+
 
 class TestEscapeCssAttributeValue:
     def test_basic(self):
@@ -621,8 +730,10 @@ class TestEscapeCssAttributeValue:
 class TestUpsertDesignModeCssOverride:
     def test_new_rule_no_section(self):
         result = _upsert_design_mode_css_override(
-            css_text="body { margin: 0; }", design_id="abc",
-            css_prop="color", css_value="red",
+            css_text="body { margin: 0; }",
+            design_id="abc",
+            css_prop="color",
+            css_value="red",
         )
         assert 'data-design-id="abc"' in result
         assert "color: red;" in result
@@ -630,65 +741,86 @@ class TestUpsertDesignModeCssOverride:
 
     def test_update_existing_property(self):
         css = (
-            '/* === Design Mode Overrides (ii-agent) === */\n'
+            "/* === Design Mode Overrides (ii-agent) === */\n"
             '[data-design-id="abc"] {\n  color: blue;\n}\n'
-            '/* === End Design Mode Overrides === */\n'
+            "/* === End Design Mode Overrides === */\n"
         )
         result = _upsert_design_mode_css_override(
-            css_text=css, design_id="abc", css_prop="color", css_value="red",
+            css_text=css,
+            design_id="abc",
+            css_prop="color",
+            css_value="red",
         )
         assert "color: red;" in result
         assert "color: blue;" not in result
 
     def test_add_property_to_existing_rule(self):
         css = (
-            '/* === Design Mode Overrides (ii-agent) === */\n'
+            "/* === Design Mode Overrides (ii-agent) === */\n"
             '[data-design-id="abc"] {\n  color: blue;\n}\n'
-            '/* === End Design Mode Overrides === */\n'
+            "/* === End Design Mode Overrides === */\n"
         )
         result = _upsert_design_mode_css_override(
-            css_text=css, design_id="abc", css_prop="font-size", css_value="16px",
+            css_text=css,
+            design_id="abc",
+            css_prop="font-size",
+            css_value="16px",
         )
         assert "font-size: 16px;" in result
         assert "color: blue;" in result
 
     def test_remove_property(self):
         css = (
-            '/* === Design Mode Overrides (ii-agent) === */\n'
+            "/* === Design Mode Overrides (ii-agent) === */\n"
             '[data-design-id="abc"] {\n  color: blue;\n}\n'
-            '/* === End Design Mode Overrides === */\n'
+            "/* === End Design Mode Overrides === */\n"
         )
         result = _upsert_design_mode_css_override(
-            css_text=css, design_id="abc", css_prop="color", css_value="",
+            css_text=css,
+            design_id="abc",
+            css_prop="color",
+            css_value="",
         )
         assert "color:" not in result
 
     def test_empty_css_prop(self):
         css = "body {}"
         result = _upsert_design_mode_css_override(
-            css_text=css, design_id="abc", css_prop="", css_value="red",
+            css_text=css,
+            design_id="abc",
+            css_prop="",
+            css_value="red",
         )
         assert result == css
 
     def test_new_rule_in_existing_section(self):
         css = (
-            '/* === Design Mode Overrides (ii-agent) === */\n'
-            '/* === End Design Mode Overrides === */\n'
+            "/* === Design Mode Overrides (ii-agent) === */\n"
+            "/* === End Design Mode Overrides === */\n"
         )
         result = _upsert_design_mode_css_override(
-            css_text=css, design_id="abc", css_prop="color", css_value="red",
+            css_text=css,
+            design_id="abc",
+            css_prop="color",
+            css_value="red",
         )
         assert "color: red;" in result
 
     def test_empty_css_text(self):
         result = _upsert_design_mode_css_override(
-            css_text="", design_id="abc", css_prop="color", css_value="red",
+            css_text="",
+            design_id="abc",
+            css_prop="color",
+            css_value="red",
         )
         assert "color: red;" in result
 
     def test_none_css_text(self):
         result = _upsert_design_mode_css_override(
-            css_text=None, design_id="abc", css_prop="color", css_value="red",
+            css_text=None,
+            design_id="abc",
+            css_prop="color",
+            css_value="red",
         )
         assert "color: red;" in result
 
@@ -814,8 +946,11 @@ class TestApplyStyleChangeByDesignId:
     def test_jsx_file(self):
         content = '<div data-design-id="s1" className="foo">text</div>'
         result, ok = _apply_style_change_by_design_id(
-            content=content, file_path="/workspace/src/App.tsx",
-            design_id="s1", css_prop="color", css_value="red",
+            content=content,
+            file_path="/workspace/src/App.tsx",
+            design_id="s1",
+            css_prop="color",
+            css_value="red",
         )
         assert ok is True
         assert "color" in result
@@ -823,8 +958,11 @@ class TestApplyStyleChangeByDesignId:
     def test_html_file(self):
         content = '<div data-design-id="s1" class="foo">text</div>'
         result, ok = _apply_style_change_by_design_id(
-            content=content, file_path="/workspace/index.html",
-            design_id="s1", css_prop="color", css_value="red",
+            content=content,
+            file_path="/workspace/index.html",
+            design_id="s1",
+            css_prop="color",
+            css_value="red",
         )
         assert ok is True
         assert "style=" in result
@@ -832,24 +970,33 @@ class TestApplyStyleChangeByDesignId:
     def test_not_found(self):
         content = "<div>text</div>"
         _, ok = _apply_style_change_by_design_id(
-            content=content, file_path="f.tsx",
-            design_id="missing", css_prop="color", css_value="red",
+            content=content,
+            file_path="f.tsx",
+            design_id="missing",
+            css_prop="color",
+            css_value="red",
         )
         assert ok is False
 
     def test_already_in_sync(self):
         content = "<div data-design-id=\"s1\" style={{ color: 'red' }}>text</div>"
         result, ok = _apply_style_change_by_design_id(
-            content=content, file_path="f.tsx",
-            design_id="s1", css_prop="color", css_value="red",
+            content=content,
+            file_path="f.tsx",
+            design_id="s1",
+            css_prop="color",
+            css_value="red",
         )
         assert ok is True
 
     def test_html_ext_detection(self):
         content = '<div data-design-id="s1">text</div>'
         result, ok = _apply_style_change_by_design_id(
-            content=content, file_path="/workspace/page.htm",
-            design_id="s1", css_prop="color", css_value="red",
+            content=content,
+            file_path="/workspace/page.htm",
+            design_id="s1",
+            css_prop="color",
+            css_value="red",
         )
         assert ok is True
 
@@ -858,42 +1005,55 @@ class TestApplyStyleChangeByDesignId:
 # Dynamic pattern
 # ---------------------------------------------------------------------------
 
+
 class TestUpdateIconAtArrayIndex:
     def test_updates_correct_index(self):
         array_content = '{ icon: Shield, id: "1" }, { icon: Zap, id: "2" }'
         content = f"const items = [{array_content}]"
         array_start = content.index("[") + 1
         result = _update_icon_at_array_index(
-            content=content, array_content=array_content,
-            array_start=array_start, target_index=1, new_icon_component="Bell",
+            content=content,
+            array_content=array_content,
+            array_start=array_start,
+            target_index=1,
+            new_icon_component="Bell",
         )
         assert "Bell" in result
         assert "Shield" in result  # First item unchanged
 
     def test_index_out_of_range(self):
-        array_content = '{ icon: Shield }'
+        array_content = "{ icon: Shield }"
         content = f"[{array_content}]"
         result = _update_icon_at_array_index(
-            content=content, array_content=array_content,
-            array_start=1, target_index=5, new_icon_component="Bell",
+            content=content,
+            array_content=array_content,
+            array_start=1,
+            target_index=5,
+            new_icon_component="Bell",
         )
         assert result == content
 
     def test_same_icon(self):
-        array_content = '{ icon: Bell }'
+        array_content = "{ icon: Bell }"
         content = f"[{array_content}]"
         result = _update_icon_at_array_index(
-            content=content, array_content=array_content,
-            array_start=1, target_index=0, new_icon_component="Bell",
+            content=content,
+            array_content=array_content,
+            array_start=1,
+            target_index=0,
+            new_icon_component="Bell",
         )
         assert result == content
 
     def test_negative_index(self):
-        array_content = '{ icon: Shield }'
+        array_content = "{ icon: Shield }"
         content = f"[{array_content}]"
         result = _update_icon_at_array_index(
-            content=content, array_content=array_content,
-            array_start=1, target_index=-1, new_icon_component="Bell",
+            content=content,
+            array_content=array_content,
+            array_start=1,
+            target_index=-1,
+            new_icon_component="Bell",
         )
         assert result == content
 
@@ -903,8 +1063,11 @@ class TestUpdateIconWhereFieldMatches:
         array_content = '{ id: "a", icon: Shield }, { id: "b", icon: Zap }'
         content = f"[{array_content}]"
         result = _update_icon_where_field_matches(
-            content=content, array_content=array_content,
-            array_start=1, field_name="id", field_value="b",
+            content=content,
+            array_content=array_content,
+            array_start=1,
+            field_name="id",
+            field_value="b",
             new_icon_component="Bell",
         )
         assert "Bell" in result
@@ -914,8 +1077,11 @@ class TestUpdateIconWhereFieldMatches:
         array_content = '{ id: "a", icon: Shield }'
         content = f"[{array_content}]"
         result = _update_icon_where_field_matches(
-            content=content, array_content=array_content,
-            array_start=1, field_name="id", field_value="missing",
+            content=content,
+            array_content=array_content,
+            array_start=1,
+            field_name="id",
+            field_value="missing",
             new_icon_component="Bell",
         )
         assert result == content
@@ -924,8 +1090,11 @@ class TestUpdateIconWhereFieldMatches:
         array_content = '{ id: "a", icon: Bell }'
         content = f"[{array_content}]"
         result = _update_icon_where_field_matches(
-            content=content, array_content=array_content,
-            array_start=1, field_name="id", field_value="a",
+            content=content,
+            array_content=array_content,
+            array_start=1,
+            field_name="id",
+            field_value="a",
             new_icon_component="Bell",
         )
         assert result == content
@@ -933,11 +1102,15 @@ class TestUpdateIconWhereFieldMatches:
 
 class TestUpdateIconInArrayByValue:
     def test_index_based(self):
-        content = 'const items = [{ icon: Shield }, { icon: Zap }]'
+        content = "const items = [{ icon: Shield }, { icon: Zap }]"
         array_start = content.index("[")
         result = _update_icon_in_array_by_value(
-            content=content, array_start=array_start, target_value="1",
-            variable_expr="index", iterator_var="item", index_var="index",
+            content=content,
+            array_start=array_start,
+            target_value="1",
+            variable_expr="index",
+            iterator_var="item",
+            index_var="index",
             new_icon_component="Bell",
         )
         assert "Bell" in result
@@ -947,8 +1120,12 @@ class TestUpdateIconInArrayByValue:
         content = 'const items = [{ id: "a", icon: Shield }, { id: "b", icon: Zap }]'
         array_start = content.index("[")
         result = _update_icon_in_array_by_value(
-            content=content, array_start=array_start, target_value="b",
-            variable_expr="item.id", iterator_var="item", index_var=None,
+            content=content,
+            array_start=array_start,
+            target_value="b",
+            variable_expr="item.id",
+            iterator_var="item",
+            index_var=None,
             new_icon_component="Bell",
         )
         assert "Bell" in result
@@ -956,8 +1133,12 @@ class TestUpdateIconInArrayByValue:
     def test_no_array(self):
         content = "const x = 42"
         result = _update_icon_in_array_by_value(
-            content=content, array_start=0, target_value="0",
-            variable_expr="index", iterator_var="item", index_var="index",
+            content=content,
+            array_start=0,
+            target_value="0",
+            variable_expr="index",
+            iterator_var="item",
+            index_var="index",
             new_icon_component="Bell",
         )
         assert result == content
@@ -966,17 +1147,19 @@ class TestUpdateIconInArrayByValue:
 class TestApplyIconChangeByDynamicPattern:
     def test_template_match(self):
         content = (
-            'import { Shield, Zap } from \'lucide-react\'\n'
+            "import { Shield, Zap } from 'lucide-react'\n"
             'const features = [{ id: "1", icon: Shield }, { id: "2", icon: Zap }]\n'
-            '{features.map((feature, index) => (\n'
-            '  <div data-design-id={`features-card-${feature.id}-icon`}>\n'
-            '    <feature.icon />\n'
-            '  </div>\n'
-            '))}'
+            "{features.map((feature, index) => (\n"
+            "  <div data-design-id={`features-card-${feature.id}-icon`}>\n"
+            "    <feature.icon />\n"
+            "  </div>\n"
+            "))}"
         )
         result, ok = _apply_icon_change_by_dynamic_pattern(
-            content=content, file_path="f.tsx",
-            design_id="features-card-1-icon", pattern=r"features-card-\d+-icon",
+            content=content,
+            file_path="f.tsx",
+            design_id="features-card-1-icon",
+            pattern=r"features-card-\d+-icon",
             icon_name="bell",
         )
         # May or may not match depending on exact pattern matching
@@ -985,24 +1168,31 @@ class TestApplyIconChangeByDynamicPattern:
     def test_no_template(self):
         content = '<div data-design-id="static-id">text</div>'
         _, ok = _apply_icon_change_by_dynamic_pattern(
-            content=content, file_path="f.tsx",
-            design_id="static-id", pattern=r"static-id",
+            content=content,
+            file_path="f.tsx",
+            design_id="static-id",
+            pattern=r"static-id",
             icon_name="bell",
         )
         assert ok is False
 
     def test_empty_content(self):
         _, ok = _apply_icon_change_by_dynamic_pattern(
-            content="", file_path="f.tsx",
-            design_id="x", pattern="x",
+            content="",
+            file_path="f.tsx",
+            design_id="x",
+            pattern="x",
             icon_name="bell",
         )
         assert ok is False
 
     def test_missing_params(self):
         _, ok = _apply_icon_change_by_dynamic_pattern(
-            content="content", file_path="f.tsx",
-            design_id="", pattern="", icon_name="",
+            content="content",
+            file_path="f.tsx",
+            design_id="",
+            pattern="",
+            icon_name="",
         )
         assert ok is False
 
@@ -1037,11 +1227,10 @@ class TestInferDesignIdPattern:
 # Async functions (with FakeSandbox)
 # ---------------------------------------------------------------------------
 
+
 class TestLocateProjectGlobalsCss:
     async def test_finds_globals_css(self, fake_sandbox):
-        sb = fake_sandbox(command_outputs={
-            "find": "/workspace/src/app/globals.css\n"
-        })
+        sb = fake_sandbox(command_outputs={"find": "/workspace/src/app/globals.css\n"})
         result = await _locate_project_globals_css(sandbox=sb, manifest_path=None)
         assert result == "/workspace/src/app/globals.css"
 
@@ -1051,9 +1240,7 @@ class TestLocateProjectGlobalsCss:
         assert result is None
 
     async def test_caching(self, fake_sandbox):
-        sb = fake_sandbox(command_outputs={
-            "find": "/workspace/src/app/globals.css\n"
-        })
+        sb = fake_sandbox(command_outputs={"find": "/workspace/src/app/globals.css\n"})
         r1 = await _locate_project_globals_css(sandbox=sb, manifest_path=None)
         sb._command_outputs = {}
         r2 = await _locate_project_globals_css(sandbox=sb, manifest_path=None)
@@ -1067,8 +1254,11 @@ class TestApplyStyleChangeAsCssOverride:
             command_outputs={"find": "/workspace/src/app/globals.css\n"},
         )
         ok, path = await _apply_style_change_as_css_override(
-            sandbox=sb, manifest_path=None,
-            design_id="abc", css_prop="color", css_value="red",
+            sandbox=sb,
+            manifest_path=None,
+            design_id="abc",
+            css_prop="color",
+            css_value="red",
         )
         assert ok is True
         assert path == "/workspace/src/app/globals.css"
@@ -1078,8 +1268,11 @@ class TestApplyStyleChangeAsCssOverride:
     async def test_no_globals_css(self, fake_sandbox):
         sb = fake_sandbox(command_outputs={})
         ok, path = await _apply_style_change_as_css_override(
-            sandbox=sb, manifest_path=None,
-            design_id="abc", css_prop="color", css_value="red",
+            sandbox=sb,
+            manifest_path=None,
+            design_id="abc",
+            css_prop="color",
+            css_value="red",
         )
         assert ok is False
         assert path is None
@@ -1087,9 +1280,11 @@ class TestApplyStyleChangeAsCssOverride:
 
 class TestFindBestSourceFileForDesignId:
     async def test_finds_file(self, fake_sandbox):
-        sb = fake_sandbox(command_outputs={
-            "rg": '/workspace/src/App.tsx:10:  data-design-id="abc"\n',
-        })
+        sb = fake_sandbox(
+            command_outputs={
+                "rg": '/workspace/src/App.tsx:10:  data-design-id="abc"\n',
+            }
+        )
         result = await _find_best_source_file_for_design_id(sandbox=sb, design_id="abc")
         assert result == "/workspace/src/App.tsx"
 
@@ -1116,24 +1311,18 @@ class TestFindBestSourceFileForIconItemId:
 class TestUpsertLucideReactImportAddOnly:
     def test_add_to_existing_import(self):
         content = "import { Shield } from 'lucide-react'\n<Shield />"
-        result = _upsert_lucide_react_import_add_only(
-            content=content, new_icon_component="Bell"
-        )
+        result = _upsert_lucide_react_import_add_only(content=content, new_icon_component="Bell")
         assert "Bell" in result
         assert "Shield" in result
 
     def test_create_new_import(self):
         content = "import React from 'react'\n<div />"
-        result = _upsert_lucide_react_import_add_only(
-            content=content, new_icon_component="Bell"
-        )
+        result = _upsert_lucide_react_import_add_only(content=content, new_icon_component="Bell")
         assert "import { Bell } from 'lucide-react'" in result
 
     def test_no_imports(self):
         content = "<div>hello</div>"
-        result = _upsert_lucide_react_import_add_only(
-            content=content, new_icon_component="Bell"
-        )
+        result = _upsert_lucide_react_import_add_only(content=content, new_icon_component="Bell")
         assert result.startswith("import { Bell } from 'lucide-react'")
 
 
@@ -1141,14 +1330,19 @@ class TestFindIconByDynamicPattern:
     async def test_searches_workspace(self, fake_sandbox):
         sb = fake_sandbox(command_outputs={})
         result, ok = await _find_icon_by_dynamic_pattern(
-            sandbox=sb, design_id="features-card-1-icon",
-            icon_name="bell", element_context=None,
+            sandbox=sb,
+            design_id="features-card-1-icon",
+            icon_name="bell",
+            element_context=None,
         )
         assert ok is False
 
     async def test_empty_params(self, fake_sandbox):
         sb = fake_sandbox()
         _, ok = await _find_icon_by_dynamic_pattern(
-            sandbox=sb, design_id="", icon_name="", element_context=None,
+            sandbox=sb,
+            design_id="",
+            icon_name="",
+            element_context=None,
         )
         assert ok is False

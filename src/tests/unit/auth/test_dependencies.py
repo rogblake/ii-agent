@@ -6,7 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from ii_agent.auth import dependencies
 from ii_agent.auth.exceptions import InvalidTokenException, UserNotFoundException
-from ii_agent.auth.users.exceptions import UserDisabledException
+from ii_agent.users.exceptions import UserDisabledException
 
 
 class FakeUserRepo:

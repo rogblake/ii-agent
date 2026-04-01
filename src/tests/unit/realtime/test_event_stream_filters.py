@@ -1,7 +1,6 @@
 import pytest
 
-from ii_agent.agent.events.models import EventType, RealtimeEvent
-from ii_agent.agent.socket.event_stream_filters import SilentEventStream
+from ii_agent.realtime.events import ApplicationEvent, EventGroup
 
 
 class FakeInnerStream:
@@ -18,7 +17,9 @@ async def test_silent_event_stream_suppresses_agent_response_events():
     inner = FakeInnerStream()
     stream = SilentEventStream(inner)
 
-    event = RealtimeEvent(type=EventType.AGENT_RESPONSE, content={"text": "thinking"})
+    event = ApplicationEvent(
+        group=EventGroup.AGENT_RUN, name="agent.response", content={"text": "thinking"}
+    )
     await stream.publish(event)
 
     assert inner.published == []
@@ -29,7 +30,9 @@ async def test_silent_event_stream_forwards_non_agent_response_events():
     inner = FakeInnerStream()
     stream = SilentEventStream(inner)
 
-    event = RealtimeEvent(type=EventType.SYSTEM, content={"message": "ok"})
+    event = ApplicationEvent(
+        group=EventGroup.SYSTEM, name="system.notification", content={"message": "ok"}
+    )
     await stream.publish(event)
 
     assert inner.published == [event]

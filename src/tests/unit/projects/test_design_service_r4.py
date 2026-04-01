@@ -2,20 +2,26 @@
 
 from __future__ import annotations
 
+import json
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from ii_agent.projects.design.exceptions import (
+    DesignProxyFetchError,
+    DesignProxyHostNotAllowedError,
     DesignSessionAccessDeniedError,
     DesignSessionNotFoundError,
     DesignSandboxUnavailableError,
     DesignValidationError,
 )
 from ii_agent.projects.design.schemas import (
+    AIChangeRequest,
     DesignStateRequest,
     ElementInfoRequest,
+    IframeAIPlanRequest,
     IframeDocumentSnapshotNode,
     StyleChange,
     SyncRequest,
@@ -35,14 +41,14 @@ def _make_session(
     user_id: str = "user-1",
     session_id: str | None = None,
     public_url: str | None = None,
-    sandbox_id: str | None = None,
+    parent_session_id: str | None = None,
     llm_setting_id: str | None = None,
 ) -> MagicMock:
     session = MagicMock()
     session.id = session_id or str(uuid.uuid4())
     session.user_id = user_id
     session.public_url = public_url
-    session.sandbox_id = sandbox_id
+    session.parent_session_id = parent_session_id
     session.llm_setting_id = llm_setting_id
     return session
 
@@ -52,8 +58,6 @@ def _make_service(**overrides) -> ProjectDesignService:
     sandbox_service = MagicMock()
     event_service = MagicMock()
     llm_setting_service = MagicMock()
-    llm_execution_service = MagicMock()
-    llm_billing_service = None
     config = MagicMock()
     config.llm_configs = {}
 
@@ -62,8 +66,6 @@ def _make_service(**overrides) -> ProjectDesignService:
         "sandbox_service": sandbox_service,
         "event_service": event_service,
         "llm_setting_service": llm_setting_service,
-        "llm_execution_service": llm_execution_service,
-        "llm_billing_service": llm_billing_service,
         "config": config,
     }
     kwargs.update(overrides)
@@ -341,7 +343,6 @@ class TestBuildProxyHostnameAllowCheckR4:
         sandbox_record.provider_sandbox_id = "sandbox123"
         is_allowed = svc._build_proxy_hostname_allow_check(
             session_public_url=None,
-            session_sandbox_id=None,
             requested_hostname="sandbox123.e2b.app",
             sandbox_record=sandbox_record,
         )
@@ -351,7 +352,6 @@ class TestBuildProxyHostnameAllowCheckR4:
         svc = _make_service()
         is_allowed = svc._build_proxy_hostname_allow_check(
             session_public_url="https://myapp.example.com",
-            session_sandbox_id=None,
             requested_hostname="myapp.example.com",
             sandbox_record=None,
         )
@@ -361,27 +361,15 @@ class TestBuildProxyHostnameAllowCheckR4:
         svc = _make_service()
         is_allowed = svc._build_proxy_hostname_allow_check(
             session_public_url="https://myapp.example.com",
-            session_sandbox_id=None,
             requested_hostname="evil.com",
             sandbox_record=None,
         )
         assert is_allowed("evil.com") is False
 
-    def test_allows_session_sandbox_id(self):
-        svc = _make_service()
-        is_allowed = svc._build_proxy_hostname_allow_check(
-            session_public_url=None,
-            session_sandbox_id="mysandbox",
-            requested_hostname="mysandbox.e2b.app",
-            sandbox_record=None,
-        )
-        assert is_allowed("mysandbox.e2b.app") is True
-
     def test_empty_hostname_rejected(self):
         svc = _make_service()
         is_allowed = svc._build_proxy_hostname_allow_check(
             session_public_url="https://myapp.com",
-            session_sandbox_id=None,
             requested_hostname="myapp.com",
             sandbox_record=None,
         )
@@ -391,7 +379,6 @@ class TestBuildProxyHostnameAllowCheckR4:
         svc = _make_service()
         is_allowed = svc._build_proxy_hostname_allow_check(
             session_public_url=None,
-            session_sandbox_id=None,
             requested_hostname="random.e2b.app",
             sandbox_record=None,
         )
@@ -403,7 +390,6 @@ class TestBuildProxyHostnameAllowCheckR4:
         sandbox_record.provider_sandbox_id = "mysandbox"
         is_allowed = svc._build_proxy_hostname_allow_check(
             session_public_url=None,
-            session_sandbox_id=None,
             requested_hostname="3000-mysandbox.e2b.app",
             sandbox_record=sandbox_record,
         )
@@ -683,7 +669,7 @@ class TestBuildSelectedSubtreeHintR4:
             selected_design_id="did-0",
             max_nodes=3,
         )
-        lines = [line for line in result.split("\n") if line.strip()]
+        lines = [l for l in result.split("\n") if l.strip()]
         assert len(lines) <= 3
 
     def test_no_infinite_loop_with_cycles(self):
@@ -749,32 +735,11 @@ class TestToolResultValueR4:
 
 
 class TestBuildBillingContextR4:
-    def test_returns_none_when_no_billing_service(self):
-        svc = _make_service(llm_billing_service=None)
-        ctx = svc._build_billing_context(
-            db=AsyncMock(),
-            user_id="u1",
-            session_id="s1",
-            llm_config=MagicMock(),
-        )
-        assert ctx is None
+    """Billing context was removed — _build_billing_context no longer exists."""
 
-    def test_returns_billing_context_when_service_present(self):
-        from ii_agent.core.llm.execution_service import LLMBillingContext
-
-        billing_svc = MagicMock()
-        svc = _make_service(llm_billing_service=billing_svc)
-        llm_config = MagicMock()
-        llm_config.model = "gpt-4"
-        ctx = svc._build_billing_context(
-            db=AsyncMock(),
-            user_id="u1",
-            session_id="s1",
-            llm_config=llm_config,
-        )
-        assert ctx is not None
-        assert isinstance(ctx, LLMBillingContext)
-        assert ctx.scope.billing_context == "projectdesign"
+    def test_service_has_no_billing_context_method(self):
+        svc = _make_service()
+        assert not hasattr(svc, "_build_billing_context")
 
 
 # ---------------------------------------------------------------------------
@@ -784,22 +749,21 @@ class TestBuildBillingContextR4:
 
 class TestBuildLlmMessagesR4:
     def test_returns_single_user_message(self):
-        svc = _make_service()
-        mock_message = MagicMock()
-        svc._llm_execution_service.new_message = MagicMock(return_value=mock_message)
-        messages = svc._build_llm_messages(session_id="sess-1", user_prompt="Do this")
+        messages = ProjectDesignService._build_llm_messages(
+            session_id="sess-1", user_prompt="Do this"
+        )
         assert len(messages) == 1
-        assert messages[0] is mock_message
 
     def test_passes_correct_prompt_to_new_message(self):
-        from ii_agent.chat.types import TextContent
+        from ii_agent.chat.types import TextContent, MessageRole
 
-        svc = _make_service()
-        svc._llm_execution_service.new_message = MagicMock(return_value=MagicMock())
-        svc._build_llm_messages(session_id="sess-1", user_prompt="Design this")
-        call_kwargs = svc._llm_execution_service.new_message.call_args
-        parts = call_kwargs[1]["parts"]
-        assert any(isinstance(p, TextContent) and p.text == "Design this" for p in parts)
+        messages = ProjectDesignService._build_llm_messages(
+            session_id="sess-1", user_prompt="Design this"
+        )
+        msg = messages[0]
+        assert msg.role == MessageRole.USER
+        assert msg.session_id == "sess-1"
+        assert any(isinstance(p, TextContent) and p.text == "Design this" for p in msg.parts)
 
 
 # ---------------------------------------------------------------------------
@@ -1180,7 +1144,11 @@ class TestResolveLlmConfigForSessionR4:
         from ii_agent.core.config.llm_config import LLMConfig
 
         svc = _make_service()
-        svc._config.llm_configs = {}
+        # No setting_id on session — falls back to resolve_system_config("default")
+        default_config = LLMConfig(model="gpt-4o")
+        svc._llm_setting_service.resolve_system_config = AsyncMock(
+            return_value=default_config
+        )
         session = _make_session(llm_setting_id=None)
         result = await svc._resolve_llm_config_for_session(
             AsyncMock(),
@@ -1214,7 +1182,11 @@ class TestResolveLlmConfigForSessionR4:
 
         svc = _make_service()
         svc._llm_setting_service.get_user_llm_config = AsyncMock(side_effect=Exception("not found"))
-        svc._config.llm_configs = {}
+        # resolve_system_config also fails, falls to "default" fallback
+        system_config = LLMConfig(model="gpt-4o")
+        svc._llm_setting_service.resolve_system_config = AsyncMock(
+            side_effect=[Exception("not found"), system_config]
+        )
         session = _make_session(llm_setting_id="gpt-4")
         # Should not raise, should return a default config
         result = await svc._resolve_llm_config_for_session(

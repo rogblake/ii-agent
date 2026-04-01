@@ -4,6 +4,7 @@ Route ordering: static paths first, then parameterized paths to avoid
 path-parameter capture of literal segments.
 """
 
+import uuid
 from typing import Optional, List
 
 from fastapi import APIRouter, Query, Request as HTTPRequest
@@ -29,7 +30,7 @@ from ii_agent.integrations.connectors.composio.schemas import (
 )
 from ii_agent.integrations.connectors.composio.connected_account_service import ConnectedAccountService
 
-router = APIRouter(prefix="/connectors/composio", tags=["composio"])
+router = APIRouter(prefix="/composio", tags=["composio"])
 
 
 # ---- Static-path routes (register BEFORE parameterised routes) ----
@@ -174,7 +175,7 @@ async def disconnect_composio_toolkit(
     db: DBSession,
     svc: ComposioServiceDep,
     toolkit_slug: str,
-    profile_id: Optional[str] = None,
+    profile_id: Optional[uuid.UUID] = None,
 ):
     """Disconnect Composio toolkit (delete profile and connected account)."""
     if not profile_id:
@@ -202,7 +203,7 @@ async def get_profile_mcp_config(
     current_user: CurrentUser,
     db: DBSession,
     svc: ComposioServiceDep,
-    profile_id: str,
+    profile_id: uuid.UUID,
 ):
     """Get MCP configuration for agent integration."""
     try:
@@ -218,14 +219,14 @@ async def sync_profile_to_agent(
     current_user: CurrentUser,
     db: DBSession,
     svc: ComposioServiceDep,
-    profile_id: str,
+    profile_id: uuid.UUID,
 ):
     """Sync Composio profile to user's MCP settings for agent use."""
     try:
         mcp_setting = await svc.sync_to_mcp_settings(db, profile_id, current_user.id)
         return SyncProfileResponse(
             success=True,
-            mcp_setting_id=str(mcp_setting.id),
+            mcp_setting_id=mcp_setting.id,
             message="Profile synced to agent MCP settings",
         )
     except ValueError as e:
@@ -238,7 +239,7 @@ async def delete_composio_profile(
     current_user: CurrentUser,
     db: DBSession,
     svc: ComposioServiceDep,
-    profile_id: str,
+    profile_id: uuid.UUID,
 ):
     """Delete a specific Composio profile."""
     profile = await svc.get_profile(db, profile_id, current_user.id)
@@ -261,7 +262,7 @@ async def enable_composio_profile(
     current_user: CurrentUser,
     db: DBSession,
     svc: ComposioServiceDep,
-    profile_id: str,
+    profile_id: uuid.UUID,
 ):
     """Enable a Composio profile and its connected account."""
     profile = await svc.get_profile(db, profile_id, current_user.id)
@@ -284,7 +285,7 @@ async def disable_composio_profile(
     current_user: CurrentUser,
     db: DBSession,
     svc: ComposioServiceDep,
-    profile_id: str,
+    profile_id: uuid.UUID,
 ):
     """Disable a Composio profile and its connected account."""
     profile = await svc.get_profile(db, profile_id, current_user.id)

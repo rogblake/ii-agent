@@ -43,9 +43,7 @@ class FakePNGExporter:
 
 
 def _service_with_exporters(storybook):
-    storybook_service = SimpleNamespace(
-        get_storybook_detail=AsyncMock(return_value=storybook)
-    )
+    storybook_service = SimpleNamespace(get_storybook_detail=AsyncMock(return_value=storybook))
     service = StorybookExportService(storybook_service=storybook_service)
     service._pdf_exporter = FakePDFExporter()
     service._png_exporter = FakePNGExporter()

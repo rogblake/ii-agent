@@ -30,7 +30,7 @@ from ii_agent.content.media.schemas import (
 )
 from ii_agent.content.media.utils import load_yaml_config
 from ii_agent.sessions.dependencies import SessionServiceDep
-from ii_agent.auth.users.dependencies import UserServiceDep
+from ii_agent.users.dependencies import UserServiceDep
 from ii_agent.files.dependencies import FileServiceDep
 
 logger = logging.getLogger(__name__)

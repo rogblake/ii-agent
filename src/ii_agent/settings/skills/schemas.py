@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -27,7 +28,7 @@ class SkillToggleRequest(BaseModel):
 class SkillInfo(BaseModel):
     """Skill information response."""
 
-    id: str = Field(..., description="Unique skill ID")
+    id: UUID = Field(..., description="Unique skill ID")
     name: str = Field(..., description="Skill name (kebab-case)")
     description: str = Field(..., description="What the skill does")
     source: str = Field(..., description="Skill source type: 'builtin', 'github', or 'custom'")

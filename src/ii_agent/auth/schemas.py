@@ -1,6 +1,8 @@
 """Pydantic schemas (DTOs) for auth domain."""
 
 from datetime import datetime
+from uuid import UUID
+
 from pydantic import BaseModel
 
 
@@ -16,7 +18,7 @@ class TokenResponse(BaseModel):
 class TokenPayload(BaseModel):
     """Model for token payload."""
 
-    user_id: str
+    user_id: UUID
     email: str
     role: str = "user"
     type: str = "access"  # or "refresh"

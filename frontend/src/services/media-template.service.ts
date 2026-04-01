@@ -38,14 +38,14 @@ class MediaTemplateService {
         }
 
         const response = await axiosInstance.get<MediaTemplatesResponse>(
-            `/media-templates?${params.toString()}`
+            `/v1/media-templates?${params.toString()}`
         )
         return response.data
     }
 
     async getMediaTemplate(templateId: string): Promise<MediaTemplate> {
         const response = await axiosInstance.get<MediaTemplate>(
-            `/media-templates/${templateId}`
+            `/v1/media-templates/${templateId}`
         )
         return response.data
     }

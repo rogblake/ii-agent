@@ -13,6 +13,7 @@ Covers deeper branches not tested by the existing test file:
 - Gemini deepcopy preserves fields
 - Gemini get_request_params with response_format
 """
+
 from __future__ import annotations
 
 import copy
@@ -24,19 +25,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.agent.runtime.models.google.gemini import (
+from ii_agent.agents.models.google.gemini import (
     Gemini,
     _normalize_function_definition,
     format_function_definitions,
     format_image_for_message,
     prepare_response_schema,
 )
-from ii_agent.agent.runtime.models.message import Message
-from ii_agent.agent.runtime.models.metrics import Metrics
-from ii_agent.agent.runtime.models.response import ModelResponse
-from ii_agent.agent.runtime.exceptions import ModelProviderError
-from ii_agent.agent.runtime.media import Image, File, Audio, Video
-from ii_agent.agent.types import Provider
+from ii_agent.agents.models.message import Message
+from ii_agent.agents.models.metrics import Metrics
+from ii_agent.agents.models.response import ModelResponse
+from ii_agent.agents.exceptions import ModelProviderError
+from ii_agent.files.media import Image, File, Audio, Video
+from ii_agent.agents.types import Provider
 
 from google.genai.types import Content, Part
 
@@ -44,6 +45,7 @@ from google.genai.types import Content, Part
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_gemini(**kwargs) -> Gemini:
     g = Gemini(**kwargs)
@@ -123,6 +125,7 @@ def _make_thought_content(thought_text: str, role: str = "model") -> Content:
 # Gemini.get_client() deeper paths
 # ---------------------------------------------------------------------------
 
+
 class TestGeminiGetClient:
     def test_returns_existing_client(self):
         g = Gemini()
@@ -194,6 +197,7 @@ class TestGeminiGetClient:
 # Gemini.get_request_params() deeper paths
 # ---------------------------------------------------------------------------
 
+
 class TestGeminiGetRequestParamsDeep:
     def test_search_adds_google_search_tool(self):
         g = _make_gemini(search=True)
@@ -235,7 +239,9 @@ class TestGeminiGetRequestParamsDeep:
 
     def test_tools_with_function_declarations(self):
         g = _make_gemini()
-        tools = [{"type": "function", "function": {"name": "search", "description": "Search the web"}}]
+        tools = [
+            {"type": "function", "function": {"name": "search", "description": "Search the web"}}
+        ]
         params = g.get_request_params(tools=tools)
         cfg = params["config"]
         # function declarations should be added
@@ -249,7 +255,10 @@ class TestGeminiGetRequestParamsDeep:
 
     def test_safety_settings_included(self):
         from google.genai.types import GenerateContentConfig
-        safety = [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"}]
+
+        safety = [
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"}
+        ]
         g = _make_gemini(safety_settings=safety, search=True)
         params = g.get_request_params()
         # config is set due to search=True
@@ -283,6 +292,7 @@ class TestGeminiGetRequestParamsDeep:
 # ---------------------------------------------------------------------------
 # Gemini._format_messages() deeper paths
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiFormatMessagesDeep:
     def test_user_message_with_video(self):
@@ -344,6 +354,7 @@ class TestGeminiFormatMessagesDeep:
 
     def test_assistant_with_text_and_tool_calls_and_thought(self):
         import base64
+
         g = _make_gemini()
         sig_bytes = b"thought_signature"
         sig_b64 = base64.b64encode(sig_bytes).decode("ascii")
@@ -388,6 +399,7 @@ class TestGeminiFormatMessagesDeep:
 # ---------------------------------------------------------------------------
 # Gemini._parse_provider_response() with grounding metadata
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiParseProviderResponseDeep:
     def test_grounding_metadata_stored_in_citations(self):
@@ -488,6 +500,7 @@ class TestGeminiParseProviderResponseDeep:
     def test_thought_with_signature(self):
         g = _make_gemini()
         import base64
+
         sig_bytes = b"thought_sig_bytes"
 
         part = MagicMock()
@@ -513,6 +526,7 @@ class TestGeminiParseProviderResponseDeep:
 # ---------------------------------------------------------------------------
 # Gemini.ainvoke_stream() tests
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiAinvokeStream:
     @pytest.mark.asyncio
@@ -545,6 +559,7 @@ class TestGeminiAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_client_error_raises_model_provider_error(self):
         from google.genai.errors import ClientError
+
         g = _make_gemini(api_key="key")
 
         async def _failing_stream():
@@ -562,6 +577,7 @@ class TestGeminiAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_timeout_raises_model_provider_error(self):
         import httpx
+
         g = _make_gemini(api_key="key")
 
         # Timeout on the await call itself
@@ -594,6 +610,7 @@ class TestGeminiAinvokeStream:
 # Gemini.format_function_call_results deeper paths
 # ---------------------------------------------------------------------------
 
+
 class TestGeminiFormatFunctionCallResultsDeep:
     def test_result_with_list_content(self):
         g = _make_gemini()
@@ -624,6 +641,7 @@ class TestGeminiFormatFunctionCallResultsDeep:
 # ---------------------------------------------------------------------------
 # Gemini._get_metrics() deeper paths
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiGetMetricsDeep:
     def test_no_usage_returns_empty_metrics(self):
@@ -663,6 +681,7 @@ class TestGeminiGetMetricsDeep:
 # ---------------------------------------------------------------------------
 # Gemini _parse_provider_response_delta grounding
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiParseProviderResponseDeltaDeep:
     def test_grounding_metadata_in_delta(self):
@@ -707,6 +726,7 @@ class TestGeminiParseProviderResponseDeltaDeep:
 # ---------------------------------------------------------------------------
 # Gemini _append_file_search_tool
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiAppendFileSearchTool:
     def test_no_file_search_store_names_no_tool_added(self):

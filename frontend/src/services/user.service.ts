@@ -4,7 +4,7 @@ import { CreditBalanceResponse, CreditUsageResponse } from '@/typings/user'
 class UserService {
     async getCreditBalance(): Promise<CreditBalanceResponse> {
         const response =
-            await axiosInstance.get<CreditBalanceResponse>('/credits/balance')
+            await axiosInstance.get<CreditBalanceResponse>('/v1/credits/balance')
         return response.data
     }
     async getCreditUsage({
@@ -15,7 +15,7 @@ class UserService {
         perPage: number
     }): Promise<CreditUsageResponse> {
         const response = await axiosInstance.get<CreditUsageResponse>(
-            '/credits/usage',
+            '/v1/credits/usage',
             {
                 params: { page, per_page: perPage }
             }

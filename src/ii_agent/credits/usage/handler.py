@@ -1,0 +1,292 @@
+"""Event-driven credit usage handler.
+
+Subscribes to ``ModelUsageEvent`` and ``ToolUsageEvent`` on the pub/sub bus.
+For each event it:
+1. Calculates the credit cost (via ``ModelPricing`` / USD conversion).
+2. Atomically deducts credits via ``CreditService``.
+3. Publishes ``CreditsDeductedEvent`` for frontend balance updates + audit.
+4. Cancels the agent run if the user's balance is exhausted.
+"""
+
+from __future__ import annotations
+
+import logging
+import uuid
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any
+
+from ii_agent.core.db import get_db_session_local
+from ii_agent.core.redis.cancel import cancel_run
+from ii_agent.credits.constants import MINIMUM_REQUIRED_CREDITS
+from ii_agent.credits.pricing import ModelPricing
+from ii_agent.credits.service import CreditService
+from ii_agent.credits.types import TransactionType
+from ii_agent.realtime.events.app_events import (
+    BaseEvent,
+    CreditsDeductedEvent,
+    ErrorCode,
+    ModelUsageEvent,
+    SystemErrorEvent,
+    ToolUsageEvent,
+)
+from ii_agent.realtime.pubsub.callbacks import EventCallbackHandler
+
+if TYPE_CHECKING:
+    from ii_agent.realtime.pubsub.asyncio_pubsub import AsyncIOPubSub
+
+logger = logging.getLogger(__name__)
+
+# Conversion: 1 USD = 100 / 1.5 credits  (matches v1/utils/credit.py)
+_USD_TO_CREDITS = Decimal("100") / Decimal("1.5")
+
+
+class CreditUsageHandler(EventCallbackHandler):
+    """Pub/sub subscriber that deducts credits for LLM and tool usage."""
+
+    def __init__(
+        self,
+        *,
+        credit_service: CreditService,
+        pubsub: AsyncIOPubSub,
+    ) -> None:
+        self._credit_service = credit_service
+        self._pubsub = pubsub
+
+    async def on_event(self, event: BaseEvent) -> None:
+        if isinstance(event, ModelUsageEvent):
+            await self._handle_llm_usage(event)
+        elif isinstance(event, ToolUsageEvent):
+            await self._handle_tool_usage(event)
+
+    # ------------------------------------------------------------------
+    # LLM token usage
+    # ------------------------------------------------------------------
+
+    async def _handle_llm_usage(self, event: ModelUsageEvent) -> None:
+        try:
+            # Skip LLM charge for user-provided API keys
+            if event.is_user_key:
+                logger.debug(
+                    "Skipping LLM charge for user-provided key (session=%s, model=%s)",
+                    event.session_id,
+                    event.model_id,
+                )
+                return
+
+            credits = self._calculate_llm_credits(event)
+            if credits <= Decimal("0"):
+                return
+
+            metadata = {
+                "source": TransactionType.LLM_USAGE,
+                "model_id": event.model_id,
+                "input_tokens": event.input_tokens,
+                "output_tokens": event.output_tokens,
+                "cache_read_tokens": event.cache_read_tokens,
+                "cache_write_tokens": event.cache_write_tokens,
+                "reasoning_tokens": event.reasoning_tokens,
+            }
+
+            remaining = await self._deduct_and_notify(
+                user_id=event.user_id,
+                session_id=event.session_id,
+                run_id=event.run_id,
+                amount=credits,
+                transaction_type=TransactionType.LLM_USAGE,
+                model_id=event.model_id,
+                description=f"LLM usage: {event.model_id}",
+                metadata=metadata,
+                source=TransactionType.LLM_USAGE,
+                audit_fields={
+                    "model_id": event.model_id,
+                    "input_tokens": event.input_tokens,
+                    "output_tokens": event.output_tokens,
+                    "cache_read_tokens": event.cache_read_tokens,
+                    "cache_write_tokens": event.cache_write_tokens,
+                },
+            )
+
+            if remaining is not None and remaining < MINIMUM_REQUIRED_CREDITS:
+                await self._cancel_for_exhaustion(event.run_id, event.session_id)
+
+        except Exception:
+            logger.exception(
+                "Failed to process LLM usage event (session=%s, run=%s)",
+                event.session_id,
+                event.run_id,
+            )
+
+    # ------------------------------------------------------------------
+    # Tool usage
+    # ------------------------------------------------------------------
+
+    async def _handle_tool_usage(self, event: ToolUsageEvent) -> None:
+        try:
+            if event.cost_usd <= 0:
+                return
+
+            credits = Decimal(str(event.cost_usd)) * _USD_TO_CREDITS
+            if credits <= Decimal("0"):
+                return
+
+            metadata = {
+                "source": TransactionType.TOOL_USAGE,
+                "tool_name": event.tool_name,
+                "cost_usd": event.cost_usd,
+            }
+
+            remaining = await self._deduct_and_notify(
+                user_id=event.user_id,
+                session_id=event.session_id,
+                run_id=event.run_id,
+                amount=credits,
+                transaction_type=TransactionType.TOOL_USAGE,
+                description=f"Tool usage: {event.tool_name}",
+                metadata=metadata,
+                source=TransactionType.TOOL_USAGE,
+                audit_fields={
+                    "tool_name": event.tool_name,
+                },
+            )
+
+            if remaining is not None and remaining < MINIMUM_REQUIRED_CREDITS:
+                await self._cancel_for_exhaustion(event.run_id, event.session_id)
+
+        except Exception:
+            logger.exception(
+                "Failed to process tool usage event (session=%s, tool=%s)",
+                event.session_id,
+                event.tool_name,
+            )
+
+    # ------------------------------------------------------------------
+    # Shared helpers
+    # ------------------------------------------------------------------
+
+    def _calculate_llm_credits(self, event: ModelUsageEvent) -> Decimal:
+        """Calculate credit cost from token counts using ModelPricing."""
+        pricing = ModelPricing.get_default_pricing(event.model_id)
+
+        input_cost = (
+            Decimal(event.input_tokens)
+            * Decimal(str(pricing.input_price_per_million))
+            / Decimal("1_000_000")
+        )
+        output_cost = (
+            Decimal(event.output_tokens)
+            * Decimal(str(pricing.output_price_per_million))
+            / Decimal("1_000_000")
+        )
+        cache_read_cost = (
+            Decimal(event.cache_read_tokens)
+            * Decimal(str(pricing.cache_read_price_per_million))
+            / Decimal("1_000_000")
+        )
+        cache_write_cost = (
+            Decimal(event.cache_write_tokens)
+            * Decimal(str(pricing.cache_write_price_per_million))
+            / Decimal("1_000_000")
+        )
+        # Reasoning tokens are billed at the output token rate
+        reasoning_cost = (
+            Decimal(event.reasoning_tokens)
+            * Decimal(str(pricing.output_price_per_million))
+            / Decimal("1_000_000")
+        )
+
+        total_usd = input_cost + output_cost + cache_read_cost + cache_write_cost + reasoning_cost
+        return total_usd * _USD_TO_CREDITS
+
+    async def _deduct_and_notify(
+        self,
+        *,
+        user_id: uuid.UUID | None,
+        session_id: uuid.UUID | None,
+        run_id: uuid.UUID | None,
+        amount: Decimal,
+        transaction_type: TransactionType,
+        model_id: str | None = None,
+        description: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        source: TransactionType,
+        audit_fields: dict[str, Any] | None = None,
+    ) -> Decimal | None:
+        """Deduct credits and publish ``CreditsDeductedEvent``.
+
+        Returns the remaining balance (``Decimal``) on success,
+        or ``None`` if the deduction failed.
+        """
+        if user_id is None:
+            return None
+
+        async with get_db_session_local() as db:
+            try:
+                await self._credit_service.deduct(
+                    db,
+                    user_id=user_id,
+                    amount=amount,
+                    transaction_type=transaction_type,
+                    session_id=session_id,
+                    run_id=run_id,
+                    model_id=model_id,
+                    description=description,
+                    metadata=metadata,
+                )
+                await db.commit()
+                balance = await self._credit_service.get_balance(db, user_id)
+            except Exception:
+                logger.warning(
+                    "Credit deduction failed for user %s",
+                    user_id,
+                    exc_info=True,
+                )
+                return None
+
+        if balance is None:
+            logger.error(
+                "get_balance returned None after successful deduct for user %s",
+                user_id,
+            )
+            return None
+
+        remaining = Decimal(str(balance.credits + balance.bonus_credits))
+
+        await self._pubsub.publish(
+            CreditsDeductedEvent(
+                session_id=session_id,
+                user_id=user_id,
+                run_id=run_id,
+                credits_used=float(amount),
+                credits_remaining=float(remaining),
+                source=source,
+                content={
+                    "credits_used": float(amount),
+                    "credits_remaining": float(remaining),
+                    "source": source,
+                    **(audit_fields or {}),
+                },
+                **(audit_fields or {}),
+            )
+        )
+
+        return remaining
+
+    async def _cancel_for_exhaustion(
+        self,
+        run_id: uuid.UUID | None,
+        session_id: uuid.UUID | None,
+    ) -> None:
+        """Cancel the active run and notify the frontend."""
+        if run_id is not None:
+            await cancel_run(str(run_id))
+            logger.info("Cancelled run %s due to credit exhaustion", run_id)
+
+        if session_id is not None:
+            await self._pubsub.publish(
+                SystemErrorEvent(
+                    session_id=session_id,
+                    error_code=ErrorCode.INSUFFICIENT_CREDITS,
+                    detail="Insufficient credits. Please add more credits to continue.",
+                    recoverable=False,
+                )
+            )

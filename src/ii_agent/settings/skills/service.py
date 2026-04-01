@@ -18,7 +18,7 @@ from ii_agent.settings.skills.models import Skill, SkillSource
 from ii_agent.settings.skills.repository import SkillRepository
 from ii_agent.settings.skills.schemas import SkillInfo, SkillList
 from ii_agent.core.config.settings import Settings
-from ii_agent.core.storage import BaseStorage
+from ii_agent.core.storage.providers.base import StorageProvider
 from ii_agent.settings.skills.github import (
     GitHubDownloadService,
     GitHubSkillError,
@@ -44,7 +44,7 @@ class SkillService:
         *,
         user_id: str,
         github_url: str,
-        storage: BaseStorage,
+        storage: StorageProvider,
         github_token: Optional[str] = None,
     ) -> SkillInfo:
         """Download skill from GitHub and store in GCS.
@@ -241,7 +241,7 @@ class SkillService:
         *,
         skill_id: str,
         user_id: str,
-        storage: Optional[BaseStorage] = None,
+        storage: Optional[StorageProvider] = None,
     ) -> bool:
         """Delete a custom skill.
 

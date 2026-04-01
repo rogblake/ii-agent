@@ -36,7 +36,7 @@ class ChatService {
         fileId: string
     }): Promise<Blob> {
         const response = await axiosInstance.get(
-            `/chat/files/${fileId}`,
+            `/v1/assets/${fileId}/download`,
             { responseType: 'blob' }
         )
         return response.data
@@ -50,7 +50,7 @@ class ChatService {
         sessionId: string
     }): Promise<Blob> {
         const response = await axiosInstance.get(
-            `/public/chat/${sessionId}/files/${fileId}`,
+            `/v1/public/sessions/${sessionId}/assets/${fileId}`,
             { responseType: 'blob' }
         )
         return response.data
@@ -75,7 +75,7 @@ class ChatService {
         sessionId: string
     ): Promise<ChatHistoryResponse> {
         const response = await axiosInstance.get<ChatHistoryResponse>(
-            `/v1/chat/conversations/${sessionId}/public`
+            `/v1/public/chat/conversations/${sessionId}`
         )
         return response.data
     }

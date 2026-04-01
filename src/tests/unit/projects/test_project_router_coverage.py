@@ -1,4 +1,5 @@
 """Targeted coverage tests for project routers and request/response wiring."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -277,7 +278,10 @@ async def test_design_router_proxy_returns_html_and_headers():
         url="https://example.com",
     )
     assert response.body == b"<html/>"
-    assert response.headers["Content-Security-Policy"] == "sandbox allow-scripts allow-forms allow-popups"
+    assert (
+        response.headers["Content-Security-Policy"]
+        == "sandbox allow-scripts allow-forms allow-popups"
+    )
 
 
 @pytest.mark.asyncio

@@ -21,7 +21,7 @@ class SessionService {
         public_only = false
     }): Promise<ISession[]> {
         const response = await axiosInstance.get<SessionsResponse>(
-            `/sessions`,
+            `/v1/sessions`,
             {
                 params: { page, per_page: limit, public_only }
             }
@@ -30,21 +30,21 @@ class SessionService {
     }
     async getSession(sessionId: string): Promise<ISession> {
         const response = await axiosInstance.get<ISession>(
-            `/sessions/${sessionId}`
+            `/v1/sessions/${sessionId}`
         )
         return response.data
     }
 
     async getPublicSession(sessionId: string): Promise<ISession> {
         const response = await axiosInstance.get<ISession>(
-            `/sessions/${sessionId}/public`
+            `/v1/public/sessions/${sessionId}`
         )
         return response.data
     }
 
     async getSessionEvents(sessionId: string): Promise<SessionEventsResponse> {
         const response = await axiosInstance.get<SessionEventsResponse>(
-            `/sessions/${sessionId}/events`
+            `/v1/sessions/${sessionId}/events`
         )
         return response.data
     }
@@ -53,25 +53,25 @@ class SessionService {
         sessionId: string
     ): Promise<SessionEventsResponse> {
         const response = await axiosInstance.get<SessionEventsResponse>(
-            `/sessions/${sessionId}/public/events`
+            `/v1/public/sessions/${sessionId}/events`
         )
         return response.data
     }
 
     async getSessionFiles(sessionId: string): Promise<SessionFile[]> {
         const response = await axiosInstance.get<SessionFile[]>(
-            `/sessions/${sessionId}/files`
+            `/v1/sessions/${sessionId}/files`
         )
         return response.data
     }
 
     async createSession(data: CreateSessionRequest): Promise<ISession> {
-        const response = await axiosInstance.post<ISession>('/sessions', data)
+        const response = await axiosInstance.post<ISession>('/v1/sessions', data)
         return response.data
     }
 
     async deleteSession(sessionId: string): Promise<void> {
-        await axiosInstance.delete(`/sessions/${sessionId}`)
+        await axiosInstance.delete(`/v1/sessions/${sessionId}`)
     }
 
     async updateSession(
@@ -79,7 +79,7 @@ class SessionService {
         data: UpdateSessionRequest
     ): Promise<ISession> {
         const response = await axiosInstance.patch<ISession>(
-            `/sessions/${sessionId}`,
+            `/v1/sessions/${sessionId}`,
             data
         )
         return response.data
@@ -89,7 +89,7 @@ class SessionService {
         sessionId: string
     ): Promise<PresentationListResponse> {
         const response = await axiosInstance.get<PresentationListResponse>(
-            `/slides?session_id=${sessionId}`
+            `/v1/slides?session_id=${sessionId}`
         )
         return response.data
     }
@@ -98,7 +98,7 @@ class SessionService {
         sessionId: string
     ): Promise<PresentationListResponse> {
         const response = await axiosInstance.get<PresentationListResponse>(
-            `/slides/public?session_id=${sessionId}`
+            `/v1/public/slides?session_id=${sessionId}`
         )
         return response.data
     }
@@ -108,25 +108,25 @@ class SessionService {
         data: UpdateSlideRequest
     ): Promise<UpdateSlideResponse> {
         const response = await axiosInstance.post<UpdateSlideResponse>(
-            `/slides?session_id=${sessionId}`,
+            `/v1/slides?session_id=${sessionId}`,
             data
         )
         return response.data
     }
 
     async publishSession(sessionId: string): Promise<void> {
-        await axiosInstance.post(`/sessions/${sessionId}/publish`)
+        await axiosInstance.post(`/v1/sessions/${sessionId}/publish`)
     }
 
     async unpublishSession(sessionId: string): Promise<void> {
-        await axiosInstance.post(`/sessions/${sessionId}/unpublish`)
+        await axiosInstance.post(`/v1/sessions/${sessionId}/unpublish`)
     }
 
     async updateSessionPlan(
         sessionId: string,
         plan: { summary: string; milestones: Milestone[] }
     ): Promise<void> {
-        await axiosInstance.patch(`/sessions/${sessionId}/plan`, plan)
+        await axiosInstance.patch(`/v1/sessions/${sessionId}/plan`, plan)
     }
 }
 

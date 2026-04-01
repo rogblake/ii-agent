@@ -9,7 +9,7 @@ import {
     selectMessages,
     useAppSelector
 } from '@/state'
-import { TAB, TOOL } from '@/typings/agent'
+import { CommandType, TAB, TOOL } from '@/typings/agent'
 import SlidesResult from './slides-result'
 import MobileResult from './mobile-result'
 import { Icon } from '../ui/icon'
@@ -39,7 +39,7 @@ const AgentResult = ({ className }: AgentResultProps) => {
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const [iframeKey, setIframeKey] = useState(0)
     const [isLoading, setIsLoading] = useState(false)
-    const { socket } = useSocketIOContext()
+    const { socket, sendMessage } = useSocketIOContext()
     const { sessionId } = useParams()
     const location = useLocation()
 
@@ -198,9 +198,9 @@ const AgentResult = ({ className }: AgentResultProps) => {
     const handleRefresh = () => {
         setIframeKey((prev) => prev + 1)
         if (socket?.connected) {
-            socket.emit('chat_message', {
-                type: 'sandbox_status',
-                session_uuid: sessionId
+            sendMessage({
+                session_uuid: sessionId || '',
+                content: { command: CommandType.SANDBOX_STATUS }
             })
         }
     }
@@ -247,9 +247,9 @@ const AgentResult = ({ className }: AgentResultProps) => {
     const handleAwakeClick = () => {
         setIsLoading(true)
         if (socket?.connected) {
-            socket.emit('chat_message', {
-                type: 'awake_sandbox',
-                session_uuid: sessionId
+            sendMessage({
+                session_uuid: sessionId || '',
+                content: { command: CommandType.AWAKE_SANDBOX }
             })
         }
     }

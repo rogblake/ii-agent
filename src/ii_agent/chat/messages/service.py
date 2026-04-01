@@ -9,9 +9,9 @@ from pydantic import TypeAdapter
 
 from ii_agent.chat.messages.models import ChatMessage
 from ii_agent.chat.messages.repository import ChatMessageRepository
-from ii_agent.files.models import FileUpload
+from ii_agent.files.models import FileAsset, SessionAsset
 
-from ii_agent.billing.usage.models import TokenUsage
+from ii_agent.billing.schemas import TokenUsage
 from ii_agent.chat.types import (
     ContentPart,
     Message,
@@ -53,15 +53,17 @@ class MessageService:
 
         parts_data = self.parts_adapter.dump_python(parts, mode="json")
 
-        # Update FileUpload records with null session_id
+        # Link files to session via SessionAsset (idempotent)
         if file_ids:
-            result = await db.execute(
-                select(FileUpload).where(FileUpload.id.in_(file_ids))
-            )
-            file_uploads = result.scalars().all()
-            for file_upload in file_uploads:
-                if file_upload.session_id is None:
-                    file_upload.session_id = session_id
+            for file_id in file_ids:
+                existing = await db.execute(
+                    select(SessionAsset).where(
+                        SessionAsset.asset_id == file_id,
+                        SessionAsset.session_id == session_id,
+                    )
+                )
+                if not existing.scalar_one_or_none():
+                    db.add(SessionAsset(session_id=session_id, asset_id=file_id))
 
         db_message = ChatMessage(
             session_id=session_id,

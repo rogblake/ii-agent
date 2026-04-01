@@ -3,6 +3,7 @@
 from ii_agent.projects.subdomains.models import ProjectCustomDomain
 from ii_agent.projects.subdomains.repository import SubdomainRepository
 from ii_agent.projects.subdomains.service import SubdomainService
+from ii_agent.projects.subdomains.types import DnsStatus, SslStatus
 from ii_agent.projects.subdomains.router import router
 from ii_agent.projects.subdomains.schemas import (
     CheckAvailabilityRequest,
@@ -33,6 +34,9 @@ from ii_agent.projects.subdomains.exceptions import (
 __all__ = [
     # Models
     "ProjectCustomDomain",
+    # Types (enums)
+    "DnsStatus",
+    "SslStatus",
     # Repository
     "SubdomainRepository",
     # Service

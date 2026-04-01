@@ -1,13 +1,13 @@
 """Repository layer for sessions domain - data access only."""
 
 import uuid
-from typing import Any, Optional, List
+from typing import Optional, List
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ii_agent.core.db.repository import BaseRepository
+from ii_agent.core.db import BaseRepository
 from ii_agent.sessions.models import Session
 
 
@@ -18,24 +18,24 @@ class SessionRepository(BaseRepository[Session]):
 
     # ==================== Basic CRUD ====================
 
-    async def get_by_id(self, db: AsyncSession, entity_id: Any) -> Optional[Session]:
-        """Get a session by its ID (accepts str or uuid.UUID)."""
+    async def get_by_id(self, db: AsyncSession, entity_id: uuid.UUID) -> Optional[Session]:
+        """Get a session by its ID."""
         result = await db.execute(
-            select(Session).where(Session.id == str(entity_id))
+            select(Session).where(Session.id == entity_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_id_with_project(self, db: AsyncSession, session_id: str | uuid.UUID) -> Optional[Session]:
+    async def get_by_id_with_project(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[Session]:
         """Get a session by ID with project eagerly loaded."""
         result = await db.execute(
             select(Session)
             .options(selectinload(Session.project))
-            .where(Session.id == str(session_id))
+            .where(Session.id == session_id)
         )
         return result.scalar_one_or_none()
 
     async def get_by_id_and_user(
-        self, db: AsyncSession, session_id: str, user_id: str
+        self, db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID
     ) -> Optional[Session]:
         """Get a non-deleted session for a specific user with project loaded."""
         result = await db.execute(
@@ -44,7 +44,7 @@ class SessionRepository(BaseRepository[Session]):
             .where(
                 Session.id == session_id,
                 Session.user_id == user_id,
-                Session.deleted_at.is_(None),
+                Session.is_deleted.is_(False),
             )
         )
         return result.scalar_one_or_none()
@@ -56,37 +56,37 @@ class SessionRepository(BaseRepository[Session]):
         )
         return result.scalar_one_or_none()
 
-    async def get_public_by_id(self, db: AsyncSession, session_id: str) -> Optional[Session]:
+    async def get_public_by_id(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[Session]:
         """Get a public, non-deleted session by ID."""
         result = await db.execute(
             select(Session).where(
                 Session.id == session_id,
                 Session.is_public,
-                Session.deleted_at.is_(None),
+                Session.is_deleted.is_(False),
             )
         )
         return result.scalar_one_or_none()
 
-    async def get_user_id(self, db: AsyncSession, session_id: str | uuid.UUID) -> Optional[str]:
+    async def get_user_id(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[uuid.UUID]:
         """Get the user ID for a session."""
         session = await self.get_by_id(db, session_id)
         if not session:
             return None
-        return str(session.user_id)
+        return session.user_id
 
     # ==================== Query Operations ====================
 
-    async def get_llm_setting_id(self, db: AsyncSession, session_id: str | uuid.UUID) -> Optional[str]:
+    async def get_model_setting_id(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[uuid.UUID]:
         """Get the LLM setting ID for a session."""
         result = await db.execute(
-            select(Session.llm_setting_id).where(Session.id == str(session_id))
+            select(Session.model_setting_id).where(Session.id == session_id)
         )
         return result.scalar_one_or_none()
 
     async def get_user_sessions(
         self,
         db: AsyncSession,
-        user_id: str,
+        user_id: uuid.UUID,
         search_term: Optional[str] = None,
         page: int = 1,
         per_page: int = 20,
@@ -94,7 +94,7 @@ class SessionRepository(BaseRepository[Session]):
         session_type: Optional[str] = None,
     ) -> tuple[List[Session], int]:
         """Get paginated sessions for a user with optional filters."""
-        conditions = [Session.user_id == user_id, Session.deleted_at.is_(None)]
+        conditions = [Session.user_id == user_id, Session.is_deleted.is_(False)]
 
         if public_only:
             conditions.append(Session.is_public)
@@ -125,20 +125,20 @@ class SessionRepository(BaseRepository[Session]):
         return sessions, total
 
     async def get_non_deleted_by_ids_and_user(
-        self, db: AsyncSession, session_ids: list[str], user_id: str
+        self, db: AsyncSession, session_ids: list[uuid.UUID], user_id: uuid.UUID
     ) -> list[Session]:
         """Get non-deleted sessions matching the given IDs for a specific user."""
         result = await db.execute(
             select(Session).where(
                 Session.id.in_(session_ids),
                 Session.user_id == user_id,
-                Session.deleted_at.is_(None),
+                Session.is_deleted.is_(False),
             )
         )
         return list(result.scalars().all())
 
     async def get_non_deleted_by_ids(
-        self, db: AsyncSession, session_ids: list[str]
+        self, db: AsyncSession, session_ids: list[uuid.UUID]
     ) -> list[Session]:
         """Get non-deleted sessions matching the given IDs."""
         if not session_ids:
@@ -146,17 +146,9 @@ class SessionRepository(BaseRepository[Session]):
         result = await db.execute(
             select(Session).where(
                 Session.id.in_(session_ids),
-                Session.deleted_at.is_(None),
+                Session.is_deleted.is_(False),
             )
         )
         return list(result.scalars().all())
 
-    async def get_sandbox_id(
-        self, db: AsyncSession, session_id: str | uuid.UUID
-    ) -> Optional[str]:
-        """Get the sandbox ID for a session (scalar projection)."""
-        result = await db.execute(
-            select(Session.sandbox_id).where(Session.id == str(session_id))
-        )
-        return result.scalar_one_or_none()
 

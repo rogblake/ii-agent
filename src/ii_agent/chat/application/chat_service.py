@@ -8,7 +8,6 @@ from typing import AsyncIterator, Dict, Optional, TYPE_CHECKING
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm.exc import StaleDataError
 
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.chat.types import (
@@ -34,17 +33,14 @@ from ii_agent.chat.messages.history_service import ChatMessageHistoryService
 from ii_agent.chat.application.council_service import CouncilService, MIN_COUNCIL_MODELS
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
-from ii_agent.chat.runs.models import ChatRunStatus
-from ii_agent.chat.runs.service import ChatRunService
-from ii_agent.billing.credits.service import CreditService
-from ii_agent.settings.llm.service import get_system_llm_config
+from ii_agent.credits.service import CreditService
 from ii_agent.core.redis import cancel
 from ii_agent.chat.exceptions import ModelNotFoundError
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.title_service import SessionTitleService
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 logger = logging.getLogger(__name__)
 
@@ -61,10 +57,9 @@ class ChatService:
         message_history: ChatMessageHistoryService,
         message_service: MessageService,
         session_repo: SessionRepository,
-        chat_run_service: ChatRunService,
         llm_setting_service,
         credit_service: CreditService | None = None,
-        container: ServiceContainer,
+        container: ApplicationContainer,
         title_service: SessionTitleService,
     ) -> None:
         self._file_processor = file_processor
@@ -73,23 +68,15 @@ class ChatService:
         self._message_history = message_history
         self._message_service = message_service
         self._session_repo = session_repo
-        self._chat_run_service = chat_run_service
         self._llm_setting_service = llm_setting_service
         self._credit_service = credit_service
         self._container = container
         self._title_service = title_service
 
-    @staticmethod
-    def _chat_run_error_code(exc: Exception, *, is_cancelled: bool) -> str:
-        """Normalize chat-run error codes for telemetry."""
-        if is_cancelled:
-            return "cancelled"
-        return exc.__class__.__name__
-
     async def create_chat_session(
-        self, db: AsyncSession, *, user_message: str, user_id: str, model_id: str
+        self, db: AsyncSession, *, user_message: str, user_id: uuid.UUID, model_id: str
     ) -> SessionMetadata:
-        session_id = str(uuid.uuid4())
+        session_id = uuid.uuid4()
         created_at = datetime.now(timezone.utc)
         session_name, title_pending = self._title_service.build_initial_title(
             user_message,
@@ -110,7 +97,7 @@ class ChatService:
                 title_pending,
             ),
         )
-        session = await self._session_repo.create(db, session)
+        session = await self._session_repo.save(db, session)
         await db.commit()
 
         logger.info(f"Created chat session {session_id} for user {user_id}")
@@ -134,7 +121,7 @@ class ChatService:
         )
 
     async def update_session_name_if_untitled(
-        self, db: AsyncSession, *, session_id: str, query: str
+        self, db: AsyncSession, *, session_id: uuid.UUID, query: str
     ) -> None:
         session = await self._session_repo.get_by_id(db, session_id)
         if not session:
@@ -160,19 +147,19 @@ class ChatService:
                 logger.info(f"Scheduled background title update for session {session_id}")
 
     async def validate_session_access(
-        self, db: AsyncSession, *, session_id: str, user_id: str
+        self, db: AsyncSession, *, session_id: uuid.UUID, user_id: uuid.UUID
     ) -> None:
         session = await self._session_repo.get_by_id(db, session_id)
         if not session or session.user_id != user_id:
             raise SessionNotFoundError("Session not found or access denied")
 
-    async def validate_public_session_access(self, db: AsyncSession, *, session_id: str) -> None:
+    async def validate_public_session_access(self, db: AsyncSession, *, session_id: uuid.UUID) -> None:
         session = await self._session_repo.get_public_by_id(db, session_id)
         if not session:
             raise SessionNotFoundError("Session not found or not public")
 
     async def validate_model_for_chat(
-        self, db: AsyncSession, *, model_id: str, user_id: str
+        self, db: AsyncSession, *, model_id: str, user_id: uuid.UUID
     ) -> None:
         all_models = await self._llm_setting_service.get_all_available_models(
             db,
@@ -182,7 +169,7 @@ class ChatService:
         if not model_info:
             raise ModelNotFoundError(f"Model not found: {model_id}")
 
-    async def get_llm_config(self, db: AsyncSession, *, model_id: str, user_id: str) -> LLMConfig:
+    async def get_llm_config(self, db: AsyncSession, *, model_id: str, user_id: uuid.UUID) -> LLMConfig:
         try:
             return await self._llm_setting_service.get_user_llm_config(
                 db,
@@ -190,13 +177,15 @@ class ChatService:
                 user_id=user_id,
             )
         except ValueError:
-            return get_system_llm_config(model_id=model_id, config=self._file_processor._config)
+            return await self._llm_setting_service.resolve_system_config(
+                db, model_id=model_id
+            )
 
     async def build_message_history_response(
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         limit: int = 50,
         before: Optional[str] = None,
     ):
@@ -209,13 +198,13 @@ class ChatService:
         )
 
     async def stream_chat_response(
-        self, db: AsyncSession, *, chat_request: ChatMessageRequest, user_id: str
+        self, db: AsyncSession, *, chat_request: ChatMessageRequest, user_id: uuid.UUID
     ) -> AsyncIterator[Dict]:
         """Stream chat response with tool execution loop.
 
         Orchestrates: context loading, file processing, tool setup, LLM turn loop.
         """
-        session_id = str(chat_request.session_id)
+        session_id = chat_request.session_id
         default_tools = {
             "web_search": True,
             "image_search": True,
@@ -273,7 +262,7 @@ class ChatService:
         display_text_part = TextContent(text=display_content)
         user_message = await self._message_service.create_message(
             db,
-            session_id=str(chat_request.session_id),
+            session_id=chat_request.session_id,
             role=MessageRole.USER,
             parts=[display_text_part],
             model_id=chat_request.model_id,
@@ -282,16 +271,9 @@ class ChatService:
             metadata=message_metadata,
         )
 
-        chat_run = await self._chat_run_service.create_run(
-            db,
-            session_id=uuid.UUID(session_id),
-            user_message_id=user_message.id,
-            model_id=model_id,
-            status=ChatRunStatus.RUNNING,
-        )
         await db.commit()
 
-        run_id = str(chat_run.id)
+        run_id = str(user_message.id)
         await cancel.register_run(run_id)
         logger.info(f"Started chat run {run_id} for session {session_id}")
 
@@ -342,12 +324,6 @@ class ChatService:
             or model_id
             or llm_config.model
         )
-        await self._chat_run_service.set_provider(
-            db,
-            chat_run=chat_run,
-            provider=llm_config.api_type.value,
-            model_id=resolved_model_id,
-        )
         provider = LLMProviderFactory.create_provider(llm_config)
         is_code_interpreter_enabled = bool(tools and tools.get("code_interpreter"))
 
@@ -388,13 +364,6 @@ class ChatService:
                         assistant_message_id = uuid.UUID(str(message_id))
                 yield event
 
-            await db.refresh(chat_run)
-            await self._chat_run_service.complete_run(
-                db,
-                chat_run=chat_run,
-                assistant_message_id=assistant_message_id,
-                finish_reason=finish_reason,
-            )
             await db.commit()
 
             await cancel.cleanup_run(run_id)
@@ -407,16 +376,6 @@ class ChatService:
                 logger.info(f"Chat run {run_id} was cancelled for session {session_id}")
             else:
                 logger.error(f"Chat streaming error: {e}", exc_info=True)
-
-            await db.refresh(chat_run)
-            await self._chat_run_service.fail_run(
-                db,
-                chat_run=chat_run,
-                status=(ChatRunStatus.ABORTED if is_cancelled else ChatRunStatus.FAILED),
-                error_message=None if is_cancelled else str(e),
-                error_code=self._chat_run_error_code(e, is_cancelled=is_cancelled),
-            )
-            await db.commit()
 
             await self._message_service.mark_messages_incomplete(
                 db,
@@ -445,7 +404,7 @@ class ChatService:
                 raise
 
     async def stream_council_chat_response(
-        self, db: AsyncSession, *, chat_request: ChatMessageRequest, user_id: str
+        self, db: AsyncSession, *, chat_request: ChatMessageRequest, user_id: uuid.UUID
     ) -> AsyncIterator[Dict]:
         """Stream council response: run multiple LLMs in parallel, then synthesize.
 
@@ -457,7 +416,7 @@ class ChatService:
 
         CouncilService.validate_preferences(council_prefs)
 
-        session_id = str(chat_request.session_id)
+        session_id = chat_request.session_id
 
         # Load context
         messages = await ContextWindowManager.load_context_for_llm(
@@ -489,15 +448,9 @@ class ChatService:
             file_ids=chat_request.file_ids,
         )
 
-        agent_task = await self._chat_run_service.create_run(
-            db,
-            session_id=uuid.UUID(session_id),
-            user_message_id=user_message.id,
-            status=ChatRunStatus.RUNNING,
-        )
         await db.commit()
 
-        run_id = str(agent_task.id)
+        run_id = str(user_message.id)
         await cancel.register_run(run_id)
         logger.info(f"Started council run {run_id} for session {session_id}")
 
@@ -557,8 +510,6 @@ class ChatService:
 
         # Fail fast: synthesis model config is required
         if council_prefs.synthesis_model_id not in llm_configs:
-            agent_task.status = ChatRunStatus.FAILED
-            await db.commit()
             await cancel.cleanup_run(run_id)
             raise ValueError(
                 f"Synthesis model '{council_prefs.synthesis_model_id}' could not be resolved"
@@ -569,8 +520,6 @@ class ChatService:
             1 for m in council_prefs.council_models if m.model_id in llm_configs
         )
         if valid_council_count < MIN_COUNCIL_MODELS:
-            agent_task.status = ChatRunStatus.FAILED
-            await db.commit()
             await cancel.cleanup_run(run_id)
             raise ValueError(
                 f"Only {valid_council_count} council models could be resolved, "
@@ -584,7 +533,6 @@ class ChatService:
 
         try:
             async for event in CouncilService.stream_council_response(
-                db=db,
                 user_id=user_id,
                 messages=messages,
                 user_question=display_content,
@@ -593,7 +541,6 @@ class ChatService:
                 model_names=model_names,
                 run_id=run_id,
                 session_id=session_id,
-                llm_execution_service=self._container.llm_execution_service,
             ):
                 event_type = event.get("type")
 
@@ -647,11 +594,6 @@ class ChatService:
                 model_id=chat_request.model_id,
             )
 
-            # Update task status
-            await db.refresh(agent_task)
-            agent_task.status = (
-                ChatRunStatus.FAILED if council_had_error else ChatRunStatus.COMPLETED
-            )
             await db.commit()
 
             await cancel.cleanup_run(run_id)
@@ -686,10 +628,6 @@ class ChatService:
             else:
                 logger.error(f"Council streaming error: {e}", exc_info=True)
 
-            await db.refresh(agent_task)
-            agent_task.status = ChatRunStatus.ABORTED if is_cancelled else ChatRunStatus.FAILED
-            await db.commit()
-
             await self._message_service.mark_messages_incomplete(
                 db,
                 parent_message_id=user_message.id,
@@ -704,42 +642,25 @@ class ChatService:
             else:
                 raise
 
-    async def clear_messages(self, db: AsyncSession, *, session_id: str) -> int:
+    async def clear_messages(self, db: AsyncSession, *, session_id: uuid.UUID) -> int:
         return await self._message_history._repo.delete_by_session(db, session_id)
 
-    async def stop_conversation(self, db: AsyncSession, *, session_id: str) -> Optional[str]:
+    async def stop_conversation(self, db: AsyncSession, *, session_id: uuid.UUID) -> Optional[uuid.UUID]:
         session = await self._session_repo.get_by_id(db, session_id)
         if not session:
             raise SessionNotFoundError("Session not found")
 
-        running_run = await self._chat_run_service.find_running_for_cancel(
-            db,
-            session_id=uuid.UUID(session_id),
+        # Find the last user message whose assistant reply is still incomplete
+        running_msg = await self._message_history._repo.find_running_by_session(
+            db, session_id
         )
 
-        if running_run:
-            run_id = str(running_run.id)
+        if running_msg and running_msg.parent_message_id:
+            run_id = str(running_msg.parent_message_id)
             cancelled = await cancel.cancel_run(run_id)
             if cancelled:
-                try:
-                    await db.refresh(running_run)
-                    if running_run.status == ChatRunStatus.RUNNING:
-                        running_run.status = ChatRunStatus.ABORTED
-                        await db.flush()
-                        logger.info(f"Cancelled running chat run {run_id} for session {session_id}")
-                    else:
-                        logger.info(
-                            f"Chat run {run_id} already finished with status {running_run.status}, skipping abort"
-                        )
-                except StaleDataError:
-                    await db.rollback()
-                    logger.info(
-                        "Chat run %s changed while stopping session %s; "
-                        "treating cancellation as best-effort",
-                        run_id,
-                        session_id,
-                    )
+                logger.info(f"Cancelled running chat for session {session_id} (run_id={run_id})")
 
         last_message = await self._message_history._repo.get_last_by_session(db, session_id)
 
-        return str(last_message.id) if last_message else None
+        return last_message.id if last_message else None

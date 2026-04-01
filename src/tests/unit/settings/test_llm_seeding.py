@@ -26,12 +26,12 @@ from ii_agent.settings.llm.seeding import (
 # configured before any model is instantiated in tests.  The User model has
 # forward-reference relationships to many other models; all must be imported
 # before mapper.configure() is called.
-import ii_agent.settings.mcp.models  # noqa: F401 – MCPSetting
-import ii_agent.settings.llm.models  # noqa: F401 – LLMSetting
-import ii_agent.files.models  # noqa: F401 – FileUpload
-import ii_agent.sessions.models  # noqa: F401 – Session
-import ii_agent.billing.models  # noqa: F401 – BillingTransaction (if exists)
-import ii_agent.auth.users.models  # noqa: F401 – User + APIKey etc
+import ii_agent.settings.mcp.models  # noqa: F401 -- MCPSetting
+import ii_agent.settings.llm.models  # noqa: F401 -- LLMSetting
+import ii_agent.files.models  # noqa: F401 -- FileUpload
+import ii_agent.sessions.models  # noqa: F401 -- Session
+import ii_agent.billing.models  # noqa: F401 -- BillingTransaction (if exists)
+import ii_agent.users.models  # noqa: F401 -- User + APIKey etc
 
 
 # ---------------------------------------------------------------------------
@@ -76,7 +76,7 @@ def _scalars_result(values):
 
 
 # ---------------------------------------------------------------------------
-# Early-exit cases — pure logic, no real DB
+# Early-exit cases -- pure logic, no real DB
 # ---------------------------------------------------------------------------
 
 
@@ -108,7 +108,7 @@ class TestSeedEarlyExit:
 
 
 # ---------------------------------------------------------------------------
-# With valid JSON — mock full DB interaction
+# With valid JSON -- mock full DB interaction
 # ---------------------------------------------------------------------------
 
 
@@ -140,7 +140,7 @@ class TestSeedWithExistingAdmin:
 
         db.execute = AsyncMock(
             side_effect=[
-                _scalar_result(mock_admin_user),          # admin user found
+                _scalar_result(mock_admin_user),  # admin user found
                 _scalars_result([mock_existing_setting]),  # existing LLM setting
             ]
         )
@@ -156,7 +156,7 @@ class TestSeedWithExistingAdmin:
     async def test_existing_admin_no_settings_count_logged(self):
         """Admin exists and has one existing setting (update path, no new ORM objects created)."""
         mock_settings = MagicMock()
-        # Config matches an existing setting — update path, no LLMSetting() constructor called
+        # Config matches an existing setting -- update path, no LLMSetting() constructor called
         configs = {
             "existing-model": {
                 "model": "gpt-4o-mini",
@@ -181,8 +181,8 @@ class TestSeedWithExistingAdmin:
 
         db.execute = AsyncMock(
             side_effect=[
-                _scalar_result(mock_admin_user),              # admin found
-                _scalars_result([mock_existing_setting]),     # one existing setting
+                _scalar_result(mock_admin_user),  # admin found
+                _scalars_result([mock_existing_setting]),  # one existing setting
             ]
         )
 
@@ -199,7 +199,9 @@ class TestSeedWithExistingAdmin:
     async def test_exception_propagates_on_db_error(self):
         """If an error occurs inside the DB block, rollback handled by get_db_session_local."""
         mock_settings = MagicMock()
-        mock_settings.llm_configs_json = json.dumps({"m": {"model": "x", "api_type": "openai", "api_key": None}})
+        mock_settings.llm_configs_json = json.dumps(
+            {"m": {"model": "x", "api_type": "openai", "api_key": None}}
+        )
 
         ctx, db = _make_ctx_db()
         db.execute = AsyncMock(side_effect=RuntimeError("DB error"))

@@ -1,7 +1,7 @@
 """Repository layer for slides domain - data access only.
 
-Operates on SlideContent model (defined in ii_agent.content.media.models) which
-stores individual slide content for presentations within sessions.
+Operates on SlideContent model which stores individual slide content
+for presentations within sessions.
 """
 
 import uuid
@@ -11,11 +11,17 @@ from typing import Optional, List
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.core.db.base import BaseRepository
 from ii_agent.content.slides.models import SlideContent
 
 
-class SlideContentRepository:
-    """Data access layer for SlideContent model."""
+class SlideContentRepository(BaseRepository[SlideContent]):
+    """Data access layer for SlideContent model.
+
+    Inherits from BaseRepository: get_by_id, save, update.
+    """
+
+    model = SlideContent
 
     async def get_by_session_and_presentation_and_number(
         self,

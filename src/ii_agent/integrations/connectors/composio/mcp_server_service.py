@@ -1,4 +1,5 @@
 """Composio MCP Server Service - manages MCP server creation and URL generation."""
+
 import secrets
 import string
 from typing import Optional, List, Any
@@ -18,6 +19,7 @@ CUID_LENGTH = 8
 
 class MCPCommands(BaseModel):
     """MCP server commands for different clients."""
+
     cursor: Optional[str] = None
     claude: Optional[str] = None
     windsurf: Optional[str] = None
@@ -25,6 +27,7 @@ class MCPCommands(BaseModel):
 
 class MCPServer(BaseModel):
     """MCP server model."""
+
     id: str
     name: str
     auth_config_ids: List[str] = []
@@ -39,6 +42,7 @@ class MCPServer(BaseModel):
 
 class MCPUrlResponse(BaseModel):
     """MCP URL generation response."""
+
     mcp_url: str
     connected_account_urls: List[str] = []
     user_ids_url: List[str] = []
@@ -49,9 +53,9 @@ def _extract_mcp_commands(commands_obj: Any) -> MCPCommands:
     if not commands_obj:
         return MCPCommands()
     return MCPCommands(
-        cursor=getattr(commands_obj, 'cursor', None),
-        claude=getattr(commands_obj, 'claude', None),
-        windsurf=getattr(commands_obj, 'windsurf', None)
+        cursor=getattr(commands_obj, "cursor", None),
+        claude=getattr(commands_obj, "claude", None),
+        windsurf=getattr(commands_obj, "windsurf", None),
     )
 
 
@@ -65,13 +69,13 @@ class MCPServerService:
     def _generate_cuid(self) -> str:
         """Generate a random CUID-like string."""
         chars = string.ascii_lowercase + string.digits
-        return ''.join(secrets.choice(chars) for _ in range(CUID_LENGTH))
+        return "".join(secrets.choice(chars) for _ in range(CUID_LENGTH))
 
     def _generate_server_name(self, toolkit_name: str) -> str:
         """Generate a valid MCP server name (max 30 chars, alphanumeric + hyphens)."""
         # Clean the toolkit name: lowercase alphanumeric with hyphens
-        clean_name = ''.join(c.lower() if c.isalnum() else '-' for c in toolkit_name)
-        clean_name = clean_name.strip('-')
+        clean_name = "".join(c.lower() if c.isalnum() else "-" for c in toolkit_name)
+        clean_name = clean_name.strip("-")
 
         cuid = self._generate_cuid()
 
@@ -93,14 +97,14 @@ class MCPServerService:
         return MCPServer(
             id=response.id,
             name=response.name,
-            auth_config_ids=getattr(response, 'auth_config_ids', []),
-            allowed_tools=getattr(response, 'allowed_tools', []),
-            mcp_url=getattr(response, 'mcp_url', None),
-            toolkits=getattr(response, 'toolkits', []),
-            commands=_extract_mcp_commands(getattr(response, 'commands', None)),
-            updated_at=getattr(response, 'updated_at', None),
-            created_at=getattr(response, 'created_at', None),
-            managed_auth_via_composio=getattr(response, 'managed_auth_via_composio', True)
+            auth_config_ids=getattr(response, "auth_config_ids", []),
+            allowed_tools=getattr(response, "allowed_tools", []),
+            mcp_url=getattr(response, "mcp_url", None),
+            toolkits=getattr(response, "toolkits", []),
+            commands=_extract_mcp_commands(getattr(response, "commands", None)),
+            updated_at=getattr(response, "updated_at", None),
+            created_at=getattr(response, "created_at", None),
+            managed_auth_via_composio=getattr(response, "managed_auth_via_composio", True),
         )
 
     def _call_mcp_create(
@@ -124,7 +128,12 @@ class MCPServerService:
         """Retrieve MCP server details."""
         return self.client.mcp.get(mcp_server_id)
 
-    def _call_mcp_update(self, mcp_server_id: str, toolkits: List[ConfigToolkit], allowed_tools: Optional[List[str]] = None):
+    def _call_mcp_update(
+        self,
+        mcp_server_id: str,
+        toolkits: List[ConfigToolkit],
+        allowed_tools: Optional[List[str]] = None,
+    ):
         """Update MCP server with new toolkits."""
         return self.client.mcp.update(
             server_id=mcp_server_id,
@@ -169,7 +178,7 @@ class MCPServerService:
         #     )
 
         instance_mcp_url = response.generate(composio_user_id)
-        mcp_url_response = instance_mcp_url['url']
+        mcp_url_response = instance_mcp_url["url"]
 
         server = self._response_to_mcp_server(response)
 
@@ -180,7 +189,7 @@ class MCPServerService:
         self,
         mcp_server_id: str,
         connected_account_ids: Optional[List[str]] = None,
-        composio_user_id: Optional[str] = None
+        composio_user_id: Optional[str] = None,
     ) -> MCPUrlResponse:
         """Generate MCP URL for accessing the server.
 

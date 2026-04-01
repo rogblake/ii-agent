@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from ii_agent.sessions.title_service import SessionTitleService
-from ii_agent.sessions.title_config import SessionTitleConfig
+from ii_agent.core.config.session_title import SessionTitleConfig
 
 pytestmark = pytest.mark.unit
 
@@ -613,11 +613,11 @@ class TestChatFileProcessor:
                 new=AsyncMock(return_value=processed),
             ),
             patch(
-                "ii_agent.chat.application.file_processing_service.get_openai_vector_store",
-                return_value=mock_vs,
+                "ii_agent.chat.application.file_processing_service.openai_vector_store",
+                mock_vs,
             ),
         ):
-            await processor.process_uploads(
+            vector_store = await processor.process_uploads(
                 AsyncMock(),
                 user_id="user-1",
                 session_id="sess-1",
@@ -685,7 +685,6 @@ class TestChatServiceValidateSessionAccess:
             message_history=SimpleNamespace(),
             message_service=SimpleNamespace(),
             session_repo=FakeRepo(session),
-            chat_run_service=SimpleNamespace(),
             llm_setting_service=SimpleNamespace(),
             credit_service=None,
             container=SimpleNamespace(),
@@ -737,7 +736,6 @@ class TestChatServiceValidateModelForChat:
             message_history=SimpleNamespace(),
             message_service=SimpleNamespace(),
             session_repo=SimpleNamespace(),
-            chat_run_service=SimpleNamespace(),
             llm_setting_service=FakeLLMSettingService(),
             credit_service=None,
             container=SimpleNamespace(),
@@ -782,7 +780,6 @@ class TestChatServiceUpdateSessionNameIfUntitled:
             message_history=SimpleNamespace(),
             message_service=SimpleNamespace(),
             session_repo=FakeRepo(),
-            chat_run_service=SimpleNamespace(),
             llm_setting_service=SimpleNamespace(),
             credit_service=None,
             container=SimpleNamespace(),
@@ -822,20 +819,16 @@ class TestChatServiceUpdateSessionNameIfUntitled:
 
 
 class TestChatServiceStopConversation:
-    def _make_service(self, session=None, running_task=None, last_message=None):
+    def _make_service(self, session=None):
         from ii_agent.chat.application.chat_service import ChatService
 
         class FakeRepo:
             async def get_by_id(self, db, session_id):
                 return session
 
-        class FakeChatRunService:
-            async def find_running_for_cancel(self, db, *, session_id):
-                return running_task
-
         class FakeMsgHistoryRepo:
             async def get_last_by_session(self, db, session_id):
-                return last_message
+                return None
 
         msg_history = SimpleNamespace(_repo=FakeMsgHistoryRepo())
 
@@ -846,7 +839,6 @@ class TestChatServiceStopConversation:
             message_history=msg_history,
             message_service=SimpleNamespace(),
             session_repo=FakeRepo(),
-            chat_run_service=FakeChatRunService(),
             llm_setting_service=SimpleNamespace(),
             credit_service=None,
             container=SimpleNamespace(),
@@ -866,37 +858,8 @@ class TestChatServiceStopConversation:
         import uuid
 
         session = SimpleNamespace(user_id="u1")
-        service = self._make_service(session=session, running_task=None)
+        service = self._make_service(session=session)
 
         real_session_id = str(uuid.uuid4())
         result = await service.stop_conversation(AsyncMock(), session_id=real_session_id)
         assert result is None
-
-    @pytest.mark.asyncio
-    async def test_rolls_back_and_returns_last_message_on_stale_abort_race(self):
-        import uuid
-
-        from sqlalchemy.orm.exc import StaleDataError
-
-        session = SimpleNamespace(user_id="u1")
-        running_task = SimpleNamespace(id=uuid.uuid4(), status="running")
-        last_message = SimpleNamespace(id=uuid.uuid4())
-        service = self._make_service(
-            session=session,
-            running_task=running_task,
-            last_message=last_message,
-        )
-
-        db = AsyncMock()
-        db.flush.side_effect = StaleDataError(
-            "UPDATE statement on table 'chat_runs' expected to update 1 row(s); 0 were matched."
-        )
-
-        with patch(
-            "ii_agent.chat.application.chat_service.cancel.cancel_run",
-            new=AsyncMock(return_value=True),
-        ):
-            result = await service.stop_conversation(db, session_id=str(uuid.uuid4()))
-
-        db.rollback.assert_awaited_once()
-        assert result == str(last_message.id)

@@ -1,11 +1,10 @@
 """Utility functions for auth domain."""
 
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from typing import Optional
-import jwt
+import secrets
+import string
 
-# Password hashing context
+from passlib.context import CryptContext
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -19,4 +18,14 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-# TODO: Add JWT token functions and other utilities
+def generate_api_key(length: int = 32) -> str:
+    """Generate a secure random API key."""
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def generate_prefixed_api_key(prefix: str = "ii", length: int = 32) -> str:
+    """Generate a prefixed API key (e.g. ``ii_abc123...``)."""
+    remaining_length = max(8, length - len(prefix) - 1)
+    random_part = generate_api_key(remaining_length)
+    return f"{prefix}_{random_part}"

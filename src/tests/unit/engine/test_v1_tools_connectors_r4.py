@@ -9,6 +9,7 @@ Covers:
 - ComposioMCPTool.__init__ and execute
 - mcp_tool_loader.load_tools_from_mcp
 """
+
 from __future__ import annotations
 
 import pytest
@@ -22,8 +23,9 @@ pytestmark = pytest.mark.unit
 # GitHubAgentTool helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_github_tool(token="test-token", default_repo=None, github_metadata=None):
-    from ii_agent.agent.runtime.tools.connectors.github import GitHubAgentTool
+    from ii_agent.agents.tools.connectors.github import GitHubAgentTool
 
     return GitHubAgentTool(
         github_token=token,
@@ -36,6 +38,7 @@ def _make_github_tool(token="test-token", default_repo=None, github_metadata=Non
 # ---------------------------------------------------------------------------
 # GitHubAgentTool initialization
 # ---------------------------------------------------------------------------
+
 
 class TestGitHubAgentToolInit:
     """Test GitHubAgentTool initialization."""
@@ -76,6 +79,7 @@ class TestGitHubAgentToolInit:
 # GitHubAgentTool._get_repo_context
 # ---------------------------------------------------------------------------
 
+
 class TestGitHubGetRepoContext:
     """Test _get_repo_context."""
 
@@ -107,6 +111,7 @@ class TestGitHubGetRepoContext:
 # GitHubAgentTool.execute - routing
 # ---------------------------------------------------------------------------
 
+
 class TestGitHubAgentToolExecute:
     """Test execute method routing and error handling."""
 
@@ -130,9 +135,9 @@ class TestGitHubAgentToolExecute:
 
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
-        mock_response.json = MagicMock(return_value=[
-            {"full_name": "owner/repo", "html_url": "http://github.com/owner/repo"}
-        ])
+        mock_response.json = MagicMock(
+            return_value=[{"full_name": "owner/repo", "html_url": "http://github.com/owner/repo"}]
+        )
 
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=mock_response)
@@ -316,17 +321,22 @@ class TestGitHubAgentToolExecute:
 # MCPTool
 # ---------------------------------------------------------------------------
 
+
 class TestMCPTool:
     """Test MCPTool class."""
 
     def _make_mcp_tool(self, **kwargs):
-        from ii_agent.agent.runtime.tools.mcp.base import MCPTool
+        from ii_agent.agents.tools.mcp.base import MCPTool
 
         defaults = dict(
             name="test_mcp",
             display_name="Test MCP",
             description="A test MCP tool",
-            input_schema={"type": "object", "properties": {"x": {"type": "string"}}, "required": ["x"]},
+            input_schema={
+                "type": "object",
+                "properties": {"x": {"type": "string"}},
+                "required": ["x"],
+            },
             read_only=True,
         )
         defaults.update(kwargs)
@@ -341,7 +351,7 @@ class TestMCPTool:
         assert tool.mcp_client is None
 
     def test_init_openai_custom_type_sets_format(self):
-        from ii_agent.agent.runtime.tools.mcp.base import MCPTool
+        from ii_agent.agents.tools.mcp.base import MCPTool
 
         schema = {"type": "object", "properties": {}}
         tool = MCPTool(
@@ -384,8 +394,9 @@ class TestMCPTool:
 
         result = await tool.execute({"x": "test"})
         assert result.is_error is not True
-        assert "Tool executed successfully" in result.llm_content or \
-               isinstance(result.llm_content, list)
+        assert "Tool executed successfully" in result.llm_content or isinstance(
+            result.llm_content, list
+        )
 
     @pytest.mark.asyncio
     async def test_execute_with_tool_error(self):
@@ -496,17 +507,22 @@ class TestMCPTool:
 # ComposioMCPTool
 # ---------------------------------------------------------------------------
 
+
 class TestComposioMCPTool:
     """Test ComposioMCPTool."""
 
     def _make_composio_tool(self):
-        from ii_agent.agent.runtime.tools.mcp.composio_mcp import ComposioMCPTool
+        from ii_agent.agents.tools.mcp.composio_mcp import ComposioMCPTool
 
         return ComposioMCPTool(
             name="github_STARS",
             display_name="GitHub Stars",
             description="Star a GitHub repo",
-            input_schema={"type": "object", "properties": {"repo": {"type": "string"}}, "required": ["repo"]},
+            input_schema={
+                "type": "object",
+                "properties": {"repo": {"type": "string"}},
+                "required": ["repo"],
+            },
             read_only=False,
             mcp_server_id="composio-server",
         )
@@ -566,7 +582,7 @@ class TestComposioMCPTool:
         assert tool.tool_logo is None
 
     def test_init_with_logo(self):
-        from ii_agent.agent.runtime.tools.mcp.composio_mcp import ComposioMCPTool
+        from ii_agent.agents.tools.mcp.composio_mcp import ComposioMCPTool
 
         tool = ComposioMCPTool(
             name="test",
@@ -583,13 +599,14 @@ class TestComposioMCPTool:
 # mcp_tool_loader.load_tools_from_mcp
 # ---------------------------------------------------------------------------
 
+
 class TestMCPToolLoader:
     """Test load_tools_from_mcp function."""
 
     @pytest.mark.asyncio
     async def test_loads_tools_from_mcp_server(self):
-        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
-        from ii_agent.agent.runtime.tools.mcp.user_mcp_tool import UserMCPTool
+        from ii_agent.agents.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agents.tools.mcp.user_mcp_tool import UserMCPTool
 
         tool1 = MagicMock()
         tool1.name = "tool_one"
@@ -613,7 +630,9 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch(
+            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
+        ):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert len(tools) == 2
@@ -621,7 +640,7 @@ class TestMCPToolLoader:
 
     @pytest.mark.asyncio
     async def test_skips_tool_without_description(self):
-        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agents.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 
         tool_no_desc = MagicMock()
         tool_no_desc.name = "no_desc_tool"
@@ -634,27 +653,31 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch(
+            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
+        ):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert len(tools) == 0
 
     @pytest.mark.asyncio
     async def test_returns_empty_on_connection_error(self):
-        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agents.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(side_effect=ConnectionError("Cannot connect"))
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch(
+            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
+        ):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert tools == []
 
     @pytest.mark.asyncio
     async def test_tool_annotations_read_only_hint(self):
-        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agents.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 
         tool = MagicMock()
         tool.name = "readonly_tool"
@@ -672,7 +695,9 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch(
+            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
+        ):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp", mcp_server_id="server-1")
 
         assert len(tools) == 1
@@ -681,7 +706,7 @@ class TestMCPToolLoader:
 
     @pytest.mark.asyncio
     async def test_tool_no_read_only_hint_defaults_to_false(self):
-        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agents.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 
         tool = MagicMock()
         tool.name = "normal_tool"
@@ -699,7 +724,9 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch(
+            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
+        ):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert len(tools) == 1
@@ -707,7 +734,7 @@ class TestMCPToolLoader:
 
     @pytest.mark.asyncio
     async def test_inner_transport_closed_after_loading(self):
-        from ii_agent.agent.runtime.tools.mcp.mcp_tool_loader import load_tools_from_mcp
+        from ii_agent.agents.tools.mcp.mcp_tool_loader import load_tools_from_mcp
 
         inner_transport = MagicMock()
         inner_transport.close = AsyncMock()
@@ -721,7 +748,9 @@ class TestMCPToolLoader:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.transport = outer_transport
 
-        with patch("ii_agent.agent.runtime.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
+        with patch(
+            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
+        ):
             await load_tools_from_mcp("http://localhost:8080/mcp")
 
         inner_transport.close.assert_called_once()

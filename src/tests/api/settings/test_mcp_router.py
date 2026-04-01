@@ -7,15 +7,15 @@ pytestmark = pytest.mark.unit
 
 
 EXPECTED_ROUTES = {
-    ("GET", "/user-settings/mcp/codex"),
-    ("POST", "/user-settings/mcp/codex"),
-    ("GET", "/user-settings/mcp/claude-code"),
-    ("POST", "/user-settings/mcp/claude-code"),
-    ("POST", "/user-settings/mcp"),
-    ("GET", "/user-settings/mcp"),
-    ("GET", "/user-settings/mcp/{setting_id}"),
-    ("PUT", "/user-settings/mcp/{setting_id}"),
-    ("DELETE", "/user-settings/mcp/{setting_id}"),
+    ("GET", "/mcp/codex"),
+    ("POST", "/mcp/codex"),
+    ("GET", "/mcp/claude-code"),
+    ("POST", "/mcp/claude-code"),
+    ("POST", "/mcp"),
+    ("GET", "/mcp"),
+    ("GET", "/mcp/{setting_id}"),
+    ("PUT", "/mcp/{setting_id}"),
+    ("DELETE", "/mcp/{setting_id}"),
 }
 
 

@@ -2,25 +2,27 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.billing.exceptions import InsufficientCreditsError
 from ii_agent.content.storybook.ai_edit_service import (
+    DEFAULT_TEXT_PERCENTAGE,
     StorybookAIEditService,
     _build_extension_prompt,
     _build_style_context,
     _calculate_safe_zones,
+    _enhance_prompt_with_style,
     _extract_page,
     _extract_text_from_html,
     _extract_text_percentage_from_html,
     _extract_text_position_from_html,
     _get_optimal_aspect_ratio,
 )
-from ii_agent.chat.types import ImageURLContent, TextContent
+from ii_agent.chat.types import ImageURLContent, MessageRole, TextContent
 from ii_agent.core.exceptions import ValidationError
 
 
@@ -30,15 +32,14 @@ from ii_agent.core.exceptions import ValidationError
 
 
 def _make_service():
-    usage_svc = MagicMock()
-    usage_svc.require_billing_ok = AsyncMock()
+    credit_svc = MagicMock()
+    credit_svc.has_sufficient_credits = AsyncMock(return_value=True)
+    credit_svc.deduct = AsyncMock(return_value=True)
     return StorybookAIEditService(
         session_service=MagicMock(),
         user_service=MagicMock(),
-        usage_service=usage_svc,
         llm_setting_service=MagicMock(),
-        llm_execution=MagicMock(),
-        reservation_service=MagicMock(),
+        credit_service=credit_svc,
         config=MagicMock(),
     )
 
@@ -75,11 +76,6 @@ def _llm_config_stub():
 
     model.model_copy = _copy
     return model
-
-
-async def _run_sync_side_effect(*, execute_fn, **kwargs):
-    result = await execute_fn()
-    return result.value
 
 
 # ---------------------------------------------------------------------------
@@ -167,14 +163,12 @@ async def test_rewrite_content_success_and_with_image_url():
     service = _make_service()
     service._resolve_storybook_llm_config = AsyncMock(return_value=(_llm_config_stub(), "default"))
 
-    user_client = MagicMock()
-    user_client.new_message = MagicMock(side_effect=["msg1", "msg2"])
-    user_client.send_once = AsyncMock(
+    user_client = AsyncMock()
+    user_client.send = AsyncMock(
         return_value=SimpleNamespace(
             content=[TextContent(text="rewritten text"), ImageURLContent(url="x")]
         )
     )
-    service._llm_execution = user_client
 
     with patch_client():
         with patch(
@@ -197,12 +191,10 @@ async def test_rewrite_content_raises_when_no_text_returned():
     service = _make_service()
     service._resolve_storybook_llm_config = AsyncMock(return_value=(_llm_config_stub(), "default"))
 
-    user_client = MagicMock()
-    user_client.new_message = MagicMock(side_effect=["msg1", "msg2"])
-    user_client.send_once = AsyncMock(
+    user_client = AsyncMock()
+    user_client.send = AsyncMock(
         return_value=SimpleNamespace(content=[ImageURLContent(url="x")])
     )
-    service._llm_execution = user_client
 
     with patch_client():
         with patch(
@@ -253,13 +245,7 @@ async def test_generate_background_success_and_deducts_credits():
     service = _make_service()
     service._user_service.get_active_api_key = AsyncMock(return_value="api-key")
 
-    with (
-        patch_generate_image({"url": "https://cdn/image.png", "cost": 0.05}),
-        patch(
-            "ii_agent.content.storybook.ai_edit_service.run_storybook_sync_operation",
-            AsyncMock(side_effect=_run_sync_side_effect),
-        ) as run_storybook_sync_operation,
-    ):
+    with patch_generate_image({"url": "https://cdn/image.png", "cost": 0.05}):
         url = await service.generate_background(
             db=MagicMock(),
             storybook=_storybook(style_json={"image_provider": "gemini"}),
@@ -270,20 +256,14 @@ async def test_generate_background_success_and_deducts_credits():
         )
 
     assert url == "https://cdn/image.png"
-    run_storybook_sync_operation.assert_awaited_once()
+    service._credit_service.deduct.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_generate_background_missing_image_url_raises():
     service = _make_service()
     service._user_service.get_active_api_key = AsyncMock(return_value="api-key")
-    with (
-        patch_generate_image({"cost": 0.01}),
-        patch(
-            "ii_agent.content.storybook.ai_edit_service.run_storybook_sync_operation",
-            AsyncMock(side_effect=_run_sync_side_effect),
-        ),
-    ):
+    with patch_generate_image({"cost": 0.01}):
         with pytest.raises(RuntimeError, match="did not return an image URL"):
             await service.generate_background(
                 db=MagicMock(),
@@ -330,24 +310,17 @@ async def test_regenerate_image_success_with_separate_page_and_next_text_page():
     service = _make_service()
     service._user_service.get_active_api_key = AsyncMock(return_value="api-key")
 
-    with (
-        patch_generate_image({"url": "https://out.png", "cost": 0.02}),
-        patch(
-            "ii_agent.content.storybook.ai_edit_service.run_storybook_sync_operation",
-            AsyncMock(side_effect=_run_sync_side_effect),
-        ),
+    with patch(
+        "ii_agent.content.storybook.ai_edit_service._generate_image",
+        AsyncMock(return_value={"url": "https://out.png", "cost": 0.02}),
     ):
-        with patch(
-            "ii_agent.content.storybook.ai_edit_service._generate_image",
-            AsyncMock(return_value={"url": "https://out.png", "cost": 0.02}),
-        ):
-            result = await service.regenerate_image(
-                db=MagicMock(),
-                storybook=storybook,
-                user_id="u1",
-                page_number=1,
-                prompt="Paint the same scene",
-            )
+        result = await service.regenerate_image(
+            db=MagicMock(),
+            storybook=storybook,
+            user_id="u1",
+            page_number=1,
+            prompt="Paint the same scene",
+        )
 
     assert result == "https://out.png"
 
@@ -364,6 +337,7 @@ async def test_regenerate_image_retries_and_raises_after_failures():
 
     service = _make_service()
     service._user_service.get_active_api_key = AsyncMock(return_value="api-key")
+    service._deduct_image_credits = AsyncMock()
 
     with patch(
         "ii_agent.content.storybook.ai_edit_service._generate_image",
@@ -381,7 +355,7 @@ async def test_regenerate_image_retries_and_raises_after_failures():
 
 
 # ---------------------------------------------------------------------------
-# _resolve_storybook_llm_config and billed image helper
+# _resolve_storybook_llm_config and _deduct_image_credits
 # ---------------------------------------------------------------------------
 
 
@@ -391,77 +365,79 @@ async def test_resolve_storybook_llm_config_invalid_session_and_valid_setting():
     fallback = SimpleNamespace(model_copy=MagicMock(return_value="fallback_copy"))
     setting = SimpleNamespace(model_copy=MagicMock(return_value="setting_copy"))
 
-    with patch(
-        "ii_agent.content.storybook.ai_edit_service.get_system_llm_config",
-        return_value=fallback,
-    ):
-        config, model_id = await service._resolve_storybook_llm_config(
-            db=MagicMock(),
-            user_id="u1",
-            session_id="bad-uuid",
-        )
-        assert config == "fallback_copy"
-        assert model_id == "default"
+    # The service now uses self._llm_setting_service.resolve_system_config for fallback
+    service._llm_setting_service.resolve_system_config = AsyncMock(return_value=fallback)
+
+    config, model_id = await service._resolve_storybook_llm_config(
+        db=MagicMock(),
+        user_id="u1",
+        session_id="bad-uuid",
+    )
+    assert config == "fallback_copy"
+    assert model_id == "default"
 
     service._session_service.get_session_by_id = AsyncMock(
         return_value=SimpleNamespace(llm_setting_id="m1")
     )
     service._llm_setting_service.get_user_llm_config = AsyncMock(return_value=setting)
 
-    with patch(
-        "ii_agent.content.storybook.ai_edit_service.get_system_llm_config",
-        return_value=fallback,
-    ):
-        config, model_id = await service._resolve_storybook_llm_config(
-            db=MagicMock(),
-            user_id="u1",
-            session_id="b9f3f6e8-12ad-4dd2-b4c0-8b9c9b0f3cf2",
-        )
-        assert config == "setting_copy"
-        assert model_id == "m1"
+    config, model_id = await service._resolve_storybook_llm_config(
+        db=MagicMock(),
+        user_id="u1",
+        session_id="b9f3f6e8-12ad-4dd2-b4c0-8b9c9b0f3cf2",
+    )
+    assert config == "setting_copy"
+    assert model_id == "m1"
 
 
 @pytest.mark.asyncio
-async def test_run_billed_image_operation_returns_image_url():
-    service = _make_service()
-    storybook = _storybook()
+async def test_check_and_deduct_storybook_credits_zero_cost_skips():
+    """When amount_usd <= 0, check_and_deduct_storybook_credits returns early."""
+    from ii_agent.billing.types import BillingContextValue, BillingScope
+    from ii_agent.content.storybook.billing import check_and_deduct_storybook_credits
 
-    with patch(
-        "ii_agent.content.storybook.ai_edit_service.run_storybook_sync_operation",
-        AsyncMock(side_effect=_run_sync_side_effect),
-    ):
-        image_url = await service._run_billed_image_operation(
-            db=MagicMock(),
-            storybook=storybook,
-            user_id="u1",
-            operation_id="background:sb-1:req-1",
-            tool_name="storybook_background",
-            context="ctx",
-            execute_fn=AsyncMock(return_value={"url": "https://cdn/image.png", "cost": None}),
-        )
+    credit_svc = MagicMock()
+    credit_svc.has_sufficient_credits = AsyncMock(return_value=True)
+    credit_svc.deduct = AsyncMock()
+    scope = BillingScope.for_session(
+        user_id="u1", app_kind="chat", session_id="s1",
+        billing_context=BillingContextValue.STORYBOOK,
+    )
 
-    assert image_url == "https://cdn/image.png"
+    await check_and_deduct_storybook_credits(
+        MagicMock(), credit_service=credit_svc, scope=scope,
+        amount_usd=0.0, tool_name="test",
+    )
+    credit_svc.deduct.assert_not_awaited()
+
+    await check_and_deduct_storybook_credits(
+        MagicMock(), credit_service=credit_svc, scope=scope,
+        amount_usd=-0.5, tool_name="test",
+    )
+    credit_svc.deduct.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_run_billed_image_operation_propagates_insufficient_credits():
-    service = _make_service()
-    storybook = _storybook()
+async def test_check_and_deduct_storybook_credits_insufficient_raises():
+    """When credit_service says no funds, InsufficientCreditsError is raised."""
+    from ii_agent.billing.exceptions import InsufficientCreditsError
+    from ii_agent.billing.types import BillingContextValue, BillingScope
+    from ii_agent.content.storybook.billing import check_and_deduct_storybook_credits
 
-    with patch(
-        "ii_agent.content.storybook.ai_edit_service.run_storybook_sync_operation",
-        AsyncMock(side_effect=InsufficientCreditsError()),
-    ):
-        with pytest.raises(InsufficientCreditsError):
-            await service._run_billed_image_operation(
-                db=MagicMock(),
-                storybook=storybook,
-                user_id="u1",
-                operation_id="background:sb-1:req-1",
-                tool_name="storybook_background",
-                context="ctx",
-                execute_fn=AsyncMock(return_value={"url": "https://cdn/image.png", "cost": 0.5}),
-            )
+    credit_svc = MagicMock()
+    credit_svc.has_sufficient_credits = AsyncMock(return_value=False)
+    credit_svc.deduct = AsyncMock()
+    scope = BillingScope.for_session(
+        user_id="u1", app_kind="chat", session_id="s1",
+        billing_context=BillingContextValue.STORYBOOK,
+    )
+
+    with pytest.raises(InsufficientCreditsError):
+        await check_and_deduct_storybook_credits(
+            MagicMock(), credit_service=credit_svc, scope=scope,
+            amount_usd=0.5, tool_name="test",
+        )
+    credit_svc.deduct.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------

@@ -76,7 +76,7 @@ class ConnectorService {
     async getGitHubAuthUrl(): Promise<ConnectorAuthUrlResponse> {
         const redirectUri = this.getGitHubRedirectUri()
         const response = await axiosInstance.get<ConnectorAuthUrlResponse>(
-            '/connectors/github/auth-url',
+            '/v1/connectors/github/auth-url',
             {
                 params: { redirect_uri: redirectUri }
             }
@@ -92,7 +92,7 @@ class ConnectorService {
         const response = await axiosInstance.post<{
             success: boolean
             message: string
-        }>('/connectors/github/callback', {
+        }>('/v1/connectors/github/callback', {
             code,
             state,
             redirect_uri: redirectUri
@@ -102,7 +102,7 @@ class ConnectorService {
 
     async getGitHubStatus(): Promise<ConnectorStatusResponse> {
         const response = await axiosInstance.get<ConnectorStatusResponse>(
-            '/connectors/github/status'
+            '/v1/connectors/github/status'
         )
         return response.data
     }
@@ -114,20 +114,20 @@ class ConnectorService {
         const response = await axiosInstance.delete<{
             success: boolean
             message: string
-        }>('/connectors/github')
+        }>('/v1/connectors/github')
         return response.data
     }
 
     async getGitHubAppConfig(): Promise<GitHubAppConfigResponse> {
         const response = await axiosInstance.get<GitHubAppConfigResponse>(
-            '/connectors/github/app-config'
+            '/v1/connectors/github/app-config'
         )
         return response.data
     }
 
     async getGitHubRepositories(): Promise<GitHubRepositoriesResponse> {
         const response = await axiosInstance.get<GitHubRepositoriesResponse>(
-            '/connectors/github/repositories'
+            '/v1/connectors/github/repositories'
         )
         return response.data
     }
@@ -135,7 +135,7 @@ class ConnectorService {
     async getRevenueCatAuthUrl(): Promise<ConnectorAuthUrlResponse> {
         const redirectUri = this.getRevenueCatRedirectUri()
         const response = await axiosInstance.get<ConnectorAuthUrlResponse>(
-            '/connectors/revenuecat/auth-url',
+            '/v1/connectors/revenuecat/auth-url',
             {
                 params: { redirect_uri: redirectUri }
             }
@@ -151,7 +151,7 @@ class ConnectorService {
         const response = await axiosInstance.post<{
             success: boolean
             message: string
-        }>('/connectors/revenuecat/callback', {
+        }>('/v1/connectors/revenuecat/callback', {
             code,
             state,
             redirect_uri: redirectUri
@@ -161,7 +161,7 @@ class ConnectorService {
 
     async getRevenueCatStatus(): Promise<ConnectorStatusResponse> {
         const response = await axiosInstance.get<ConnectorStatusResponse>(
-            '/connectors/revenuecat/status'
+            '/v1/connectors/revenuecat/status'
         )
         return response.data
     }
@@ -173,7 +173,7 @@ class ConnectorService {
         const response = await axiosInstance.delete<{
             success: boolean
             message: string
-        }>('/connectors/revenuecat')
+        }>('/v1/connectors/revenuecat')
         return response.data
     }
 
@@ -181,7 +181,7 @@ class ConnectorService {
         // Pass frontend URL for OAuth callback redirect
         const frontendUrl = window.location.origin
         const response = await axiosInstance.get<ConnectorAuthUrlResponse>(
-            '/connectors/google-drive/auth-url',
+            '/v1/connectors/google-drive/auth-url',
             {
                 params: { frontend_url: frontendUrl }
             }
@@ -196,7 +196,7 @@ class ConnectorService {
         const response = await axiosInstance.post<{
             success: boolean
             message: string
-        }>('/connectors/google-drive/callback', {
+        }>('/v1/connectors/google-drive/callback', {
             code,
             state
         })
@@ -205,7 +205,7 @@ class ConnectorService {
 
     async getGoogleDriveStatus(): Promise<ConnectorStatusResponse> {
         const response = await axiosInstance.get<ConnectorStatusResponse>(
-            '/connectors/google-drive/status'
+            '/v1/connectors/google-drive/status'
         )
         return response.data
     }
@@ -213,7 +213,7 @@ class ConnectorService {
     async getGoogleDrivePickerConfig(): Promise<GoogleDrivePickerConfigResponse> {
         const response =
             await axiosInstance.get<GoogleDrivePickerConfigResponse>(
-                '/connectors/google-drive/picker-config'
+                '/v1/connectors/google-drive/picker-config'
             )
         return response.data
     }
@@ -222,7 +222,7 @@ class ConnectorService {
         fileIds: string[]
     ): Promise<GoogleDriveFilesResponse> {
         const response = await axiosInstance.post<GoogleDriveFilesResponse>(
-            '/connectors/google-drive/files',
+            '/v1/connectors/google-drive/files',
             { file_ids: fileIds }
         )
         return response.data
@@ -235,7 +235,7 @@ class ConnectorService {
         const response = await axiosInstance.delete<{
             success: boolean
             message: string
-        }>('/connectors/google-drive')
+        }>('/v1/connectors/google-drive')
         return response.data
     }
 

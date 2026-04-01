@@ -16,7 +16,7 @@ class BillingService {
         billingCycle: BillingCycle
     }): Promise<CreateCheckoutSessionResponse> {
         const response = await axiosInstance.post<CreateCheckoutSessionResponse>(
-            '/billing/checkout-session',
+            '/v1/billing/checkout-session',
             {
                 planId,
                 billingCycle,
@@ -33,7 +33,7 @@ class BillingService {
         returnUrl
     }: CreatePortalSessionRequest = {}): Promise<CreatePortalSessionResponse> {
         const response = await axiosInstance.post<CreatePortalSessionResponse>(
-            '/billing/portal-session',
+            '/v1/billing/portal-session',
             {
                 returnUrl
             }

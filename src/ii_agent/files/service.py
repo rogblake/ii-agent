@@ -1,23 +1,27 @@
-"""Service layer for files domain - business logic only."""
+"""Unified service layer for files domain.
+
+Merges the old FileService and AssetService into a single service.
+"""
 
 from __future__ import annotations
 
-import asyncio
+import os
 import uuid
-from typing import AsyncIterator, List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import AsyncIterator, Optional
 
-import anyio
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 from ii_agent.core.config.settings import Settings
+from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.core.storage.service import StorageService
 from ii_agent.files.exceptions import (
     FileAccessDeniedError,
-    FileUploadNotFoundError,
     FileSizeLimitExceededError,
+    FileUploadNotFoundError,
 )
-from ii_agent.files.models import FileUpload
+from ii_agent.files.models import AssetSource, AssetType, FileAsset, UploadStatus
 from ii_agent.files.repository import FileRepository
 from ii_agent.files.schemas import (
     FileDataResponse,
@@ -25,112 +29,176 @@ from ii_agent.files.schemas import (
     GenerateUploadUrlResponse,
     MediaLibraryItem,
     MediaLibraryResponse,
+    PublishResponse,
     UploadCompleteResponse,
 )
+from ii_agent.files.media import File as MediaFile, Image as MediaImage
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.repository import SessionRepository
-from ii_agent.core.storage import BaseStorage
-from ii_agent.core.storage.locations import get_session_file_path
 
-
-# Constants for file processing
-IMAGE_CONTENT_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/heic", "image/heif"}
+# Constants
+IMAGE_CONTENT_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
 SEVEN_DAY_SECONDS = 7 * 24 * 3600
+# Re-generate signed URL 5 minutes before it actually expires
+SIGNED_URL_BUFFER_SECONDS = 5 * 60
 
 
 class FileService:
-    """Service for managing file uploads - business logic layer."""
+    """Unified service for managing file assets."""
 
     def __init__(
         self,
         *,
         file_repo: FileRepository,
         session_repo: SessionRepository,
-        file_store: BaseStorage,
-        media_store: BaseStorage | None,
+        storage: StorageService,
         config: Settings,
     ) -> None:
         self._config = config
         self._file_repo = file_repo
         self._session_repo = session_repo
-        self._storage = file_store
-        self._media_storage = media_store
+        self._storage = storage
 
-    def _get_storage_for_path(self, storage_path: str) -> BaseStorage:
-        """Get the appropriate storage client for a given path."""
-        if self._media_storage and storage_path.startswith("sessions/"):
-            return self._media_storage
-        return self._storage
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
 
-    def _get_file_url(self, storage_path: str | None) -> str | None:
-        """Get file URL from storage_path."""
+    @staticmethod
+    def _is_signed_url_valid(asset: FileAsset) -> bool:
+        """Check if the cached signed URL is still usable."""
+        if not asset.signed_url or not asset.signed_url_expires_at:
+            return False
+        now = datetime.now(timezone.utc)
+        expires = asset.signed_url_expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        return (expires - now).total_seconds() > SIGNED_URL_BUFFER_SECONDS
+
+    async def _get_file_url(
+        self,
+        asset: FileAsset,
+        db: AsyncSession | None = None,
+    ) -> str | None:
+        """Return a usable URL for the asset, using the cached signed URL when valid."""
+        storage_path = asset.storage_path
         if not storage_path:
             return None
-        if storage_path.startswith("http://") or storage_path.startswith("https://"):
+        if storage_path.startswith(("http://", "https://")):
             return storage_path
-        storage_client = self._get_storage_for_path(storage_path)
-        return storage_client.get_download_signed_url(storage_path)
 
-    def _to_file_data(self, file: FileUpload) -> FileDataResponse:
-        """Convert a FileUpload model to FileDataResponse."""
+        # Use cached signed URL if still valid
+        if self._is_signed_url_valid(asset):
+            return asset.signed_url
+
+        # Generate a fresh signed URL using configured TTL
+        ttl_seconds = self._config.storage.signed_url_ttl_seconds
+        signed_url = await self._storage.signed_url(storage_path, expiry_seconds=ttl_seconds)
+        if signed_url and db is not None:
+            asset.signed_url = signed_url
+            asset.signed_url_expires_at = datetime.now(timezone.utc) + timedelta(
+                seconds=ttl_seconds
+            )
+            await db.flush()
+        return signed_url
+
+    async def _to_file_data(
+        self, asset: FileAsset, db: AsyncSession | None = None
+    ) -> FileDataResponse:
+        """Convert a FileAsset model to FileDataResponse."""
         return FileDataResponse(
-            id=file.id,
-            name=file.file_name,
-            size=file.file_size,
-            content_type=file.content_type,
-            storage_path=file.storage_path,
-            url=self._get_file_url(file.storage_path),
+            id=asset.id,
+            name=asset.file_name,
+            size=asset.file_size,
+            content_type=asset.content_type,
+            storage_path=asset.storage_path,
+            url=await self._get_file_url(asset, db),
+            asset_type=asset.asset_type,
+            source=asset.source,
+            upload_status=asset.upload_status,
+            is_public=asset.is_public,
+            sandbox_path=asset.sandbox_path,
+            created_at=asset.created_at,
         )
+
+    @staticmethod
+    def _detect_asset_type(content_type: str | None) -> str:
+        """Infer AssetType from a MIME content type."""
+        if not content_type:
+            return AssetType.OTHER
+        if content_type.startswith("image/"):
+            return AssetType.IMAGE
+        if content_type.startswith("video/"):
+            return AssetType.VIDEO
+        if content_type.startswith("audio/"):
+            return AssetType.AUDIO
+        if content_type.startswith("text/"):
+            return AssetType.DOCUMENT
+        if content_type in (
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ):
+            return AssetType.DOCUMENT
+        return AssetType.OTHER
 
     # ==================== File CRUD ====================
 
-    async def get_file_by_id(self, db: AsyncSession, file_id: str) -> FileDataResponse:
+    async def get_file_by_id(self, db: AsyncSession, file_id: uuid.UUID) -> FileDataResponse:
         """Get file by ID and return FileDataResponse."""
-        file = await self._file_repo.get_by_id(db, file_id)
-        if not file:
+        asset = await self._file_repo.get_by_id(db, file_id)
+        if not asset:
             raise FileUploadNotFoundError(file_id)
-        return self._to_file_data(file)
+        return await self._to_file_data(asset, db)
 
     async def get_files_by_session_id(
-        self, db: AsyncSession, session_id: str
-    ) -> List[FileDataResponse]:
-        """Get all files for a session and return FileDataResponse list."""
-        files = await self._file_repo.get_by_session_id(db, session_id)
-        return [self._to_file_data(file) for file in files]
+        self, db: AsyncSession, session_id: uuid.UUID
+    ) -> list[FileDataResponse]:
+        """Get all files linked to a session."""
+        assets = await self._file_repo.get_by_session_id(db, session_id)
+        return [await self._to_file_data(a, db) for a in assets]
 
-    async def update_file_session_id(self, db: AsyncSession, file_id: str, session_id: str) -> bool:
-        """Update file session ID."""
-        return await self._file_repo.update_session_id(db, file_id, session_id)
+    async def link_file_to_session(self, db: AsyncSession, file_id: uuid.UUID, session_id: uuid.UUID) -> bool:
+        """Link a file to a session via SessionAsset."""
+        asset = await self._file_repo.get_by_id(db, file_id)
+        if not asset:
+            return False
+        await self._file_repo.link_to_session(db, file_id, session_id)
+        return True
 
     async def create_file_record(
         self,
         db: AsyncSession,
         *,
-        file_id: str,
+        file_id: uuid.UUID,
         file_name: str,
         file_size: int,
         storage_path: str,
         content_type: str,
-        session_id: str,
-    ) -> FileUpload:
-        """Create a file upload record, resolving user_id from session_id.
+        session_id: uuid.UUID,
+    ) -> FileAsset:
+        """Create a file record, resolving user_id from session_id.
 
         Convenience method for callers that don't have user_id available.
+        Also links the file to the session via SessionAsset.
         """
         session = await self._session_repo.get_by_id(db, session_id)
         if not session:
             raise SessionNotFoundError(f"Session {session_id} not found")
 
-        return await self._file_repo.create(
+        asset = await self._file_repo.create_asset(
             db,
             file_id=file_id,
             user_id=session.user_id,
             file_name=file_name,
-            file_size=file_size,
             storage_path=storage_path,
             content_type=content_type,
-            session_id=session_id,
+            file_size=file_size,
+            asset_type=self._detect_asset_type(content_type),
+            source=AssetSource.GENERATED,
+            upload_status=UploadStatus.COMPLETE,
         )
+        await self._file_repo.link_to_session(db, file_id, session_id)
+        return asset
 
     async def write_file_from_url(
         self,
@@ -140,37 +208,35 @@ class FileService:
         file_name: str,
         file_size: int,
         content_type: str,
-        session_id: str,
-        user_id: Optional[str] = None,
+        session_id: uuid.UUID,
+        user_id: Optional[uuid.UUID] = None,
     ) -> FileDataResponse:
-        """Write file from URL to storage and create database record.
-
-        If user_id is not provided, it is resolved from session_id.
-        """
+        """Write file from URL to storage and create database record."""
         if not user_id:
             session = await self._session_repo.get_by_id(db, session_id)
             if not session:
                 raise SessionNotFoundError(f"Session {session_id} not found")
             user_id = session.user_id
 
-        file_id = str(uuid.uuid4())
-        storage_path = get_session_file_path(session_id, file_id, file_name)
+        file_id = uuid.uuid4()
+        ext = os.path.splitext(file_name)[1].lstrip(".") or "bin"
+        storage_path = path_resolver.user_file(str(user_id), str(file_id), ext)
 
-        file = await self._file_repo.create(
+        asset = await self._file_repo.create_asset(
             db,
             file_id=file_id,
             user_id=user_id,
             file_name=file_name,
-            file_size=file_size,
             storage_path=storage_path,
             content_type=content_type,
-            session_id=session_id,
+            file_size=file_size,
+            asset_type=self._detect_asset_type(content_type),
+            source=AssetSource.GENERATED,
         )
+        await self._file_repo.link_to_session(db, file_id, session_id)
+        await self._storage.write_from_url(url, storage_path, content_type)
 
-        storage_client = self._get_storage_for_path(storage_path)
-        storage_client.write_from_url(url, storage_path, content_type)
-
-        return self._to_file_data(file)
+        return await self._to_file_data(asset, db)
 
     # ==================== Agent File Helpers ====================
 
@@ -178,68 +244,50 @@ class FileService:
         self,
         db: AsyncSession,
         *,
-        file_ids: List[str],
-        user_id: str,
-        session_id: str,
+        file_ids: list[uuid.UUID],
+        user_id: uuid.UUID,
+        session_id: uuid.UUID,
         expiration_seconds: int = SEVEN_DAY_SECONDS,
-    ) -> List[FileDataResponse]:
-        """Fetch files by IDs, link them to the session, and return with signed URLs.
-
-        For each file ID:
-        1. Look up the file record.
-        2. Update its ``session_id`` if not already set.
-        3. Generate a signed download URL.
-
-        Returns a list of :class:`FileDataResponse` objects.
-        """
-        results: List[FileDataResponse] = []
+    ) -> list[FileDataResponse]:
+        """Fetch files by IDs, link them to the session, and return with signed URLs."""
+        results: list[FileDataResponse] = []
         for file_id in file_ids:
-            file_record = await self._file_repo.get_by_id(db, file_id)
-            if not file_record:
+            asset = await self._file_repo.get_by_id(db, file_id)
+            if not asset:
                 continue
-            # Link file to session if not already linked
-            if not file_record.session_id or file_record.session_id != session_id:
-                await self._file_repo.update_session_id(db, file_id, session_id)
-            results.append(self._to_file_data(file_record))
+            await self._file_repo.link_to_session(db, file_id, session_id)
+            results.append(await self._to_file_data(asset, db))
         return results
 
     async def prepare_agent_files(
         self,
         db: AsyncSession,
         *,
-        file_ids: List[str],
-        user_id: str,
-        session_id: str,
-    ) -> tuple[list[dict], list[dict]]:
+        file_ids: list[uuid.UUID],
+        user_id: uuid.UUID,
+        session_id: uuid.UUID,
+    ) -> tuple[list[MediaImage], list[MediaFile]]:
         """Fetch files by IDs and separate into images and generic files.
 
-        Returns ``(image_dicts, file_dicts)`` where each dict contains keys
-        that the handler can use to construct v1 ``Image`` / ``UrlFile`` objects
-        without the file service depending on v1 types.
-
-        Image dicts:  ``{"url": str, "mime_type": str}``
-        File dicts:   ``{"id": str, "url": str, "filename": str}``
+        Returns ``(images, files)`` with typed media objects.
         """
         files_data = await self.get_files_by_ids_and_update_session(
-            db,
-            file_ids=file_ids,
-            user_id=user_id,
-            session_id=session_id,
+            db, file_ids=file_ids, user_id=user_id, session_id=session_id
         )
 
-        images: list[dict] = []
-        files: list[dict] = []
+        images: list[MediaImage] = []
+        files: list[MediaFile] = []
 
         for file_data in files_data:
             if not file_data.url:
                 continue
 
             files.append(
-                {
-                    "id": file_data.id,
-                    "url": file_data.url,
-                    "filename": file_data.name,
-                }
+                MediaFile(
+                    id=str(file_data.id),
+                    url=file_data.url,
+                    filename=file_data.name,
+                )
             )
 
             # Detect images by content_type or file extension fallback
@@ -254,12 +302,7 @@ class FileService:
                         mime_type = f"image/{ext}" if ext not in ("jpg",) else "image/jpeg"
 
             if is_image:
-                images.append(
-                    {
-                        "url": file_data.url,
-                        "mime_type": mime_type,
-                    }
-                )
+                images.append(MediaImage(url=file_data.url, mime_type=mime_type))
 
         return images, files
 
@@ -269,155 +312,153 @@ class FileService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         file_name: str,
         content_type: str,
         file_size: int,
-        upload_storage: BaseStorage,
-        max_file_size: int,
     ) -> GenerateUploadUrlResponse:
-        """Generate a signed URL for uploading a file."""
+        """Generate a signed URL for uploading a file.
+
+        Creates a PENDING asset record so the upload can be tracked.
+        """
+        max_file_size = self._config.storage.file_upload_size_limit
         if file_size > max_file_size:
             raise FileSizeLimitExceededError(file_size, max_file_size)
 
-        file_id = str(uuid.uuid4())
-        blob_name = f"users/{user_id}/uploads/{file_id}-{file_name}"
-        signed_url = upload_storage.get_upload_signed_url(blob_name, content_type)
+        file_id = uuid.uuid4()
+        ext = os.path.splitext(file_name)[1].lstrip(".") or "bin"
+        blob_name = path_resolver.user_upload(str(user_id), str(file_id), ext)
+        signed_url = await self._storage.signed_upload_url(blob_name, content_type)
 
-        return GenerateUploadUrlResponse(id=file_id, upload_url=signed_url)
+        await self._file_repo.create_asset(
+            db,
+            file_id=file_id,
+            user_id=user_id,
+            file_name=file_name,
+            storage_path=blob_name,
+            content_type=content_type,
+            file_size=file_size,
+            asset_type=self._detect_asset_type(content_type),
+            source=AssetSource.USER_UPLOAD,
+            upload_status=UploadStatus.PENDING,
+        )
+
+        return GenerateUploadUrlResponse(id=str(file_id), upload_url=signed_url)
 
     async def complete_upload(
         self,
         db: AsyncSession,
         *,
-        user_id: str,
-        file_id: str,
+        user_id: uuid.UUID,
+        file_id: uuid.UUID,
         file_name: str,
         file_size: int,
         content_type: str,
-        session_id: Optional[str],
-        upload_storage: BaseStorage,
+        session_id: Optional[uuid.UUID],
     ) -> UploadCompleteResponse:
-        """Complete file upload: verify in storage, create DB record, return download URL."""
-        blob_name = f"users/{user_id}/uploads/{file_id}-{file_name}"
+        """Complete file upload: verify in storage, mark COMPLETE, return URL."""
+        asset = await self._file_repo.get_by_id_and_user(db, file_id, user_id)
 
-        if not upload_storage.is_exists(blob_name):
+        if not asset:
             raise FileUploadNotFoundError(file_id)
 
-        # Normalize content_type for HEIC/HEIF files.  Browsers often report
-        # an empty MIME type (sent as "application/octet-stream" by the frontend)
-        # for HEIC uploads, so we fix it based on the file extension.
-        if content_type in ("application/octet-stream", "", None) and file_name:
-            ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
-            if ext in ("heic", "heif"):
-                content_type = f"image/{ext}"
+        # Verify file exists in storage
+        if not await self._storage.exists(asset.storage_path):
+            await self._file_repo.mark_failed(db, file_id)
+            raise FileUploadNotFoundError(file_id)
 
-        await self._file_repo.create(
-            db,
-            file_id=file_id,
-            user_id=user_id,
-            file_name=file_name,
-            file_size=file_size,
-            storage_path=blob_name,
-            content_type=content_type,
-            session_id=session_id,
-        )
+        # Mark complete and update metadata
+        await self._file_repo.mark_complete(db, file_id)
 
-        signed_url = upload_storage.get_download_signed_url(blob_name)
+        # Link to session if provided
+        if session_id:
+            await self._file_repo.link_to_session(db, file_id, session_id)
+
+        signed_url = await self._storage.signed_url(asset.storage_path)
         return UploadCompleteResponse(file_url=signed_url)
 
     async def get_file_stream(
-        self, db: AsyncSession, file_id: str, *, user_id: str
+        self, db: AsyncSession, file_id: uuid.UUID, *, user_id: uuid.UUID
     ) -> StreamingResponse:
         """Get a streaming response for file download, validating user ownership."""
-        file_upload = await self._file_repo.get_by_id_and_user(db, file_id, user_id)
-        if not file_upload:
+        asset = await self._file_repo.get_by_id_and_user(db, file_id, user_id)
+        if not asset:
             raise FileAccessDeniedError(file_id)
-        return await self._create_file_stream_response(file_upload)
+        return await self._create_file_stream_response(asset)
 
     async def get_public_file_stream(
-        self, db: AsyncSession, session_id: str, file_id: str
+        self, db: AsyncSession, session_id: uuid.UUID, file_id: uuid.UUID
     ) -> StreamingResponse:
         """Get a streaming response for a public session file download."""
-        file_upload = await self._file_repo.get_by_session_and_id(db, session_id, file_id)
-        if not file_upload:
+        asset = await self._file_repo.get_by_session_and_id(db, session_id, file_id)
+        if not asset:
             raise FileUploadNotFoundError(file_id)
-        return await self._create_file_stream_response(file_upload)
+        return await self._create_file_stream_response(asset)
 
-    async def _create_file_stream_response(self, file_upload: FileUpload) -> StreamingResponse:
-        """Create a streaming response for file download.
-
-        HEIC/HEIF files are converted to JPEG on-the-fly because browsers
-        (Chrome, Firefox) cannot render HEIC in ``<img>`` tags.
-        """
-        storage_client = self._get_storage_for_path(file_upload.storage_path)
-
-        # Detect HEIC by content_type or file extension
-        content_type = file_upload.content_type or "application/octet-stream"
+    async def _create_file_stream_response(self, asset: FileAsset) -> StreamingResponse:
+        """Create a streaming response for file download."""
+        # Detect HEIC by content_type or file extension before reading
+        content_type = asset.content_type or "application/octet-stream"
         is_heic = content_type in ("image/heic", "image/heif")
-        if not is_heic and file_upload.file_name:
-            ext = file_upload.file_name.rsplit(".", 1)[-1].lower() if "." in file_upload.file_name else ""
+        if not is_heic and asset.file_name:
+            ext = asset.file_name.rsplit(".", 1)[-1].lower() if "." in asset.file_name else ""
             is_heic = ext in ("heic", "heif")
 
         if is_heic:
-            return await self._create_heic_converted_response(file_upload, storage_client)
+            return await self._create_heic_converted_response(asset)
+
+        file_obj = await self._storage.read(asset.storage_path)
 
         async def file_stream() -> AsyncIterator[bytes]:
-            file_obj = await anyio.to_thread.run_sync(storage_client.read, file_upload.storage_path)
             try:
                 chunk_size = 64 * 1024
                 while True:
-                    chunk = await anyio.to_thread.run_sync(file_obj.read, chunk_size)
+                    chunk = file_obj.read(chunk_size)
                     if not chunk:
                         break
                     yield chunk
             finally:
-                await anyio.to_thread.run_sync(file_obj.close)
+                file_obj.close()
 
         return StreamingResponse(
             file_stream(),
             media_type=content_type,
             headers={
-                "Content-Disposition": f'attachment; filename="{file_upload.file_name}"',
-                "Content-Length": str(file_upload.file_size),
+                "Content-Disposition": f'attachment; filename="{asset.file_name}"',
+                "Content-Length": str(asset.file_size or 0),
             },
         )
 
-    async def _create_heic_converted_response(
-        self, file_upload: FileUpload, storage_client: BaseStorage
-    ) -> Response:
+    async def _create_heic_converted_response(self, asset: FileAsset) -> StreamingResponse:
         """Read a HEIC file, convert to JPEG, and return as a response."""
-        from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+        import anyio
+        from ii_agent.agents.utils.heic import convert_heic_to_jpeg
         from ii_agent.core.logger import logger
         from fastapi.responses import Response
 
         # Read the entire file (required for HEIC conversion)
-        file_obj = await anyio.to_thread.run_sync(storage_client.read, file_upload.storage_path)
+        file_obj = await self._storage.read(asset.storage_path)
         try:
-            heic_bytes = await anyio.to_thread.run_sync(file_obj.read)
+            heic_bytes = file_obj.read()
         finally:
-            await anyio.to_thread.run_sync(file_obj.close)
+            file_obj.close()
 
         try:
-            jpeg_bytes, _ = await anyio.to_thread.run_sync(
-                convert_heic_to_jpeg, heic_bytes
-            )
+            jpeg_bytes, _ = await anyio.to_thread.run_sync(convert_heic_to_jpeg, heic_bytes)
         except Exception:
             logger.warning(
-                f"HEIC conversion failed for {file_upload.file_name}, "
+                f"HEIC conversion failed for {asset.file_name}, "
                 "serving original with image/heic content-type"
             )
-            # Return raw HEIC bytes with the correct content-type so the
-            # browser doesn't get a corrupt "image/jpeg" response.
             return Response(
                 content=heic_bytes,
                 media_type="image/heic",
                 headers={
-                    "Content-Disposition": f'attachment; filename="{file_upload.file_name}"',
+                    "Content-Disposition": f'attachment; filename="{asset.file_name}"',
                 },
             )
 
-        base_name = file_upload.file_name.rsplit(".", 1)[0] if "." in file_upload.file_name else file_upload.file_name
+        base_name = asset.file_name.rsplit(".", 1)[0] if "." in asset.file_name else asset.file_name
         jpeg_name = f"{base_name}.jpg"
 
         return Response(
@@ -434,38 +475,31 @@ class FileService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
-        storage_paths: List[str],
-        config_media_bucket: str | None = None,
-        config_upload_bucket: str | None = None,
+        user_id: uuid.UUID,
+        storage_paths: list[str],
     ) -> GenerateDownloadUrlsResponse:
         """Generate signed download URLs for a list of storage paths owned by user."""
         normalized_paths = [path.lstrip("/") for path in storage_paths]
 
-        file_uploads = await self._file_repo.get_by_user_and_paths(db, user_id, normalized_paths)
-        file_map = {file.storage_path: file for file in file_uploads}
+        assets = await self._file_repo.get_by_user_and_paths(db, user_id, normalized_paths)
+        asset_map = {a.storage_path: a for a in assets}
 
-        files_to_sign: List[FileUpload] = []
-        index_map: List[int] = []
-        file_ids: List[str | None] = [None] * len(normalized_paths)
-        missing_paths: List[str] = []
+        files_to_sign: list[FileAsset] = []
+        index_map: list[int] = []
+        file_ids: list[uuid.UUID | None] = [None] * len(normalized_paths)
+        missing_paths: list[str] = []
 
         for idx, path in enumerate(normalized_paths):
-            file_upload = file_map.get(path)
-            if file_upload:
-                files_to_sign.append(file_upload)
+            asset = asset_map.get(path)
+            if asset:
+                files_to_sign.append(asset)
                 index_map.append(idx)
-                file_ids[idx] = file_upload.id
+                file_ids[idx] = asset.id
             else:
                 missing_paths.append(path)
 
-        signed_subset = await self._get_download_signed_urls_batch(
-            files_to_sign,
-            force_signed=True,
-            media_bucket_name=config_media_bucket,
-            upload_bucket_name=config_upload_bucket,
-        )
-        signed_urls: List[str | None] = [None] * len(normalized_paths)
+        signed_subset = await self._get_download_signed_urls_batch(files_to_sign, force_signed=True)
+        signed_urls: list[str | None] = [None] * len(normalized_paths)
 
         for idx, url in zip(index_map, signed_subset):
             signed_urls[idx] = url
@@ -482,7 +516,7 @@ class FileService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         limit: int,
         offset: int,
         config_media_bucket: str | None = None,
@@ -490,29 +524,21 @@ class FileService:
     ) -> MediaLibraryResponse:
         """Return all image uploads for a user across all sessions."""
         total = await self._file_repo.count_user_images(db, user_id)
-        file_uploads = await self._file_repo.get_user_images(
-            db, user_id, limit=limit, offset=offset
-        )
+        assets = await self._file_repo.get_user_images(db, user_id, limit=limit, offset=offset)
 
-        signed_urls = await self._get_download_signed_urls_batch(
-            file_uploads,
-            media_bucket_name=config_media_bucket,
-            upload_bucket_name=config_upload_bucket,
-        )
+        signed_urls = await self._get_download_signed_urls_batch(assets)
 
-        items: List[MediaLibraryItem] = []
-        for file_upload, signed_url in zip(file_uploads, signed_urls):
+        items: list[MediaLibraryItem] = []
+        for asset, signed_url in zip(assets, signed_urls):
             if not signed_url:
                 continue
             items.append(
                 MediaLibraryItem(
-                    id=file_upload.id,
-                    name=file_upload.file_name,
+                    id=asset.id,
+                    name=asset.file_name,
                     url=signed_url,
-                    source="generated"
-                    if file_upload.storage_path and "generated" in file_upload.storage_path
-                    else "upload",
-                    created_at=file_upload.created_at,
+                    source="generated" if asset.source == AssetSource.GENERATED else "upload",
+                    created_at=asset.created_at,
                 )
             )
 
@@ -521,7 +547,7 @@ class FileService:
             total=total,
             limit=limit,
             offset=offset,
-            has_more=offset + len(file_uploads) < total,
+            has_more=offset + len(assets) < total,
         )
 
     # ==================== Avatar ====================
@@ -530,106 +556,114 @@ class FileService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         file_content,
         file_extension: str,
-        avatar_storage: BaseStorage,
     ) -> str:
         """Upload or update an avatar image. Returns public URL."""
-        destination_blob_name = f"users/{user_id}/profile/avatar.{file_extension}"
-        avatar_storage.write(content=file_content, path=destination_blob_name)
-        return avatar_storage.get_public_url(destination_blob_name)
+        destination_blob_name = path_resolver.public_avatar(str(user_id), file_extension)
+        await self._storage.write(path=destination_blob_name, content=file_content)
+        return self._storage.public_url(destination_blob_name)
 
-    def get_avatar_url(
-        self,
-        avatar_blob_name: str,
-        avatar_storage: BaseStorage,
-    ) -> str:
+    def get_avatar_url(self, avatar_blob_name: str) -> str:
         """Get the public URL for an avatar."""
-        return avatar_storage.get_public_url(avatar_blob_name)
+        return self._storage.public_url(avatar_blob_name)
+
+    # ==================== Publish ====================
+
+    async def publish(
+        self,
+        db: AsyncSession,
+        *,
+        file_id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> PublishResponse:
+        """Move an asset from private to public storage path."""
+        asset = await self._file_repo.get_by_id_and_user(db, file_id, user_id)
+        if not asset:
+            raise FileUploadNotFoundError(file_id)
+
+        ext = os.path.splitext(asset.file_name)[1].lstrip(".") or "bin"
+        public_path = path_resolver.public_shared(str(asset.id), ext)
+        await self._storage.copy(asset.storage_path, public_path)
+        public_url = self._storage.public_url(public_path)
+
+        asset.is_public = True
+        asset.storage_path = public_path
+        await db.flush()
+        return PublishResponse(public_url=public_url)
+
+    # ==================== GDPR Delete ====================
+
+    async def delete_asset(self, db: AsyncSession, file_id: uuid.UUID) -> None:
+        """Remove a file from storage and the database."""
+        asset = await self._file_repo.get_by_id(db, file_id)
+        if asset:
+            await self._storage.delete(asset.storage_path)
+            await self._file_repo.delete_asset(db, file_id)
+
+    async def delete_user_data(self, db: AsyncSession, user_id: uuid.UUID) -> None:
+        """GDPR: delete all files for a user from storage and the DB."""
+        from sqlalchemy import select
+
+        result = await db.execute(select(FileAsset).where(FileAsset.user_id == user_id))
+        assets = list(result.scalars().all())
+        for asset in assets:
+            await self._storage.delete(asset.storage_path)
+        await self._file_repo.delete_user_assets(db, user_id)
 
     # ==================== Internal Helpers ====================
 
     async def _get_download_signed_urls_batch(
         self,
-        file_uploads: List[FileUpload],
+        assets: list[FileAsset],
         *,
         force_signed: bool = False,
-        media_bucket_name: str | None = None,
-        upload_bucket_name: str | None = None,
-    ) -> List[str | None]:
+    ) -> list[str | None]:
         """Fetch usable URLs efficiently using batch operations."""
-        if not file_uploads:
+        if not assets:
             return []
 
-        results: List[str | None] = [None] * len(file_uploads)
-        media_storage_indices: List[tuple[int, str]] = []
-        file_storage_indices: List[tuple[int, str]] = []
+        results: list[str | None] = [None] * len(assets)
+        paths_to_sign: list[tuple[int, str]] = []
 
-        for idx, file_upload in enumerate(file_uploads):
-            storage_path = file_upload.storage_path
+        for idx, asset in enumerate(assets):
+            storage_path = asset.storage_path
             if not storage_path:
                 results[idx] = None
-            elif storage_path.startswith("http://") or storage_path.startswith("https://"):
+            elif storage_path.startswith(("http://", "https://")):
                 results[idx] = storage_path
             else:
-                if storage_path.startswith("sessions/"):
-                    media_storage_indices.append((idx, storage_path))
-                else:
-                    file_storage_indices.append((idx, storage_path))
+                paths_to_sign.append((idx, storage_path))
 
-        async def process_storage_batch(
-            storage_client: BaseStorage,
-            indices: List[tuple[int, str]],
-            bucket_name: str | None,
-        ) -> None:
-            if not indices:
-                return
+        if not paths_to_sign:
+            return results
 
-            paths = [path for _, path in indices]
+        paths = [path for _, path in paths_to_sign]
 
-            try:
-                loop = asyncio.get_event_loop()
-                signed_urls = await loop.run_in_executor(
-                    None, storage_client.get_download_signed_urls_batch, paths
-                )
+        try:
+            signed_urls = await self._storage.signed_urls_batch(paths)
 
-                for (idx, storage_path), signed_url in zip(indices, signed_urls):
-                    if signed_url:
-                        results[idx] = signed_url
-                    elif not force_signed:
-                        try:
-                            results[idx] = storage_client.get_permanent_url(storage_path)
-                        except Exception:
-                            if bucket_name:
-                                results[idx] = (
-                                    f"https://storage.googleapis.com/{bucket_name}/{storage_path}"
-                                )
-                            else:
-                                results[idx] = None
-
-            except Exception:
-                for idx, path in indices:
+            for (idx, storage_path), signed_url in zip(paths_to_sign, signed_urls):
+                if signed_url:
+                    results[idx] = signed_url
+                elif not force_signed:
                     try:
-                        results[idx] = storage_client.get_download_signed_url(path)
+                        results[idx] = self._storage.public_url(storage_path)
                     except Exception:
-                        if not force_signed:
-                            try:
-                                results[idx] = storage_client.get_permanent_url(path)
-                            except Exception:
-                                if bucket_name:
-                                    results[idx] = (
-                                        f"https://storage.googleapis.com/{bucket_name}/{path}"
-                                    )
-                                else:
-                                    results[idx] = None
-                        else:
-                            results[idx] = None
+                        results[idx] = None
 
-        media_client = self._media_storage or self._storage
-        await asyncio.gather(
-            process_storage_batch(media_client, media_storage_indices, media_bucket_name),
-            process_storage_batch(self._storage, file_storage_indices, upload_bucket_name),
-        )
+        except Exception:
+            for idx, path in paths_to_sign:
+                try:
+                    results[idx] = await self._storage.signed_url(path)
+                except Exception:
+                    if not force_signed:
+                        try:
+                            results[idx] = self._storage.public_url(path)
+                        except Exception:
+                            results[idx] = None
+                    else:
+                        results[idx] = None
 
         return results

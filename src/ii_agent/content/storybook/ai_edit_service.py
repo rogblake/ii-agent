@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from decimal import Decimal
 import logging
 import re
 import uuid
@@ -12,28 +11,25 @@ from typing import Any, Dict, Optional
 from bs4 import BeautifulSoup
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.auth.users.service import UserService
+from ii_agent.users.service import UserService
+from ii_agent.credits.service import CreditService
 from ii_agent.billing.exceptions import InsufficientCreditsError
-from ii_agent.billing.types import BillingContextValue, BillingResult, BillingScope
-from ii_agent.billing.reservations.service import CreditReservationService
-from ii_agent.billing.reservations.types import SourceDomain
-from ii_agent.billing.usage.service import UsageService
+from ii_agent.billing.types import BillingScope
 from ii_agent.chat.llm.factory import get_client
 from ii_agent.chat.types import ImageURLContent, MessageRole, TextContent
 from ii_agent.content.media.service import _generate_image
 from ii_agent.content.storybook.billing import (
     DEFAULT_STORYBOOK_IMAGE_RESERVE_USD,
-    build_storybook_request,
     build_storybook_scope,
-    run_storybook_sync_operation,
+    check_and_deduct_storybook_credits,
 )
 from ii_agent.content.storybook.schemas import StorybookDetail
 from ii_agent.core.config.settings import Settings
 from ii_agent.core.exceptions import ValidationError
-from ii_agent.core.llm.execution_service import LLMBillingContext, LLMExecutionService
+from ii_agent.chat.llm.utils import make_message, extract_text_content
 from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.sessions.service import SessionService
-from ii_agent.settings.llm.service import LLMSettingService, get_system_llm_config
+from ii_agent.settings.llm.service import ModelSettingService
 
 logger = logging.getLogger(__name__)
 
@@ -346,18 +342,14 @@ class StorybookAIEditService:
         *,
         session_service: SessionService,
         user_service: UserService,
-        usage_service: UsageService,
-        llm_setting_service: LLMSettingService,
-        llm_execution: LLMExecutionService,
-        reservation_service: CreditReservationService,
+        llm_setting_service: ModelSettingService,
+        credit_service: CreditService,
         config: Settings,
     ) -> None:
         self._session_service = session_service
         self._user_service = user_service
-        self._usage_service = usage_service
         self._llm_setting_service = llm_setting_service
-        self._llm_execution = llm_execution
-        self._reservation_service = reservation_service
+        self._credit_service = credit_service
         self._config = config
 
     async def rewrite_content(
@@ -391,12 +383,12 @@ class StorybookAIEditService:
             )
 
         messages = [
-            self._llm_execution.new_message(
+            make_message(
                 role=MessageRole.SYSTEM,
                 session_id=storybook.session_id,
                 parts=[TextContent(text=AI_REWRITE_SYSTEM_PROMPT)],
             ),
-            self._llm_execution.new_message(
+            make_message(
                 role=MessageRole.USER,
                 session_id=storybook.session_id,
                 parts=[
@@ -406,28 +398,8 @@ class StorybookAIEditService:
             ),
         ]
 
-        result = await self._llm_execution.send_once(
-            client=client,
-            messages=messages,
-            billing_context=LLMBillingContext(
-                scope=BillingScope.for_session(
-                    user_id=user_id,
-                    app_kind="chat",
-                    session_id=storybook.session_id,
-                    billing_context=BillingContextValue.STORYBOOK,
-                ),
-                llm_config=llm_config,
-                model_id=model_id,
-            ),
-            usage_key=f"storybook_ai_rewrite:{storybook.id}:{get_or_generate_request_id()}",
-        )
-        texts = []
-        for part in result.content:
-            if isinstance(part, TextContent):
-                texts.append(part.text)
-            elif isinstance(part, str):
-                texts.append(part)
-        rewritten_text = "".join(texts).strip()
+        result = await client.send(messages)
+        rewritten_text = extract_text_content(result.content).strip()
         if not rewritten_text:
             raise ValidationError("AI did not return any rewritten content")
         return rewritten_text
@@ -446,7 +418,8 @@ class StorybookAIEditService:
         if not prompt or not prompt.strip():
             raise ValidationError("No prompt provided for image generation")
 
-        await self._usage_service.require_billing_ok(db, user_id)
+        if not await self._credit_service.has_sufficient_credits(db, user_id):
+            raise InsufficientCreditsError(available_credits=0.0, required_credits=0.0)
 
         user_api_key = await self._user_service.get_active_api_key(db, user_id)
         if not user_api_key:
@@ -490,7 +463,8 @@ class StorybookAIEditService:
         if not prompt or not prompt.strip():
             raise ValidationError("No prompt provided for image regeneration")
 
-        await self._usage_service.require_billing_ok(db, user_id)
+        if not await self._credit_service.has_sufficient_credits(db, user_id):
+            raise InsufficientCreditsError(available_credits=0.0, required_credits=0.0)
 
         page = _extract_page(storybook, page_number)
         if not page:
@@ -637,34 +611,35 @@ class StorybookAIEditService:
         session_id: str,
     ):
         """Resolve the session LLM config with default fallback."""
-        fallback = get_system_llm_config(model_id="default", config=self._config)
+
+        async def _get_default() -> LLMConfig:
+            return await self._llm_setting_service.resolve_system_config(db, setting_id="default")
 
         try:
             session_uuid = uuid.UUID(session_id)
             session = await self._session_service.get_session_by_id(db, session_uuid)
         except Exception:
-            return fallback.model_copy(deep=True), "default"
+            return (await _get_default()).model_copy(deep=True), "default"
 
-        setting_id = str(getattr(session, "llm_setting_id", "") or "").strip()
+        setting_id = str(getattr(session, "model_setting_id", "") or "").strip()
         if not setting_id:
-            return fallback.model_copy(deep=True), "default"
+            return (await _get_default()).model_copy(deep=True), "default"
 
         try:
             llm_config = await self._llm_setting_service.get_user_llm_config(
                 db,
-                model_id=setting_id,
+                setting_id=setting_id,
                 user_id=user_id,
             )
             return llm_config.model_copy(deep=True), setting_id
         except Exception:
             try:
-                llm_config = get_system_llm_config(
-                    model_id=setting_id,
-                    config=self._config,
+                llm_config = await self._llm_setting_service.resolve_system_config(
+                    db, setting_id=setting_id
                 )
                 return llm_config.model_copy(deep=True), setting_id
             except Exception:
-                return fallback.model_copy(deep=True), "default"
+                return (await _get_default()).model_copy(deep=True), "default"
 
     async def _run_billed_image_operation(
         self,
@@ -677,53 +652,41 @@ class StorybookAIEditService:
         context: str,
         execute_fn,
     ) -> str:
-        """Reserve, execute, then settle one storybook image generation call."""
+        """Check credits, execute image generation, then deduct actual cost."""
         scope = build_storybook_scope(
             user_id=user_id,
             session_id=storybook.session_id,
         )
-        request = build_storybook_request(
-            scope=scope,
-            namespace="storybook_image",
-            operation_id=operation_id,
-            source_domain=SourceDomain.IMAGE_GENERATION,
-            tool_name=tool_name,
-            reserve_usd=DEFAULT_STORYBOOK_IMAGE_RESERVE_USD,
-            metadata={
-                "storybook_id": storybook.id,
-                "context": context,
-            },
-        )
 
-        async def _execute() -> BillingResult[str]:
-            response = await execute_fn()
-            image_url = response.get("url")
-            if not image_url:
-                raise RuntimeError("Image generation did not return an image URL")
+        # 1. Check credits up-front
+        estimated_cost = float(DEFAULT_STORYBOOK_IMAGE_RESERVE_USD)
+        has_credits = await self._credit_service.has_sufficient_credits(db, user_id, estimated_cost)
+        if not has_credits:
+            logger.warning("[Storybook AI Edit] Insufficient credits for %s", context)
+            raise InsufficientCreditsError(
+                available_credits=0.0,
+                required_credits=estimated_cost,
+            )
 
-            actual_cost = response.get("cost") or DEFAULT_IMAGE_COST_USD
-            return BillingResult(
-                value=image_url,
-                actual_usd=Decimal(str(actual_cost)),
-                usage_payload={
-                    "provider": (storybook.style_json or {}).get("image_provider"),
-                    "latency_ms": None,
-                    "cost_usd": float(actual_cost),
-                    "tool_name": tool_name,
+        # 2. Execute the operation
+        response = await execute_fn()
+        image_url = response.get("url")
+        if not image_url:
+            raise RuntimeError("Image generation did not return an image URL")
+
+        # 3. Deduct actual cost
+        actual_cost = response.get("cost") or DEFAULT_IMAGE_COST_USD
+        if actual_cost > 0:
+            await check_and_deduct_storybook_credits(
+                db,
+                credit_service=self._credit_service,
+                scope=scope,
+                amount_usd=actual_cost,
+                tool_name=tool_name,
+                metadata={
                     "storybook_id": storybook.id,
                     "context": context,
                 },
             )
 
-        try:
-            return await run_storybook_sync_operation(
-                reservation_service=self._reservation_service,
-                scope=scope,
-                request=request,
-                execute_fn=_execute,
-                release_reason="storybook_image_failed",
-                settlement_error="storybook_image_settle_exception",
-            )
-        except InsufficientCreditsError:
-            logger.warning("[Storybook AI Edit] Insufficient credits for %s", context)
-            raise
+        return image_url

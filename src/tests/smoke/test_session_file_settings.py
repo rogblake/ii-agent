@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -8,7 +9,7 @@ from ii_agent.files.exceptions import FileSizeLimitExceededError
 from ii_agent.files.service import FileService
 from ii_agent.sessions.service import SessionService
 from ii_agent.settings.llm.schemas import ModelSettingCreate
-from ii_agent.settings.llm.service import LLMSettingService
+from ii_agent.settings.llm.service import ModelSettingService
 
 pytestmark = pytest.mark.smoke
 
@@ -55,11 +56,11 @@ class LLMRepo:
 
 
 @pytest.mark.asyncio
-async def test_session_and_file_sanity(settings_factory, in_memory_storage):
+async def test_session_and_file_sanity(settings_factory):
     session_service = SessionService(
         session_repo=SessionRepo(),
         event_repo=SimpleNamespace(),
-        agent_run_service=SimpleNamespace(),
+        run_task_service=SimpleNamespace(),
         file_store=SimpleNamespace(get_download_signed_url=lambda path: f"signed:{path}"),
         sandbox_repo=SimpleNamespace(),
         config=settings_factory(),
@@ -72,12 +73,16 @@ async def test_session_and_file_sanity(settings_factory, in_memory_storage):
         api_version="v1",
     )
 
+    storage_mock = MagicMock()
+    storage_mock.signed_upload_url = AsyncMock(
+        side_effect=lambda path, ct, **kw: f"upload://{path}"
+    )
+
     file_service = FileService(
         file_repo=FileRepo(),
         session_repo=SimpleNamespace(),
-        file_store=in_memory_storage,
-        media_store=None,
-        config=settings_factory(),
+        storage=storage_mock,
+        config=settings_factory(storage={"file_upload_size_limit": 10}),
     )
 
     upload = await file_service.generate_upload_url(
@@ -86,8 +91,6 @@ async def test_session_and_file_sanity(settings_factory, in_memory_storage):
         file_name="a.txt",
         content_type="text/plain",
         file_size=3,
-        upload_storage=in_memory_storage,
-        max_file_size=10,
     )
 
     assert upload.id
@@ -99,8 +102,6 @@ async def test_session_and_file_sanity(settings_factory, in_memory_storage):
             file_name="big.txt",
             content_type="text/plain",
             file_size=100,
-            upload_storage=in_memory_storage,
-            max_file_size=10,
         )
 
     assert str(session.id)
@@ -108,9 +109,11 @@ async def test_session_and_file_sanity(settings_factory, in_memory_storage):
 
 @pytest.mark.asyncio
 async def test_llm_setting_create_and_read_sanity(settings_factory, monkeypatch):
-    monkeypatch.setattr("ii_agent.settings.llm.service.encryption_manager.encrypt", lambda value: f"enc:{value}")
+    monkeypatch.setattr(
+        "ii_agent.settings.llm.service.encryption_manager.encrypt", lambda value: f"enc:{value}"
+    )
 
-    service = LLMSettingService(
+    service = ModelSettingService(
         repo=LLMRepo(),
         config=settings_factory(),
         session_repo=SimpleNamespace(get_by_id=lambda *args, **kwargs: None),
@@ -119,7 +122,7 @@ async def test_llm_setting_create_and_read_sanity(settings_factory, monkeypatch)
     created = await service.create_model_settings(
         db=None,
         user_id="u1",
-        setting_model_in=ModelSettingCreate(
+        model_setting_request=ModelSettingCreate(
             model="gpt-4o",
             api_type=APITypes.OPENAI,
             api_key="secret",

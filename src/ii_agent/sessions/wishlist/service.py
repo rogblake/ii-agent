@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import List
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,7 @@ from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.wishlist.models import SessionWishlist
 from ii_agent.sessions.wishlist.repository import WishlistRepository
+from ii_agent.sessions.wishlist.schemas import SessionWishlistItem
 
 logger = logging.getLogger(__name__)
 
@@ -31,22 +33,22 @@ class SessionWishlistService:
         self._wishlist_repo = wishlist_repo
         self._session_repo = session_repo
 
-    async def get_user_wishlist(self, db: AsyncSession, user_id: str) -> List[dict]:
+    async def get_user_wishlist(self, db: AsyncSession, user_id: uuid.UUID) -> List[SessionWishlistItem]:
         """Get all wishlist sessions for a user."""
         wishlists = await self._wishlist_repo.get_user_wishlists(db, user_id)
 
         return [
-            {
-                "id": w.id,
-                "session_id": w.session_id,
-                "session_name": w.session.name if w.session else None,
-                "created_at": w.created_at,
-                "last_message_at": w.session.last_message_at if w.session else None,
-            }
+            SessionWishlistItem(
+                id=w.id,
+                session_id=w.session_id,
+                session_name=w.session.name if w.session else None,
+                created_at=w.created_at,
+                last_message_at=w.session.last_message_at if w.session else None,
+            )
             for w in wishlists
         ]
 
-    async def add_to_wishlist(self, db: AsyncSession, user_id: str, session_id: str) -> bool:
+    async def add_to_wishlist(self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
         """Add a session to user's wishlist.
 
         Returns True if added successfully, False if already exists.
@@ -67,14 +69,14 @@ class SessionWishlistService:
         await self._wishlist_repo.create(db, wishlist_item)
         return True
 
-    async def remove_from_wishlist(self, db: AsyncSession, user_id: str, session_id: str) -> bool:
+    async def remove_from_wishlist(self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
         """Remove a session from user's wishlist.
 
         Returns True if removed, False if not found.
         """
         return await self._wishlist_repo.delete_by_user_and_session(db, user_id, session_id)
 
-    async def is_in_wishlist(self, db: AsyncSession, user_id: str, session_id: str) -> bool:
+    async def is_in_wishlist(self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
         """Check if a session is in user's wishlist."""
         item = await self._wishlist_repo.get_by_user_and_session(db, user_id, session_id)
         return item is not None

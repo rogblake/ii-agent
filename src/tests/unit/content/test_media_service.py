@@ -38,9 +38,13 @@ class FakeMediaTemplateRepo:
 
 
 @pytest.mark.asyncio
-async def test_list_media_templates_resolves_public_preview_urls(settings_factory, in_memory_storage):
+async def test_list_media_templates_resolves_public_preview_urls(
+    settings_factory, in_memory_storage
+):
     repo = FakeMediaTemplateRepo()
-    service = MediaTemplateService(repo=repo, media_storage=in_memory_storage, config=settings_factory())
+    service = MediaTemplateService(
+        repo=repo, media_storage=in_memory_storage, config=settings_factory()
+    )
 
     result = await service.list_media_templates(db=None)
 
@@ -60,7 +64,9 @@ async def test_get_media_tool_filters_non_mini_tools(settings_factory, in_memory
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
-    service = MediaTemplateService(repo=repo, media_storage=in_memory_storage, config=settings_factory())
+    service = MediaTemplateService(
+        repo=repo, media_storage=in_memory_storage, config=settings_factory()
+    )
 
     tool = await service.get_media_tool(db=None, tool_id="t2")
 

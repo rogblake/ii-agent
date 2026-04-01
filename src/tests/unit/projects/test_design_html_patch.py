@@ -277,25 +277,19 @@ class TestApplySlideStyleChangeWithStatus:
 
     def test_adds_style_attribute(self):
         html = self._make_html("el-1")
-        new_html, success = apply_slide_style_change_with_status(
-            html, "el-1", "color", "red"
-        )
+        new_html, success = apply_slide_style_change_with_status(html, "el-1", "color", "red")
         assert success
         assert "color: red;" in new_html
 
     def test_returns_false_when_design_id_not_found(self):
         html = self._make_html("el-1")
-        new_html, success = apply_slide_style_change_with_status(
-            html, "el-999", "color", "red"
-        )
+        new_html, success = apply_slide_style_change_with_status(html, "el-999", "color", "red")
         assert not success
         assert new_html == html
 
     def test_updates_existing_style_attribute(self):
         html = '<div data-design-id="el-2" style="font-size: 14px;">Text</div>'
-        new_html, success = apply_slide_style_change_with_status(
-            html, "el-2", "color", "blue"
-        )
+        new_html, success = apply_slide_style_change_with_status(html, "el-2", "color", "blue")
         assert success
         assert "color: blue;" in new_html
         assert "font-size: 14px" in new_html
@@ -310,18 +304,14 @@ class TestApplySlideStyleChangeWithStatus:
 
     def test_empty_value_removes_property(self):
         html = '<div data-design-id="el-4" style="color: red;">Text</div>'
-        new_html, success = apply_slide_style_change_with_status(
-            html, "el-4", "color", ""
-        )
+        new_html, success = apply_slide_style_change_with_status(html, "el-4", "color", "")
         assert success
         # color should be removed
         assert "color: red" not in new_html
 
     def test_self_closing_tag_receives_style(self):
         html = '<img data-design-id="img-1" />'
-        new_html, success = apply_slide_style_change_with_status(
-            html, "img-1", "width", "100px"
-        )
+        new_html, success = apply_slide_style_change_with_status(html, "img-1", "width", "100px")
         assert success
         assert "width: 100px;" in new_html
 
@@ -335,8 +325,7 @@ class TestApplySlideStyleChangeWithStatus:
         html = "<html><body><div><div>Content</div></div></body></html>"
         # No data-design-id, use XPath fallback
         new_html, success = apply_slide_style_change_with_status(
-            html, "nonexistent", "color", "red",
-            xpath="/html/body/div/div"
+            html, "nonexistent", "color", "red", xpath="/html/body/div/div"
         )
         # XPath fallback - success depends on xpath finding the element
         assert isinstance(success, bool)
@@ -355,17 +344,13 @@ class TestApplySlideTextChangeWithStatus:
 
     def test_replaces_text_content(self):
         html = self._make_html("t-1", "Original Text")
-        new_html, success = apply_slide_text_change_with_status(
-            html, "t-1", "New Text"
-        )
+        new_html, success = apply_slide_text_change_with_status(html, "t-1", "New Text")
         assert success
         assert "New Text" in new_html
 
     def test_returns_false_when_design_id_not_found(self):
         html = self._make_html("t-1", "Text")
-        new_html, success = apply_slide_text_change_with_status(
-            html, "t-999", "New Text"
-        )
+        new_html, success = apply_slide_text_change_with_status(html, "t-999", "New Text")
         assert not success
         assert new_html == html
 
@@ -381,18 +366,14 @@ class TestApplySlideTextChangeWithStatus:
 
     def test_preserves_surrounding_html(self):
         html = '<p>Before</p><div data-design-id="t-3">Old</div><p>After</p>'
-        new_html, success = apply_slide_text_change_with_status(
-            html, "t-3", "New"
-        )
+        new_html, success = apply_slide_text_change_with_status(html, "t-3", "New")
         assert success
         assert "<p>Before</p>" in new_html
         assert "<p>After</p>" in new_html
 
     def test_text_with_nested_elements_replaced_at_top_level(self):
         html = '<div data-design-id="t-4"><span>nested</span> text</div>'
-        new_html, success = apply_slide_text_change_with_status(
-            html, "t-4", "Replaced"
-        )
+        new_html, success = apply_slide_text_change_with_status(html, "t-4", "Replaced")
         assert success
         assert "Replaced" in new_html
 
@@ -404,16 +385,12 @@ class TestApplySlideTextChangeWithStatus:
 
     def test_self_closing_tag_returns_false(self):
         html = '<img data-design-id="img-1" />'
-        new_html, success = apply_slide_text_change_with_status(
-            html, "img-1", "new text"
-        )
+        new_html, success = apply_slide_text_change_with_status(html, "img-1", "new text")
         assert not success
 
     def test_empty_text_replaces_content(self):
         html = self._make_html("t-6", "Some content")
-        new_html, success = apply_slide_text_change_with_status(
-            html, "t-6", ""
-        )
+        new_html, success = apply_slide_text_change_with_status(html, "t-6", "")
         assert success
 
 
@@ -429,32 +406,26 @@ class TestApplySlideDeleteChangeWithStatus:
         return (
             f'<div class="container">'
             f'  <p data-design-id="{design_id}">Delete me</p>'
-            f'  <p>Keep me</p>'
-            f'</div>'
+            f"  <p>Keep me</p>"
+            f"</div>"
         )
 
     def test_deletes_element_by_design_id(self):
         html = self._make_html("del-1")
-        new_html, success = apply_slide_delete_change_with_status(
-            html, design_id="del-1"
-        )
+        new_html, success = apply_slide_delete_change_with_status(html, design_id="del-1")
         assert success
         assert 'data-design-id="del-1"' not in new_html
         assert "Delete me" not in new_html
 
     def test_preserves_other_elements(self):
         html = self._make_html("del-2")
-        new_html, success = apply_slide_delete_change_with_status(
-            html, design_id="del-2"
-        )
+        new_html, success = apply_slide_delete_change_with_status(html, design_id="del-2")
         assert success
         assert "Keep me" in new_html
 
     def test_returns_false_when_design_id_not_found(self):
         html = self._make_html("del-3")
-        new_html, success = apply_slide_delete_change_with_status(
-            html, design_id="nonexistent"
-        )
+        new_html, success = apply_slide_delete_change_with_status(html, design_id="nonexistent")
         assert not success
         assert new_html == html
 
@@ -465,14 +436,8 @@ class TestApplySlideDeleteChangeWithStatus:
         assert len(result) == 2
 
     def test_deletes_nested_element(self):
-        html = (
-            '<div data-design-id="outer">'
-            '  <span data-design-id="inner">Inner</span>'
-            '</div>'
-        )
-        new_html, success = apply_slide_delete_change_with_status(
-            html, design_id="inner"
-        )
+        html = '<div data-design-id="outer">  <span data-design-id="inner">Inner</span></div>'
+        new_html, success = apply_slide_delete_change_with_status(html, design_id="inner")
         assert success
         assert "Inner" not in new_html
         # Outer should still be there
@@ -480,17 +445,13 @@ class TestApplySlideDeleteChangeWithStatus:
 
     def test_deletes_self_closing_element(self):
         html = '<div><img data-design-id="img-del" src="x.png" />Keep</div>'
-        new_html, success = apply_slide_delete_change_with_status(
-            html, design_id="img-del"
-        )
+        new_html, success = apply_slide_delete_change_with_status(html, design_id="img-del")
         assert success
         assert 'data-design-id="img-del"' not in new_html
 
     def test_trims_leading_whitespace_on_own_line(self):
         html = '<div>\n  <p data-design-id="trim-1">Text</p>\n</div>'
-        new_html, success = apply_slide_delete_change_with_status(
-            html, design_id="trim-1"
-        )
+        new_html, success = apply_slide_delete_change_with_status(html, design_id="trim-1")
         assert success
         # The element should be removed cleanly
         assert 'data-design-id="trim-1"' not in new_html

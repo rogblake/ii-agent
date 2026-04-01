@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -16,6 +17,7 @@ from ii_agent.projects.subdomains.exceptions import SubdomainNotFoundError
 from ii_agent.projects.subdomains.models import ProjectCustomDomain
 from ii_agent.projects.subdomains.repository import SubdomainRepository
 from ii_agent.projects.subdomains.schemas import CustomDomainResponse
+from ii_agent.projects.subdomains.types import DnsStatus, SslStatus
 
 
 class SubdomainService:
@@ -38,11 +40,11 @@ class SubdomainService:
         self,
         db: AsyncSession,
         *,
-        project_id: str,
-        user_id: str,
+        project_id: uuid.UUID,
+        user_id: uuid.UUID,
         subdomain: str,
         full_domain: str,
-        deployment_id: Optional[str] = None,
+        deployment_id: Optional[uuid.UUID] = None,
         cloudflare_record_id: Optional[str] = None,
     ) -> CustomDomainResponse:
         """Create a custom domain record for a project, or update if one exists."""
@@ -55,30 +57,29 @@ class SubdomainService:
             existing.cloudflare_record_id = cloudflare_record_id
             existing.claimed_at = datetime.now(timezone.utc)
             existing.claimed_by_user_id = user_id
-            existing.dns_status = "active"
-            existing.ssl_status = "active"
+            existing.dns_status = DnsStatus.ACTIVE
+            existing.ssl_status = SslStatus.ACTIVE
 
             domain = await self._subdomain_repo.update(db, existing)
 
-            await self._project_repo.update_custom_domain(
-                db, project_id, domain.id, full_domain
-            )
+            await self._project_repo.update_production_url(db, project_id, full_domain)
 
             return CustomDomainResponse.model_validate(domain)
 
-        domain = await self._subdomain_repo.create(
-            db,
+        new_domain = ProjectCustomDomain(
             project_id=project_id,
-            user_id=user_id,
             subdomain=subdomain,
             full_domain=full_domain,
             deployment_id=deployment_id,
+            dns_status=DnsStatus.ACTIVE,
+            ssl_status=SslStatus.ACTIVE,
             cloudflare_record_id=cloudflare_record_id,
+            claimed_at=datetime.now(timezone.utc),
+            claimed_by_user_id=user_id,
         )
+        domain = await self._subdomain_repo.save(db, new_domain)
 
-        await self._project_repo.update_custom_domain(
-            db, project_id, domain.id, full_domain
-        )
+        await self._project_repo.update_production_url(db, project_id, full_domain)
 
         return CustomDomainResponse.model_validate(domain)
 
@@ -86,8 +87,8 @@ class SubdomainService:
         self,
         db: AsyncSession,
         *,
-        project_id: str,
-        user_id: str,
+        project_id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> bool:
         """Delete a custom domain for a project.
 
@@ -101,17 +102,14 @@ class SubdomainService:
         if not domain:
             return False
 
-        await self._project_repo.update_custom_domain(db, project_id, None)
-
-        # Revert production_url to the current deployment URL
-        if project.current_production_deployment_id:
-            deployment = await self._deployments_repo.get_latest_deployment(
-                db, project_id=project_id
+        # Revert production_url to the latest deployment URL
+        deployment = await self._deployments_repo.get_latest_deployment(
+            db, project_id=project_id
+        )
+        if deployment and deployment.deployment_url:
+            await self._project_repo.update_production_url(
+                db, project_id, deployment.deployment_url
             )
-            if deployment and deployment.deployment_url:
-                await self._project_repo.update_production_url(
-                    db, project_id, deployment.deployment_url
-                )
 
         await self._subdomain_repo.delete(db, domain)
 
@@ -122,9 +120,9 @@ class SubdomainService:
         db: AsyncSession,
         subdomain: str,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         is_admin: bool = False,
-    ) -> Optional[ProjectCustomDomain]:
+    ) -> Optional[CustomDomainResponse]:
         """Get a subdomain record, enforcing ownership for non-admin users."""
         subdomain = subdomain.lower().strip()
 
@@ -132,15 +130,12 @@ class SubdomainService:
         if not domain:
             return None
 
-        if is_admin:
-            return domain
+        if not is_admin:
+            project = await self._project_repo.get_by_id_and_user(db, domain.project_id, user_id)
+            if not project:
+                return None
 
-        # Verify the user owns the project this domain belongs to
-        project = await self._project_repo.get_by_id_and_user(db, domain.project_id, user_id)
-        if not project:
-            return None
-
-        return domain
+        return CustomDomainResponse.model_validate(domain)
 
     async def get_custom_domain_by_subdomain(
         self, db: AsyncSession, subdomain: str
@@ -160,11 +155,11 @@ class SubdomainService:
             return None
         return CustomDomainResponse.model_validate(domain)
 
-    async def get_project_owner_user_id(self, db: AsyncSession, project_id: str) -> Optional[str]:
+    async def get_project_owner_user_id(self, db: AsyncSession, project_id: uuid.UUID) -> Optional[uuid.UUID]:
         """Get the owner user_id for a project."""
         return await self._project_repo.get_owner_user_id(db, project_id)
 
-    async def get_cloud_run_url(self, db: AsyncSession, project_id: str) -> Optional[str]:
+    async def get_cloud_run_url(self, db: AsyncSession, project_id: uuid.UUID) -> Optional[str]:
         """Get the Cloud Run deployment URL for a project."""
         deployment = await self._deployments_repo.get_latest_deployment(
             db, project_id=project_id, provider="cloud_run"
@@ -173,6 +168,6 @@ class SubdomainService:
             return None
         return deployment.deployment_url
 
-    async def get_user_project(self, db: AsyncSession, project_id: str, user_id: str):
+    async def get_user_project(self, db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID):
         """Verify user owns the project and return it."""
         return await self._project_repo.get_by_id_and_user(db, project_id, user_id)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useParams } from 'react-router'
 import { Loader2, CheckCircle2, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -17,7 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Icon } from '@/components/ui/icon'
 import { cn } from '@/lib/utils'
-import { AgentEvent } from '@/typings/agent'
+import { AgentEvent, CommandType, type ChatMessagePayload } from '@/typings/agent'
 import { useSocketIOContext } from '@/contexts/websocket-context'
 
 // Types
@@ -81,6 +82,7 @@ export const TestflightWizardDialog = ({
 }: TestflightWizardDialogProps) => {
     const { t } = useTranslation()
     const { socket, sendMessage } = useSocketIOContext()
+    const { sessionId } = useParams<{ sessionId: string }>()
     const [currentStep, setCurrentStep] = useState<WizardStep>('expo')
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -154,8 +156,11 @@ export const TestflightWizardDialog = ({
             }
 
             const success = sendMessage({
-                type: 'submit_testflight',
-                content
+                session_uuid: sessionId || '',
+                content: {
+                    command: CommandType.SUBMIT_TESTFLIGHT,
+                    ...content
+                } as ChatMessagePayload['content']
             })
 
             if (!success) {
@@ -393,8 +398,8 @@ export const TestflightWizardDialog = ({
 
             // Check for existing Apple auth
             sendMessage({
-                type: 'apple_check_auth',
-                content: {}
+                session_uuid: sessionId || '',
+                content: { command: CommandType.APPLE_CHECK_AUTH }
             })
         }
     }, [open, sendMessage])
@@ -409,10 +414,11 @@ export const TestflightWizardDialog = ({
         // Save the expo token if it's new or changed
         if (!hasStoredExpoToken) {
             sendMessage({
-                type: 'save_expo_token',
+                session_uuid: sessionId || '',
                 content: {
+                    command: CommandType.SAVE_EXPO_TOKEN,
                     expo_token: expoToken.trim()
-                }
+                } as ChatMessagePayload['content']
             })
         }
         // Always require Apple login for security (don't store passwords)
@@ -433,11 +439,12 @@ export const TestflightWizardDialog = ({
         setError(null)
 
         const success = sendMessage({
-            type: 'apple_auth_login',
+            session_uuid: sessionId || '',
             content: {
+                command: CommandType.APPLE_AUTH_LOGIN,
                 apple_id: appleId.trim(),
                 password: password.trim()
-            }
+            } as ChatMessagePayload['content']
         })
 
         if (!success) {
@@ -464,10 +471,11 @@ export const TestflightWizardDialog = ({
         setError(null)
 
         const success = sendMessage({
-            type: 'apple_auth_2fa',
+            session_uuid: sessionId || '',
             content: {
+                command: CommandType.APPLE_AUTH_2FA,
                 code: twoFactorCode.trim()
-            }
+            } as ChatMessagePayload['content']
         })
 
         if (!success) {
@@ -486,10 +494,11 @@ export const TestflightWizardDialog = ({
         setError(null)
 
         const success = sendMessage({
-            type: 'apple_auth_select_team',
+            session_uuid: sessionId || '',
             content: {
+                command: CommandType.APPLE_AUTH_SELECT_TEAM,
                 team_id: team.team_id
-            }
+            } as ChatMessagePayload['content']
         })
 
         if (!success) {
@@ -505,8 +514,8 @@ export const TestflightWizardDialog = ({
         setError(null)
 
         const success = sendMessage({
-            type: 'apple_list_apps',
-            content: {}
+            session_uuid: sessionId || '',
+            content: { command: CommandType.APPLE_LIST_APPS }
         })
 
         if (!success) {
@@ -560,8 +569,11 @@ export const TestflightWizardDialog = ({
         }
 
         const success = sendMessage({
-            type: 'apple_app_setup',
-            content
+            session_uuid: sessionId || '',
+            content: {
+                command: CommandType.APPLE_APP_SETUP,
+                ...content
+            } as ChatMessagePayload['content']
         })
 
         if (!success) {

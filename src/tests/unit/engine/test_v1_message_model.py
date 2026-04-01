@@ -1,4 +1,4 @@
-"""Unit tests for ii_agent.agent.runtime.models.message module.
+"""Unit tests for ii_agent.agents.models.message module.
 
 Tests cover:
 - Message creation with defaults
@@ -9,20 +9,21 @@ Tests cover:
 - from_dict() reconstruction
 - MessageReferences, UrlCitation, DocumentCitation, Citations models
 """
+
 import json
 from time import time
 from unittest.mock import MagicMock
 
 import pytest
 
-from ii_agent.agent.runtime.models.message import (
+from ii_agent.agents.models.message import (
     Citations,
     DocumentCitation,
     Message,
     MessageReferences,
     UrlCitation,
 )
-from ii_agent.agent.runtime.models.metrics import Metrics
+from ii_agent.agents.models.metrics import Metrics
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +65,9 @@ def citations_obj():
     return Citations(
         raw={"source": "web"},
         urls=[UrlCitation(url="https://example.com", title="Example")],
-        documents=[DocumentCitation(document_title="Doc A", cited_text="Some text", file_name="doc_a.pdf")],
+        documents=[
+            DocumentCitation(document_title="Doc A", cited_text="Some text", file_name="doc_a.pdf")
+        ],
     )
 
 
@@ -681,9 +684,7 @@ class TestFromDict:
         assert msg.references is None
 
     def test_reconstruction_citations_already_citations_object(self):
-        citations_dict = Citations(
-            urls=[UrlCitation(url="https://test.com")]
-        )
+        citations_dict = Citations(urls=[UrlCitation(url="https://test.com")])
         data = {
             "role": "assistant",
             "content": "resp",

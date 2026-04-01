@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
 import logging
 import re
 from typing import Any, Dict, List, Optional
@@ -10,14 +9,12 @@ from typing import Any, Dict, List, Optional
 from bs4 import BeautifulSoup
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.billing.types import BillingResult
-from ii_agent.billing.reservations.service import CreditReservationService
-from ii_agent.billing.reservations.types import SourceDomain
+from ii_agent.billing.exceptions import InsufficientCreditsError
+from ii_agent.credits.service import CreditService
 from ii_agent.content.storybook.billing import (
     DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD,
-    build_storybook_request,
     build_storybook_scope,
-    run_storybook_sync_operation,
+    check_and_deduct_storybook_credits,
 )
 from ii_agent.content.storybook.models import Storybook
 from ii_agent.content.storybook.repository import StorybookRepository
@@ -29,7 +26,6 @@ from ii_agent.content.storybook.voice_service import (
     _get_voice_service,
     _resolve_language_code,
 )
-from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.projects.design.utils.constants import (
     DESIGN_MODE_GOOGLE_FONTS,
     DESIGN_MODE_RUNTIME_SCRIPT,
@@ -77,11 +73,11 @@ class StorybookEditService:
         *,
         repo: StorybookRepository,
         version_service: StorybookVersionService,
-        reservation_service: CreditReservationService,
+        credit_service: CreditService,
     ) -> None:
         self._repo = repo
         self._version_service = version_service
-        self._reservation_service = reservation_service
+        self._credit_service = credit_service
 
     async def get_page_html_with_runtime(
         self,
@@ -300,7 +296,7 @@ class StorybookEditService:
         page_changes: Dict[int, List[DesignChange]],
         image_urls: Optional[Dict[int, str]] = None,
     ) -> Optional[StorybookDetail]:
-        """Apply storybook edits and settle any regenerated voice cost."""
+        """Apply storybook edits and deduct any regenerated voice cost."""
         source_storybook = await self._repo.get_by_id(db, storybook_id)
         if source_storybook is None:
             return None
@@ -328,53 +324,47 @@ class StorybookEditService:
             )
             return new_storybook
 
-        request_id = get_or_generate_request_id()
         scope = build_storybook_scope(
             user_id=user_id,
             session_id=session_id,
         )
-        request = build_storybook_request(
-            scope=scope,
-            namespace="storybook_edit_voice",
-            operation_id=f"edit-voice:{storybook_id}:{request_id}",
-            source_domain=SourceDomain.VOICE_GENERATION,
-            tool_name="storybook_edit_voice",
-            reserve_usd=DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD * estimated_voice_pages,
-            metadata={
-                "storybook_id": storybook_id,
-                "voice_page_count_estimate": estimated_voice_pages,
-            },
+
+        # 1. Check credits up-front
+        estimated_cost = float(
+            DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD * estimated_voice_pages
+        )
+        has_credits = await self._credit_service.has_sufficient_credits(
+            db, user_id, estimated_cost
+        )
+        if not has_credits:
+            raise InsufficientCreditsError(
+                available_credits=0.0,
+                required_credits=estimated_cost,
+            )
+
+        # 2. Execute the operation
+        new_storybook, total_voice_cost_usd = await self.save_all_page_edits(
+            db,
+            storybook_id=storybook_id,
+            page_changes=page_changes,
+            image_urls=image_urls,
         )
 
-        async def _execute_edits() -> BillingResult[Optional[StorybookDetail]]:
-            new_storybook, total_voice_cost_usd = await self.save_all_page_edits(
+        # 3. Deduct actual cost
+        if total_voice_cost_usd > 0:
+            await check_and_deduct_storybook_credits(
                 db,
-                storybook_id=storybook_id,
-                page_changes=page_changes,
-                image_urls=image_urls,
-            )
-            await db.commit()
-            return BillingResult(
-                value=new_storybook,
-                actual_usd=Decimal(str(total_voice_cost_usd)),
-                usage_payload={
-                    "provider": None,
-                    "latency_ms": None,
-                    "cost_usd": total_voice_cost_usd,
-                    "tool_name": "storybook_edit_voice",
+                credit_service=self._credit_service,
+                scope=scope,
+                amount_usd=total_voice_cost_usd,
+                tool_name="storybook_edit_voice",
+                metadata={
                     "storybook_id": storybook_id,
                     "voice_page_count_estimate": estimated_voice_pages,
                 },
             )
 
-        return await run_storybook_sync_operation(
-            reservation_service=self._reservation_service,
-            scope=scope,
-            request=request,
-            execute_fn=_execute_edits,
-            release_reason="storybook_edit_failed",
-            settlement_error="storybook_edit_voice_settle_exception",
-        )
+        return new_storybook
 
     @staticmethod
     def _estimate_voice_pages_for_edits(

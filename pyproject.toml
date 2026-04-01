@@ -6,13 +6,14 @@ readme = "README.md"
 authors = [{ name = "Intelligent Internet", email = "info@ii.inc" }]
 requires-python = ">=3.10"
 dependencies = [
+  "a2a-sdk==0.3.9",
   "httpx>=0.25.0",
   "anthropic[vertex]>=0.50.0",
   "dataclasses-json>=0.6.7",
   "duckduckgo-search>=8.0.1",
   "fastapi>=0.115.12",
   "google-cloud-aiplatform>=1.133.0",
-  "google-genai>=1.57.0,<1.60",
+  "google-genai>=1.66.0",
   "ii-researcher>=0.1.5",
   "jsonschema>=4.23.0",
   "mammoth>=1.9.0",
@@ -79,17 +80,16 @@ dependencies = [
   "json-repair>=0.54.3",
   "strictyaml>=1.7.0",
   "universal-pathlib>=0.2.0",
+  "ii-agent-tools",
   "sqlalchemy>=2.0.0",
   "google-cloud-secret-manager>=2.20.0",
   "composio",
   "loguru>=0.7.3",
   "google-cloud-run>=0.15.0",
   "google-cloud-build>=3.35.0",
-  "fal-client>=0.13.1",
-  "aiohttp>=3.11.18",
-  "elevenlabs==2.32.0",
-  "pydantic-settings>=2.10.1",
-  "requests>=2.32.3",
+  "passlib>=1.7.4",
+  "fal-client>=0.13.2",
+  "minio>=7.2.0",
 ]
 
 [project.optional-dependencies]
@@ -104,6 +104,7 @@ gaia = [
 
 [project.scripts]
 ii-agent = "ii_agent.cli.main:main"
+ii-tool = "ii_tool.mcp.server:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -111,14 +112,16 @@ build-backend = "hatchling.build"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["ii_agent*", "ii_tool*"]
+include = ["ii_agent*", "ii_agent*", "ii_tool*"]
+
+[tool.uv.sources]
+ii-agent-tools = { git = "ssh://git@github.com/Intelligent-Internet/ii-agent-tools.git", rev = "v0.0.17" }
 
 [dependency-groups]
 dev = [
     "mypy>=1.19.1",
     "pytest-asyncio>=1.0.0",
     "pytest-cov>=6.3.0",
-    "ruff>=0.14.9",
 ]
 
 [tool.pytest.ini_options]
@@ -136,7 +139,7 @@ asyncio_mode = "auto"
 
 [tool.coverage.run]
 branch = true
-source = ["ii_agent"]
+source = ["ii_agent", "ii_agent"]
 omit = ["src/tests/*"]
 
 [tool.coverage.report]

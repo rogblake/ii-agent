@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 import pytest
 from sqlalchemy import exc
 
-from ii_agent.core.db import manager
+from ii_agent.core.db import base as manager
 
 
 class _FakeSession:

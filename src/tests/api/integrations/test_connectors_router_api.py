@@ -118,7 +118,7 @@ def test_connectors_github_repositories_mapping(monkeypatch):
                     "html_url": "https://github.com/org/repo",
                     "default_branch": "main",
                 }
-                ]
+            ]
 
     monkeypatch.setattr(connectors_router_module, "GitHubConnector", _FakeGitHubConnector)
     monkeypatch.setattr(

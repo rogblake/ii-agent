@@ -1,5 +1,6 @@
 """Repository layer for session pins - data access only."""
 
+import uuid
 from typing import List, Optional
 
 from sqlalchemy import and_, delete, select
@@ -15,7 +16,7 @@ class PinRepository(BaseRepository[SessionPin]):
 
     model = SessionPin
 
-    async def get_user_pins(self, db: AsyncSession, user_id: str) -> List[SessionPin]:
+    async def get_user_pins(self, db: AsyncSession, user_id: uuid.UUID) -> List[SessionPin]:
         """Get all pin items for a user with session eager-loaded."""
         result = await db.execute(
             select(SessionPin)
@@ -26,7 +27,7 @@ class PinRepository(BaseRepository[SessionPin]):
         return list(result.scalars().all())
 
     async def get_by_user_and_session(
-        self, db: AsyncSession, user_id: str, session_id: str
+        self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID
     ) -> Optional[SessionPin]:
         """Get a pin item by user and session."""
         result = await db.execute(
@@ -46,7 +47,7 @@ class PinRepository(BaseRepository[SessionPin]):
         return pin_item
 
     async def delete_by_user_and_session(
-        self, db: AsyncSession, user_id: str, session_id: str
+        self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID
     ) -> bool:
         """Delete a pin item by user and session. Returns True if deleted."""
         result = await db.execute(

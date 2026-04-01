@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import exc
 
 from ii_agent.auth.jwt_handler import JWTHandler
-from ii_agent.core.db import manager as db_manager
+from ii_agent.core.db import base as db_manager
 
 pytestmark = pytest.mark.smoke
 

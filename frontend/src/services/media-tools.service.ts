@@ -3,7 +3,7 @@ import { type MiniTool } from '@/constants/media-tools'
 
 export class MediaToolsService {
     async listMediaTools(): Promise<MiniTool[]> {
-        const response = await axiosInstance.get<MiniTool[]>('/media-tools')
+        const response = await axiosInstance.get<MiniTool[]>('/v1/media-tools')
         return response.data
     }
 

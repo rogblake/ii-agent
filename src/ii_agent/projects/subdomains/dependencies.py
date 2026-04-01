@@ -1,13 +1,18 @@
-"""FastAPI dependencies for subdomains domain."""
+"""FastAPI dependencies for subdomains domain.
+
+SubdomainService is not container-managed (uses Cloudflare KV which
+requires per-request config from environment), so it keeps a factory
+pattern with repo injection.
+"""
 
 from typing import Annotated
 
 from fastapi import Depends
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.projects.subdomains.exceptions import SubdomainServiceUnavailableError
 from ii_agent.projects.dependencies import ProjectRepositoryDep
 from ii_agent.projects.deployments.dependencies import DeploymentsRepositoryDep
+from ii_agent.projects.subdomains.exceptions import SubdomainServiceUnavailableError
 from ii_agent.projects.subdomains.repository import SubdomainRepository
 from ii_agent.projects.subdomains.service import SubdomainService
 from ii_agent.projects.subdomains.utils import CloudflareKVConfig, CloudflareKVService
@@ -24,7 +29,7 @@ def get_subdomain_repository() -> SubdomainRepository:
 SubdomainRepositoryDep = Annotated[SubdomainRepository, Depends(get_subdomain_repository)]
 
 
-# ==================== Service Dependencies ====================
+# ==================== Service Dependencies (factory) ======================
 
 
 def get_subdomain_service(
@@ -41,6 +46,12 @@ def get_subdomain_service(
     )
 
 
+SubdomainServiceDep = Annotated[SubdomainService, Depends(get_subdomain_service)]
+
+
+# ==================== Cloudflare KV Dependencies =========================
+
+
 def get_kv_service() -> CloudflareKVService:
     """Provide CloudflareKVService instance from environment config."""
     try:
@@ -52,6 +63,9 @@ def get_kv_service() -> CloudflareKVService:
         ) from e
 
 
+CloudflareKVServiceDep = Annotated[CloudflareKVService, Depends(get_kv_service)]
+
+
 def get_base_domain() -> str:
     """Get base domain from Cloudflare config."""
     try:
@@ -61,15 +75,13 @@ def get_base_domain() -> str:
         return "iiapp.dev"
 
 
-SubdomainServiceDep = Annotated[SubdomainService, Depends(get_subdomain_service)]
-CloudflareKVServiceDep = Annotated[CloudflareKVService, Depends(get_kv_service)]
 BaseDomainDep = Annotated[str, Depends(get_base_domain)]
 
 
 __all__ = [
     "get_subdomain_repository",
-    "get_subdomain_service",
     "SubdomainRepositoryDep",
+    "get_subdomain_service",
     "SubdomainServiceDep",
     "get_kv_service",
     "CloudflareKVServiceDep",

@@ -1,5 +1,7 @@
 """JWT token handling utilities."""
 
+import uuid
+
 import jwt
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
@@ -25,12 +27,12 @@ class JWTHandler:
     def refresh_token_expire_days(self):
         return get_settings().refresh_token_expire_days
 
-    def create_access_token(self, user_id: str, email: str, role: str = "user") -> str:
+    def create_access_token(self, user_id: uuid.UUID, email: str, role: str = "user") -> str:
         """Create a new access token."""
         now = datetime.now(timezone.utc)
         exp_time = now + timedelta(minutes=self.access_token_expire_minutes)
         payload = {
-            "user_id": user_id,
+            "user_id": str(user_id),
             "email": email,
             "role": role,
             "type": "access",
@@ -39,10 +41,10 @@ class JWTHandler:
         }
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
-    def create_refresh_token(self, user_id: str) -> str:
+    def create_refresh_token(self, user_id: uuid.UUID) -> str:
         """Create a new refresh token."""
         payload = {
-            "user_id": user_id,
+            "user_id": str(user_id),
             "type": "refresh",
             "exp": datetime.now(timezone.utc)
             + timedelta(days=self.refresh_token_expire_days),

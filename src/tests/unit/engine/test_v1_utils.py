@@ -28,7 +28,7 @@ from pydantic import BaseModel
 # ---------------------------------------------------------------------------
 # Module imports
 # ---------------------------------------------------------------------------
-from ii_agent.agent.runtime.utils.string import (
+from ii_agent.agents.utils.string import (
     _clean_json_content,
     _extract_json_objects,
     _parse_individual_json,
@@ -39,7 +39,7 @@ from ii_agent.agent.runtime.utils.string import (
     parse_response_model_str,
     url_safe_string,
 )
-from ii_agent.agent.runtime.utils.common import (
+from ii_agent.agents.utils.common import (
     check_type_compatibility,
     dataclass_to_dict,
     get_image_str,
@@ -49,31 +49,32 @@ from ii_agent.agent.runtime.utils.common import (
     nested_model_dump,
     validate_typed_dict,
 )
-from ii_agent.agent.runtime.utils.merge_dict import (
+from ii_agent.agents.utils.merge_dict import (
     merge_dictionaries,
     merge_parallel_session_states,
 )
-from ii_agent.agent.runtime.utils.safe_formatter import SafeFormatter
-from ii_agent.agent.runtime.utils.serialize import json_serializer
-from ii_agent.agent.runtime.utils.timer import Timer
-from ii_agent.agent.runtime.utils.tools import (
+from ii_agent.agents.utils.safe_formatter import SafeFormatter
+from ii_agent.agents.utils.serialize import json_serializer
+from ii_agent.agents.utils.timer import Timer
+from ii_agent.agents.utils.tools import (
     extract_tool_call_from_string,
     extract_tool_from_xml,
     remove_function_calls_from_string,
     remove_tool_calls_from_string,
 )
-from ii_agent.agent.runtime.utils.functions import get_function_call
-from ii_agent.agent.runtime.utils.message import filter_tool_calls, get_text_from_message
-from ii_agent.agent.runtime.utils.response import escape_markdown_tags, format_tool_calls
+from ii_agent.agents.utils.functions import get_function_call
+from ii_agent.agents.utils.message import filter_tool_calls, get_text_from_message
+from ii_agent.agents.utils.response import escape_markdown_tags, format_tool_calls
 
-from ii_agent.agent.runtime.models.message import Message
-from ii_agent.agent.runtime.models.response import ToolExecution
-from ii_agent.agent.runtime.tools.function import Function, FunctionCall
+from ii_agent.agents.models.message import Message
+from ii_agent.agents.models.response import ToolExecution
+from ii_agent.agents.tools.function import Function, FunctionCall
 
 
 # ===========================================================================
 # Helpers / fixtures shared across tests
 # ===========================================================================
+
 
 def _make_function(name: str = "my_func") -> Function:
     """Return a minimal Function instance without a real entrypoint."""
@@ -121,8 +122,8 @@ class RequiredMixed(TypedDict):
 # 1. string.py
 # ===========================================================================
 
-class TestIsValidUuid:
 
+class TestIsValidUuid:
     def test_valid_uuid4(self):
         assert is_valid_uuid("550e8400-e29b-41d4-a716-446655440000") is True
 
@@ -162,7 +163,6 @@ class TestIsValidUuid:
 
 
 class TestUrlSafeString:
-
     def test_spaces_replaced_with_dashes(self):
         result = url_safe_string("hello world")
         assert result == "hello-world"
@@ -206,7 +206,6 @@ class TestUrlSafeString:
 
 
 class TestHashStringSha256:
-
     def test_known_hash_for_hello(self):
         expected = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
         assert hash_string_sha256("hello") == expected
@@ -232,7 +231,6 @@ class TestHashStringSha256:
 
 
 class TestExtractJsonObjects:
-
     def test_single_json_object(self):
         text = '{"key": "value"}'
         result = _extract_json_objects(text)
@@ -272,7 +270,6 @@ class TestExtractJsonObjects:
 
 
 class TestCleanJsonContent:
-
     def test_removes_json_code_block(self):
         content = '```json\n{"key": "value"}\n```'
         result = _clean_json_content(content)
@@ -306,7 +303,6 @@ class TestCleanJsonContent:
 
 
 class TestParseIndividualJson:
-
     class MyModel(BaseModel):
         name: str
         items: List[str] = []
@@ -343,7 +339,6 @@ class TestParseIndividualJson:
 
 
 class TestParseResponseModelStr:
-
     class MyModel(BaseModel):
         value: int
         label: str = "default"
@@ -378,7 +373,6 @@ class TestParseResponseModelStr:
 
 
 class TestGenerateId:
-
     def test_without_seed_returns_valid_uuid(self):
         result = generate_id()
         assert is_valid_uuid(result) is True
@@ -408,7 +402,6 @@ class TestGenerateId:
 
 
 class TestGenerateIdFromName:
-
     def test_spaces_converted_to_dashes(self):
         result = generate_id_from_name("hello world")
         assert result == "hello-world"
@@ -443,8 +436,8 @@ class TestGenerateIdFromName:
 # 2. common.py
 # ===========================================================================
 
-class TestIsinstanceAny:
 
+class TestIsinstanceAny:
     def test_matches_first_type(self):
         assert isinstanceany("hello", [str, int]) is True
 
@@ -465,7 +458,6 @@ class TestIsinstanceAny:
 
 
 class TestIsEmpty:
-
     def test_none_is_empty(self):
         assert is_empty(None) is True
 
@@ -487,7 +479,6 @@ class TestIsEmpty:
 
 
 class TestGetImageStr:
-
     def test_basic_format(self):
         result = get_image_str("myrepo", "latest")
         assert result == "myrepo:latest"
@@ -502,7 +493,6 @@ class TestGetImageStr:
 
 
 class TestDataclassToDict:
-
     def test_basic_conversion(self):
         @dataclass
         class Point:
@@ -563,7 +553,6 @@ class TestDataclassToDict:
 
 
 class TestNestedModelDump:
-
     def test_pydantic_model(self):
         class M(BaseModel):
             x: int
@@ -605,7 +594,6 @@ class TestNestedModelDump:
 
 
 class TestIsTypedDict:
-
     def test_typed_dict_returns_true(self):
         assert is_typed_dict(SimpleSchema) is True
 
@@ -626,7 +614,6 @@ class TestIsTypedDict:
 
 
 class TestCheckTypeCompatibility:
-
     def test_none_with_optional_type(self):
         result = check_type_compatibility(None, Optional[str])
         assert result is True
@@ -652,6 +639,7 @@ class TestCheckTypeCompatibility:
 
     def test_union_type_match(self):
         from typing import Union
+
         assert check_type_compatibility("hello", Union[str, int]) is True
         assert check_type_compatibility(42, Union[str, int]) is True
 
@@ -667,7 +655,6 @@ class TestCheckTypeCompatibility:
 
 
 class TestValidateTypedDict:
-
     def test_valid_data(self):
         result = validate_typed_dict({"name": "Alice", "age": 30}, SimpleSchema)
         assert result == {"name": "Alice", "age": 30}
@@ -702,8 +689,8 @@ class TestValidateTypedDict:
 # 3. merge_dict.py
 # ===========================================================================
 
-class TestMergeDictionaries:
 
+class TestMergeDictionaries:
     def test_simple_merge(self):
         a = {"x": 1}
         b = {"y": 2}
@@ -749,7 +736,6 @@ class TestMergeDictionaries:
 
 
 class TestMergeParallelSessionStates:
-
     def test_applies_changed_keys(self):
         original = {"x": 1, "y": 2}
         modified = [{"x": 10}]
@@ -799,8 +785,8 @@ class TestMergeParallelSessionStates:
 # 4. safe_formatter.py
 # ===========================================================================
 
-class TestSafeFormatter:
 
+class TestSafeFormatter:
     def setup_method(self):
         self.fmt = SafeFormatter()
 
@@ -851,8 +837,8 @@ class TestSafeFormatter:
 # 5. serialize.py
 # ===========================================================================
 
-class TestJsonSerializer:
 
+class TestJsonSerializer:
     def test_datetime_returns_iso_format(self):
         dt = datetime(2024, 1, 15, 10, 30, 0)
         result = json_serializer(dt)
@@ -865,6 +851,7 @@ class TestJsonSerializer:
 
     def test_time_returns_iso_format(self):
         from datetime import time as time_type
+
         t = time_type(14, 30, 0)
         result = json_serializer(t)
         assert result == "14:30:00"
@@ -919,8 +906,8 @@ class TestJsonSerializer:
 # 6. timer.py
 # ===========================================================================
 
-class TestTimer:
 
+class TestTimer:
     def test_start_sets_start_time(self):
         timer = Timer()
         assert timer.start_time is None
@@ -999,8 +986,8 @@ class TestTimer:
 # 7. tools.py
 # ===========================================================================
 
-class TestExtractToolCallFromString:
 
+class TestExtractToolCallFromString:
     def test_basic_extraction(self):
         text = "some text <tool_call>my tool content</tool_call> more"
         result = extract_tool_call_from_string(text)
@@ -1028,7 +1015,6 @@ class TestExtractToolCallFromString:
 
 
 class TestRemoveToolCallsFromString:
-
     def test_single_tool_call_removed(self):
         text = "before <tool_call>content</tool_call> after"
         result = remove_tool_calls_from_string(text)
@@ -1060,7 +1046,6 @@ class TestRemoveToolCallsFromString:
 
 
 class TestExtractToolFromXml:
-
     def test_basic_extraction(self):
         xml = """
         <tool_name>my_tool</tool_name>
@@ -1094,7 +1079,6 @@ class TestExtractToolFromXml:
 
 
 class TestRemoveFunctionCallsFromString:
-
     def test_single_function_call_removed(self):
         text = "before <function_calls>call_content</function_calls> after"
         result = remove_function_calls_from_string(text)
@@ -1103,7 +1087,9 @@ class TestRemoveFunctionCallsFromString:
         assert "after" in result
 
     def test_multiple_function_calls_removed(self):
-        text = "A <function_calls>first</function_calls> B <function_calls>second</function_calls> C"
+        text = (
+            "A <function_calls>first</function_calls> B <function_calls>second</function_calls> C"
+        )
         result = remove_function_calls_from_string(text)
         assert "<function_calls>" not in result
         assert "</function_calls>" not in result
@@ -1123,8 +1109,8 @@ class TestRemoveFunctionCallsFromString:
 # 8. functions.py
 # ===========================================================================
 
-class TestGetFunctionCall:
 
+class TestGetFunctionCall:
     def _make_functions(self, names: List[str]) -> Dict[str, Function]:
         return {name: Function(name=name) for name in names}
 
@@ -1228,8 +1214,8 @@ class TestGetFunctionCall:
 # 9. message.py
 # ===========================================================================
 
-class TestFilterToolCalls:
 
+class TestFilterToolCalls:
     def _make_messages(self) -> List[Message]:
         """Create a realistic sequence of messages with tool calls."""
         messages = [
@@ -1305,7 +1291,6 @@ class TestFilterToolCalls:
 
 
 class TestGetTextFromMessage:
-
     def test_plain_string(self):
         result = get_text_from_message("hello world")
         assert result == "hello world"
@@ -1394,8 +1379,8 @@ class TestGetTextFromMessage:
 # 10. response.py
 # ===========================================================================
 
-class TestEscapeMarkdownTags:
 
+class TestEscapeMarkdownTags:
     def test_escapes_opening_tag(self):
         result = escape_markdown_tags("text <tool_call> more", {"tool_call"})
         assert "<tool_call>" not in result
@@ -1436,7 +1421,6 @@ class TestEscapeMarkdownTags:
 
 
 class TestFormatToolCalls:
-
     def test_basic_tool_call_formatted(self):
         te = _make_tool_execution(tool_name="search", tool_args={"query": "hello"})
         result = format_tool_calls([te])

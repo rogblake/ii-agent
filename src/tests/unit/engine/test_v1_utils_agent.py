@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.agent.runtime.utils.agent import (
+from ii_agent.agents.utils.agent import (
     DEFAULT_ABORT_REASON,
     get_tool_abort_message,
     get_tool_error_message,
@@ -26,14 +26,15 @@ from ii_agent.agent.runtime.utils.agent import (
     aexecute_instructions,
     aexecute_system_message,
 )
-from ii_agent.agent.runtime.media import Audio, File, Image, Video
-from ii_agent.agent.runtime.models.message import Message
-from ii_agent.agent.runtime.run.agent import RunOutput, RunInput
+from ii_agent.files.media import Audio, File, Image, Video
+from ii_agent.agents.models.message import Message
+from ii_agent.agents.runs.agent import RunOutput, RunInput
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_run_output(messages=None) -> RunOutput:
     run = RunOutput(
@@ -91,6 +92,7 @@ def make_run_input(images=None, videos=None, audios=None, files=None) -> RunInpu
 # get_tool_abort_message tests
 # ---------------------------------------------------------------------------
 
+
 class TestGetToolAbortMessage:
     def test_default_abort_reason(self):
         msg = get_tool_abort_message()
@@ -115,6 +117,7 @@ class TestGetToolAbortMessage:
 # get_tool_error_message tests
 # ---------------------------------------------------------------------------
 
+
 class TestGetToolErrorMessage:
     def test_contains_error_text(self):
         msg = get_tool_error_message("Connection timeout")
@@ -133,6 +136,7 @@ class TestGetToolErrorMessage:
 # ---------------------------------------------------------------------------
 # collect_joint_images tests
 # ---------------------------------------------------------------------------
+
 
 class TestCollectJointImages:
     def test_returns_none_when_no_input(self):
@@ -200,6 +204,7 @@ class TestCollectJointImages:
 # collect_joint_videos tests
 # ---------------------------------------------------------------------------
 
+
 class TestCollectJointVideos:
     def test_returns_none_when_no_input(self):
         result = collect_joint_videos(None, None)
@@ -232,6 +237,7 @@ class TestCollectJointVideos:
 # ---------------------------------------------------------------------------
 # collect_joint_audios tests
 # ---------------------------------------------------------------------------
+
 
 class TestCollectJointAudios:
     def test_returns_none_when_no_input(self):
@@ -266,6 +272,7 @@ class TestCollectJointAudios:
 # collect_joint_files tests
 # ---------------------------------------------------------------------------
 
+
 class TestCollectJointFiles:
     def test_returns_none_when_no_input(self):
         result = collect_joint_files(None)
@@ -287,6 +294,7 @@ class TestCollectJointFiles:
 # ---------------------------------------------------------------------------
 # store_media_util tests
 # ---------------------------------------------------------------------------
+
 
 class TestStoreMediaUtil:
     def test_stores_images_from_model_response(self):
@@ -352,6 +360,7 @@ class TestStoreMediaUtil:
 # validate_media_object_id tests
 # ---------------------------------------------------------------------------
 
+
 class TestValidateMediaObjectId:
     def test_assigns_id_to_images_without_id(self):
         img = make_image(image_id=None)
@@ -390,6 +399,7 @@ class TestValidateMediaObjectId:
 # scrub_media_from_run_output tests
 # ---------------------------------------------------------------------------
 
+
 class TestScrubMediaFromRunOutput:
     def test_scrubs_run_input_media(self):
         run_output = make_run_output()
@@ -420,6 +430,7 @@ class TestScrubMediaFromRunOutput:
 # scrub_media_from_message tests
 # ---------------------------------------------------------------------------
 
+
 class TestScrubMediaFromMessage:
     def test_clears_all_media_fields(self):
         msg = make_message()
@@ -445,6 +456,7 @@ class TestScrubMediaFromMessage:
 # ---------------------------------------------------------------------------
 # scrub_tool_results_from_run_output tests
 # ---------------------------------------------------------------------------
+
 
 class TestScrubToolResultsFromRunOutput:
     def test_removes_tool_messages(self):
@@ -481,9 +493,9 @@ class TestScrubToolResultsFromRunOutput:
         tool_msg = make_message("tool")
         tool_msg.tool_call_id = tool_call_id
 
-        run_output = make_run_output(messages=[
-            regular_assistant_msg, tool_calling_assistant_msg, tool_msg
-        ])
+        run_output = make_run_output(
+            messages=[regular_assistant_msg, tool_calling_assistant_msg, tool_msg]
+        )
         scrub_tool_results_from_run_output(run_output)
 
         assert regular_assistant_msg in run_output.messages
@@ -496,6 +508,7 @@ class TestScrubToolResultsFromRunOutput:
 # ---------------------------------------------------------------------------
 # scrub_history_messages_from_run_output tests
 # ---------------------------------------------------------------------------
+
 
 class TestScrubHistoryMessagesFromRunOutput:
     def test_removes_history_messages(self):
@@ -516,6 +529,7 @@ class TestScrubHistoryMessagesFromRunOutput:
 # ---------------------------------------------------------------------------
 # execute_instructions tests
 # ---------------------------------------------------------------------------
+
 
 class TestExecuteInstructions:
     def test_calls_simple_function(self):
@@ -571,6 +585,7 @@ class TestExecuteInstructions:
 # aexecute_instructions tests
 # ---------------------------------------------------------------------------
 
+
 class TestAExecuteInstructions:
     @pytest.mark.asyncio
     async def test_calls_sync_function(self):
@@ -621,6 +636,7 @@ class TestAExecuteInstructions:
 # ---------------------------------------------------------------------------
 # aexecute_system_message tests
 # ---------------------------------------------------------------------------
+
 
 class TestAExecuteSystemMessage:
     @pytest.mark.asyncio

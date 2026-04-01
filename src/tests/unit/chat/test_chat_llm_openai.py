@@ -100,9 +100,7 @@ def _make_assistant_message(text: str = "Hi") -> Message:
     )
 
 
-def _make_tool_result_message(
-    tool_call_id: str = "c1", name: str = "tool", output=None
-) -> Message:
+def _make_tool_result_message(tool_call_id: str = "c1", name: str = "tool", output=None) -> Message:
     if output is None:
         output = TextResultContent(value="result")
     return Message(
@@ -336,8 +334,14 @@ class TestGetContentType:
             ("file.css", "text/css"),
             ("page.html", "text/html"),
             ("code.ts", "application/typescript"),
-            ("report.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-            ("slides.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+            (
+                "report.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ),
+            (
+                "slides.pptx",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            ),
             ("script.sh", "application/x-sh"),
             ("code.go", "text/x-golang"),
             ("code.java", "text/x-java"),
@@ -417,7 +421,9 @@ class TestConvertMessagesUser:
             id=_uuid_mod.uuid4(),
             session_id=_SESSION_ID,
             role=MessageRole.USER,
-            parts=[BinaryContent(data=b"\xff\xd8\xff", mime_type="image/jpeg", path="/tmp/img.jpg")],
+            parts=[
+                BinaryContent(data=b"\xff\xd8\xff", mime_type="image/jpeg", path="/tmp/img.jpg")
+            ],
         )
         result = provider._convert_messages([msg], _make_empty_container_file())
         content = result[0]["content"]
@@ -575,9 +581,7 @@ class TestConvertMessagesToolResult:
         msg = _make_tool_result_message(
             "c1",
             "tool",
-            ArrayResultContent(
-                value=[ImageDataContentPart(media_type="image/png", data="base64")]
-            ),
+            ArrayResultContent(value=[ImageDataContentPart(media_type="image/png", data="base64")]),
         )
         result = provider._convert_messages([msg], _make_empty_container_file())
         assert result[0]["output"][0]["type"] == "input_image"
@@ -589,7 +593,9 @@ class TestConvertMessagesToolResult:
             "tool",
             ArrayResultContent(
                 value=[
-                    FileDataContentPart(mime_type="application/pdf", data="pdfdata", filename="f.pdf")
+                    FileDataContentPart(
+                        mime_type="application/pdf", data="pdfdata", filename="f.pdf"
+                    )
                 ]
             ),
         )
@@ -601,9 +607,7 @@ class TestConvertMessagesToolResult:
         msg = _make_tool_result_message(
             "c1",
             "tool",
-            ArrayResultContent(
-                value=[ImageUrlContentPart(url="http://example.com/img.png")]
-            ),
+            ArrayResultContent(value=[ImageUrlContentPart(url="http://example.com/img.png")]),
         )
         result = provider._convert_messages([msg], _make_empty_container_file())
         assert result[0]["output"][0]["type"] == "input_text"

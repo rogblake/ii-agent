@@ -2,54 +2,40 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import mimetypes
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from ii_agent.agent.runtime.tools.clients import _get_client
+from ii_agent.agents.tools.clients import _get_client
 from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.storage.path_resolver import path_resolver
 from ii_agent.content.media.constants import IMAGE_MINI_TOOLS_TYPE
 from ii_agent.content.media.models import MediaTemplate
 from ii_agent.content.media.repository import MediaTemplateRepository
 from ii_agent.content.media.schemas import MediaTemplateInfo, MediaTool, ReferenceImageResponse, get_image_limits
-from ii_agent.core.storage import BaseStorage
-from ii_agent.core.redis import create_entity_cache
+from ii_agent.core.storage.providers.base import StorageProvider
+from ii_agent.core.redis.cache import EntityCache
 
 logger = logging.getLogger(__name__)
 
-# Cache instance with 10-minute TTL
-_media_template_cache = create_entity_cache(namespace="media_templates", ttl=600)
 
-# Cache for media tools with 10-minute TTL
-_media_tools_cache = create_entity_cache(namespace="media_tools", ttl=600)
-
-
-def _get_public_url(storage: BaseStorage, preview: Optional[str]) -> Optional[str]:
+def _get_public_url(storage: StorageProvider, preview: Optional[str]) -> Optional[str]:
     """Get public URL for a preview image."""
     if not preview:
         return None
-    return storage.get_public_url(preview)
+    return storage.public_url(preview)
 
 
 async def _get_public_urls_parallel(
-    storage: BaseStorage, previews: List[Optional[str]]
+    storage: StorageProvider, previews: List[Optional[str]]
 ) -> List[Optional[str]]:
-    """Get public URLs for multiple previews in parallel using a thread pool."""
-    loop = asyncio.get_event_loop()
-
-    with ThreadPoolExecutor() as executor:
-        tasks = [
-            loop.run_in_executor(executor, _get_public_url, storage, preview)
-            for preview in previews
-        ]
-        return await asyncio.gather(*tasks)
+    """Get public URLs for multiple previews. public_url is sync, so no I/O needed."""
+    return [_get_public_url(storage, preview) for preview in previews]
 
 
 def _map_template_to_media_tool(template: dict) -> MediaTool:
@@ -73,12 +59,14 @@ class MediaTemplateService:
         self,
         *,
         repo: MediaTemplateRepository,
-        media_storage: BaseStorage,
+        media_storage: StorageProvider,
         config: Settings,
+        cache: EntityCache,
     ) -> None:
         self._config = config
         self._repo = repo
         self._storage = media_storage
+        self._cache = cache
 
     async def get_media_template_by_id(
         self, db: AsyncSession, template_id: str
@@ -89,7 +77,7 @@ class MediaTemplateService:
             MediaTemplateInfo or None if not found.
         """
         cache_key = f"template:{template_id}"
-        cached = await _media_template_cache.get(cache_key)
+        cached = await self._cache.get(cache_key)
         if cached:
             return MediaTemplateInfo(**cached)
 
@@ -98,7 +86,7 @@ class MediaTemplateService:
             return None
 
         info = self._to_info(template)
-        await _media_template_cache.set(cache_key, info.model_dump())
+        await self._cache.set(cache_key, info.model_dump())
         return info
 
     async def get_media_template_by_name(
@@ -132,7 +120,7 @@ class MediaTemplateService:
             f"list:page={page}:size={page_size}"
             f":search={search or ''}:type={media_type or ''}"
         )
-        cached = await _media_template_cache.get(cache_key)
+        cached = await self._cache.get(cache_key)
         if cached:
             return cached
 
@@ -167,7 +155,7 @@ class MediaTemplateService:
             "total_pages": result["total_pages"],
         }
 
-        await _media_template_cache.set(cache_key, result_dict)
+        await self._cache.set(cache_key, result_dict)
         return result_dict
 
     # -- Media tools (mini tools) ------------------------------------------
@@ -181,8 +169,8 @@ class MediaTemplateService:
         name: Optional[str] = None,
     ) -> List[MediaTool]:
         """List media mini tools with caching."""
-        cache_key = f"list:page={page}:size={page_size}:name={name or ''}"
-        cached = await _media_tools_cache.get(cache_key)
+        cache_key = f"tools:list:page={page}:size={page_size}:name={name or ''}"
+        cached = await self._cache.get(cache_key)
         if cached:
             return [MediaTool(**tool) for tool in cached]
 
@@ -192,7 +180,7 @@ class MediaTemplateService:
         templates = result.get("templates", [])
         media_tools = [_map_template_to_media_tool(t) for t in templates]
 
-        await _media_tools_cache.set(cache_key, [tool.model_dump() for tool in media_tools])
+        await self._cache.set(cache_key, [tool.model_dump() for tool in media_tools])
         return media_tools
 
     async def get_media_tool(
@@ -202,7 +190,7 @@ class MediaTemplateService:
     ) -> Optional[MediaTool]:
         """Get a media mini tool by id with caching."""
         cache_key = f"tool:{tool_id}"
-        cached = await _media_tools_cache.get(cache_key)
+        cached = await self._cache.get(cache_key)
         if cached:
             return MediaTool(**cached)
 
@@ -211,7 +199,7 @@ class MediaTemplateService:
             return None
 
         media_tool = _map_template_to_media_tool(template.model_dump())
-        await _media_tools_cache.set(cache_key, media_tool.model_dump())
+        await self._cache.set(cache_key, media_tool.model_dump())
         return media_tool
 
     # -- Reference image generation ----------------------------------------
@@ -228,11 +216,11 @@ class MediaTemplateService:
         user_api_key: str,
         model_name: Optional[str] = None,
         provider: Optional[str] = None,
-        default_storage: BaseStorage,
+        default_storage: StorageProvider,
         file_service: Any,
     ) -> ReferenceImageResponse:
-        """Generate a reference image, store it, and create a FileUpload record."""
-        from ii_agent.files.models import FileUpload
+        """Generate a reference image, store it, and create a FileAsset record."""
+        from ii_agent.files.models import FileAsset
 
         try:
             result = await _generate_reference_image(
@@ -268,15 +256,15 @@ class MediaTemplateService:
                         session_id=session_id,
                     )
                 else:
-                    user_storage_path = f"users/{user_id}/generated/{file_id}{ext}"
+                    user_storage_path = path_resolver.user_generated(user_id, file_id, ext.lstrip("."))
                     try:
-                        default_storage.write_from_url(
-                            url=url,
-                            path=user_storage_path,
-                            content_type=content_type,
+                        await default_storage.write_from_url(
+                            url,
+                            user_storage_path,
+                            content_type,
                         )
                         storage_path = user_storage_path
-                        signed_url = default_storage.get_download_signed_url(user_storage_path)
+                        signed_url = await default_storage.signed_download_url(user_storage_path)
                         if signed_url:
                             url = signed_url
                     except Exception as copy_error:
@@ -285,14 +273,13 @@ class MediaTemplateService:
                             copy_error,
                         )
 
-                    db_file = FileUpload(
+                    db_file = FileAsset(
                         id=file_id,
                         user_id=user_id,
                         file_name=file_name,
                         file_size=file_size,
                         storage_path=storage_path,
                         content_type=content_type,
-                        session_id=None,
                     )
                     db.add(db_file)
                     await db.flush()

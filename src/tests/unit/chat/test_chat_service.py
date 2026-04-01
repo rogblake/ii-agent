@@ -1,11 +1,12 @@
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 
 from ii_agent.chat.application.chat_service import ChatService
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.title_service import SessionTitleService
-from ii_agent.sessions.title_config import SessionTitleConfig
+from ii_agent.core.config.session_title import SessionTitleConfig
 
 
 class FakeSessionRepo:
@@ -38,7 +39,6 @@ def chat_service(settings_factory, title_service):
         message_history=SimpleNamespace(),
         message_service=SimpleNamespace(),
         session_repo=FakeSessionRepo(),
-        chat_run_service=SimpleNamespace(),
         llm_setting_service=SimpleNamespace(),
         credit_service=None,
         container=SimpleNamespace(),
@@ -87,7 +87,7 @@ async def test_generate_title_skips_llm_for_short_query(monkeypatch):
         )
     )
 
-    async def _unexpected_llm_call(_query, **_kwargs):
+    async def _unexpected_llm_call(_query):
         raise AssertionError("LLM title generation should not run for short queries")
 
     monkeypatch.setattr(service, "_call_llm", _unexpected_llm_call)
@@ -109,14 +109,7 @@ async def test_background_title_update_retries_with_truncation_fallback(monkeypa
     fallback_title = SessionTitleService._truncate(query, max_length=80)
     attempts: list[str] = []
 
-    async def _fake_generate_title(
-        _query,
-        _max_length=80,
-        *,
-        session_id=None,
-        user_id=None,
-        app_kind="chat",
-    ):
+    async def _fake_generate_title(_query, _max_length=80):
         return "Semantic title"
 
     async def _fake_persist_title_update(_session_id: str, title: str) -> bool:
@@ -128,13 +121,7 @@ async def test_background_title_update_retries_with_truncation_fallback(monkeypa
     monkeypatch.setattr(service, "generate_title", _fake_generate_title)
     monkeypatch.setattr(service, "_persist_title_update", _fake_persist_title_update)
 
-    await service._background_title_update(
-        session_id="session-1",
-        user_id="user-1",
-        app_kind="chat",
-        query=query,
-        max_length=80,
-    )
+    await service._background_title_update("session-1", query, 80)
 
     assert attempts == ["Semantic title", fallback_title]
 
@@ -151,14 +138,7 @@ async def test_create_chat_session_commits_before_scheduling_title_update(
         async def commit(self):
             steps.append("commit")
 
-    def _schedule_title_update(
-        _session_id: str,
-        _query: str,
-        _max_length: int = 80,
-        *,
-        user_id: str,
-        app_kind: str,
-    ):
+    def _schedule_title_update(_session_id: str, _query: str, _max_length: int = 80):
         steps.append("schedule")
 
     monkeypatch.setattr(

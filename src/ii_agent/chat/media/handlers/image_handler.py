@@ -12,7 +12,7 @@ from ii_agent.chat.types import (
 )
 from ii_agent.chat.tools.image_generate import ImageGenerationTool
 from ii_agent.chat.application.file_processor import process_files_for_message
-from ii_agent.core.storage.client import storage
+from ii_agent.core.storage.client import get_storage
 from ..modes.base import BaseModeStrategy
 from ..modes.advanced_mode import AdvancedModeStrategy
 from ..modes.mini_tools_mode import MiniToolsModeStrategy
@@ -22,7 +22,7 @@ from ..registry import register_handler
 from .base import BaseMediaHandler
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class ImageMediaHandler(BaseMediaHandler):
         session_id: str,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
-        container: ServiceContainer,
+        container: ApplicationContainer,
     ) -> list[ImageGenerationTool]:
         """Create ImageGenerationTool with configuration."""
 
@@ -74,15 +74,17 @@ class ImageMediaHandler(BaseMediaHandler):
         # Get media references
         media_refs = media_preferences.references if media_preferences.references else None
 
-        return [ImageGenerationTool(
-            session_id=session_id,
-            media_preferences=media_preferences,
-            image_aspect_ratio=media_preferences.aspect_ratio,
-            image_resolution=media_preferences.resolution,
-            references=media_refs,
-            mini_tools_mode=is_mini_tools_mode,
-            container=container,
-        )]
+        return [
+            ImageGenerationTool(
+                session_id=session_id,
+                media_preferences=media_preferences,
+                image_aspect_ratio=media_preferences.aspect_ratio,
+                image_resolution=media_preferences.resolution,
+                references=media_refs,
+                mini_tools_mode=is_mini_tools_mode,
+                container=container,
+            )
+        ]
 
     async def build_llm_context(
         self,
@@ -116,56 +118,74 @@ class ImageMediaHandler(BaseMediaHandler):
             # Load SUBJECT references first
             if subject_refs:
                 subject_file_ids = [ref.file_id for ref in subject_refs]
-                indices_str = ", ".join([f"#{i}" for i in range(current_idx, current_idx + len(subject_refs))])
+                indices_str = ", ".join(
+                    [f"#{i}" for i in range(current_idx, current_idx + len(subject_refs))]
+                )
                 advanced_mode_parts.append(
-                    TextContent(text=f"\n SUBJECT REFERENCE {indices_str} - THIS PERSON/CHARACTER MUST APPEAR IN OUTPUT:")
+                    TextContent(
+                        text=f"\n SUBJECT REFERENCE {indices_str} - THIS PERSON/CHARACTER MUST APPEAR IN OUTPUT:"
+                    )
                 )
                 processed = await process_files_for_message(
                     db_session=db_session,
                     file_ids=subject_file_ids,
-                    storage=storage,
+                    storage=get_storage(),
                     session_id=session_id,
                 )
                 if processed.binary_parts:
                     advanced_mode_parts.extend(processed.binary_parts)
                     current_idx += len(processed.binary_parts)
-                    logger.info(f"[ADVANCED_MODE] Loaded {len(processed.binary_parts)} SUBJECT reference(s)")
+                    logger.info(
+                        f"[ADVANCED_MODE] Loaded {len(processed.binary_parts)} SUBJECT reference(s)"
+                    )
 
             # Load SCENE references second
             if scene_refs:
                 scene_file_ids = [ref.file_id for ref in scene_refs]
-                indices_str = ", ".join([f"#{i}" for i in range(current_idx, current_idx + len(scene_refs))])
+                indices_str = ", ".join(
+                    [f"#{i}" for i in range(current_idx, current_idx + len(scene_refs))]
+                )
                 advanced_mode_parts.append(
-                    TextContent(text=f"\n SCENE REFERENCE {indices_str} - USE THIS ENVIRONMENT AS BACKGROUND:")
+                    TextContent(
+                        text=f"\n SCENE REFERENCE {indices_str} - USE THIS ENVIRONMENT AS BACKGROUND:"
+                    )
                 )
                 processed = await process_files_for_message(
                     db_session=db_session,
                     file_ids=scene_file_ids,
-                    storage=storage,
+                    storage=get_storage(),
                     session_id=session_id,
                 )
                 if processed.binary_parts:
                     advanced_mode_parts.extend(processed.binary_parts)
                     current_idx += len(processed.binary_parts)
-                    logger.info(f"[ADVANCED_MODE] Loaded {len(processed.binary_parts)} SCENE reference(s)")
+                    logger.info(
+                        f"[ADVANCED_MODE] Loaded {len(processed.binary_parts)} SCENE reference(s)"
+                    )
 
             # Load STYLE references third
             if style_refs:
                 style_file_ids = [ref.file_id for ref in style_refs]
-                indices_str = ", ".join([f"#{i}" for i in range(current_idx, current_idx + len(style_refs))])
+                indices_str = ", ".join(
+                    [f"#{i}" for i in range(current_idx, current_idx + len(style_refs))]
+                )
                 advanced_mode_parts.append(
-                    TextContent(text=f"\n STYLE REFERENCE {indices_str} - COPY ART STYLE ONLY (DO NOT COPY ANY SUBJECT/PERSON FROM THIS IMAGE):")
+                    TextContent(
+                        text=f"\n STYLE REFERENCE {indices_str} - COPY ART STYLE ONLY (DO NOT COPY ANY SUBJECT/PERSON FROM THIS IMAGE):"
+                    )
                 )
                 processed = await process_files_for_message(
                     db_session=db_session,
                     file_ids=style_file_ids,
-                    storage=storage,
+                    storage=get_storage(),
                     session_id=session_id,
                 )
                 if processed.binary_parts:
                     advanced_mode_parts.extend(processed.binary_parts)
                     current_idx += len(processed.binary_parts)
-                    logger.info(f"[ADVANCED_MODE] Loaded {len(processed.binary_parts)} STYLE reference(s)")
+                    logger.info(
+                        f"[ADVANCED_MODE] Loaded {len(processed.binary_parts)} STYLE reference(s)"
+                    )
 
         # 2. Load previously generated images in this session
         generated_images = await ReferenceResolver.get_session_images(
@@ -174,9 +194,13 @@ class ImageMediaHandler(BaseMediaHandler):
         )
         if generated_images:
             # Calculate starting index for generated images (continue from current_idx)
-            indices_str = ", ".join([f"#{i}" for i in range(current_idx, current_idx + len(generated_images))])
+            indices_str = ", ".join(
+                [f"#{i}" for i in range(current_idx, current_idx + len(generated_images))]
+            )
             advanced_mode_parts.append(
-                TextContent(text=f"\n--- PREVIOUSLY GENERATED IMAGE(S) {indices_str} (Modify these when user asks for changes) ---")
+                TextContent(
+                    text=f"\n--- PREVIOUSLY GENERATED IMAGE(S) {indices_str} (Modify these when user asks for changes) ---"
+                )
             )
             processed_generated = await process_files_for_message(
                 db_session=db_session,

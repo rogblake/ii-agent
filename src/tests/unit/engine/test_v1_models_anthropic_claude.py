@@ -25,7 +25,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from ii_agent.agent.runtime.models.anthropic.claude import (
+from ii_agent.agents.models.anthropic.claude import (
     ROLE_MAP,
     MCPServerConfiguration,
     Claude,
@@ -33,19 +33,20 @@ from ii_agent.agent.runtime.models.anthropic.claude import (
     format_tools_for_model,
     format_messages,
 )
-from ii_agent.agent.runtime.models.message import Message
-from ii_agent.agent.runtime.models.metrics import Metrics
-from ii_agent.agent.runtime.models.response import ModelResponse
-from ii_agent.agent.runtime.exceptions import (
+from ii_agent.agents.models.message import Message
+from ii_agent.agents.models.metrics import Metrics
+from ii_agent.agents.models.response import ModelResponse
+from ii_agent.agents.exceptions import (
     ModelProviderError,
     ModelRateLimitError,
 )
-from ii_agent.agent.types import Provider
+from ii_agent.agents.types import Provider
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_claude(**kwargs) -> Claude:
     c = Claude(**kwargs)
@@ -71,9 +72,7 @@ def _make_usage(input_t=10, output_t=20, cache_create=5, cache_read=3):
     usage.output_tokens = output_t
     usage.cache_creation_input_tokens = cache_create
     usage.cache_read_input_tokens = cache_read
-    usage.model_dump = MagicMock(
-        return_value={"input_tokens": input_t, "output_tokens": output_t}
-    )
+    usage.model_dump = MagicMock(return_value={"input_tokens": input_t, "output_tokens": output_t})
     return usage
 
 
@@ -90,6 +89,7 @@ def _make_provider_response(blocks, stop_reason="end_turn", role="assistant", us
 # ---------------------------------------------------------------------------
 # 1. ROLE_MAP
 # ---------------------------------------------------------------------------
+
 
 class TestRoleMap:
     def test_system_maps_to_system(self):
@@ -111,6 +111,7 @@ class TestRoleMap:
 # ---------------------------------------------------------------------------
 # 2. MCPServerConfiguration
 # ---------------------------------------------------------------------------
+
 
 class TestMCPServerConfiguration:
     def test_required_fields(self):
@@ -136,6 +137,7 @@ class TestMCPServerConfiguration:
 # ---------------------------------------------------------------------------
 # 3. _normalize_tool_definition
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeToolDefinition:
     def test_none_returns_none(self):
@@ -167,6 +169,7 @@ class TestNormalizeToolDefinition:
 # 4. format_tools_for_model
 # ---------------------------------------------------------------------------
 
+
 class TestFormatToolsForModel:
     def test_empty_tools(self):
         assert format_tools_for_model([]) == []
@@ -175,7 +178,13 @@ class TestFormatToolsForModel:
         assert format_tools_for_model(None) == []
 
     def test_valid_tool_formatted(self):
-        tools = [{"name": "search", "description": "Search", "parameters": {"type": "object", "properties": {}}}]
+        tools = [
+            {
+                "name": "search",
+                "description": "Search",
+                "parameters": {"type": "object", "properties": {}},
+            }
+        ]
         result = format_tools_for_model(tools)
         assert len(result) == 1
         assert result[0]["name"] == "search"
@@ -210,6 +219,7 @@ class TestFormatToolsForModel:
 # 5. format_messages
 # ---------------------------------------------------------------------------
 
+
 class TestFormatMessages:
     def test_system_message_extracted(self):
         msgs = [Message(role="system", content="Be helpful")]
@@ -241,8 +251,10 @@ class TestFormatMessages:
         ]
         formatted, _ = format_messages(msgs)
         tool_result_msgs = [
-            m for m in formatted
-            if m.get("role") == "user" and isinstance(m.get("content"), list)
+            m
+            for m in formatted
+            if m.get("role") == "user"
+            and isinstance(m.get("content"), list)
             and any(c.get("type") == "tool_result" for c in m["content"])
         ]
         assert len(tool_result_msgs) >= 1
@@ -337,6 +349,7 @@ class TestFormatMessages:
 # 6. Claude class defaults
 # ---------------------------------------------------------------------------
 
+
 class TestClaudeDefaults:
     def test_default_id(self):
         c = Claude()
@@ -374,6 +387,7 @@ class TestClaudeDefaults:
 # 7. Claude._setup_skills_configuration
 # ---------------------------------------------------------------------------
 
+
 class TestClaudeSkillsConfiguration:
     def test_skills_trigger_betas_setup(self):
         c = Claude(skills=[{"type": "anthropic", "skill_id": "pptx", "version": "latest"}])
@@ -404,6 +418,7 @@ class TestClaudeSkillsConfiguration:
 # ---------------------------------------------------------------------------
 # 8. Claude._ensure_additional_properties_false
 # ---------------------------------------------------------------------------
+
 
 class TestClaudeEnsureAdditionalPropertiesFalse:
     def test_object_type_gets_false(self):
@@ -438,6 +453,7 @@ class TestClaudeEnsureAdditionalPropertiesFalse:
 # ---------------------------------------------------------------------------
 # 9. Claude._build_output_format
 # ---------------------------------------------------------------------------
+
 
 class TestClaudeBuildOutputFormat:
     def test_none_returns_none(self):
@@ -474,6 +490,7 @@ class TestClaudeBuildOutputFormat:
 # ---------------------------------------------------------------------------
 # 10. Claude.get_request_params
 # ---------------------------------------------------------------------------
+
 
 class TestClaudeGetRequestParams:
     def test_max_tokens_included(self):
@@ -533,6 +550,7 @@ class TestClaudeGetRequestParams:
 # 11. Claude._prepare_request_kwargs
 # ---------------------------------------------------------------------------
 
+
 class TestClaudePrepareRequestKwargs:
     def test_system_message_included(self):
         c = Claude()
@@ -582,6 +600,7 @@ class TestClaudePrepareRequestKwargs:
 # ---------------------------------------------------------------------------
 # 12. Claude._parse_provider_response
 # ---------------------------------------------------------------------------
+
 
 class TestClaudeParseProviderResponse:
     def test_role_set_to_assistant(self):
@@ -644,6 +663,7 @@ class TestClaudeParseProviderResponse:
 
     def test_web_search_citation_extracted(self):
         from anthropic.types import CitationsWebSearchResultLocation
+
         c = _make_claude()
         citation = MagicMock(spec=CitationsWebSearchResultLocation)
         citation.url = "https://example.com"
@@ -656,6 +676,7 @@ class TestClaudeParseProviderResponse:
 
     def test_document_citation_extracted(self):
         from anthropic.types import CitationPageLocation
+
         c = _make_claude()
         citation = MagicMock(spec=CitationPageLocation)
         citation.document_title = "Test Doc"
@@ -685,10 +706,12 @@ class TestClaudeParseProviderResponse:
 # 13. ainvoke error handling
 # ---------------------------------------------------------------------------
 
+
 class TestClaudeAinvokeErrors:
     @pytest.mark.asyncio
     async def test_api_connection_error_raises_model_provider_error(self):
         from anthropic import APIConnectionError
+
         c = _make_claude(api_key="key")
         err = MagicMock(spec=APIConnectionError)
         err.__class__ = APIConnectionError
@@ -703,6 +726,7 @@ class TestClaudeAinvokeErrors:
     async def test_rate_limit_error_raises_model_rate_limit_error(self):
         from anthropic import RateLimitError
         import httpx
+
         c = _make_claude(api_key="key")
         # Use a real RateLimitError instance so `raise ... from e` works
         mock_response = MagicMock(spec=httpx.Response)
@@ -718,6 +742,7 @@ class TestClaudeAinvokeErrors:
     @pytest.mark.asyncio
     async def test_api_status_error_raises_model_provider_error(self):
         from anthropic import APIStatusError
+
         c = _make_claude(api_key="key")
         err = MagicMock(spec=APIStatusError)
         err.__class__ = APIStatusError
@@ -732,9 +757,7 @@ class TestClaudeAinvokeErrors:
     @pytest.mark.asyncio
     async def test_generic_exception_raises_model_provider_error(self):
         c = _make_claude(api_key="key")
-        c.async_client.beta.messages.create = AsyncMock(
-            side_effect=ValueError("unexpected error")
-        )
+        c.async_client.beta.messages.create = AsyncMock(side_effect=ValueError("unexpected error"))
         msgs = [Message(role="user", content="hi")]
         assistant = Message(role="assistant", content="")
         with pytest.raises(ModelProviderError):
@@ -743,6 +766,7 @@ class TestClaudeAinvokeErrors:
     @pytest.mark.asyncio
     async def test_httpx_timeout_raises_model_provider_error(self):
         import httpx
+
         c = _make_claude(api_key="key")
         c.async_client.beta.messages.create = AsyncMock(
             side_effect=httpx.TimeoutException("timed out")
@@ -756,6 +780,7 @@ class TestClaudeAinvokeErrors:
 # ---------------------------------------------------------------------------
 # 14. Claude.get_system_message_for_model
 # ---------------------------------------------------------------------------
+
 
 class TestClaudeGetSystemMessageForModel:
     def test_with_tools_returns_string(self):
@@ -774,6 +799,7 @@ class TestClaudeGetSystemMessageForModel:
 # ---------------------------------------------------------------------------
 # 15. Claude ainvoke happy path
 # ---------------------------------------------------------------------------
+
 
 class TestClaudeAinvokeHappyPath:
     @pytest.mark.asyncio

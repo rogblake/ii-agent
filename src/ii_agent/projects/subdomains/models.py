@@ -5,14 +5,16 @@ from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Index, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ii_agent.core.db.base import Base, TimestampColumn
+from ii_agent.projects.subdomains.types import DnsStatus, SslStatus
 
 if TYPE_CHECKING:
     from ii_agent.projects.models import Project
     from ii_agent.projects.deployments.models import ProjectDeployment
-    from ii_agent.auth.users.models import User
+    from ii_agent.users.models import User
 
 
 class ProjectCustomDomain(Base):
@@ -24,11 +26,8 @@ class ProjectCustomDomain(Base):
 
     __tablename__ = "project_custom_domains"
 
-    id: Mapped[str] = mapped_column(
-        String, primary_key=True, default=lambda: str(uuid.uuid4())
-    )
-    project_id: Mapped[str] = mapped_column(
-        String,
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
@@ -49,22 +48,22 @@ class ProjectCustomDomain(Base):
     )
 
     # Deployment linking
-    deployment_id: Mapped[Optional[str]] = mapped_column(
-        String,
+    deployment_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("project_deployments.id", ondelete="SET NULL"),
         nullable=True,
         comment="Specific deployment this domain points to (NULL = current production)",
     )
 
     # DNS/SSL status
-    dns_status: Mapped[str] = mapped_column(
+    dns_status: Mapped[DnsStatus] = mapped_column(
         String(50),
-        default="pending",
+        default=DnsStatus.PENDING,
         comment="DNS record status: pending, propagating, active, failed",
     )
-    ssl_status: Mapped[str] = mapped_column(
+    ssl_status: Mapped[SslStatus] = mapped_column(
         String(50),
-        default="pending",
+        default=SslStatus.PENDING,
         comment="SSL certificate status: pending, provisioning, active, failed",
     )
     cloudflare_record_id: Mapped[Optional[str]] = mapped_column(
@@ -79,8 +78,8 @@ class ProjectCustomDomain(Base):
         nullable=True,
         comment="When the subdomain was claimed",
     )
-    claimed_by_user_id: Mapped[Optional[str]] = mapped_column(
-        String,
+    claimed_by_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         comment="User who claimed this subdomain",

@@ -30,10 +30,10 @@ from ii_agent.core.config.agent import AgentSettings
 from ii_agent.core.config.mobile import MobileSettings
 from ii_agent.core.config.enhance_prompt_config import EnhancePromptConfig
 from ii_agent.core.config.nano_banana import NanoBananaConfig
-from ii_agent.sessions.title_config import SessionTitleConfig
+from ii_agent.core.config.session_title import SessionTitleConfig
 
 if TYPE_CHECKING:
-    from ii_agent.core.storage.base import BaseStorage
+    from ii_agent.core.storage.providers.base import StorageProvider
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 II_AGENT_DIR = Path(__file__).parent.parent.parent
 
 # Type aliases
-Environment = Literal["dev", "staging", "production"]
+Environment = Literal["dev", "staging", "production", "local"]
 
 
 class Settings(BaseSettings):
@@ -351,12 +351,12 @@ class Settings(BaseSettings):
     # ========== Computed Properties ==========
 
     @property
-    def storage_client(self) -> BaseStorage:
+    def storage_client(self) -> StorageProvider:
         """Get storage client singleton."""
         # Use lazy import to avoid circular import
-        from ii_agent.core.storage.client import storage
+        from ii_agent.core.storage.client import get_storage
 
-        return storage
+        return get_storage()
 
     @property
     def sync_database_url(self) -> str:

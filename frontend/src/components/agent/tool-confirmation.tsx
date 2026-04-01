@@ -4,7 +4,7 @@ import { Check, X } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../ui/button'
-import { ToolConfirmationData, TOOL } from '@/typings/agent'
+import { ToolConfirmationData, TOOL, CommandType } from '@/typings/agent'
 import { useSocketIOContext } from '@/contexts/websocket-context'
 import { useAppDispatch } from '@/state'
 import { setRunStatus } from '@/state/slice/agent'
@@ -40,15 +40,11 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
 
         // Send continue_run command to backend
         sendMessage({
-            type: 'continue_run',
+            session_uuid: confirmation.session_id,
             content: {
+                command: CommandType.CONTINUE_RUN,
                 run_id: confirmation.run_id,
-                session_id: confirmation.session_id,
                 confirmed: confirmed,
-                tool: {
-                    tool_id: requirement?.tool_execution?.tool_call_id || '',
-                    tool_name: requirement?.tool_execution?.tool_name || ''
-                },
                 ...(userInput ? { user_input: userInput } : {})
             }
         })

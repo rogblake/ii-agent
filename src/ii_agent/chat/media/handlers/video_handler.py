@@ -30,14 +30,15 @@ from ii_agent.chat.application.file_processor import (
     compress_image_for_provider,
     DEFAULT_IMAGE_LIMIT,
 )
-from ii_agent.core.storage.client import media_storage, storage
+from ii_agent.core.storage.client import get_storage
+from ii_agent.core.storage.path_resolver import path_resolver
 from ..modes.base import BaseModeStrategy
 from ..modes.normal_mode import NormalModeStrategy
 from ..registry import register_handler
 from .base import BaseMediaHandler
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ class VideoMediaHandler(BaseMediaHandler):
         session_id: str,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
-        container: ServiceContainer,
+        container: ApplicationContainer,
     ) -> List[BaseTool]:
         """
         Create all video-related tools.
@@ -224,8 +225,7 @@ class VideoMediaHandler(BaseMediaHandler):
 
         # Build audio guidance
         audio_hint = build_audio_guidance_hint(
-            video_settings.audio_included,
-            is_multi_segment=needs_multi_segment
+            video_settings.audio_included, is_multi_segment=needs_multi_segment
         )
 
         # Build frame transition guidance
@@ -262,13 +262,13 @@ class VideoMediaHandler(BaseMediaHandler):
                 step_num = i + 2
                 if i == extensions_needed - 1 and has_end:
                     extension_steps.append(
-                        f"\n   Step {step_num}: generate_video(prompt=\"[continue description]\", "
+                        f'\n   Step {step_num}: generate_video(prompt="[continue description]", '
                         f"source_video=<previous_url>, use_extension_api=True, is_final_segment=True)"
                         f"\n           → Returns {current_total}s merged video (with end frame applied)"
                     )
                 else:
                     extension_steps.append(
-                        f"\n   Step {step_num}: generate_video(prompt=\"[continue description]\", "
+                        f'\n   Step {step_num}: generate_video(prompt="[continue description]", '
                         f"source_video=<previous_url>, use_extension_api=True)"
                         f"\n           → Returns {current_total}s merged video"
                     )
@@ -290,7 +290,7 @@ class VideoMediaHandler(BaseMediaHandler):
                 f"\n📋 EXACT STEPS TO FOLLOW:"
                 f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 f"\n"
-                f"\n   Step 1: generate_video(prompt=\"[your detailed prompt]\")"
+                f'\n   Step 1: generate_video(prompt="[your detailed prompt]")'
                 f"\n           → Returns 8s video URL (initial segment)"
                 f"{extension_steps_str}"
                 f"\n"
@@ -305,11 +305,13 @@ class VideoMediaHandler(BaseMediaHandler):
                 f"\n• Resolution: Extensions use 720p (API limitation)"
                 + (
                     f"\n• END FRAME: User provided end frame - set is_final_segment=True on last extension"
-                    if has_end else ""
+                    if has_end
+                    else ""
                 )
                 + (
                     f"\n• START FRAME: User's start frame is applied automatically to Step 1"
-                    if has_start else ""
+                    if has_start
+                    else ""
                 )
                 + f"\n\nSTART NOW: Call generate_video with your prompt for Step 1!]"
                 + f"{storybook_hint}"
@@ -369,7 +371,7 @@ class VideoMediaHandler(BaseMediaHandler):
 
     async def _resolve_file_to_public_url(self, file_id: str) -> str | None:
         """Resolve a file ID to its public URL, converting HEIC to JPEG."""
-        from ii_agent.core.db.manager import get_db_session_local
+        from ii_agent.core.db import get_db_session_local
 
         try:
             async with get_db_session_local() as db:
@@ -379,6 +381,7 @@ class VideoMediaHandler(BaseMediaHandler):
                 file_repo = get_file_repository()
                 session_repo = get_session_repository()
                 from ii_agent.files.service import FileService
+
                 file_svc = FileService(file_repo=file_repo, session_repo=session_repo)
 
                 file_data = await file_svc.get_file_by_id(db, file_id)
@@ -386,21 +389,7 @@ class VideoMediaHandler(BaseMediaHandler):
                     return None
 
                 storage_path = file_data.storage_path
-
-                # Detect HEIC by content_type or file extension
-                is_heic = (file_data.content_type or "").lower() in ("image/heic", "image/heif")
-                if not is_heic and file_data.file_name:
-                    ext = file_data.file_name.rsplit(".", 1)[-1].lower() if "." in file_data.file_name else ""
-                    is_heic = ext in ("heic", "heif")
-
-                if is_heic:
-                    public_url = await self._convert_heic_storage_to_jpeg(file_id, storage_path)
-                elif storage_path.startswith("sessions/"):
-                    public_url = media_storage.get_public_url(storage_path)
-                else:
-                    public_url = await self._copy_to_public_storage(
-                        file_id, storage_path, file_data.content_type
-                    )
+                public_url = get_storage().public_url(storage_path)
 
                 logger.info(f"[VIDEO_HANDLER] Resolved file {file_id} -> {public_url}")
                 return public_url
@@ -411,12 +400,13 @@ class VideoMediaHandler(BaseMediaHandler):
     async def _convert_heic_storage_to_jpeg(self, file_id: str, source_path: str) -> str:
         """Read HEIC from storage, convert to JPEG, upload to public storage."""
         import anyio
-        from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+        from ii_agent.agents.utils.heic import convert_heic_to_jpeg
 
         public_path = f"video_generation_frames/{file_id[:8]}.jpg"
 
         def _do():
             import io
+
             file_obj = storage.read(source_path)
             heic_bytes = file_obj.read()
             file_obj.close()
@@ -433,7 +423,7 @@ class VideoMediaHandler(BaseMediaHandler):
         import anyio
         import httpx
         import uuid as _uuid
-        from ii_agent.agent.runtime.utils.heic import convert_heic_to_jpeg
+        from ii_agent.agents.utils.heic import convert_heic_to_jpeg
 
         try:
             async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
@@ -444,6 +434,7 @@ class VideoMediaHandler(BaseMediaHandler):
 
             def _convert_and_upload():
                 import io
+
                 jpeg_bytes, _ = convert_heic_to_jpeg(heic_bytes)
                 fid = str(_uuid.uuid4())[:8]
                 public_path = f"video_generation_frames/{fid}.jpg"
@@ -461,19 +452,11 @@ class VideoMediaHandler(BaseMediaHandler):
     async def _copy_to_public_storage(
         self, file_id: str, source_path: str, content_type: str | None
     ) -> str:
-        """Copy a file from private storage to public media storage."""
-        import anyio
-
+        """Copy a file from private storage to public storage."""
         ext = source_path.rsplit(".", 1)[-1] if "." in source_path else "png"
-        public_path = f"video_generation_frames/{file_id[:8]}.{ext}"
-
-        def _copy_sync():
-            file_data = storage.read(source_path)
-            return media_storage.upload_and_get_permanent_url(
-                file_data, public_path, content_type or "image/png"
-            )
-
-        return await anyio.to_thread.run_sync(_copy_sync)
+        public_path = path_resolver.public_shared(file_id[:8], ext)
+        await get_storage().copy(source_path, public_path)
+        return get_storage().public_url(public_path)
 
     async def _download_image_as_binary(self, url: str) -> Optional[BinaryContent]:
         """Download image from URL and return as BinaryContent."""
@@ -518,7 +501,9 @@ class VideoMediaHandler(BaseMediaHandler):
                     data=image_data,
                 )
         except httpx.HTTPStatusError as e:
-            logger.warning(f"[VIDEO_HANDLER] HTTP {e.response.status_code} downloading image: {url}")
+            logger.warning(
+                f"[VIDEO_HANDLER] HTTP {e.response.status_code} downloading image: {url}"
+            )
             return None
         except Exception as e:
             logger.warning(f"[VIDEO_HANDLER] Failed to download image: {e}")

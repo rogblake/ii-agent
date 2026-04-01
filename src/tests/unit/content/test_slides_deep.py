@@ -217,6 +217,7 @@ class TestGetVersions:
     @pytest.mark.asyncio
     async def test_returns_versions_list(self):
         from datetime import datetime, timezone
+
         repo = AsyncMock()
         repo.get_slide = AsyncMock(return_value=None)
         repo.get_versions = AsyncMock(
@@ -280,6 +281,7 @@ class TestRevertToVersion:
     @pytest.mark.asyncio
     async def test_returns_success_response(self):
         from ii_agent.content.slides.nano_banana.schemas import RevertRequest
+
         repo = AsyncMock()
         target_version = SimpleNamespace(
             id="v1",
@@ -308,6 +310,7 @@ class TestRevertToVersion:
     @pytest.mark.asyncio
     async def test_returns_failure_when_version_not_found(self):
         from ii_agent.content.slides.nano_banana.schemas import RevertRequest
+
         repo = AsyncMock()
         repo.get_version_by_id = AsyncMock(return_value=None)
 
@@ -324,6 +327,7 @@ class TestRevertToVersion:
     @pytest.mark.asyncio
     async def test_returns_failure_when_version_belongs_to_different_slide(self):
         from ii_agent.content.slides.nano_banana.schemas import RevertRequest
+
         repo = AsyncMock()
         # Version from different session
         wrong_version = SimpleNamespace(
@@ -490,6 +494,7 @@ class TestRegenerateSlide:
     @pytest.mark.asyncio
     async def test_returns_failure_on_slide_not_found(self):
         from ii_agent.content.slides.nano_banana.schemas import RegenerateRequest
+
         repo = AsyncMock()
         repo.get_slide = AsyncMock(side_effect=ValueError("Not found"))
 
@@ -508,6 +513,7 @@ class TestRegenerateSlide:
     @pytest.mark.asyncio
     async def test_calls_validate_session_access(self):
         from ii_agent.content.slides.nano_banana.schemas import RegenerateRequest
+
         repo = AsyncMock()
         repo.get_slide = AsyncMock(return_value=None)
 
@@ -535,6 +541,7 @@ class TestRemoveBackground:
     @pytest.mark.asyncio
     async def test_returns_failure_on_invalid_request(self):
         from ii_agent.content.slides.nano_banana.schemas import RemoveBackgroundRequest
+
         repo = AsyncMock()
         svc = _make_nano_service(repo=repo)
 

@@ -22,6 +22,8 @@ SlideRepositoryDep = Annotated[SlideContentRepository, Depends(get_slide_reposit
 
 
 # ==================== Service Dependencies ====================
+# Note: SlideService is NOT in ApplicationContainer — it uses inline
+# construction with per-request repo injection.
 
 
 def get_slide_service(

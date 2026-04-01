@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import Dict, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, Optional
+from uuid import UUID
+
+from pydantic import BaseModel
 
 
 class ProjectSecretsRequest(BaseModel):
@@ -12,7 +14,7 @@ class ProjectSecretsRequest(BaseModel):
 class ProjectSecretsResponse(BaseModel):
     """Response containing decrypted secrets for a project session."""
 
-    project_id: str
-    session_id: str
+    project_id: UUID
+    session_id: UUID
     secrets: Dict[str, Any]
     updated_at: Optional[datetime]

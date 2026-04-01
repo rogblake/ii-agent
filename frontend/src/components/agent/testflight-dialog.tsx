@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useParams } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -18,14 +19,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Icon } from '@/components/ui/icon'
 import { mobileAppService } from '@/services/mobile-app.service'
+import type { ChatMessagePayload } from '@/typings/agent'
 
 interface TestflightDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    sendMessage: (payload: {
-        type: string
-        content: Record<string, unknown>
-    }) => boolean
+    sendMessage: (payload: ChatMessagePayload) => boolean
 }
 
 export const TestflightDialog = ({
@@ -34,6 +33,7 @@ export const TestflightDialog = ({
     sendMessage
 }: TestflightDialogProps) => {
     const { t } = useTranslation()
+    const { sessionId } = useParams<{ sessionId: string }>()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [formData, setFormData] = useState({
         expoToken: '',
@@ -72,6 +72,7 @@ export const TestflightDialog = ({
                 appleId: formData.appleId.trim(),
                 appSpecificPassword: formData.appSpecificPassword.trim(),
                 teamId: formData.teamId.trim() || undefined,
+                sessionId: sessionId || '',
                 sendMessage
             })
 

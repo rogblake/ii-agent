@@ -154,7 +154,7 @@ class ContextWindowManager:
             messages_to_summarize = messages[1:last_user_idx] # Skip summary message at index 0
         else:
             messages_to_summarize = messages[:last_user_idx]
-        
+
         messages_to_keep = messages[last_user_idx:]
 
         if not messages_to_summarize:

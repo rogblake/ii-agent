@@ -1,36 +1,41 @@
-"""Storage module for file storage operations.
+"""Storage module — single-bucket async object storage.
 
-Import pattern:
-    # For types and factory
-    from ii_agent.core.storage import BaseStorage, GCS, create_storage_client
+Usage::
 
-    # For path utilities
-    from ii_agent.core.storage.locations import get_session_file_path
+    # Via DI in FastAPI routes:
+    from ii_agent.core.storage.dependencies import StorageServiceDep
 
-    # For singleton instances (import directly from client to avoid circular imports)
-    from ii_agent.core.storage.client import storage, media_storage
+    # Raw provider access (singleton, safe outside DI):
+    from ii_agent.core.storage import get_storage
+    provider = get_storage()
+    await provider.write("custom/path", data)
 """
 
-from .base import BaseStorage
-from .gcs import GCS
-from .factory import create_storage_client
-from .dependencies import get_media_template_storage
-from .locations import (
-    get_conversation_agent_state_path,
-    get_conversation_metadata_path,
-    get_session_file_path,
-    get_user_upload_file_path,
-    get_user_avatar_path,
+from ii_agent.core.storage.client import get_storage, set_storage, reset_storage
+from ii_agent.core.storage.dependencies import StorageServiceDep
+from ii_agent.core.storage.exceptions import (
+    StorageError,
+    StorageObjectNotFoundError,
+    StoragePermissionError,
 )
+from ii_agent.core.storage.path_resolver import PathResolver, path_resolver
+from ii_agent.core.storage.providers.base import StorageProvider
+from ii_agent.core.storage.service import StorageService
 
 __all__ = [
-    "BaseStorage",
-    "GCS",
-    "create_storage_client",
-    "get_media_template_storage",
-    "get_conversation_agent_state_path",
-    "get_conversation_metadata_path",
-    "get_session_file_path",
-    "get_user_upload_file_path",
-    "get_user_avatar_path",
+    # Service
+    "StorageService",
+    "StorageServiceDep",
+    # Raw provider
+    "StorageProvider",
+    "get_storage",
+    "set_storage",
+    "reset_storage",
+    # Path resolver
+    "PathResolver",
+    "path_resolver",
+    # Errors
+    "StorageError",
+    "StorageObjectNotFoundError",
+    "StoragePermissionError",
 ]

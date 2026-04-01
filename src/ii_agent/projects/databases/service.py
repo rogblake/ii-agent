@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from typing import List, Optional
 from urllib.parse import urlparse
 
@@ -14,8 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.projects.databases import utils
 from ii_agent.projects.databases.exceptions import ProjectDatabaseError
-from ii_agent.projects.databases.schemas import TableRecordsResult
-from ii_agent.projects.databases.models import DatabaseSourceEnum, ProjectDatabase
+from ii_agent.projects.databases.schemas import ProjectDatabaseResponse, TableRecordsResult
+from ii_agent.projects.databases.models import ProjectDatabase
+from ii_agent.projects.databases.types import DatabaseSource
 from ii_agent.projects.databases.repository import ProjectDatabaseRepository
 from ii_agent.projects.repository import ProjectRepository
 
@@ -92,8 +94,8 @@ class DatabaseService:
     async def get_project_db_connection(
         self,
         db: AsyncSession,
-        project_id: str,
-        user_id: str,
+        project_id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> Optional[str]:
         """Fetch the database connection URL for a project."""
         project = await self._project_repo.get_by_id_and_user(
@@ -107,8 +109,8 @@ class DatabaseService:
     async def get_project_db_tables(
         self,
         db: AsyncSession,
-        project_id: str,
-        user_id: str,
+        project_id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> Optional[list[str]]:
         """Return the table names for the project's database."""
         connection_url = await self.get_project_db_connection(
@@ -121,8 +123,8 @@ class DatabaseService:
     async def get_project_db_records(
         self,
         db: AsyncSession,
-        project_id: str,
-        user_id: str,
+        project_id: uuid.UUID,
+        user_id: uuid.UUID,
         *,
         table_name: str,
         limit: int,
@@ -163,10 +165,10 @@ class DatabaseService:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         connection_string: str,
-        source: str = DatabaseSourceEnum.USER.value,
-    ) -> ProjectDatabase:
+        source: str = DatabaseSource.USER,
+    ) -> ProjectDatabaseResponse:
         """Upsert a database record from a connection URL.
 
         If an active database exists for the session, update it.
@@ -181,14 +183,17 @@ class DatabaseService:
             existing.host = host
             existing.database_name = database_name
             existing.role_name = role_name
-            return await self._db_repo.update(db, existing)
+            entity = await self._db_repo.update(db, existing)
+            return ProjectDatabaseResponse.model_validate(entity)
 
-        return await self._db_repo.create(
-            db,
+        new_record = ProjectDatabase(
             session_id=session_id,
             source=source,
             connection_string=connection_string,
             host=host,
             database_name=database_name,
             role_name=role_name,
+            is_active=True,
         )
+        entity = await self._db_repo.save(db, new_record)
+        return ProjectDatabaseResponse.model_validate(entity)

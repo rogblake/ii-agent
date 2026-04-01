@@ -26,7 +26,9 @@ class FakeSecretManagerClient:
         self.access_calls.append(request["name"])
         if request["name"] not in self.responses:
             raise RuntimeError(f"secret missing: {request['name']}")
-        return SimpleNamespace(payload=SimpleNamespace(data=self.responses[request["name"]].encode("utf-8")))
+        return SimpleNamespace(
+            payload=SimpleNamespace(data=self.responses[request["name"]].encode("utf-8"))
+        )
 
 
 async def test_secret_provider_base_get_secrets_only_includes_found_values():

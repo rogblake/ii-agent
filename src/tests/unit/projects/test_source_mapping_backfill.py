@@ -248,7 +248,7 @@ class TestUpsertDataDesignIdAttribute:
 
     def test_returns_none_for_unknown_id_form(self):
         # Dynamic expression: data-design-id={someVar}
-        tag = '<div data-design-id={someVar}>'
+        tag = "<div data-design-id={someVar}>"
         result = _upsert_data_design_id_attribute(tag, "did-1")
         assert result is None
 
@@ -262,7 +262,7 @@ class TestUpsertDataDesignIdAttribute:
         assert result is None
 
     def test_empty_design_id_returns_none(self):
-        result = _upsert_data_design_id_attribute('<div>', "")
+        result = _upsert_data_design_id_attribute("<div>", "")
         assert result is None
 
 
@@ -338,10 +338,7 @@ class TestFindBestOpeningTagByClassTokens:
         assert "data-design-id" not in tag
 
     def test_prefers_preferred_tag_name(self):
-        content = (
-            '<span className="container">Span</span>'
-            '<div className="container">Div</div>'
-        )
+        content = '<span className="container">Span</span><div className="container">Div</div>'
         result = _find_best_opening_tag_by_class_tokens(
             content=content,
             class_name="container",
@@ -362,11 +359,11 @@ class TestFindBestOpeningTagByClassTokens:
 class TestFindBestComponentCallsiteOpeningTag:
     def test_finds_component_with_anchor_match(self):
         content = (
-            '<div>\n'
+            "<div>\n"
             '  <CardHeader data-design-id="ch-1">\n'
-            '    <h2>Hello World</h2>\n'
-            '  </CardHeader>\n'
-            '</div>'
+            "    <h2>Hello World</h2>\n"
+            "  </CardHeader>\n"
+            "</div>"
         )
         result = _find_best_component_callsite_opening_tag(
             content=content,
@@ -376,9 +373,7 @@ class TestFindBestComponentCallsiteOpeningTag:
         assert result is not None
 
     def test_returns_none_when_no_anchor_match(self):
-        content = (
-            '<CardHeader>No matching text here</CardHeader>'
-        )
+        content = "<CardHeader>No matching text here</CardHeader>"
         result = _find_best_component_callsite_opening_tag(
             content=content,
             component_name="CardHeader",
@@ -396,7 +391,7 @@ class TestFindBestComponentCallsiteOpeningTag:
 
     def test_returns_none_for_empty_component_name(self):
         result = _find_best_component_callsite_opening_tag(
-            content='<CardHeader>text</CardHeader>',
+            content="<CardHeader>text</CardHeader>",
             component_name="",
             anchors=["text"],
         )
@@ -404,7 +399,7 @@ class TestFindBestComponentCallsiteOpeningTag:
 
     def test_returns_none_for_empty_anchors(self):
         result = _find_best_component_callsite_opening_tag(
-            content='<CardHeader>text</CardHeader>',
+            content="<CardHeader>text</CardHeader>",
             component_name="CardHeader",
             anchors=[],
         )
@@ -412,8 +407,7 @@ class TestFindBestComponentCallsiteOpeningTag:
 
     def test_prefers_component_without_existing_design_id(self):
         content = (
-            '<CardHeader data-design-id="existing">Hello</CardHeader>'
-            '<CardHeader>Hello</CardHeader>'
+            '<CardHeader data-design-id="existing">Hello</CardHeader><CardHeader>Hello</CardHeader>'
         )
         result = _find_best_component_callsite_opening_tag(
             content=content,
@@ -445,7 +439,9 @@ class TestInferComponentNameBeforeIndex:
         assert result is None
 
     def test_infers_from_forwardRef(self):
-        content = "const Input = React.forwardRef((props, ref) => {\n  return <input ref={ref} />;\n});\n"
+        content = (
+            "const Input = React.forwardRef((props, ref) => {\n  return <input ref={ref} />;\n});\n"
+        )
         result = _infer_component_name_before_index(content, len(content))
         assert result == "Input"
 
@@ -468,10 +464,7 @@ class TestInferComponentNameBeforeIndex:
         assert result is None
 
     def test_returns_nearest_component(self):
-        content = (
-            "function Outer() { return null; }\n"
-            "function Inner() { return null; }\n"
-        )
+        content = "function Outer() { return null; }\nfunction Inner() { return null; }\n"
         # Index points to end - should find Inner as nearest.
         result = _infer_component_name_before_index(content, len(content))
         assert result == "Inner"
@@ -549,9 +542,7 @@ class TestFindBestOpeningTagNearSourceLocation:
         assert result is not None
 
     def test_returns_none_for_empty_content(self):
-        result = _find_best_opening_tag_near_source_location(
-            content="", line_no=1, column_no=None
-        )
+        result = _find_best_opening_tag_near_source_location(content="", line_no=1, column_no=None)
         assert result is None
 
     def test_returns_none_for_invalid_line_no(self):
@@ -638,9 +629,7 @@ class TestBackfillFromReactSource:
 
     @pytest.mark.asyncio
     async def test_returns_none_when_file_read_fails(self):
-        ctx = _make_element_context(
-            reactSource={"fileName": "src/App.tsx", "lineNumber": 5}
-        )
+        ctx = _make_element_context(reactSource={"fileName": "src/App.tsx", "lineNumber": 5})
         change = _make_style_change(element_context=ctx)
         sandbox = _make_sandbox(read_raises=FileNotFoundError("not found"))
         result = await _backfill_design_id_in_source_from_react_source(

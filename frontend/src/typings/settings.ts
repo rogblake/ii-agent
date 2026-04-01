@@ -16,9 +16,12 @@ export interface ValidateApiKeyResponse {
 export interface IModel {
     id: string
     model: string
-    api_type: 'openai' | 'anthropic' | 'gemini' | 'custom'
+    model_id?: string
+    provider?: string
+    api_type?: 'openai' | 'anthropic' | 'gemini' | 'custom'
     base_url?: string
     api_key?: string
+    display_name?: string
     context_length?: number
     input_price_per_token?: number
     output_price_per_token?: number
@@ -26,6 +29,10 @@ export interface IModel {
     supports_vision?: boolean
     description?: string
     source?: 'user' | 'system'
+    pricing?: {
+        input_price_per_million?: number
+        output_price_per_million?: number
+    } | null
     created_at?: string
     updated_at?: string
 }

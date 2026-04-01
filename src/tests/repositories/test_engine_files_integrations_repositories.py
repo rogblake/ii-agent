@@ -9,10 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.content.media.models import MediaTemplate
 from ii_agent.core.db.repository import BaseRepository
-from ii_agent.agent.runs.models import RunStatus
-from ii_agent.agent.runs.repository import AgentRunTaskRepository
-from ii_agent.agent.sandboxes.models import AgentSandbox
-from ii_agent.agent.sandboxes.repository import SandboxRepository
+from ii_agent.tasks.types import RunStatus
+from ii_agent.tasks.repository import RunTaskRepository
+from ii_agent.agents.sandboxes.models import AgentSandbox
+from ii_agent.agents.sandboxes.repository import SandboxRepository
 from ii_agent.files.repository import FileRepository
 from ii_agent.integrations.connectors.models import ComposioProfile, Connector
 from ii_agent.integrations.connectors.repository import ConnectorRepository
@@ -53,7 +53,7 @@ async def test_agent_run_task_repository_status_queries(
     session_factory,
 ) -> None:
     session = await session_factory()
-    repo = AgentRunTaskRepository()
+    repo = RunTaskRepository()
     session_uuid = uuid.UUID(session.id)
 
     first = await repo.create(db_session, session_id=session_uuid, status=RunStatus.RUNNING)
@@ -122,7 +122,7 @@ async def test_file_repository_filters_pagination_and_update(
     user = await user_factory()
     session = await session_factory(user_id=user.id)
 
-    image_file = await repo.create(
+    image_file = await repo.save(
         db_session,
         file_id="file-img",
         user_id=user.id,
@@ -132,7 +132,7 @@ async def test_file_repository_filters_pagination_and_update(
         content_type="image/png",
         session_id=session.id,
     )
-    await repo.create(
+    await repo.save(
         db_session,
         file_id="file-no-type",
         user_id=user.id,
@@ -141,7 +141,7 @@ async def test_file_repository_filters_pagination_and_update(
         storage_path="/files/b.bin",
         content_type=None,
     )
-    await repo.create(
+    await repo.save(
         db_session,
         file_id="file-text",
         user_id=user.id,

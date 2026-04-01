@@ -7,12 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ii_agent.agent.runtime.tools.connectors.github import GitHubAgentTool
+from ii_agent.agents.tools.connectors.github import GitHubAgentTool
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_tool(
     github_token="token123",
@@ -40,6 +41,7 @@ def make_http_response(json_data=None, status_code=200) -> MagicMock:
 # __init__ tests
 # ---------------------------------------------------------------------------
 
+
 class TestGitHubAgentToolInit:
     def test_init_sets_attributes(self):
         tool = make_tool(github_token="my-token")
@@ -54,7 +56,12 @@ class TestGitHubAgentToolInit:
         assert "DEFAULT REPOSITORY" not in tool.description
 
     def test_init_with_default_repository(self):
-        repo = {"full_name": "owner/repo", "default_branch": "main", "owner": "owner", "name": "repo"}
+        repo = {
+            "full_name": "owner/repo",
+            "default_branch": "main",
+            "owner": "owner",
+            "name": "repo",
+        }
         tool = make_tool(default_repository=repo)
         assert "owner/repo" in tool.description
         assert "main" in tool.description
@@ -86,6 +93,7 @@ class TestGitHubAgentToolInit:
 # ---------------------------------------------------------------------------
 # _get_repo_context tests
 # ---------------------------------------------------------------------------
+
 
 class TestGetRepoContext:
     def test_explicit_owner_and_repo(self):
@@ -125,6 +133,7 @@ class TestGetRepoContext:
 # execute routing tests
 # ---------------------------------------------------------------------------
 
+
 class TestExecuteRouting:
     @pytest.mark.asyncio
     async def test_execute_missing_action_returns_error(self):
@@ -149,6 +158,7 @@ class TestExecuteRouting:
     @pytest.mark.asyncio
     async def test_execute_handles_http_status_error(self):
         import httpx
+
         tool = make_tool()
 
         with patch("httpx.AsyncClient") as mock_client_class:
@@ -160,7 +170,9 @@ class TestExecuteRouting:
             mock_response.status_code = 404
             mock_response.text = "Not Found"
             mock_client.get = AsyncMock(
-                side_effect=httpx.HTTPStatusError("Not found", request=MagicMock(), response=mock_response)
+                side_effect=httpx.HTTPStatusError(
+                    "Not found", request=MagicMock(), response=mock_response
+                )
             )
             mock_client_class.return_value = mock_client
 
@@ -171,6 +183,7 @@ class TestExecuteRouting:
 # ---------------------------------------------------------------------------
 # _list_repos tests
 # ---------------------------------------------------------------------------
+
 
 class TestListRepos:
     @pytest.mark.asyncio
@@ -205,6 +218,7 @@ class TestListRepos:
 # _get_repo tests
 # ---------------------------------------------------------------------------
 
+
 class TestGetRepo:
     @pytest.mark.asyncio
     async def test_get_repo_returns_json(self):
@@ -222,6 +236,7 @@ class TestGetRepo:
 # _get_file tests
 # ---------------------------------------------------------------------------
 
+
 class TestGetFile:
     @pytest.mark.asyncio
     async def test_get_file_requires_path(self):
@@ -238,7 +253,9 @@ class TestGetFile:
         file_data = {"content": content}
         mock_client.get = AsyncMock(return_value=make_http_response(file_data))
 
-        result = await tool._get_file(mock_client, {}, {"owner": "owner", "repo": "repo", "path": "README.md"})
+        result = await tool._get_file(
+            mock_client, {}, {"owner": "owner", "repo": "repo", "path": "README.md"}
+        )
         assert "hello world" in result
 
     @pytest.mark.asyncio
@@ -248,13 +265,16 @@ class TestGetFile:
         dir_data = [{"name": "file1.py"}, {"name": "file2.py"}]
         mock_client.get = AsyncMock(return_value=make_http_response(dir_data))
 
-        result = await tool._get_file(mock_client, {}, {"owner": "owner", "repo": "repo", "path": "src"})
+        result = await tool._get_file(
+            mock_client, {}, {"owner": "owner", "repo": "repo", "path": "src"}
+        )
         assert "directory" in result.lower()
 
 
 # ---------------------------------------------------------------------------
 # _list_issues tests
 # ---------------------------------------------------------------------------
+
 
 class TestListIssues:
     @pytest.mark.asyncio
@@ -282,6 +302,7 @@ class TestListIssues:
 # _get_issue tests
 # ---------------------------------------------------------------------------
 
+
 class TestGetIssue:
     @pytest.mark.asyncio
     async def test_get_issue_requires_issue_number(self):
@@ -297,7 +318,9 @@ class TestGetIssue:
         issue_data = {"number": 5, "title": "My Issue"}
         mock_client.get = AsyncMock(return_value=make_http_response(issue_data))
 
-        result = await tool._get_issue(mock_client, {}, {"owner": "o", "repo": "r", "issue_number": 5})
+        result = await tool._get_issue(
+            mock_client, {}, {"owner": "o", "repo": "r", "issue_number": 5}
+        )
         parsed = json.loads(result)
         assert parsed["number"] == 5
 
@@ -305,6 +328,7 @@ class TestGetIssue:
 # ---------------------------------------------------------------------------
 # _create_issue tests
 # ---------------------------------------------------------------------------
+
 
 class TestCreateIssue:
     @pytest.mark.asyncio
@@ -314,10 +338,11 @@ class TestCreateIssue:
         issue = {"number": 10, "html_url": "http://github.com/owner/repo/issues/10"}
         mock_client.post = AsyncMock(return_value=make_http_response(issue))
 
-        result = await tool._create_issue(mock_client, {}, {
-            "owner": "owner", "repo": "repo",
-            "title": "New Issue", "body": "Issue body"
-        })
+        result = await tool._create_issue(
+            mock_client,
+            {},
+            {"owner": "owner", "repo": "repo", "title": "New Issue", "body": "Issue body"},
+        )
         assert "10" in result
         assert "http://github.com" in result
 
@@ -328,11 +353,17 @@ class TestCreateIssue:
         issue = {"number": 11, "html_url": "http://github.com/owner/repo/issues/11"}
         mock_client.post = AsyncMock(return_value=make_http_response(issue))
 
-        await tool._create_issue(mock_client, {}, {
-            "owner": "o", "repo": "r",
-            "title": "Test", "body": "Body",
-            "labels": ["bug"],
-        })
+        await tool._create_issue(
+            mock_client,
+            {},
+            {
+                "owner": "o",
+                "repo": "r",
+                "title": "Test",
+                "body": "Body",
+                "labels": ["bug"],
+            },
+        )
         post_kwargs = mock_client.post.call_args[1]
         assert "labels" in post_kwargs["json"]
         assert post_kwargs["json"]["labels"] == ["bug"]
@@ -341,6 +372,7 @@ class TestCreateIssue:
 # ---------------------------------------------------------------------------
 # _list_prs tests
 # ---------------------------------------------------------------------------
+
 
 class TestListPrs:
     @pytest.mark.asyncio
@@ -359,6 +391,7 @@ class TestListPrs:
 # _create_pr tests
 # ---------------------------------------------------------------------------
 
+
 class TestCreatePr:
     @pytest.mark.asyncio
     async def test_create_pr_returns_url(self):
@@ -367,10 +400,18 @@ class TestCreatePr:
         pr = {"number": 7, "html_url": "http://github.com/owner/repo/pull/7"}
         mock_client.post = AsyncMock(return_value=make_http_response(pr))
 
-        result = await tool._create_pr(mock_client, {}, {
-            "owner": "owner", "repo": "repo",
-            "title": "New PR", "head": "feature", "base": "main", "body": "PR body"
-        })
+        result = await tool._create_pr(
+            mock_client,
+            {},
+            {
+                "owner": "owner",
+                "repo": "repo",
+                "title": "New PR",
+                "head": "feature",
+                "base": "main",
+                "body": "PR body",
+            },
+        )
         assert "7" in result
         assert "http://github.com" in result
 
@@ -379,43 +420,59 @@ class TestCreatePr:
 # _create_commit tests
 # ---------------------------------------------------------------------------
 
+
 class TestCreateCommit:
     @pytest.mark.asyncio
     async def test_create_commit_requires_branch(self):
         tool = make_tool()
         mock_client = AsyncMock()
         with pytest.raises(ValueError, match="branch"):
-            await tool._create_commit(mock_client, {}, {"owner": "o", "repo": "r", "message": "msg", "files": []})
+            await tool._create_commit(
+                mock_client, {}, {"owner": "o", "repo": "r", "message": "msg", "files": []}
+            )
 
     @pytest.mark.asyncio
     async def test_create_commit_requires_message(self):
         tool = make_tool()
         mock_client = AsyncMock()
         with pytest.raises(ValueError, match="message"):
-            await tool._create_commit(mock_client, {}, {"owner": "o", "repo": "r", "branch": "main", "files": []})
+            await tool._create_commit(
+                mock_client, {}, {"owner": "o", "repo": "r", "branch": "main", "files": []}
+            )
 
     @pytest.mark.asyncio
     async def test_create_commit_requires_files(self):
         tool = make_tool()
         mock_client = AsyncMock()
         with pytest.raises(ValueError, match="files"):
-            await tool._create_commit(mock_client, {}, {"owner": "o", "repo": "r", "branch": "main", "message": "msg", "files": []})
+            await tool._create_commit(
+                mock_client,
+                {},
+                {"owner": "o", "repo": "r", "branch": "main", "message": "msg", "files": []},
+            )
 
     @pytest.mark.asyncio
     async def test_create_commit_validates_file_structure(self):
         tool = make_tool()
         mock_client = AsyncMock()
         with pytest.raises(ValueError, match="path.*content"):
-            await tool._create_commit(mock_client, {}, {
-                "owner": "o", "repo": "r",
-                "branch": "main", "message": "msg",
-                "files": [{"path": "only-path"}]
-            })
+            await tool._create_commit(
+                mock_client,
+                {},
+                {
+                    "owner": "o",
+                    "repo": "r",
+                    "branch": "main",
+                    "message": "msg",
+                    "files": [{"path": "only-path"}],
+                },
+            )
 
 
 # ---------------------------------------------------------------------------
 # _search_code tests
 # ---------------------------------------------------------------------------
+
 
 class TestSearchCode:
     @pytest.mark.asyncio
@@ -434,7 +491,7 @@ class TestSearchCode:
             "items": [
                 {"repository": {"full_name": "owner/repo1"}, "path": "src/file1.py"},
                 {"repository": {"full_name": "owner/repo2"}, "path": "src/file2.py"},
-            ]
+            ],
         }
         mock_client.get = AsyncMock(return_value=make_http_response(results))
 
@@ -446,6 +503,7 @@ class TestSearchCode:
 # ---------------------------------------------------------------------------
 # _list_branches tests
 # ---------------------------------------------------------------------------
+
 
 class TestListBranches:
     @pytest.mark.asyncio
@@ -463,6 +521,7 @@ class TestListBranches:
 # ---------------------------------------------------------------------------
 # _create_branch tests
 # ---------------------------------------------------------------------------
+
 
 class TestCreateBranch:
     @pytest.mark.asyncio
@@ -483,11 +542,16 @@ class TestCreateBranch:
         mock_client.get = AsyncMock(return_value=ref_response)
         mock_client.post = AsyncMock(return_value=create_ref_response)
 
-        result = await tool._create_branch(mock_client, {}, {
-            "owner": "o", "repo": "r",
-            "branch": "new-branch",
-            "from_branch": "main",
-        })
+        result = await tool._create_branch(
+            mock_client,
+            {},
+            {
+                "owner": "o",
+                "repo": "r",
+                "branch": "new-branch",
+                "from_branch": "main",
+            },
+        )
         assert "new-branch" in result
         assert "main" in result
 
@@ -495,6 +559,7 @@ class TestCreateBranch:
 # ---------------------------------------------------------------------------
 # _get_readme tests
 # ---------------------------------------------------------------------------
+
 
 class TestGetReadme:
     @pytest.mark.asyncio
@@ -513,6 +578,7 @@ class TestGetReadme:
 # _create_issue_comment tests
 # ---------------------------------------------------------------------------
 
+
 class TestCreateIssueComment:
     @pytest.mark.asyncio
     async def test_create_issue_comment_posts_and_confirms(self):
@@ -520,11 +586,16 @@ class TestCreateIssueComment:
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=make_http_response({"id": 1}))
 
-        result = await tool._create_issue_comment(mock_client, {}, {
-            "owner": "o", "repo": "r",
-            "issue_number": 5,
-            "body": "Test comment",
-        })
+        result = await tool._create_issue_comment(
+            mock_client,
+            {},
+            {
+                "owner": "o",
+                "repo": "r",
+                "issue_number": 5,
+                "body": "Test comment",
+            },
+        )
         assert "5" in result
         assert "Comment added" in result
 
@@ -533,6 +604,7 @@ class TestCreateIssueComment:
 # _create_pr_review tests
 # ---------------------------------------------------------------------------
 
+
 class TestCreatePrReview:
     @pytest.mark.asyncio
     async def test_create_pr_review_defaults_to_comment(self):
@@ -540,11 +612,16 @@ class TestCreatePrReview:
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=make_http_response({"id": 1}))
 
-        result = await tool._create_pr_review(mock_client, {}, {
-            "owner": "o", "repo": "r",
-            "pr_number": 3,
-            "body": "LGTM",
-        })
+        result = await tool._create_pr_review(
+            mock_client,
+            {},
+            {
+                "owner": "o",
+                "repo": "r",
+                "pr_number": 3,
+                "body": "LGTM",
+            },
+        )
         assert "3" in result
         post_data = mock_client.post.call_args[1]["json"]
         assert post_data["event"] == "COMMENT"

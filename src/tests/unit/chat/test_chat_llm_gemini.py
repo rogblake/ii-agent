@@ -36,6 +36,7 @@ from ii_agent.core.config.llm_config import LLMConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_llm_config(model="gemini-pro") -> LLMConfig:
     cfg = MagicMock(spec=LLMConfig)
     cfg.model = model
@@ -69,6 +70,7 @@ def _make_text_message(text: str, role=MessageRole.USER) -> Message:
 # map_googe_finish_reason
 # ---------------------------------------------------------------------------
 
+
 class TestMapGoogeFinishReason:
     def test_stop_maps_to_end_turn(self):
         assert map_googe_finish_reason("STOP", False) == FinishReason.END_TURN
@@ -96,6 +98,7 @@ class TestMapGoogeFinishReason:
 # generate_tool_call_id
 # ---------------------------------------------------------------------------
 
+
 class TestGenerateToolCallId:
     def test_starts_with_call_prefix(self):
         id_ = generate_tool_call_id()
@@ -109,6 +112,7 @@ class TestGenerateToolCallId:
 # ---------------------------------------------------------------------------
 # get_thought_signature_from_content / provider_options
 # ---------------------------------------------------------------------------
+
 
 class TestThoughtSignatureHelpers:
     def test_get_from_content_with_signature(self):
@@ -153,6 +157,7 @@ class TestThoughtSignatureHelpers:
 # get_tool_call_from_parts
 # ---------------------------------------------------------------------------
 
+
 class TestGetToolCallFromParts:
     def test_no_function_calls_returns_empty(self):
         parts = [MagicMock(function_call=None), MagicMock(function_call=None)]
@@ -190,6 +195,7 @@ class TestGetToolCallFromParts:
 # ---------------------------------------------------------------------------
 # GeminiProvider._convert_tools
 # ---------------------------------------------------------------------------
+
 
 class TestConvertTools:
     def test_none_tools_returns_none(self):
@@ -232,6 +238,7 @@ class TestConvertTools:
 # GeminiProvider._add_code_execution_tool
 # ---------------------------------------------------------------------------
 
+
 class TestAddCodeExecutionTool:
     def test_adds_to_empty_list(self):
         provider = _make_provider()
@@ -254,6 +261,7 @@ class TestAddCodeExecutionTool:
 # ---------------------------------------------------------------------------
 # GeminiProvider._convert_messages
 # ---------------------------------------------------------------------------
+
 
 class TestConvertMessages:
     def test_empty_messages_returns_empty(self):
@@ -345,6 +353,7 @@ class TestConvertMessages:
 # GeminiProvider.model
 # ---------------------------------------------------------------------------
 
+
 class TestGeminiProviderModel:
     def test_model_returns_dict_with_name(self):
         provider = _make_provider("gemini-ultra")
@@ -356,6 +365,7 @@ class TestGeminiProviderModel:
 # ---------------------------------------------------------------------------
 # GeminiStreamState
 # ---------------------------------------------------------------------------
+
 
 class TestGeminiStreamState:
     def test_initial_state(self):

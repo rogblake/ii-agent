@@ -1,13 +1,13 @@
 """Wishlist management API endpoints."""
 
 import logging
+import uuid
 from fastapi import APIRouter
 
 from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.sessions.wishlist.dependencies import WishlistServiceDep
 from ii_agent.sessions.wishlist.schemas import (
     SessionWishlistResponse,
-    SessionWishlistItem,
     WishlistActionResponse,
 )
 
@@ -16,32 +16,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/wishlist", tags=["Wishlist"])
 
 
-@router.get("/sessions", response_model=SessionWishlistResponse)
+@router.get("", response_model=SessionWishlistResponse)
 async def get_wishlist_sessions(
     current_user: CurrentUser,
     wishlist_service: WishlistServiceDep,
     db: DBSession,
 ) -> SessionWishlistResponse:
     """Get all wishlist sessions for the current user."""
-    sessions_data = await wishlist_service.get_user_wishlist(
-        db, str(current_user.id)
-    )
-
-    sessions = [SessionWishlistItem(**session) for session in sessions_data]
-
-    return SessionWishlistResponse(sessions=sessions, total=len(sessions))
+    items = await wishlist_service.get_user_wishlist(db, current_user.id)
+    return SessionWishlistResponse(sessions=items, total=len(items))
 
 
-@router.post("/sessions/{session_id}", response_model=WishlistActionResponse)
+@router.post("/{session_id}", response_model=WishlistActionResponse)
 async def add_to_wishlist(
-    session_id: str,
+    session_id: uuid.UUID,
     current_user: CurrentUser,
     wishlist_service: WishlistServiceDep,
     db: DBSession,
 ) -> WishlistActionResponse:
     """Add a session to the current user's wishlist."""
     success = await wishlist_service.add_to_wishlist(
-        db, str(current_user.id), session_id
+        db, current_user.id, session_id
     )
 
     if not success:
@@ -56,16 +51,16 @@ async def add_to_wishlist(
     )
 
 
-@router.delete("/sessions/{session_id}", response_model=WishlistActionResponse)
+@router.delete("/{session_id}", response_model=WishlistActionResponse)
 async def remove_from_wishlist(
-    session_id: str,
+    session_id: uuid.UUID,
     current_user: CurrentUser,
     wishlist_service: WishlistServiceDep,
     db: DBSession,
 ) -> WishlistActionResponse:
     """Remove a session from the current user's wishlist."""
     success = await wishlist_service.remove_from_wishlist(
-        db, str(current_user.id), session_id
+        db, current_user.id, session_id
     )
 
     if not success:

@@ -3,20 +3,10 @@
 from datetime import datetime, timezone
 import uuid
 
-from sqlalchemy import BigInteger, ForeignKey, Index, String
-from sqlalchemy import (
-    UUID,
-    Column,
-    TIMESTAMP,
-    UniqueConstraint,
-)
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import BigInteger, Column, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
-from ii_agent.core.db.base import Base
-
-
-# Use timezone-aware timestamps for PostgreSQL
-_ProviderTimestamp = TIMESTAMP(timezone=True)
+from ii_agent.core.db.base import Base, TimestampColumn
 
 
 class ChatProviderContainer(Base):
@@ -26,23 +16,23 @@ class ChatProviderContainer(Base):
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     session_id = Column(
-        String,
+        UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="CASCADE"),
         nullable=False,
     )
     provider = Column(String, nullable=False)  # 'openai', 'anthropic', etc.
     container_id = Column(String, nullable=False)  # Provider's container ID
     name = Column(String, nullable=True)  # Container name
-    expires_at = Column(_ProviderTimestamp, nullable=True)
+    expires_at = Column(TimestampColumn, nullable=True)
     raw_container_object = Column(JSONB, nullable=True)
     status = Column(String, nullable=True)
     created_at = Column(
-        _ProviderTimestamp,
+        TimestampColumn,
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
     updated_at = Column(
-        _ProviderTimestamp,
+        TimestampColumn,
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
@@ -66,12 +56,12 @@ class ChatProviderFile(Base):
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     file_id = Column(
-        String,
+        UUID(as_uuid=True),
         ForeignKey("file_uploads.id", ondelete="CASCADE"),
         nullable=False,
     )
     session_id = Column(
-        String,
+        UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -81,17 +71,17 @@ class ChatProviderFile(Base):
     )  # Provider's file ID (e.g., 'file-abc123')
     raw_file_object = Column(JSONB, nullable=True)  # Raw file object from provider API
     created_at = Column(
-        _ProviderTimestamp,
+        TimestampColumn,
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
     updated_at = Column(
-        _ProviderTimestamp,
+        TimestampColumn,
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
-    expires_at = Column(_ProviderTimestamp, nullable=True)  # File expiration timestamp
+    expires_at = Column(TimestampColumn, nullable=True)  # File expiration timestamp
 
     __table_args__ = (
         Index("idx_chat_provider_files_file_id", "file_id"),
@@ -113,7 +103,7 @@ class ChatProviderVectorStore(Base):
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     user_id = Column(
-        String,
+        UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -124,18 +114,18 @@ class ChatProviderVectorStore(Base):
         JSONB, nullable=True
     )  # Raw vector store object from provider API
     created_at = Column(
-        _ProviderTimestamp,
+        TimestampColumn,
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
     updated_at = Column(
-        _ProviderTimestamp,
+        TimestampColumn,
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
     expires_at = Column(
-        _ProviderTimestamp, nullable=True
+        TimestampColumn, nullable=True
     )  # Vector store expiration timestamp
     __mapper_args__ = {"version_id_col": version}
     __table_args__ = (

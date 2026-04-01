@@ -1,9 +1,7 @@
+import type { ChatMessagePayload } from '@/typings/agent'
 import type { DesignChange } from './types'
 
-type SocketCommandSender = (payload: {
-    type: string
-    content: Record<string, unknown>
-}) => boolean
+type SocketCommandSender = (payload: ChatMessagePayload) => boolean
 
 export interface DesignStateSocketResponse {
     operation?: string
@@ -33,14 +31,16 @@ function buildRequestId() {
 async function requestDesignState(
     sendSocketMessage: SocketCommandSender,
     {
-        type,
+        command,
         operation,
         content,
+        sessionId,
         timeoutMs = 15_000
     }: {
-        type: 'design_get_state' | 'design_save_state'
+        command: 'design_get_state' | 'design_save_state'
         operation: 'design_state_loaded' | 'design_state_saved'
         content: Record<string, unknown>
+        sessionId: string
         timeoutMs?: number
     }
 ) {
@@ -67,7 +67,7 @@ async function requestDesignState(
                     new Error(
                         typeof detail.error === 'string'
                             ? detail.error
-                            : `Socket command ${type} failed`
+                            : `Socket command ${command} failed`
                     )
                 )
                 return
@@ -78,7 +78,7 @@ async function requestDesignState(
 
         const timeoutId = setTimeout(() => {
             cleanup(timeoutId)
-            reject(new Error(`Socket command ${type} timed out`))
+            reject(new Error(`Socket command ${command} timed out`))
         }, timeoutMs)
 
         window.addEventListener(
@@ -87,11 +87,12 @@ async function requestDesignState(
         )
 
         const sent = sendSocketMessage({
-            type,
+            session_uuid: sessionId,
             content: {
+                command,
                 ...content,
                 request_id: requestId
-            }
+            } as ChatMessagePayload['content']
         })
 
         if (!sent) {
@@ -119,14 +120,14 @@ export interface DesignSyncSocketResponse {
 async function requestDesignSync(
     sendSocketMessage: SocketCommandSender,
     {
-        type,
+        command,
         operation,
         content,
         sessionId,
         timeoutMs = 120_000,
         timeoutMessage
     }: {
-        type: 'design_sync_state' | 'slide_deck_sync_state'
+        command: 'design_sync_state' | 'slide_deck_sync_state'
         operation:
             | 'design_sync_state_complete'
             | 'slide_deck_sync_state_complete'
@@ -163,7 +164,7 @@ async function requestDesignSync(
                     new Error(
                         typeof detail.message === 'string'
                             ? detail.message
-                            : `Socket command ${type} failed`
+                            : `Socket command ${command} failed`
                     )
                 )
                 return
@@ -183,8 +184,11 @@ async function requestDesignSync(
         )
 
         const sent = sendSocketMessage({
-            type,
-            content
+            session_uuid: sessionId,
+            content: {
+                command,
+                ...content
+            } as ChatMessagePayload['content']
         })
 
         if (!sent) {
@@ -199,9 +203,10 @@ export async function loadDesignStateViaSocket(
     sessionId: string
 ) {
     return await requestDesignState(sendSocketMessage, {
-        type: 'design_get_state',
+        command: 'design_get_state',
         operation: 'design_state_loaded',
-        content: { session_id: sessionId }
+        content: { session_id: sessionId },
+        sessionId
     })
 }
 
@@ -218,13 +223,14 @@ export async function saveDesignStateViaSocket(
     }
 ) {
     return await requestDesignState(sendSocketMessage, {
-        type: 'design_save_state',
+        command: 'design_save_state',
         operation: 'design_state_saved',
         content: {
             session_id: sessionId,
             changes,
             redo_changes: redoChanges
-        }
+        },
+        sessionId
     })
 }
 
@@ -233,7 +239,7 @@ export async function syncDesignStateViaSocket(
     sessionId: string
 ) {
     return await requestDesignSync(sendSocketMessage, {
-        type: 'design_sync_state',
+        command: 'design_sync_state',
         operation: 'design_sync_state_complete',
         content: { session_id: sessionId },
         sessionId,
@@ -252,7 +258,7 @@ export async function syncSlideDeckStateViaSocket(
     }
 ) {
     return await requestDesignSync(sendSocketMessage, {
-        type: 'slide_deck_sync_state',
+        command: 'slide_deck_sync_state',
         operation: 'slide_deck_sync_state_complete',
         content: {
             session_id: sessionId,

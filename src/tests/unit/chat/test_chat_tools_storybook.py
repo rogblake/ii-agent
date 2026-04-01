@@ -27,6 +27,7 @@ from ii_agent.chat.types import MediaPreferences
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_tool(
     session_id: str = "sess-001",
     container=None,
@@ -56,6 +57,7 @@ def _media_prefs(**kwargs) -> MediaPreferences:
 # ---------------------------------------------------------------------------
 # Instantiation
 # ---------------------------------------------------------------------------
+
 
 class TestStorybookGenerationToolInit:
     def test_defaults_when_no_media_preferences(self):
@@ -103,9 +105,11 @@ class TestStorybookGenerationToolInit:
 # info()
 # ---------------------------------------------------------------------------
 
+
 class TestStorybookGenerationToolInfo:
     def test_info_returns_tool_info(self):
         from ii_agent.chat.tools.base import ToolInfo
+
         tool = _make_tool()
         info = tool.info()
         assert isinstance(info, ToolInfo)
@@ -128,6 +132,7 @@ class TestStorybookGenerationToolInfo:
 # ---------------------------------------------------------------------------
 # _get_content_scene_cap
 # ---------------------------------------------------------------------------
+
 
 class TestGetContentSceneCap:
     def test_returns_max_when_page_count_none(self):
@@ -195,6 +200,7 @@ class TestGetContentSceneCap:
 # _apply_scene_cap
 # ---------------------------------------------------------------------------
 
+
 class TestApplySceneCap:
     def test_does_not_cap_when_within_limit(self):
         tool = _make_tool()
@@ -214,6 +220,7 @@ class TestApplySceneCap:
 # ---------------------------------------------------------------------------
 # _resolve_text_position
 # ---------------------------------------------------------------------------
+
 
 class TestResolveTextPosition:
     def test_cover_page_always_returns_none(self):
@@ -267,6 +274,7 @@ class TestResolveTextPosition:
 # _build_style_context
 # ---------------------------------------------------------------------------
 
+
 class TestBuildStyleContext:
     def test_returns_empty_string_when_no_style(self):
         tool = _make_tool()
@@ -290,16 +298,19 @@ class TestBuildStyleContext:
 
     def test_joins_multiple_parts(self):
         tool = _make_tool()
-        result = tool._build_style_context({
-            "art_style": "cartoon",
-            "color_palette": "vibrant",
-        })
+        result = tool._build_style_context(
+            {
+                "art_style": "cartoon",
+                "color_palette": "vibrant",
+            }
+        )
         assert ". " in result
 
 
 # ---------------------------------------------------------------------------
 # _enhance_prompt_with_style
 # ---------------------------------------------------------------------------
+
 
 class TestEnhancePromptWithStyle:
     def test_includes_original_prompt(self):
@@ -333,6 +344,7 @@ class TestEnhancePromptWithStyle:
 # ---------------------------------------------------------------------------
 # _get_optimal_aspect_ratio
 # ---------------------------------------------------------------------------
+
 
 class TestGetOptimalAspectRatio:
     def test_returns_base_when_no_text(self):
@@ -368,6 +380,7 @@ class TestGetOptimalAspectRatio:
 # ---------------------------------------------------------------------------
 # _calculate_safe_zones
 # ---------------------------------------------------------------------------
+
 
 class TestCalculateSafeZones:
     def test_returns_100_100_for_none_position(self):
@@ -405,10 +418,12 @@ class TestCalculateSafeZones:
 # run() always returns disabled error
 # ---------------------------------------------------------------------------
 
+
 class TestStorybookGenerationToolRun:
     @pytest.mark.asyncio
     async def test_run_returns_disabled_error(self):
         from ii_agent.chat.types import ErrorTextContent
+
         tool = _make_tool()
         call = ToolCallInput(id="c1", name="generate_storybook", input="{}")
         response = await tool.run(call)
@@ -420,11 +435,13 @@ class TestStorybookGenerationToolRun:
 # start_celery_generation – guard clauses
 # ---------------------------------------------------------------------------
 
+
 class TestStartCeleryGeneration:
     @pytest.mark.asyncio
     async def test_returns_error_for_invalid_json_input(self):
         from ii_agent.chat.types import ErrorTextContent
         import uuid
+
         tool = _make_tool()
         call = ToolCallInput(id="c1", name="generate_storybook", input="invalid json")
         response = await tool.start_celery_generation(
@@ -436,6 +453,7 @@ class TestStartCeleryGeneration:
     async def test_returns_error_when_no_scenes(self):
         from ii_agent.chat.types import ErrorTextContent
         import uuid
+
         tool = _make_tool()
         call = ToolCallInput(
             id="c1",
@@ -452,6 +470,7 @@ class TestStartCeleryGeneration:
 # ---------------------------------------------------------------------------
 # _generate_voice_audio – guard clauses
 # ---------------------------------------------------------------------------
+
 
 class TestGenerateVoiceAudio:
     @pytest.mark.asyncio
@@ -483,6 +502,7 @@ class TestGenerateVoiceAudio:
 # ---------------------------------------------------------------------------
 # Module-level constants
 # ---------------------------------------------------------------------------
+
 
 class TestModuleLevelConstants:
     def test_default_aspect_ratio(self):

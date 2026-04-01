@@ -21,7 +21,7 @@ from ..registry import register_handler
 from .base import BaseMediaHandler
 
 if TYPE_CHECKING:
-    from ii_agent.core.container import ServiceContainer
+    from ii_agent.core.container import ApplicationContainer
 
 logger = logging.getLogger(__name__)
 
@@ -47,20 +47,24 @@ class StorybookMediaHandler(BaseMediaHandler):
         session_id: str,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
-        container: ServiceContainer,
+        container: ApplicationContainer,
     ) -> list[StorybookGenerationTool]:
         """Create the appropriate generation tool based on the detected mode."""
         if isinstance(mode_strategy, MangaModeStrategy):
-            return [MangaGenerationTool(
+            return [
+                MangaGenerationTool(
+                    session_id=session_id,
+                    media_preferences=media_preferences,
+                    container=container,
+                )
+            ]
+        return [
+            StorybookGenerationTool(
                 session_id=session_id,
                 media_preferences=media_preferences,
                 container=container,
-            )]
-        return [StorybookGenerationTool(
-            session_id=session_id,
-            media_preferences=media_preferences,
-            container=container,
-        )]
+            )
+        ]
 
     async def build_llm_context(
         self,

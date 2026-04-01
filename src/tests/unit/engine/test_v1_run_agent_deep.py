@@ -17,7 +17,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-from ii_agent.agent.runtime.run.agent import (
+from ii_agent.agents.runs.agent import (
     RunInput,
     RunOutput,
     RunEvent,
@@ -38,13 +38,14 @@ from ii_agent.agent.runtime.run.agent import (
     run_output_event_from_dict,
     RUN_EVENT_TYPE_REGISTRY,
 )
-from ii_agent.agent.runtime.run.base import RunStatus
-from ii_agent.agent.runtime.models.message import Message
+from ii_agent.agents.runs.base import RunStatus
+from ii_agent.agents.models.message import Message
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_run_output(**kwargs) -> RunOutput:
     defaults = dict(
@@ -69,6 +70,7 @@ def make_message(role="assistant", content="test", from_history=False) -> Messag
 # RunInput.to_dict deep tests
 # ---------------------------------------------------------------------------
 
+
 class TestRunInputToDictDeep:
     """Test to_dict with various input content types."""
 
@@ -87,28 +89,32 @@ class TestRunInputToDictDeep:
         assert isinstance(d["input_content"], list)
 
     def test_to_dict_with_list_of_dicts_containing_images(self):
-        from ii_agent.agent.runtime.media import Image
+        from ii_agent.files.media import Image
+
         img = Image(id="img-1", url="http://example.com/img.png")
         ri = RunInput(input_content=[{"images": [img], "text": "hello"}])
         d = ri.to_dict()
         assert "input_content" in d
 
     def test_to_dict_with_list_of_dicts_containing_videos(self):
-        from ii_agent.agent.runtime.media import Video
+        from ii_agent.files.media import Video
+
         vid = Video(id="vid-1", url="http://example.com/vid.mp4")
         ri = RunInput(input_content=[{"videos": [vid], "text": "hello"}])
         d = ri.to_dict()
         assert "input_content" in d
 
     def test_to_dict_with_list_of_dicts_containing_audios(self):
-        from ii_agent.agent.runtime.media import Audio
+        from ii_agent.files.media import Audio
+
         aud = Audio(id="aud-1", content=b"audio", transcript="")
         ri = RunInput(input_content=[{"audios": [aud], "text": "hello"}])
         d = ri.to_dict()
         assert "input_content" in d
 
     def test_to_dict_with_list_of_dicts_containing_files(self):
-        from ii_agent.agent.runtime.media import File
+        from ii_agent.files.media import File
+
         f = File(id="file-1", name="test.txt", content=b"data")
         ri = RunInput(input_content=[{"files": [f], "text": "hello"}])
         d = ri.to_dict()
@@ -126,7 +132,8 @@ class TestRunInputToDictDeep:
         assert "input_content" in d
 
     def test_to_dict_includes_images_when_present(self):
-        from ii_agent.agent.runtime.media import Image
+        from ii_agent.files.media import Image
+
         img = Image(id="img-1", url="http://example.com/img.png")
         ri = RunInput(input_content="test", images=[img])
         d = ri.to_dict()
@@ -134,21 +141,24 @@ class TestRunInputToDictDeep:
         assert len(d["images"]) == 1
 
     def test_to_dict_includes_videos_when_present(self):
-        from ii_agent.agent.runtime.media import Video
+        from ii_agent.files.media import Video
+
         vid = Video(id="vid-1", url="http://example.com/vid.mp4")
         ri = RunInput(input_content="test", videos=[vid])
         d = ri.to_dict()
         assert "videos" in d
 
     def test_to_dict_includes_audios_when_present(self):
-        from ii_agent.agent.runtime.media import Audio
+        from ii_agent.files.media import Audio
+
         aud = Audio(id="aud-1", content=b"audio", transcript="")
         ri = RunInput(input_content="test", audios=[aud])
         d = ri.to_dict()
         assert "audios" in d
 
     def test_to_dict_includes_files_when_present(self):
-        from ii_agent.agent.runtime.media import File
+        from ii_agent.files.media import File
+
         f = File(id="file-1", name="test.txt", content=b"data")
         ri = RunInput(input_content="test", files=[f])
         d = ri.to_dict()
@@ -176,6 +186,7 @@ class TestRunInputToDictDeep:
 # ---------------------------------------------------------------------------
 # RunInput.from_dict with media reconstruction
 # ---------------------------------------------------------------------------
+
 
 class TestRunInputFromDictDeep:
     def test_from_dict_reconstructs_images(self):
@@ -205,55 +216,63 @@ class TestRunInputFromDictDeep:
 # RunOutput.to_dict deep tests
 # ---------------------------------------------------------------------------
 
+
 class TestRunOutputToDictDeep:
     def test_to_dict_serializes_tools(self):
         output = make_run_output()
         tool = MagicMock()
         tool.to_dict.return_value = {"name": "test_tool"}
         # Simulate ToolExecution-like object
-        from ii_agent.agent.runtime.models.response import ToolExecution
+        from ii_agent.agents.models.response import ToolExecution
+
         te = ToolExecution(tool_name="my_tool")
         output.tools = [te]
         d = output.to_dict()
         assert "tools" in d
 
     def test_to_dict_serializes_images(self):
-        from ii_agent.agent.runtime.media import Image
+        from ii_agent.files.media import Image
+
         output = make_run_output()
         output.images = [Image(id="img-1", url="http://example.com/img.png")]
         d = output.to_dict()
         assert "images" in d
 
     def test_to_dict_serializes_videos(self):
-        from ii_agent.agent.runtime.media import Video
+        from ii_agent.files.media import Video
+
         output = make_run_output()
         output.videos = [Video(id="vid-1", url="http://example.com/vid.mp4")]
         d = output.to_dict()
         assert "videos" in d
 
     def test_to_dict_serializes_audio_list(self):
-        from ii_agent.agent.runtime.media import Audio
+        from ii_agent.files.media import Audio
+
         output = make_run_output()
         output.audio = [Audio(id="aud-1", content=b"data", transcript="")]
         d = output.to_dict()
         assert "audio" in d
 
     def test_to_dict_serializes_files(self):
-        from ii_agent.agent.runtime.media import File
+        from ii_agent.files.media import File
+
         output = make_run_output()
         output.files = [File(id="file-1", name="test.txt", content=b"data")]
         d = output.to_dict()
         assert "files" in d
 
     def test_to_dict_serializes_response_audio(self):
-        from ii_agent.agent.runtime.media import Audio
+        from ii_agent.files.media import Audio
+
         output = make_run_output()
         output.response_audio = Audio(id="ra-1", content=b"audio", transcript="hello")
         d = output.to_dict()
         assert "response_audio" in d
 
     def test_to_dict_serializes_citations(self):
-        from ii_agent.agent.runtime.models.message import Citations
+        from ii_agent.agents.models.message import Citations
+
         output = make_run_output()
         output.citations = MagicMock()
         output.citations.model_dump.return_value = {"items": []}
@@ -293,7 +312,8 @@ class TestRunOutputToDictDeep:
         assert "input" in d
 
     def test_to_dict_includes_references(self):
-        from ii_agent.agent.runtime.run.base import MessageReferences
+        from ii_agent.agents.runs.base import MessageReferences
+
         output = make_run_output()
         ref = MagicMock(spec=MessageReferences)
         ref.model_dump.return_value = {"url": "http://example.com"}
@@ -325,6 +345,7 @@ class TestRunOutputToDictDeep:
 # ---------------------------------------------------------------------------
 # RunOutput.from_dict deep tests
 # ---------------------------------------------------------------------------
+
 
 class TestRunOutputFromDictDeep:
     def test_from_dict_handles_status_string(self):
@@ -377,7 +398,8 @@ class TestRunOutputFromDictDeep:
         assert recovered.reasoning_messages is not None
 
     def test_from_dict_handles_metrics(self):
-        from ii_agent.agent.runtime.models.metrics import Metrics
+        from ii_agent.agents.models.metrics import Metrics
+
         output = make_run_output()
         m = Metrics()
         m.input_tokens = 100
@@ -405,9 +427,11 @@ class TestRunOutputFromDictDeep:
 # RunOutput.add_member_run deep tests
 # ---------------------------------------------------------------------------
 
+
 class TestRunOutputAddMemberRunDeep:
     def test_add_member_run_aggregates_videos(self):
-        from ii_agent.agent.runtime.media import Video
+        from ii_agent.files.media import Video
+
         parent = make_run_output()
         child = make_run_output(run_id="child-run")
         child.videos = [Video(id="vid-1", url="http://example.com/vid.mp4")]
@@ -416,7 +440,8 @@ class TestRunOutputAddMemberRunDeep:
         assert len(parent.videos) == 1
 
     def test_add_member_run_aggregates_audio(self):
-        from ii_agent.agent.runtime.media import Audio
+        from ii_agent.files.media import Audio
+
         parent = make_run_output()
         child = make_run_output(run_id="child-run")
         child.audio = [Audio(id="aud-1", content=b"data", transcript="")]
@@ -424,7 +449,8 @@ class TestRunOutputAddMemberRunDeep:
         assert parent.audio is not None
 
     def test_add_member_run_aggregates_files(self):
-        from ii_agent.agent.runtime.media import File
+        from ii_agent.files.media import File
+
         parent = make_run_output()
         child = make_run_output(run_id="child-run")
         child.files = [File(id="file-1", name="test.txt", content=b"data")]
@@ -432,7 +458,8 @@ class TestRunOutputAddMemberRunDeep:
         assert parent.files is not None
 
     def test_add_member_run_accumulates_multiple_children(self):
-        from ii_agent.agent.runtime.media import Image
+        from ii_agent.files.media import Image
+
         parent = make_run_output()
         child1 = make_run_output(run_id="child-1")
         child1.images = [Image(id="img-1", url="http://example.com/1.png")]
@@ -456,6 +483,7 @@ class TestRunOutputAddMemberRunDeep:
 # ---------------------------------------------------------------------------
 # RunOutput.get_content_as_string deep tests
 # ---------------------------------------------------------------------------
+
 
 class TestGetContentAsStringDeep:
     def test_pydantic_model_content(self):
@@ -489,6 +517,7 @@ class TestGetContentAsStringDeep:
 # RunPausedEvent edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestRunPausedEventDeep:
     def test_active_requirements_returns_unresolved(self):
         req1 = MagicMock()
@@ -519,9 +548,12 @@ class TestRunPausedEventDeep:
 # CustomEvent
 # ---------------------------------------------------------------------------
 
+
 class TestCustomEventDeep:
     def test_custom_event_stores_kwargs(self):
-        ev = CustomEvent(event="CustomEvent", agent_id="a1", agent_name="A", custom_field="custom_value")
+        ev = CustomEvent(
+            event="CustomEvent", agent_id="a1", agent_name="A", custom_field="custom_value"
+        )
         assert ev.custom_field == "custom_value"
 
     def test_custom_event_default_event_string(self):
@@ -533,6 +565,7 @@ class TestCustomEventDeep:
 # run_output_event_from_dict for all registered event types
 # ---------------------------------------------------------------------------
 
+
 class TestRunOutputEventFromDictAllTypes:
     def _base_dict(self, event_value: str) -> dict:
         return {
@@ -542,31 +575,34 @@ class TestRunOutputEventFromDictAllTypes:
             "run_id": str(uuid4()),
         }
 
-    @pytest.mark.parametrize("event_value,expected_class", [
-        ("RunStarted", "RunStartedEvent"),
-        ("RunContent", "RunContentEvent"),
-        ("RunContentCompleted", "RunContentCompletedEvent"),
-        ("RunContentDelta", "RunContentDeltaEvent"),
-        ("RunCompleted", "RunCompletedEvent"),
-        ("RunError", "RunErrorEvent"),
-        ("RunCancelled", "RunCancelledEvent"),
-        ("RunPaused", "RunPausedEvent"),
-        ("RunContinued", "RunContinuedEvent"),
-        ("PreHookStarted", "PreHookStartedEvent"),
-        ("PreHookCompleted", "PreHookCompletedEvent"),
-        ("PostHookStarted", "PostHookStartedEvent"),
-        ("PostHookCompleted", "PostHookCompletedEvent"),
-        ("ReasoningStarted", "ReasoningStartedEvent"),
-        ("ReasoningDelta", "ReasoningDeltaEvent"),
-        ("ReasoningCompleted", "ReasoningCompletedEvent"),
-        ("MemoryUpdateStarted", "MemoryUpdateStartedEvent"),
-        ("MemoryUpdateCompleted", "MemoryUpdateCompletedEvent"),
-        ("SessionSummaryStarted", "AgentSummaryStartedEvent"),
-        ("SessionSummaryCompleted", "AgentSummaryCompletedEvent"),
-        ("ToolCallStarted", "ToolCallStartedEvent"),
-        ("ToolCallCompleted", "ToolCallCompletedEvent"),
-        ("SandboxInitialized", "SandboxInitializedEvent"),
-    ])
+    @pytest.mark.parametrize(
+        "event_value,expected_class",
+        [
+            ("RunStarted", "RunStartedEvent"),
+            ("RunContent", "RunContentEvent"),
+            ("RunContentCompleted", "RunContentCompletedEvent"),
+            ("RunContentDelta", "RunContentDeltaEvent"),
+            ("RunCompleted", "RunCompletedEvent"),
+            ("RunError", "RunErrorEvent"),
+            ("RunCancelled", "RunCancelledEvent"),
+            ("RunPaused", "RunPausedEvent"),
+            ("RunContinued", "RunContinuedEvent"),
+            ("PreHookStarted", "PreHookStartedEvent"),
+            ("PreHookCompleted", "PreHookCompletedEvent"),
+            ("PostHookStarted", "PostHookStartedEvent"),
+            ("PostHookCompleted", "PostHookCompletedEvent"),
+            ("ReasoningStarted", "ReasoningStartedEvent"),
+            ("ReasoningDelta", "ReasoningDeltaEvent"),
+            ("ReasoningCompleted", "ReasoningCompletedEvent"),
+            ("MemoryUpdateStarted", "MemoryUpdateStartedEvent"),
+            ("MemoryUpdateCompleted", "MemoryUpdateCompletedEvent"),
+            ("SessionSummaryStarted", "AgentSummaryStartedEvent"),
+            ("SessionSummaryCompleted", "AgentSummaryCompletedEvent"),
+            ("ToolCallStarted", "ToolCallStartedEvent"),
+            ("ToolCallCompleted", "ToolCallCompletedEvent"),
+            ("SandboxInitialized", "SandboxInitializedEvent"),
+        ],
+    )
     def test_event_type_from_dict(self, event_value, expected_class):
         data = self._base_dict(event_value)
         ev = run_output_event_from_dict(data)
@@ -581,11 +617,16 @@ class TestRunOutputEventFromDictAllTypes:
 # SandboxInitializedEvent.to_dict
 # ---------------------------------------------------------------------------
 
+
 class TestSandboxInitializedEventDeep:
     def test_to_dict_with_sandbox_info(self):
-        from ii_agent.agent.sandboxes.schemas import SandboxInfo
+        from ii_agent.agents.sandboxes.schemas import SandboxInfo
+
         sandbox_info = MagicMock(spec=SandboxInfo)
-        sandbox_info.model_dump.return_value = {"status": "running", "vscode_url": "http://vscode.example.com"}
+        sandbox_info.model_dump.return_value = {
+            "status": "running",
+            "vscode_url": "http://vscode.example.com",
+        }
 
         ev = SandboxInitializedEvent(agent_id="a1", agent_name="A", sandbox_info=sandbox_info)
         d = ev.to_dict()
@@ -600,6 +641,7 @@ class TestSandboxInitializedEventDeep:
 # ---------------------------------------------------------------------------
 # RunOutput.to_json compact mode
 # ---------------------------------------------------------------------------
+
 
 class TestRunOutputToJsonDeep:
     def test_to_json_compact_mode(self):
@@ -619,6 +661,7 @@ class TestRunOutputToJsonDeep:
 # ---------------------------------------------------------------------------
 # BaseAgentRunEvent properties with tools
 # ---------------------------------------------------------------------------
+
 
 class TestBaseAgentRunEventPropertiesDeep:
     def test_tools_requiring_confirmation_filters_correctly(self):
@@ -658,6 +701,7 @@ class TestBaseAgentRunEventPropertiesDeep:
 # ---------------------------------------------------------------------------
 # RunEvent enum completeness
 # ---------------------------------------------------------------------------
+
 
 class TestRunEventEnumCompleteness:
     def test_all_event_enum_values_are_registered(self):

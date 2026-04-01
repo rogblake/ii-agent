@@ -41,9 +41,7 @@ def test_find_page_by_number_returns_match_or_none():
 
 
 def test_prepare_pages_for_export_combines_separate_page_pairs(monkeypatch):
-    monkeypatch.setattr(
-        html_generator_module, "_calculate_dimensions", lambda *_: (100, 200)
-    )
+    monkeypatch.setattr(html_generator_module, "_calculate_dimensions", lambda *_: (100, 200))
     monkeypatch.setattr(
         html_generator_module,
         "combine_html_pages_for_export",
@@ -81,9 +79,7 @@ def test_prepare_single_page_for_export_returns_none_for_missing_page():
 
 
 def test_prepare_single_page_for_export_combines_image_and_text_page(monkeypatch):
-    monkeypatch.setattr(
-        html_generator_module, "_calculate_dimensions", lambda *_: (120, 240)
-    )
+    monkeypatch.setattr(html_generator_module, "_calculate_dimensions", lambda *_: (120, 240))
     monkeypatch.setattr(
         html_generator_module,
         "combine_html_pages_for_export",
@@ -106,9 +102,7 @@ def test_prepare_single_page_for_export_combines_image_and_text_page(monkeypatch
 
 
 def test_prepare_single_page_for_export_combines_from_text_side(monkeypatch):
-    monkeypatch.setattr(
-        html_generator_module, "_calculate_dimensions", lambda *_: (120, 240)
-    )
+    monkeypatch.setattr(html_generator_module, "_calculate_dimensions", lambda *_: (120, 240))
     monkeypatch.setattr(
         html_generator_module,
         "combine_html_pages_for_export",
@@ -131,9 +125,7 @@ def test_prepare_single_page_for_export_combines_from_text_side(monkeypatch):
 
 
 def test_prepare_single_page_for_export_returns_none_when_html_missing(monkeypatch):
-    monkeypatch.setattr(
-        html_generator_module, "_calculate_dimensions", lambda *_: (120, 240)
-    )
+    monkeypatch.setattr(html_generator_module, "_calculate_dimensions", lambda *_: (120, 240))
 
     export_data = prepare_single_page_for_export(
         pages=[_page(1, html_content=None)],
@@ -146,9 +138,7 @@ def test_prepare_single_page_for_export_returns_none_when_html_missing(monkeypat
 
 
 def test_prepare_single_page_for_export_returns_page_with_base_dimensions(monkeypatch):
-    monkeypatch.setattr(
-        html_generator_module, "_calculate_dimensions", lambda *_: (150, 250)
-    )
+    monkeypatch.setattr(html_generator_module, "_calculate_dimensions", lambda *_: (150, 250))
 
     export_data = prepare_single_page_for_export(
         pages=[_page(1, html_content="<standalone>")],

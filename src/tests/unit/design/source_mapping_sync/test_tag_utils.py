@@ -19,6 +19,7 @@ from ii_agent.projects.design.source_mapping_sync._tag_utils import (
 # _extract_opening_tag_name
 # ---------------------------------------------------------------------------
 
+
 class TestExtractOpeningTagName:
     def test_simple_div(self):
         assert _extract_opening_tag_name("<div>") == "div"
@@ -46,6 +47,7 @@ class TestExtractOpeningTagName:
 # _extract_closing_tag_name
 # ---------------------------------------------------------------------------
 
+
 class TestExtractClosingTagName:
     def test_closing_div(self):
         assert _extract_closing_tag_name("</div>") == "div"
@@ -67,6 +69,7 @@ class TestExtractClosingTagName:
 # _find_tag_end
 # ---------------------------------------------------------------------------
 
+
 class TestFindTagEnd:
     def test_simple_tag(self):
         text = '<div class="foo">'
@@ -77,7 +80,7 @@ class TestFindTagEnd:
         assert _find_tag_end(text, 0) == len(text) - 1
 
     def test_jsx_braces(self):
-        text = '<div onClick={() => {}}>rest'
+        text = "<div onClick={() => {}}>rest"
         result = _find_tag_end(text, 0)
         assert result is not None
         assert text[result] == ">"
@@ -109,6 +112,7 @@ class TestFindTagEnd:
 # _is_html_tag_name_for_design_mode
 # ---------------------------------------------------------------------------
 
+
 class TestIsHtmlTagNameForDesignMode:
     def test_html_tag(self):
         assert _is_html_tag_name_for_design_mode("div") is True
@@ -129,6 +133,7 @@ class TestIsHtmlTagNameForDesignMode:
 # ---------------------------------------------------------------------------
 # _tag_name_matches_for_design_mode
 # ---------------------------------------------------------------------------
+
 
 class TestTagNameMatchesForDesignMode:
     def test_same_html(self):
@@ -154,6 +159,7 @@ class TestTagNameMatchesForDesignMode:
 # ---------------------------------------------------------------------------
 # _find_matching_closing_tag_end
 # ---------------------------------------------------------------------------
+
 
 class TestFindMatchingClosingTagEnd:
     def test_simple(self):
@@ -201,6 +207,7 @@ class TestFindMatchingClosingTagEnd:
 # _find_opening_tag_bounds_for_design_id
 # ---------------------------------------------------------------------------
 
+
 class TestFindOpeningTagBoundsForDesignId:
     def test_double_quoted(self):
         content = '<div data-design-id="abc">text</div>'
@@ -247,6 +254,7 @@ class TestFindOpeningTagBoundsForDesignId:
 # _find_element_span_for_design_id
 # ---------------------------------------------------------------------------
 
+
 class TestFindElementSpanForDesignId:
     def test_full_span(self):
         content = '<div data-design-id="a">hello</div>'
@@ -280,6 +288,7 @@ class TestFindElementSpanForDesignId:
 # ---------------------------------------------------------------------------
 # _normalize_whitespace_for_match
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeWhitespaceForMatch:
     def test_collapse_spaces(self):

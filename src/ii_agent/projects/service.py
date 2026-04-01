@@ -34,7 +34,7 @@ class ProjectService:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         project_name: str,
         framework: Optional[str] = None,
         project_path: Optional[str] = None,
@@ -65,7 +65,6 @@ class ProjectService:
             return existing
 
         project = Project(
-            id=str(uuid.uuid4()),
             user_id=session.user_id,
             session_id=session_id,
             name=project_name,
@@ -75,13 +74,13 @@ class ProjectService:
             database_json=database,
         )
 
-        return await self._project_repo.create(db, project)
+        return await self._project_repo.save(db, project)
 
     async def get_session_project(
         self,
         db: AsyncSession,
-        session_id: str,
-        user_id: str,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> Project:
         """Fetch the session project for a user.
 
@@ -100,8 +99,8 @@ class ProjectService:
     async def get_session_project_or_none(
         self,
         db: AsyncSession,
-        session_id: str,
-        user_id: str,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> Optional[Project]:
         """Return the most recent project for the given session if the user owns it."""
         return await self._project_repo.get_by_session_and_user(
@@ -111,8 +110,8 @@ class ProjectService:
     async def get_user_project_by_id(
         self,
         db: AsyncSession,
-        project_id: str,
-        user_id: str,
+        project_id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> Optional[Project]:
         """Fetch a project by its ID for the provided user."""
         return await self._project_repo.get_by_id_and_user(
@@ -123,8 +122,8 @@ class ProjectService:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
-        user_id: str,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
         production_url: str,
     ) -> Optional[Project]:
         """Persist the latest deployment URL for the user's session project."""
@@ -141,7 +140,7 @@ class ProjectService:
         self,
         db: AsyncSession,
         *,
-        project_id: str,
+        project_id: uuid.UUID,
         secrets: dict[str, Any],
     ) -> Optional[Project]:
         """Persist the latest secrets for the user's session project."""

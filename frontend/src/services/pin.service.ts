@@ -7,21 +7,21 @@ import {
 class PinService {
     async getPinnedSessions(): Promise<SessionPinResponse> {
         const response = await axiosInstance.get<SessionPinResponse>(
-            '/pin/sessions'
+            '/v1/sessions/pins'
         )
         return response.data
     }
 
     async pinSession(sessionId: string): Promise<PinActionResponse> {
         const response = await axiosInstance.post<PinActionResponse>(
-            `/pin/sessions/${sessionId}`
+            `/v1/sessions/pins/${sessionId}`
         )
         return response.data
     }
 
     async unpinSession(sessionId: string): Promise<PinActionResponse> {
         const response = await axiosInstance.delete<PinActionResponse>(
-            `/pin/sessions/${sessionId}`
+            `/v1/sessions/pins/${sessionId}`
         )
         return response.data
     }

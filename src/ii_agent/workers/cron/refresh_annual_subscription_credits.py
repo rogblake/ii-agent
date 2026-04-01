@@ -15,10 +15,8 @@ from typing import Any, Dict
 
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.logger import logger as app_logger
-from ii_agent.core.db.manager import get_db_session_local
-from ii_agent.auth.users.models import User
-from ii_agent.billing.credits.ledger_models import LedgerEntryType
-from ii_agent.billing.reservations.types import SourceDomain
+from ii_agent.core.db import get_db_session_local
+from ii_agent.users.models import User
 from ii_agent.workers.cron.cron_manager import CronJobDefinition, CronManager
 
 REFRESH_METADATA_KEY = "last_annual_credit_refresh"
@@ -88,16 +86,15 @@ async def refresh_annual_subscription_credits() -> None:
     now = datetime.now(timezone.utc)
     refreshed = 0
 
-    from ii_agent.billing.credits.balance_repository import CreditBalanceRepository
-    from ii_agent.billing.credits.service import CreditService
-    from ii_agent.billing.customers.repository import BillingCustomerRepository
-    from ii_agent.billing.customers.service import BillingCustomerService
+    # BillingCustomerService was removed during refactoring.
+    # This cron job needs migration to use the new billing/credits modules.
+    app_logger.warning(
+        "refresh_annual_subscription_credits skipped: "
+        "BillingCustomerService not yet migrated"
+    )
+    return
 
-    billing_customer_service = BillingCustomerService(customer_repo=BillingCustomerRepository())
-    balance_repo = CreditBalanceRepository()
-    credit_service = CreditService(balance_repo=balance_repo)
-
-    async with get_db_session_local() as db:
+    async with get_db_session_local() as db:  # noqa: E501  # unreachable until migrated
         # Subscription state now lives in billing_customers.
         bc_rows = await billing_customer_service.list_by_subscription(
             db,
@@ -122,13 +119,12 @@ async def refresh_annual_subscription_credits() -> None:
                 continue
 
             try:
-                await credit_service.reset_plan_balance(
+                await credit_service.set_subscription_credits(
                     db,
-                    user.id,
-                    monthly_credits,
-                    entry_type=LedgerEntryType.REFRESH,
-                    source_domain=SourceDomain.CRON,
-                    entry_metadata={"plan": bc.subscription_plan, "cycle": "annually"},
+                    user_id=user.id,
+                    plan_credits=monthly_credits,
+                    plan_id=bc.subscription_plan,
+                    metadata={"cycle": "annually"},
                 )
             except Exception:
                 app_logger.opt(exception=True).warning(

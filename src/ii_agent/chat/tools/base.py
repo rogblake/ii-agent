@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 from pydantic import BaseModel
 
-from ii_agent.billing.reservations.types import BillingQuote
 from ii_agent.chat.types import ToolResultContent
 
 
@@ -71,13 +70,6 @@ class BaseTool(ABC):
         """
         pass
 
-    async def quote_cost(self, tool_call: ToolCallInput) -> BillingQuote | None:
-        """Return an upfront exact or bounded quote when the tool is platform-billable."""
-        if self.max_cost_usd is None:
-            return None
-        return BillingQuote(
-            strategy="bounded",
-            reserve_usd=self.max_cost_usd,
-            max_usd=self.max_cost_usd,
-            metadata={"tool_name": self.name},
-        )
+    async def quote_cost(self, tool_call: ToolCallInput) -> None:
+        """Return None; billing uses direct deduction after execution."""
+        return None

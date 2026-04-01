@@ -14,6 +14,7 @@ from ii_agent.projects.design.source_mapping_sync._manifest import (
 # _parse_design_mode_manifest_mapping
 # ---------------------------------------------------------------------------
 
+
 class TestParseDesignModeManifestMapping:
     def test_v1_ids_format(self):
         data = {"version": 1, "ids": {"abc": "/workspace/src/App.tsx"}}
@@ -102,6 +103,7 @@ class TestParseDesignModeManifestMapping:
 # _load_design_mode_manifest_mapping (async)
 # ---------------------------------------------------------------------------
 
+
 class TestLoadDesignModeManifestMapping:
     async def test_loads_and_parses(self, fake_sandbox):
         manifest = json.dumps({"abc": "/workspace/src/App.tsx"})
@@ -119,10 +121,12 @@ class TestLoadDesignModeManifestMapping:
         assert mapping1 == mapping2
 
     async def test_file_not_found(self, fake_sandbox):
-        sb = fake_sandbox(command_outputs={
-            "find /workspace -maxdepth 1": "",
-            "find /workspace -type f": "",
-        })
+        sb = fake_sandbox(
+            command_outputs={
+                "find /workspace -maxdepth 1": "",
+                "find /workspace -type f": "",
+            }
+        )
         path, mapping = await _load_design_mode_manifest_mapping(sb)
         assert path is None
         assert mapping == {}

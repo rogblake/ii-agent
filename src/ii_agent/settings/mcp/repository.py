@@ -1,5 +1,6 @@
 """Repository layer for mcp_settings domain - data access only."""
 
+import uuid
 from typing import List, Optional
 
 from sqlalchemy import or_, select
@@ -15,7 +16,7 @@ class MCPSettingRepository(BaseRepository[MCPSetting]):
     model = MCPSetting
 
     async def get_by_id_and_user(
-        self, db: AsyncSession, setting_id: str, user_id: str
+        self, db: AsyncSession, setting_id: uuid.UUID, user_id: uuid.UUID
     ) -> Optional[MCPSetting]:
         """Get an MCP setting by ID for a specific user."""
         result = await db.execute(
@@ -27,7 +28,7 @@ class MCPSettingRepository(BaseRepository[MCPSetting]):
         return result.scalar_one_or_none()
 
     async def get_by_user_and_tool_type(
-        self, db: AsyncSession, user_id: str, tool_type: str
+        self, db: AsyncSession, user_id: uuid.UUID, tool_type: str
     ) -> Optional[MCPSetting]:
         """Get an MCP setting by user ID and tool_type from JSONB metadata."""
         result = await db.execute(
@@ -41,7 +42,7 @@ class MCPSettingRepository(BaseRepository[MCPSetting]):
     async def list_by_user(
         self,
         db: AsyncSession,
-        user_id: str,
+        user_id: uuid.UUID,
         *,
         only_active: bool = False,
         no_metadata: bool = False,
@@ -64,7 +65,7 @@ class MCPSettingRepository(BaseRepository[MCPSetting]):
         result = await db.execute(query)
         return list(result.scalars().all())
 
-    async def list_active_by_user(self, db: AsyncSession, user_id: str) -> List[MCPSetting]:
+    async def list_active_by_user(self, db: AsyncSession, user_id: uuid.UUID) -> List[MCPSetting]:
         """List all active MCP settings for a user."""
         return await self.list_by_user(db, user_id, only_active=True)
 

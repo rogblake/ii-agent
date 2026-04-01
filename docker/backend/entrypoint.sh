@@ -12,10 +12,9 @@ GUNICORN_TIMEOUT="${GUNICORN_TIMEOUT:-360}"
 GUNICORN_BIND="${GUNICORN_BIND:-0.0.0.0:8000}"
 
 CELERY_APP="${CELERY_APP:-ii_agent.workers.celery.app:celery_app}"
-CELERY_CONCURRENCY="${CELERY_CONCURRENCY:-${CELERY_WORKER_CONCURRENCY:-}}"
+CELERY_CONCURRENCY="${CELERY_CONCURRENCY:-4}"
 CELERY_LOGLEVEL="${CELERY_LOGLEVEL:-info}"
 CELERY_QUEUES="${CELERY_QUEUES:-default,high_priority,low_priority}"
-CELERY_POOL="${CELERY_POOL:-${CELERY_WORKER_POOL:-}}"
 
 FLOWER_PORT="${FLOWER_PORT:-5555}"
 
@@ -34,20 +33,11 @@ case "$MODE" in
         ;;
     worker)
         echo "Starting Celery worker..."
-        celery_args=(
-            celery
-            -A "$CELERY_APP"
-            worker
-            --loglevel="$CELERY_LOGLEVEL"
-            --queues="$CELERY_QUEUES"
-        )
-        if [[ -n "$CELERY_CONCURRENCY" ]]; then
-            celery_args+=(--concurrency="$CELERY_CONCURRENCY")
-        fi
-        if [[ -n "$CELERY_POOL" ]]; then
-            celery_args+=(--pool="$CELERY_POOL")
-        fi
-        exec "${celery_args[@]}" "$@"
+        exec celery -A "$CELERY_APP" worker \
+            --loglevel="$CELERY_LOGLEVEL" \
+            --concurrency="$CELERY_CONCURRENCY" \
+            --queues="$CELERY_QUEUES" \
+            "$@"
         ;;
     beat)
         echo "Starting Celery beat..."

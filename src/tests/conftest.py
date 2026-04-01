@@ -16,7 +16,7 @@ os.environ.setdefault("COMPOSIO_CACHE_DIR", "/tmp/.composio")
 os.environ.setdefault("II_AGENT_SKIP_MIGRATIONS", "1")
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.core.storage.base import BaseStorage
+from ii_agent_tools.storage.base import BaseStorage
 from ii_agent.workers.celery.model_imports import import_model_modules
 
 _REQUIRED_SUITE_MARKERS = {"unit", "integration", "smoke"}
@@ -57,6 +57,8 @@ def pytest_collection_modifyitems(config, items: list[pytest.Item]):
                 item.add_marker(pytest.mark.integration)
             elif "src/tests/smoke/" in nodeid:
                 item.add_marker(pytest.mark.smoke)
+            elif "src/tests/a2a/" in nodeid:
+                item.add_marker(pytest.mark.external)
 
         suite_markers = _suite_markers_for_item(item) & _REQUIRED_SUITE_MARKERS
         if len(suite_markers) > 1:

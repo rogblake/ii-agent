@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +19,7 @@ class AppleCredentialRepository(BaseRepository[AppleCredential]):
     async def get_by_user_and_apple_id(
         self,
         db: AsyncSession,
-        user_id: str,
+        user_id: uuid.UUID,
         apple_id: str,
     ) -> AppleCredential | None:
         result = await db.execute(
@@ -28,7 +30,7 @@ class AppleCredentialRepository(BaseRepository[AppleCredential]):
         )
         return result.scalar_one_or_none()
 
-    async def get_latest_by_user(self, db: AsyncSession, user_id: str) -> AppleCredential | None:
+    async def get_latest_by_user(self, db: AsyncSession, user_id: uuid.UUID) -> AppleCredential | None:
         result = await db.execute(
             select(AppleCredential)
             .where(AppleCredential.user_id == user_id)
@@ -42,7 +44,7 @@ class AppleCredentialRepository(BaseRepository[AppleCredential]):
     async def get_latest_authenticated_by_user(
         self,
         db: AsyncSession,
-        user_id: str,
+        user_id: uuid.UUID,
     ) -> AppleCredential | None:
         result = await db.execute(
             select(AppleCredential)

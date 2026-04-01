@@ -38,6 +38,7 @@ from ii_agent.core.config.llm_config import APITypes, LLMConfig
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_config(
     model: str = "gpt-4",
     api_type: APITypes = APITypes.CUSTOM,
@@ -90,6 +91,7 @@ def _make_tool_message(tool_results: list) -> Message:
 # Constructor
 # ---------------------------------------------------------------------------
 
+
 class TestCustomProviderInit:
     def test_model_name_set(self):
         provider = _make_custom_provider("custom/gpt-4")
@@ -127,6 +129,7 @@ class TestCustomProviderInit:
 # model() method
 # ---------------------------------------------------------------------------
 
+
 class TestCustomProviderModel:
     def test_model_returns_dict(self):
         provider = _make_custom_provider("custom/llama-3")
@@ -144,6 +147,7 @@ class TestCustomProviderModel:
 # ---------------------------------------------------------------------------
 # _convert_tools
 # ---------------------------------------------------------------------------
+
 
 class TestConvertTools:
     def test_none_returns_none(self):
@@ -177,6 +181,7 @@ class TestConvertTools:
 # ---------------------------------------------------------------------------
 # _convert_messages - tool role
 # ---------------------------------------------------------------------------
+
 
 class TestConvertMessagesTool:
     def test_text_result_content_converted_to_string(self):
@@ -269,7 +274,9 @@ class TestConvertMessagesTool:
 
     def test_array_result_with_file_data_part(self):
         provider = _make_custom_provider()
-        file_item = FileDataContentPart(data="base64data", mime_type="text/plain", filename="report.txt")
+        file_item = FileDataContentPart(
+            data="base64data", mime_type="text/plain", filename="report.txt"
+        )
         output = ArrayResultContent(value=[file_item])
         tr = MagicMock()
         tr.tool_call_id = "call_8"
@@ -299,6 +306,7 @@ class TestConvertMessagesTool:
 # ---------------------------------------------------------------------------
 # _convert_messages - non-tool roles
 # ---------------------------------------------------------------------------
+
 
 class TestConvertMessagesNonTool:
     def test_user_text_message(self):
@@ -353,6 +361,7 @@ class TestConvertMessagesNonTool:
 # send()
 # ---------------------------------------------------------------------------
 
+
 class TestCustomProviderSend:
     @pytest.mark.asyncio
     async def test_send_prepends_system_message(self):
@@ -367,7 +376,9 @@ class TestCustomProviderSend:
         mock_response.choices = [mock_choice]
         mock_response.usage = MagicMock(prompt_tokens=10, completion_tokens=5)
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)) as mock_acomp:
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ) as mock_acomp:
             result = await provider.send([msg])
 
         # Verify system message was added
@@ -388,7 +399,9 @@ class TestCustomProviderSend:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         text_parts = [p for p in result.content if isinstance(p, TextContent)]
@@ -413,7 +426,9 @@ class TestCustomProviderSend:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         tool_calls = [p for p in result.content if isinstance(p, ToolCall)]
@@ -433,7 +448,9 @@ class TestCustomProviderSend:
         mock_response.choices = [mock_choice]
         mock_response.usage = None
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+        ):
             result = await provider.send([msg])
 
         assert result.finish_reason == FinishReason.END_TURN
@@ -443,7 +460,10 @@ class TestCustomProviderSend:
         provider = _make_custom_provider()
         msg = _make_user_message("Hello")
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(side_effect=RuntimeError("API error"))):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion",
+            new=AsyncMock(side_effect=RuntimeError("API error")),
+        ):
             with pytest.raises(RuntimeError, match="API error"):
                 await provider.send([msg])
 
@@ -466,8 +486,17 @@ class TestCustomProviderSend:
         mock_response.usage = None
 
         # Pre-inject a system message by patching _convert_messages
-        with patch.object(provider, "_convert_messages", return_value=[{"role": "system", "content": "sys"}, {"role": "user", "content": "hello"}]):
-            with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)) as mock_acomp:
+        with patch.object(
+            provider,
+            "_convert_messages",
+            return_value=[
+                {"role": "system", "content": "sys"},
+                {"role": "user", "content": "hello"},
+            ],
+        ):
+            with patch(
+                "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
+            ) as mock_acomp:
                 await provider.send([system_msg])
 
         call_kwargs = mock_acomp.call_args
@@ -480,6 +509,7 @@ class TestCustomProviderSend:
 # ---------------------------------------------------------------------------
 # stream()
 # ---------------------------------------------------------------------------
+
 
 class TestCustomProviderStream:
     @pytest.mark.asyncio
@@ -510,7 +540,9 @@ class TestCustomProviderStream:
             for chunk in chunks:
                 yield chunk
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -554,7 +586,9 @@ class TestCustomProviderStream:
             for chunk in chunks:
                 yield chunk
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -568,7 +602,9 @@ class TestCustomProviderStream:
         provider = _make_custom_provider()
         msg = _make_user_message("Hello")
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(side_effect=RuntimeError("boom"))):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(side_effect=RuntimeError("boom"))
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)
@@ -601,7 +637,9 @@ class TestCustomProviderStream:
             for chunk in chunks:
                 yield chunk
 
-        with patch("ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())):
+        with patch(
+            "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=_fake_stream())
+        ):
             events = []
             async for event in provider.stream([msg]):
                 events.append(event)

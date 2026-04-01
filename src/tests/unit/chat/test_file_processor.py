@@ -26,6 +26,7 @@ from ii_agent.chat.application.file_processor import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_file(content: bytes) -> io.BytesIO:
     """Return an in-memory binary file-like object."""
     return io.BytesIO(content)
@@ -333,9 +334,7 @@ class TestContentExtractorFactoryExtractContent:
 
     def test_falls_back_to_extension_when_content_type_is_none(self):
         data = b"some,csv,data\n1,2,3\n"
-        result = ContentExtractorFactory.extract_content(
-            _make_file(data), None, "report.csv"
-        )
+        result = ContentExtractorFactory.extract_content(_make_file(data), None, "report.csv")
         assert result is not None
         assert "some" in result
 

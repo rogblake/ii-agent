@@ -16,21 +16,17 @@ from sqlalchemy.ext.compiler import compiles
 os.environ.setdefault("COMPOSIO_CACHE_DIR", "/tmp/.composio")
 
 # Import all phase-2 model modules so mapper relationships are fully registered.
-import ii_agent.auth.models  # noqa: F401
-import ii_agent.auth.users.models  # noqa: F401
+import ii_agent.users.models  # noqa: F401 (auth.models merged into users.models)
 import ii_agent.billing.models  # noqa: F401
-import ii_agent.billing.customers.models  # noqa: F401
-import ii_agent.billing.credits.balance_models  # noqa: F401
-import ii_agent.billing.credits.ledger_models  # noqa: F401
-import ii_agent.billing.usage.models  # noqa: F401
+import ii_agent.credits.models  # noqa: F401
 import ii_agent.chat.messages.models  # noqa: F401
 import ii_agent.chat.providers.models  # noqa: F401
 import ii_agent.content.media.models  # noqa: F401
 import ii_agent.settings.skills.models  # noqa: F401
 import ii_agent.content.slides.models  # noqa: F401
 import ii_agent.content.storybook.models  # noqa: F401
-import ii_agent.agent.runs.models  # noqa: F401
-import ii_agent.agent.sandboxes.models  # noqa: F401
+import ii_agent.agents.runs.models  # noqa: F401
+import ii_agent.agents.sandboxes.models  # noqa: F401
 import ii_agent.files.models  # noqa: F401
 import ii_agent.integrations.connectors.models  # noqa: F401
 import ii_agent.integrations.mobile.apple.models  # noqa: F401
@@ -38,13 +34,13 @@ import ii_agent.projects.databases.models  # noqa: F401
 import ii_agent.projects.deployments.models  # noqa: F401
 import ii_agent.projects.models  # noqa: F401
 import ii_agent.projects.subdomains.models  # noqa: F401
-import ii_agent.agent.events.models  # noqa: F401
+import ii_agent.realtime.events.models  # noqa: F401
 import ii_agent.sessions.models  # noqa: F401
 import ii_agent.sessions.pin.models  # noqa: F401
 import ii_agent.sessions.wishlist.models  # noqa: F401
 import ii_agent.settings.llm.models  # noqa: F401
 import ii_agent.settings.mcp.models  # noqa: F401
-from ii_agent.auth.users.models import User
+from ii_agent.users.models import User
 from ii_agent.core.db.base import Base
 from ii_agent.projects.models import Project
 from ii_agent.sessions.models import Session

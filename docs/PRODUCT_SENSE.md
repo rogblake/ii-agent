@@ -48,8 +48,8 @@ Integration with II-Researcher for comprehensive research tasks. The agent searc
 
 ### Developer (API)
 - Integrates via API keys (`ii_<32chars>`)
-- Configures MCP servers through user settings
-- Uses MCP and custom skills
+- Uses A2A (Agent-to-Agent) protocol
+- Connects MCP SSE server to ChatGPT
 
 ## Key User Journeys
 

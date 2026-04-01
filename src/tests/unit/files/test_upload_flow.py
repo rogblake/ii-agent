@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -21,13 +22,12 @@ class FakeSessionRepo:
 
 
 @pytest.mark.asyncio
-async def test_generate_upload_url_rejects_oversized_file(settings_factory, in_memory_storage):
+async def test_generate_upload_url_rejects_oversized_file(settings_factory):
     service = FileService(
         file_repo=FakeFileRepo(),
         session_repo=FakeSessionRepo(),
-        file_store=in_memory_storage,
-        media_store=None,
-        config=settings_factory(),
+        storage=MagicMock(),
+        config=settings_factory(storage={"file_upload_size_limit": 10}),
     )
 
     with pytest.raises(FileSizeLimitExceededError):
@@ -37,24 +37,29 @@ async def test_generate_upload_url_rejects_oversized_file(settings_factory, in_m
             file_name="a.txt",
             content_type="text/plain",
             file_size=11,
-            upload_storage=in_memory_storage,
-            max_file_size=10,
         )
 
 
 @pytest.mark.asyncio
-async def test_complete_upload_creates_record_and_returns_signed_url(settings_factory, in_memory_storage):
+async def test_complete_upload_creates_record_and_returns_signed_url(settings_factory):
     file_repo = FakeFileRepo()
+    blob_name = "users/u1/uploads/f1-report.pdf"
+
+    storage_mock = MagicMock()
+    storage_mock.exists = AsyncMock(return_value=True)
+    storage_mock.signed_url = AsyncMock(
+        side_effect=lambda path, **kw: f"https://signed.local/{path}"
+    )
+    storage_mock.signed_upload_url = AsyncMock(
+        side_effect=lambda path, ct, **kw: f"https://upload.local/{path}"
+    )
+
     service = FileService(
         file_repo=file_repo,
         session_repo=FakeSessionRepo(),
-        file_store=in_memory_storage,
-        media_store=None,
+        storage=storage_mock,
         config=settings_factory(),
     )
-
-    blob_name = "users/u1/uploads/f1-report.pdf"
-    in_memory_storage.write(b"pdf", blob_name)
 
     response = await service.complete_upload(
         db=None,
@@ -64,7 +69,6 @@ async def test_complete_upload_creates_record_and_returns_signed_url(settings_fa
         file_size=3,
         content_type="application/pdf",
         session_id="s1",
-        upload_storage=in_memory_storage,
     )
 
     assert response.file_url.endswith(blob_name)
@@ -72,12 +76,14 @@ async def test_complete_upload_creates_record_and_returns_signed_url(settings_fa
 
 
 @pytest.mark.asyncio
-async def test_complete_upload_raises_when_object_missing(settings_factory, in_memory_storage):
+async def test_complete_upload_raises_when_object_missing(settings_factory):
+    storage_mock = MagicMock()
+    storage_mock.exists = AsyncMock(return_value=False)
+
     service = FileService(
         file_repo=FakeFileRepo(),
         session_repo=FakeSessionRepo(),
-        file_store=in_memory_storage,
-        media_store=None,
+        storage=storage_mock,
         config=settings_factory(),
     )
 
@@ -90,5 +96,4 @@ async def test_complete_upload_raises_when_object_missing(settings_factory, in_m
             file_size=1,
             content_type="text/plain",
             session_id=None,
-            upload_storage=in_memory_storage,
         )

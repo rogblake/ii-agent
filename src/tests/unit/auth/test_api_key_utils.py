@@ -1,4 +1,4 @@
-from ii_agent.auth import api_key_utils
+from ii_agent.auth import utils as api_key_utils
 
 
 def test_generate_api_key_length_and_charset(monkeypatch):

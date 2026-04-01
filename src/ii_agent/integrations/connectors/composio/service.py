@@ -51,6 +51,7 @@ class ComposioService:
         auth_config_service: AuthConfigService,
         connected_account_service: ConnectedAccountService,
         mcp_server_service: MCPServerService,
+        cache_service: Optional[ComposioCacheService] = None,
     ) -> None:
         self._config = config
         self._repo = repo
@@ -60,6 +61,7 @@ class ComposioService:
         self._auth_config_service = auth_config_service
         self._connected_account_service = connected_account_service
         self._mcp_server_service = mcp_server_service
+        self._cache_service = cache_service
 
     # -- Encryption helpers --------------------------------------------------
 
@@ -84,7 +86,7 @@ class ComposioService:
     # -- Profile name generation ---------------------------------------------
 
     async def _generate_unique_profile_name(
-        self, db: AsyncSession, user_id: str, base_name: str
+        self, db: AsyncSession, user_id: uuid.UUID, base_name: str
     ) -> str:
         count = await self._repo.count_profiles_with_name_prefix(db, user_id, base_name)
         if count == 0:
@@ -118,7 +120,7 @@ class ComposioService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         profile_name: str,
         toolkit_slug: str,
         toolkit_name: str,
@@ -135,7 +137,6 @@ class ComposioService:
         default_tools = get_default_tools(toolkit_slug)
 
         profile = ComposioProfile(
-            id=str(uuid.uuid4()),
             user_id=user_id,
             profile_name=unique_name,
             toolkit_slug=toolkit_slug,
@@ -151,42 +152,42 @@ class ComposioService:
             enabled_tools=default_tools,
         )
 
-        created = await self._repo.create(db, profile)
+        created = await self._repo.save(db, profile)
         logger.info(f"Created Composio profile: {created.id}")
         return self._profile_to_info(created)
 
     async def get_profiles(
         self,
         db: AsyncSession,
-        user_id: str,
+        user_id: uuid.UUID,
         toolkit_slug: Optional[str] = None,
     ) -> List[ComposioProfileInfo]:
         profiles = await self._repo.get_profiles_by_user(db, user_id, toolkit_slug)
         return [self._profile_to_info(p) for p in profiles]
 
     async def get_profile(
-        self, db: AsyncSession, profile_id: str, user_id: str
+        self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID
     ) -> Optional[ComposioProfile]:
         return await self._repo.get_by_id_and_user(db, profile_id, user_id)
 
-    async def enable_profile(self, db: AsyncSession, profile_id: str, user_id: str) -> bool:
+    async def enable_profile(self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         return await self._repo.update_status(db, profile_id, user_id, "enable")
 
-    async def disable_profile(self, db: AsyncSession, profile_id: str, user_id: str) -> bool:
+    async def disable_profile(self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         return await self._repo.update_status(db, profile_id, user_id, "disable")
 
-    async def delete_profile(self, db: AsyncSession, profile_id: str, user_id: str) -> bool:
+    async def delete_profile(self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         return await self._repo.delete(db, profile_id, user_id)
 
     async def update_enabled_tools(
-        self, db: AsyncSession, profile_id: str, enabled_tools: list
+        self, db: AsyncSession, profile_id: uuid.UUID, enabled_tools: list
     ) -> bool:
         return await self._repo.update_enabled_tools(db, profile_id, enabled_tools)
 
     # -- MCP config helpers --------------------------------------------------
 
     async def get_user_composio_mcp_configs(
-        self, db: AsyncSession, user_id: str
+        self, db: AsyncSession, user_id: uuid.UUID
     ) -> Dict[str, Dict[str, str]]:
         """Get decrypted MCP configurations for enabled profiles."""
         profiles = await self._repo.get_enabled_profiles_by_user(db, user_id)
@@ -206,7 +207,7 @@ class ComposioService:
         return mcp_configs
 
     async def get_mcp_config_for_agent(
-        self, db: AsyncSession, profile_id: str, user_id: str
+        self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID
     ) -> dict:
         profile = await self._repo.get_by_id_and_user(db, profile_id, user_id)
         if not profile:
@@ -227,7 +228,7 @@ class ComposioService:
             },
         }
 
-    async def sync_to_mcp_settings(self, db: AsyncSession, profile_id: str, user_id: str):
+    async def sync_to_mcp_settings(self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID):
         """Sync Composio profile to MCP settings for agent consumption."""
         from ii_agent.settings.mcp.schemas import (
             MCPServersConfig,
@@ -266,7 +267,7 @@ class ComposioService:
     async def _delete_pending_profile(
         self,
         db: AsyncSession,
-        user_id: str,
+        user_id: uuid.UUID,
         toolkit_slug: str,
     ) -> bool:
         """Delete pending profile for a specific toolkit."""
@@ -293,7 +294,7 @@ class ComposioService:
         db: AsyncSession,
         *,
         toolkit_slug: str,
-        user_id: str,
+        user_id: uuid.UUID,
         profile_name: str,
         redirect_url: Optional[str] = None,
         initiation_fields: Optional[Dict[str, str]] = None,
@@ -409,7 +410,7 @@ class ComposioService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         app_name: str,
         connected_account_id: str,
     ) -> bool:
@@ -433,8 +434,8 @@ class ComposioService:
         self,
         db: AsyncSession,
         *,
-        profile_id: str,
-        user_id: str,
+        profile_id: uuid.UUID,
+        user_id: uuid.UUID,
         enabled_tools: List[str],
     ) -> bool:
         """Update enabled tools for a profile and sync with MCP server."""
@@ -493,7 +494,7 @@ class ComposioService:
 
     async def get_toolkit_actions(self, toolkit_slug: str):
         """Get available actions for a toolkit with categories."""
-        cached_actions = await ComposioCacheService.get_toolkit_actions(toolkit_slug)
+        cached_actions = await self._cache_service.get_toolkit_actions(toolkit_slug) if self._cache_service else None
         if cached_actions and cached_actions.get("actions"):
             cached_actions["actions"] = [
                 {k: v for k, v in action.items() if k != "parameters"}
@@ -542,11 +543,12 @@ class ComposioService:
             "actions": actions_without_params,
             "categories": sorted(categories),
         }
-        await ComposioCacheService.set_toolkit_actions(
-            toolkit_slug,
-            actions_data=formatted_actions,
-            categories=sorted(categories),
-        )
+        if self._cache_service:
+            await self._cache_service.set_toolkit_actions(
+                toolkit_slug,
+                actions_data=formatted_actions,
+                categories=sorted(categories),
+            )
         return result
 
     # -- Callback URL helper -------------------------------------------------

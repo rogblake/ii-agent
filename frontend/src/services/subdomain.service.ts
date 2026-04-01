@@ -45,7 +45,7 @@ class SubdomainService {
         subdomain: string
     ): Promise<CheckAvailabilityResponse> {
         const response = await axiosInstance.post<CheckAvailabilityResponse>(
-            '/subdomains/check-availability',
+            '/v1/project/subdomains/check-availability',
             { subdomain }
         )
         return response.data
@@ -53,21 +53,21 @@ class SubdomainService {
 
     async getSubdomain(subdomain: string): Promise<SubdomainResponse> {
         const response = await axiosInstance.get<SubdomainResponse>(
-            `/subdomains/${subdomain}`
+            `/v1/project/subdomains/${subdomain}`
         )
         return response.data
     }
 
     async getBaseDomainInfo(): Promise<BaseDomainInfoResponse> {
         const response = await axiosInstance.get<BaseDomainInfoResponse>(
-            '/subdomains/base-domain/info'
+            '/v1/project/subdomains/base-domain/info'
         )
         return response.data
     }
 
     async getReservedSubdomains(): Promise<{ reserved: string[] }> {
         const response = await axiosInstance.get<{ reserved: string[] }>(
-            '/subdomains/reserved'
+            '/v1/project/subdomains/reserved'
         )
         return response.data
     }
@@ -77,7 +77,7 @@ class SubdomainService {
         subdomain: string
     ): Promise<ClaimSubdomainResponse> {
         const response = await axiosInstance.post<ClaimSubdomainResponse>(
-            '/subdomains/claim',
+            '/v1/project/subdomains/claim',
             { project_id: projectId, subdomain }
         )
         return response.data

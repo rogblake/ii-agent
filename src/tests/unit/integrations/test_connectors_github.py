@@ -19,6 +19,7 @@ from ii_agent.integrations.connectors.github import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _settings(
     *,
     github_app_id: str | None = "app-123",
@@ -191,20 +192,19 @@ async def test_generate_installation_token_parses_expiry_and_fallback():
         assert data.token_expiry.tzinfo is not None
 
     fallback_client = _make_http_client()
-    fallback_client.post = AsyncMock(
-        return_value=_make_async_response({"token": "without-exp"})
-    )
+    fallback_client.post = AsyncMock(return_value=_make_async_response({"token": "without-exp"}))
     with (
         patch("ii_agent.integrations.connectors.github.get_settings", return_value=_settings()),
         patch("ii_agent.integrations.connectors.github.jwt.encode", return_value="jwt"),
-        patch("ii_agent.integrations.connectors.github.httpx.AsyncClient", return_value=fallback_client),
+        patch(
+            "ii_agent.integrations.connectors.github.httpx.AsyncClient",
+            return_value=fallback_client,
+        ),
     ):
         data = await connector._generate_installation_token(1)
         assert data.access_token == "without-exp"
         assert data.token_expiry is not None
-        expected = datetime.now(timezone.utc) + timedelta(
-            minutes=INSTALLATION_TOKEN_EXPIRY_MINUTES
-        )
+        expected = datetime.now(timezone.utc) + timedelta(minutes=INSTALLATION_TOKEN_EXPIRY_MINUTES)
         assert abs((data.token_expiry - expected).total_seconds()) < 120
 
 
@@ -425,7 +425,9 @@ async def test_get_valid_token_refreshes_when_token_expiring():
     connector.db_session.commit = AsyncMock()
     connector.db_session.refresh = AsyncMock()
     connector.refresh_access_token = AsyncMock(
-        return_value=ConnectorData(access_token="new-token", token_expiry=datetime.now(timezone.utc))
+        return_value=ConnectorData(
+            access_token="new-token", token_expiry=datetime.now(timezone.utc)
+        )
     )
 
     with patch.object(GitHubConnector, "_is_github_app_configured", return_value=True):

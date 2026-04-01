@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -15,23 +16,30 @@ class FakeSessionRepo:
 
 
 class BrokenBatchStorage:
-    def get_download_signed_urls_batch(self, paths):
+    async def signed_urls_batch(self, paths, **kw):
         raise RuntimeError("batch failed")
 
-    def get_download_signed_url(self, path):
+    async def signed_url(self, path, **kw):
         return f"https://signed.local/{path}"
 
-    def get_permanent_url(self, path):
-        return f"https://permanent.local/{path}"
+    def public_url(self, path):
+        return f"https://public.local/{path}"
 
 
 @pytest.mark.asyncio
-async def test_generate_download_urls_reports_missing_paths(settings_factory, in_memory_storage):
+async def test_generate_download_urls_reports_missing_paths(settings_factory):
+    storage_mock = MagicMock()
+    storage_mock.signed_urls_batch = AsyncMock(
+        side_effect=lambda paths, **kw: [f"https://signed.local/{p}" for p in paths]
+    )
+    storage_mock.public_url = MagicMock(
+        side_effect=lambda p: f"https://public.local/{p}"
+    )
+
     service = FileService(
         file_repo=FakeFileRepo(),
         session_repo=FakeSessionRepo(),
-        file_store=in_memory_storage,
-        media_store=None,
+        storage=storage_mock,
         config=settings_factory(),
     )
 
@@ -47,12 +55,11 @@ async def test_generate_download_urls_reports_missing_paths(settings_factory, in
 
 
 @pytest.mark.asyncio
-async def test_signed_url_batch_falls_back_when_batch_signing_fails(settings_factory, in_memory_storage):
+async def test_signed_url_batch_falls_back_when_batch_signing_fails(settings_factory):
     service = FileService(
         file_repo=FakeFileRepo(),
         session_repo=FakeSessionRepo(),
-        file_store=in_memory_storage,
-        media_store=None,
+        storage=MagicMock(),
         config=settings_factory(),
     )
     service._storage = BrokenBatchStorage()
@@ -64,16 +71,15 @@ async def test_signed_url_batch_falls_back_when_batch_signing_fails(settings_fac
 
 
 @pytest.mark.asyncio
-async def test_signed_url_batch_force_signed_disables_permanent_fallback(settings_factory, in_memory_storage):
+async def test_signed_url_batch_force_signed_disables_permanent_fallback(settings_factory):
     class AlwaysFailStorage(BrokenBatchStorage):
-        def get_download_signed_url(self, path):
+        async def signed_url(self, path, **kw):
             raise RuntimeError("single-sign-fail")
 
     service = FileService(
         file_repo=FakeFileRepo(),
         session_repo=FakeSessionRepo(),
-        file_store=in_memory_storage,
-        media_store=None,
+        storage=MagicMock(),
         config=settings_factory(),
     )
     service._storage = AlwaysFailStorage()

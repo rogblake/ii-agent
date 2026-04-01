@@ -3,10 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.chat.types import MediaPreferences
-from ii_agent.content.media.service import MediaTemplateService
-from ii_agent.content.media.repository import MediaTemplateRepository
-from ii_agent.core.storage.client import media_storage
-from ii_agent.core.config.settings import get_settings
+from ii_agent.core.container import get_app_container
 from .base import BaseModeStrategy
 
 
@@ -85,7 +82,7 @@ class StorybookModeStrategy(BaseModeStrategy):
         genre = getattr(media_preferences, 'genre', None)
         if genre:
             try:
-                template = await MediaTemplateService(config=get_settings(), repo=MediaTemplateRepository(), media_storage=media_storage).get_media_template_by_name(db_session, genre)
+                template = await get_app_container().media_template_service.get_media_template_by_name(db_session, genre)
                 if template and template.prompt:
                     genre_instruction = f"\n**GENRE STYLE GUIDE ({genre}):**\n{template.prompt}\n"
             except Exception:
@@ -96,7 +93,7 @@ class StorybookModeStrategy(BaseModeStrategy):
         template_id = getattr(media_preferences, 'template_id', None)
         if template_id:
             try:
-                template = await MediaTemplateService(config=get_settings(), repo=MediaTemplateRepository(), media_storage=media_storage).get_media_template_by_id(db_session, template_id)
+                template = await get_app_container().media_template_service.get_media_template_by_id(db_session, template_id)
                 if template and template.prompt:
                     template_instruction = (
                         f"\n\n**TEMPLATE INSTRUCTIONS ({template.name}):**\n"

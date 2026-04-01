@@ -11,7 +11,7 @@ from ii_agent.content.slides.templates.schemas import (
     SlideTemplateInfo,
 )
 
-router = APIRouter(prefix="/slide-templates", tags=["Slide Templates"])
+router = APIRouter(prefix="/templates", tags=["Slide Templates"])
 
 
 @router.get("")

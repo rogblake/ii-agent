@@ -15,7 +15,7 @@ from ii_agent.core.exceptions import PaymentRequiredError, ValidationError
 from ii_agent.sessions.dependencies import SessionServiceDep
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.auth.dependencies import CurrentUser, DBSession
-from ii_agent.billing.usage.dependencies import UsageServiceDep
+from ii_agent.credits.dependencies import CreditServiceDep
 from ii_agent.content.storybook.exceptions import (
     StorybookAccessDeniedError,
     StorybookExportError,
@@ -51,9 +51,10 @@ from ii_agent.content.storybook.schemas import (
     AIRegenerateImageRequest,
     AIRegenerateImageResponse,
 )
-from ii_agent.auth.users.dependencies import UserServiceDep
+from ii_agent.users.dependencies import UserServiceDep
 from ii_agent.content.media.service import _generate_image
-from ii_agent.core.storage.dependencies import MediaTemplateStorageDep
+from ii_agent.core.storage.dependencies import StorageDep
+from ii_agent.core.storage.path_resolver import path_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ router = APIRouter(prefix="/storybooks", tags=["Storybooks"])
 
 @router.get("/session/{session_id}", response_model=StorybookListResponse)
 async def get_session_storybooks(
-    session_id: str,
+    session_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     session_service: SessionServiceDep,
@@ -70,7 +71,7 @@ async def get_session_storybooks(
     include_pages: bool = Query(False, description="Include page data"),
 ) -> StorybookListResponse:
     """Get all storybooks for a session."""
-    session_data = await session_service.get_session_details(db, session_id, str(current_user.id))
+    session_data = await session_service.get_session_details(db, session_id, current_user.id)
     if not session_data:
         raise SessionNotFoundError(f"Session {session_id} not found or access denied")
 
@@ -83,7 +84,7 @@ async def get_session_storybooks(
 
 @router.get("/{storybook_id}", response_model=StorybookDetail)
 async def get_storybook(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     session_service: SessionServiceDep,
@@ -99,7 +100,7 @@ async def get_storybook(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -116,7 +117,7 @@ def _format_content_disposition(filename: str) -> str:
 
 @router.post("/{storybook_id}/voice", response_model=StorybookVoiceOverResponse)
 async def generate_storybook_voiceover(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     voice_service: StorybookVoiceServiceDep,
@@ -133,7 +134,7 @@ async def generate_storybook_voiceover(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -141,7 +142,7 @@ async def generate_storybook_voiceover(
     return await voice_service.generate_voiceover_and_deduct_credits(
         db,
         storybook_id=storybook_id,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         session_id=storybook.session_id,
         language_code=language,
         force=force,
@@ -150,7 +151,7 @@ async def generate_storybook_voiceover(
 
 @router.get("/{storybook_id}/progress", response_model=StorybookGenerationResponse)
 async def get_storybook_progress(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     session_service: SessionServiceDep,
@@ -164,7 +165,7 @@ async def get_storybook_progress(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -174,7 +175,7 @@ async def get_storybook_progress(
 
 @router.post("/{storybook_id}/cancel")
 async def cancel_storybook_generation(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     voice_service: StorybookVoiceServiceDep,
@@ -189,7 +190,7 @@ async def cancel_storybook_generation(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -211,7 +212,7 @@ async def cancel_storybook_generation(
     response_model=StorybookVersionResponse,
 )
 async def update_page_text(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     page_number: int,
     request: PageTextUpdateRequest,
     current_user: CurrentUser,
@@ -230,7 +231,7 @@ async def update_page_text(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -252,7 +253,7 @@ async def update_page_text(
     response_model=StorybookVersionResponse,
 )
 async def regenerate_page_image(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     page_number: int,
     request: PageRegenerateRequest,
     current_user: CurrentUser,
@@ -272,12 +273,12 @@ async def regenerate_page_image(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
 
-    user_api_key = await user_service.get_active_api_key(db, str(current_user.id))
+    user_api_key = await user_service.get_active_api_key(db, current_user.id)
     if not user_api_key:
         logger.warning("No active API key found for user")
 
@@ -312,7 +313,7 @@ async def regenerate_page_image(
 
 @router.get("/{storybook_id}/edit/proxy", response_class=HTMLResponse)
 async def proxy_storybook_edit_page(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     edit_service: StorybookEditServiceDep,
@@ -332,7 +333,7 @@ async def proxy_storybook_edit_page(
     session_data = await session_service.get_session_details(
         db,
         storybook.session_id,
-        str(current_user.id),
+        current_user.id,
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -356,12 +357,12 @@ async def proxy_storybook_edit_page(
 
 @router.post("/{storybook_id}/edit/save", response_model=SaveEditsResponse)
 async def save_storybook_edits(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     request: SaveEditsRequest,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     edit_service: StorybookEditServiceDep,
-    usage_service: UsageServiceDep,
+    credit_service: CreditServiceDep,
     session_service: SessionServiceDep,
     db: DBSession,
 ) -> SaveEditsResponse:
@@ -377,7 +378,7 @@ async def save_storybook_edits(
     session_data = await session_service.get_session_details(
         db,
         storybook.session_id,
-        str(current_user.id),
+        current_user.id,
     )
     if not session_data:
         return SaveEditsResponse(
@@ -404,13 +405,14 @@ async def save_storybook_edits(
     if not page_changes and not image_urls:
         return SaveEditsResponse(success=False, error="No changes to save")
 
-    await usage_service.require_billing_ok(db, str(current_user.id))
+    if not await credit_service.has_sufficient_credits(db, current_user.id):
+        raise InsufficientCreditsError(available_credits=0.0, required_credits=0.0)
 
     try:
         new_storybook = await edit_service.save_all_page_edits_with_billing(
             db,
             storybook_id=storybook_id,
-            user_id=str(current_user.id),
+            user_id=current_user.id,
             page_changes=page_changes,
             image_urls=image_urls,
         )
@@ -428,7 +430,7 @@ async def save_storybook_edits(
 
 @router.get("/{storybook_id}/versions", response_model=VersionHistoryResponse)
 async def get_storybook_versions(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     edit_service: StorybookEditServiceDep,
@@ -447,7 +449,7 @@ async def get_storybook_versions(
     session_data = await session_service.get_session_details(
         db,
         storybook.session_id,
-        str(current_user.id),
+        current_user.id,
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -464,11 +466,11 @@ async def get_storybook_versions(
     response_model=StorybookBackgroundUploadResponse,
 )
 async def upload_storybook_background(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     session_service: SessionServiceDep,
-    media_storage: MediaTemplateStorageDep,
+    media_storage: StorageDep,
     db: DBSession,
     file: UploadFile = File(...),
 ) -> StorybookBackgroundUploadResponse:
@@ -484,7 +486,7 @@ async def upload_storybook_background(
     session_data = await session_service.get_session_details(
         db,
         storybook.session_id,
-        str(current_user.id),
+        current_user.id,
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -505,14 +507,11 @@ async def upload_storybook_background(
         }
         suffix = ext_map.get(content_type, ".png")
 
-    storage_path = (
-        f"sessions/{storybook.session_id}/storybook/backgrounds/{uuid.uuid4().hex}{suffix}"
+    storage_path = path_resolver.user_storybook(
+        current_user.id, uuid.uuid4().hex, suffix.lstrip(".")
     )
-    public_url = media_storage.upload_and_get_permanent_url(
-        file.file,
-        storage_path,
-        content_type=content_type,
-    )
+    await media_storage.write(storage_path, file.file, content_type)
+    public_url = media_storage.public_url(storage_path)
     return StorybookBackgroundUploadResponse(url=public_url, storage_path=storage_path)
 
 
@@ -521,7 +520,7 @@ async def upload_storybook_background(
     response_model=AIRewriteResponse,
 )
 async def ai_rewrite_storybook_content(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     request: AIRewriteRequest,
     current_user: CurrentUser,
     service: StorybookServiceDep,
@@ -547,7 +546,7 @@ async def ai_rewrite_storybook_content(
     session_data = await session_service.get_session_details(
         db,
         storybook.session_id,
-        str(current_user.id),
+        current_user.id,
     )
     if not session_data:
         return AIRewriteResponse(
@@ -559,7 +558,7 @@ async def ai_rewrite_storybook_content(
         rewritten_text = await ai_edit_service.rewrite_content(
             db,
             storybook=storybook,
-            user_id=str(current_user.id),
+            user_id=current_user.id,
             content=request.content,
             page_image_url=request.page_image_url,
         )
@@ -581,7 +580,7 @@ async def ai_rewrite_storybook_content(
     response_model=AIGenerateBackgroundResponse,
 )
 async def ai_generate_storybook_background(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     request: AIGenerateBackgroundRequest,
     current_user: CurrentUser,
     service: StorybookServiceDep,
@@ -607,7 +606,7 @@ async def ai_generate_storybook_background(
     session_data = await session_service.get_session_details(
         db,
         storybook.session_id,
-        str(current_user.id),
+        current_user.id,
     )
     if not session_data:
         return AIGenerateBackgroundResponse(
@@ -619,7 +618,7 @@ async def ai_generate_storybook_background(
         image_url = await ai_edit_service.generate_background(
             db,
             storybook=storybook,
-            user_id=str(current_user.id),
+            user_id=current_user.id,
             prompt=request.prompt,
             page_image_url=request.page_image_url,
             text_position=request.text_position,
@@ -642,7 +641,7 @@ async def ai_generate_storybook_background(
     response_model=AIRegenerateImageResponse,
 )
 async def ai_regenerate_storybook_image(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     request: AIRegenerateImageRequest,
     current_user: CurrentUser,
     service: StorybookServiceDep,
@@ -668,7 +667,7 @@ async def ai_regenerate_storybook_image(
     session_data = await session_service.get_session_details(
         db,
         storybook.session_id,
-        str(current_user.id),
+        current_user.id,
     )
     if not session_data:
         return AIRegenerateImageResponse(
@@ -680,7 +679,7 @@ async def ai_regenerate_storybook_image(
         image_url = await ai_edit_service.regenerate_image(
             db,
             storybook=storybook,
-            user_id=str(current_user.id),
+            user_id=current_user.id,
             page_number=request.page_number,
             prompt=request.prompt,
             reference_image_url=request.reference_image_url,
@@ -703,7 +702,7 @@ async def ai_regenerate_storybook_image(
 
 @router.get("/{storybook_id}/download")
 async def download_storybook(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     export_service: StorybookExportServiceDep,
@@ -720,7 +719,7 @@ async def download_storybook(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -729,7 +728,7 @@ async def download_storybook(
     if not pdf_bytes:
         raise StorybookExportError("Failed to generate PDF")
 
-    filename = f"{storybook.name.replace(' ', '_')}_{storybook_id[:8]}.pdf"
+    filename = f"{storybook.name.replace(' ', '_')}_{str(storybook_id)[:8]}.pdf"
 
     return Response(
         content=pdf_bytes,
@@ -742,7 +741,7 @@ async def download_storybook(
 
 @router.get("/{storybook_id}/download/stream")
 async def download_storybook_with_progress(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     export_service: StorybookExportServiceDep,
@@ -759,7 +758,7 @@ async def download_storybook_with_progress(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -782,7 +781,7 @@ async def download_storybook_with_progress(
 
 @router.get("/{storybook_id}/download/page/{page_number}")
 async def download_storybook_page_pdf(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     page_number: int,
     current_user: CurrentUser,
     service: StorybookServiceDep,
@@ -800,7 +799,7 @@ async def download_storybook_page_pdf(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -822,7 +821,7 @@ async def download_storybook_page_pdf(
 
 @router.get("/{storybook_id}/download/png/{page_number}")
 async def download_storybook_page_png(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     page_number: int,
     current_user: CurrentUser,
     service: StorybookServiceDep,
@@ -840,7 +839,7 @@ async def download_storybook_page_png(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -862,7 +861,7 @@ async def download_storybook_page_png(
 
 @router.get("/{storybook_id}/download/png")
 async def download_storybook_png_zip(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     export_service: StorybookExportServiceDep,
@@ -879,7 +878,7 @@ async def download_storybook_png_zip(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -888,7 +887,7 @@ async def download_storybook_png_zip(
     if not zip_bytes:
         raise StorybookExportError("Failed to generate PNG files")
 
-    filename = f"{storybook.name.replace(' ', '_')}_{storybook_id[:8]}-pages.zip"
+    filename = f"{storybook.name.replace(' ', '_')}_{str(storybook_id)[:8]}-pages.zip"
 
     return Response(
         content=zip_bytes,
@@ -901,7 +900,7 @@ async def download_storybook_png_zip(
 
 @router.get("/{storybook_id}/download/png/stream")
 async def download_storybook_png_with_progress(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     current_user: CurrentUser,
     service: StorybookServiceDep,
     export_service: StorybookExportServiceDep,
@@ -918,7 +917,7 @@ async def download_storybook_png_with_progress(
         raise StorybookNotFoundError(f"Storybook {storybook_id} not found")
 
     session_data = await session_service.get_session_details(
-        db, storybook.session_id, str(current_user.id)
+        db, storybook.session_id, current_user.id
     )
     if not session_data:
         raise StorybookAccessDeniedError("Access denied to this storybook")
@@ -939,10 +938,16 @@ async def download_storybook_png_with_progress(
     )
 
 
-# Public endpoint for shared storybooks
-@router.get("/public/{storybook_id}", response_model=StorybookDetail)
+# ---------------------------------------------------------------------------
+# Public endpoints (served under /v1/public/storybooks)
+# ---------------------------------------------------------------------------
+
+public_router = APIRouter(prefix="/storybooks", tags=["Storybooks Public"])
+
+
+@public_router.get("/{storybook_id}", response_model=StorybookDetail)
 async def get_public_storybook(
-    storybook_id: str,
+    storybook_id: uuid.UUID,
     service: StorybookServiceDep,
     session_service: SessionServiceDep,
     db: DBSession,

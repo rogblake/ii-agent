@@ -7,7 +7,6 @@ from ii_agent.workers.celery.model_imports import import_model_modules
 
 import_model_modules()  # resolve all cross-model ORM relationships
 
-from ii_agent.agent.events.models import EventType
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.service import SessionService
 
@@ -18,7 +17,11 @@ class FakeSessionRepo:
         self.updated = 0
 
     async def get_by_id_and_user(self, db, session_id, user_id):
-        return self.session if str(self.session.id) == str(session_id) and self.session.user_id == user_id else None
+        return (
+            self.session
+            if str(self.session.id) == str(session_id) and self.session.user_id == user_id
+            else None
+        )
 
     async def update(self, db, session):
         self.updated += 1
@@ -53,7 +56,7 @@ async def test_update_session_plan_normalizes_fields_and_creates_event(settings_
     service = SessionService(
         session_repo=session_repo,
         event_repo=event_repo,
-        agent_run_service=SimpleNamespace(),
+        run_task_service=SimpleNamespace(),
         file_store=SimpleNamespace(get_download_signed_url=lambda path: f"signed:{path}"),
         sandbox_repo=SimpleNamespace(),
         config=settings_factory(),
@@ -71,7 +74,7 @@ async def test_update_session_plan_normalizes_fields_and_creates_event(settings_
     milestone = session.session_metadata["plan"]["milestones"][0]
     assert milestone["details"] == ""
     assert milestone["dependencies"] == []
-    assert event_repo.created[0].type == EventType.PLAN_GENERATED.value
+    assert event_repo.created[0].type == "plan.milestone.generated"
 
 
 @pytest.mark.asyncio
@@ -85,7 +88,7 @@ async def test_update_session_plan_updates_existing_plan_event(settings_factory)
     service = SessionService(
         session_repo=session_repo,
         event_repo=event_repo,
-        agent_run_service=SimpleNamespace(),
+        run_task_service=SimpleNamespace(),
         file_store=SimpleNamespace(get_download_signed_url=lambda path: f"signed:{path}"),
         sandbox_repo=SimpleNamespace(),
         config=settings_factory(),
@@ -111,7 +114,7 @@ async def test_update_session_plan_raises_when_session_missing(settings_factory)
     service = SessionService(
         session_repo=missing_repo,
         event_repo=FakeEventRepo(),
-        agent_run_service=SimpleNamespace(),
+        run_task_service=SimpleNamespace(),
         file_store=SimpleNamespace(get_download_signed_url=lambda path: f"signed:{path}"),
         sandbox_repo=SimpleNamespace(),
         config=settings_factory(),

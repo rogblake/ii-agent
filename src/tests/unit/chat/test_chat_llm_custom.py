@@ -31,7 +31,8 @@ from ii_agent.chat.types import (
     FileDataContentPart,
     ImageUrlContentPart,
 )
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 
 
 # ---------------------------------------------------------------------------
@@ -41,14 +42,14 @@ from ii_agent.core.config.llm_config import APITypes, LLMConfig
 
 def _make_config(
     model: str = "gpt-4",
-    api_type: APITypes = APITypes.CUSTOM,
+    provider: Provider = Provider.CUSTOM,
     api_key: str | None = "sk-test",
     base_url: str | None = None,
     temperature: float = 0.0,
 ) -> LLMConfig:
     return LLMConfig(
         model=model,
-        api_type=api_type,
+        provider=provider,
         api_key=api_key,
         base_url=base_url,
         temperature=temperature,
@@ -106,7 +107,7 @@ class TestCustomProviderInit:
         assert provider.provider_prefix == "custom"
 
     def test_gemini_api_type_prefixed(self):
-        cfg = _make_config(model="gemini-pro", api_type=APITypes.GEMINI)
+        cfg = _make_config(model="gemini-pro", provider=Provider.GOOGLE)
         provider = CustomProvider(cfg)
         assert provider.model_name.startswith("gemini/")
 

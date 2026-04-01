@@ -8,7 +8,7 @@ import json
 import uuid
 
 from ii_agent.core.db import get_db_session_local
-from ii_agent.integrations.mobile.apple.models import AppleAuthStateEnum, AppleCredential
+from ii_agent.integrations.mobile.apple.models import AppleAuthState, AppleCredential
 from ii_agent.integrations.mobile.apple.repository import AppleCredentialRepository
 from ii_agent.core.secrets.encryption import encryption_manager
 
@@ -99,7 +99,7 @@ class AppleCredentialService:
                 return None
 
             if credential.session_expiry and credential.session_expiry < datetime.now(timezone.utc):
-                credential.auth_state = AppleAuthStateEnum.EXPIRED.value
+                credential.auth_state = AppleAuthState.EXPIRED.value
                 await db.flush()
                 return None
 
@@ -171,7 +171,7 @@ class AppleCredentialService:
                 credential = AppleCredential(
                     user_id=user_id,
                     apple_id="pending",
-                    auth_state=AppleAuthStateEnum.PENDING_LOGIN.value,
+                    auth_state=AppleAuthState.PENDING_LOGIN.value,
                 )
                 db.add(credential)
 
@@ -197,7 +197,7 @@ class AppleCredentialService:
                 credential = AppleCredential(
                     user_id=user_id,
                     apple_id="pending",
-                    auth_state=AppleAuthStateEnum.PENDING_LOGIN.value,
+                    auth_state=AppleAuthState.PENDING_LOGIN.value,
                 )
                 db.add(credential)
 

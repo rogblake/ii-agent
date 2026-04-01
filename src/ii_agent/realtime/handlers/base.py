@@ -267,6 +267,7 @@ class BaseCommandHandler(ABC, Generic[TContent]):
         session_info: SessionInfo,
         run_id: uuid.UUID,
         is_user_key: bool = False,
+        llm_config: ModelConfig | None = None,
     ) -> RunStatus:
         """Process an agent event stream, emitting realtime events and handling run status.
 
@@ -294,13 +295,16 @@ class BaseCommandHandler(ABC, Generic[TContent]):
                 await self.send_event(realtime_event)
 
             # --- Billing events (per-turn LLM usage) ---
-            if isinstance(event, ModelTurnMetricsEvent) and event.metrics:
+            if isinstance(event, ModelTurnMetricsEvent) and event.metrics and llm_config:
                 await self.send_event(
                     ModelUsageEvent(
                         session_id=session_info.id,
                         user_id=session_info.user_id,
                         run_id=run_id,
+                        setting_id=llm_config.id,
                         model_id=event.model_id,
+                        provider=llm_config.provider,
+                        pricing=llm_config.pricing,
                         input_tokens=event.metrics.input_tokens,
                         output_tokens=event.metrics.output_tokens,
                         cache_read_tokens=event.metrics.cache_read_tokens,

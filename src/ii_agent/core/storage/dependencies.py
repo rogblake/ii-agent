@@ -14,5 +14,3 @@ def _get_storage_service(container: ContainerDep) -> StorageService:
 
 StorageServiceDep = Annotated[StorageService, Depends(_get_storage_service)]
 
-# Backward compat alias
-StorageDep = StorageServiceDep

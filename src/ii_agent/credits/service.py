@@ -350,7 +350,7 @@ class CreditService:
             model_id=model_id,
             billing_transaction_id=billing_transaction_id,
             description=description,
-            metadata_=metadata or {},
+            data=metadata or {},
         )
 
     @staticmethod

@@ -4,7 +4,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.settings.llm.service import ModelSettingService, get_system_llm_config_from_db
 
 U1 = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -44,7 +45,7 @@ async def test_get_llm_settings_prefers_user_source_when_requested():
         return LLMConfig(
             setting_id="user-setting",
             model="gpt-4o",
-            api_type=APITypes.OPENAI,
+            provider=Provider.OPENAI,
             config_type="user",
         )
 
@@ -76,7 +77,7 @@ async def test_get_llm_settings_falls_back_to_system_when_user_setting_missing()
     service.resolve_config_by_setting_id = AsyncMock(
         return_value=LLMConfig(
             model="gpt-4o",
-            api_type=APITypes.OPENAI,
+            provider=Provider.OPENAI,
             config_type="system",
             setting_id="sys-setting",
         )

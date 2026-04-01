@@ -87,8 +87,8 @@ async def test_session_repository_filters_pagination_and_projections(
     llm_setting = ModelSetting(
         id=str(uuid.uuid4()),
         user_id=user.id,
-        model="gpt-5",
-        api_type="openai",
+        model_id="gpt-5",
+        provider="OpenAI",
     )
     db_session.add(llm_setting)
     await db_session.flush()
@@ -303,14 +303,14 @@ async def test_llm_setting_repository_lookup_filter_and_delete(
     first = ModelSetting(
         id=str(uuid.uuid4()),
         user_id=user.id,
-        model="gpt-5",
-        api_type="openai",
+        model_id="gpt-5",
+        provider="OpenAI",
     )
     second = ModelSetting(
         id=str(uuid.uuid4()),
         user_id=user.id,
-        model="gemini-3-pro-preview",
-        api_type="google",
+        model_id="gemini-3-pro-preview",
+        provider="Google",
     )
     db_session.add_all([first, second])
     await db_session.flush()
@@ -318,7 +318,7 @@ async def test_llm_setting_repository_lookup_filter_and_delete(
     assert await repo.find_by_id_and_user_id(db_session, first.id, user.id) is not None
     assert await repo.find_by_model_and_user(db_session, "gpt-5", user.id) is not None
     assert len(await repo.find_all_by_user(db_session, user.id)) == 2
-    assert len(await repo.find_all_by_user(db_session, user.id, api_type="google")) == 1
+    assert len(await repo.find_all_by_user(db_session, user.id, provider="Google")) == 1
 
     await repo.delete(db_session, first)
     assert await repo.find_by_id_and_user_id(db_session, first.id, user.id) is None

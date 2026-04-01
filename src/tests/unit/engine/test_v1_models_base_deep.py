@@ -293,7 +293,7 @@ class TestModelToDict:
         assert "name" not in d
 
     def test_get_provider_returns_provider_when_set(self):
-        from ii_agent.agents.types import Provider
+        from ii_agent.settings.llm import Provider
 
         m = _ConcreteModel(id="gpt-4", name="Test", provider=Provider.OPENAI)
         assert m.get_provider() == Provider.OPENAI

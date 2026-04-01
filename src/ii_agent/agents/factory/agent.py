@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 from uuid import UUID
 
 from ii_agent.core.config.settings import Settings, get_settings
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.chat.base import LLMClient
 from ii_server.core.workspace import WorkspaceManager
 from ii_agent.agents.prompts.agent_prompts import get_system_prompt_for_agent_type
 from ii_agent.agents.sandboxes import Sandbox
 from ii_agent.agents.agent import IIAgent
-from ii_agent.agents.models.provider import Provider
+from ii_agent.settings.llm import Provider
 from ii_agent.agents.skills.base import SkillCreator
 from ii_agent.agents.connector import BaseConnectorTool
 from ii_agent.agents.factory.tools import AgentConfigManager, AgentType
@@ -19,15 +19,6 @@ from ii_agent.agents.models.utils import get_model
 from ii_agent.agents.sessions import SessionStore
 from ii_agent.agents.tools.task import SYSTEM_PROMPT, TaskAgentTool, DESCRIPTION
 from ii_agent.core.logger import logger
-
-PROVIDER_SPEC_MAP: Dict[APITypes, Provider] = {
-    APITypes.OPENAI: Provider.OPENAI,
-    APITypes.ANTHROPIC: Provider.ANTHROPIC,
-    APITypes.GEMINI: Provider.GOOGLE,
-    APITypes.CUSTOM: Provider.CUSTOM,
-}
-
-
 
 class AgentFactory:
     """Factory for creating configured agent instances."""
@@ -96,7 +87,7 @@ class AgentFactory:
         has_design_doc = tool_args.get("design_document", False)
 
         # Get LLM client and model
-        provider = PROVIDER_SPEC_MAP.get(llm_config.api_type)
+        provider = llm_config.provider
         # Resolve model
         model = get_model(provider, llm_config=llm_config)
 
@@ -149,7 +140,7 @@ class AgentFactory:
                 a2a_agents=has_a2a,
                 task_agent=has_task_agent,
                 metadata=metadata,
-                api_type=llm_config.api_type if llm_config else None,
+                provider=llm_config.provider if llm_config else None,
             )
 
         sub_agents = []
@@ -256,7 +247,7 @@ class AgentFactory:
 
         logger.info("Creating task agent sub-agent tool")
 
-        provider = PROVIDER_SPEC_MAP.get(llm_config.api_type)
+        provider = llm_config.provider
         # Resolve model
         model = get_model(provider, llm_config=llm_config)
         # Resolve required tool names

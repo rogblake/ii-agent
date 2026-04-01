@@ -13,10 +13,10 @@ import logging
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Literal, Optional
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ii_agent.core.config.database import DatabaseSettings
 from ii_agent.core.config.redis import RedisSettings
@@ -88,38 +88,6 @@ class Settings(BaseSettings):
         env_nested_delimiter="__",
         nested_model_default_partial_update=True,
     )
-
-    @classmethod
-    def settings_customise_sources(
-        cls,
-        settings_cls: type[BaseSettings],
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> Tuple[PydanticBaseSettingsSource, ...]:
-        """Customise settings source priority order.
-
-        Priority (highest to lowest):
-            1. init_settings   - explicit constructor kwargs
-            2. env_settings    - environment variables
-            3. gcp_secrets     - GCP Secret Manager (when GCP_PROJECT_ID is set)
-            4. dotenv_settings - .env file
-        """
-        if os.getenv("USE_GCP_SECRETS"):
-            from ii_agent.core.config.gcp_source import GCPSecretManagerSource
-
-            return (
-                init_settings,
-                env_settings,
-                GCPSecretManagerSource(settings_cls),
-                dotenv_settings,
-            )
-        return (
-            init_settings,
-            env_settings,
-            dotenv_settings,
-        )
 
     # ========== Top-level Configuration ==========
 
@@ -264,27 +232,6 @@ class Settings(BaseSettings):
 
     # ========== LLM Configuration ==========
 
-    llm_configs: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="LLM model configurations keyed by model name",
-    )
-
-    @field_validator("llm_configs", mode="before")
-    @classmethod
-    def parse_llm_configs(cls, v):
-        """Convert raw dicts to LLMConfig objects."""
-        if not v:
-            return v
-        from ii_agent.core.config.llm_config import LLMConfig
-
-        parsed = {}
-        for key, val in v.items():
-            if isinstance(val, dict):
-                parsed[key] = LLMConfig(**val)
-            else:
-                parsed[key] = val
-        return parsed
-
     researcher_agent_config: Optional[Any] = Field(
         default=None,
         description="Configuration for the researcher agent pipeline",
@@ -321,11 +268,34 @@ class Settings(BaseSettings):
         gt=0,
     )
 
-    llm_configs_json: Optional[str] = Field(
+    model_configs: Optional[list[Dict[str, Any]]] = Field(
         default=None,
-        alias="LLM_CONFIGS",
-        description="JSON string of LLM configurations for admin seeding",
+        description=(
+            "List of LLM model configurations for system seeding. "
+            "Each entry is validated as ModelConfigEntry (model_id, provider, params, ...). "
+            "Set via MODEL_CONFIGS env var (JSON array) or MODEL_CONFIGS_FILE (YAML file)."
+        ),
     )
+
+    @field_validator("model_configs", mode="before")
+    @classmethod
+    def parse_model_configs(cls, v: Any) -> Any:
+        """Parse JSON string or validate list of model config entries."""
+        if not v:
+            return v
+        # If it's a JSON string (from env var), parse it
+        if isinstance(v, str):
+            import json
+            v = json.loads(v)
+        if not isinstance(v, list):
+            return v
+        # Validate each entry through ModelConfigEntry
+        from ii_agent.settings.llm.schemas import ModelConfigEntry
+        return [
+            ModelConfigEntry.model_validate(entry).model_dump()
+            if isinstance(entry, dict) else entry
+            for entry in v
+        ]
 
     # ========== GCP Secret Manager ==========
 

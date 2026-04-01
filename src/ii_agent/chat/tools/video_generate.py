@@ -16,7 +16,6 @@ from ii_agent.chat.types import (
     MediaPreferences,
     VideoSettings,
     VideoFrameReference,
-    StorybookContext,
 )
 from ii_agent.core.db import get_db_session_local
 from ii_agent.core.storage.client import get_storage
@@ -532,51 +531,48 @@ class VideoGenerationTool(BaseTool):
 
     async def _convert_heic_and_upload(self, file_id: str, source_path: str) -> str:
         """Convert a HEIC file to JPEG and upload to public storage."""
+        import io
         import anyio
         from ii_agent.agents.utils.heic import convert_heic_to_jpeg
 
+        logger.info(f"[VIDEO_TOOL] Converting HEIC frame {file_id} to JPEG")
         public_path = f"video_generation_frames/{file_id[:8]}.jpg"
 
-        def _convert_and_upload():
-            import io
+        file_obj = await get_storage().read(source_path)
+        heic_bytes = file_obj.read()
+        file_obj.close()
 
-            file_obj = storage.read(source_path)
-            heic_bytes = file_obj.read()
-            file_obj.close()
-            jpeg_bytes, _ = convert_heic_to_jpeg(heic_bytes)
-            return media_storage.upload_and_get_permanent_url(
-                io.BytesIO(jpeg_bytes), public_path, "image/jpeg"
-            )
+        def _convert(data: bytes) -> bytes:
+            jpeg_bytes, _ = convert_heic_to_jpeg(data)
+            return jpeg_bytes
 
-        logger.info(f"[VIDEO_TOOL] Converting HEIC frame {file_id} to JPEG")
-        return await anyio.to_thread.run_sync(_convert_and_upload)
+        jpeg_bytes = await anyio.to_thread.run_sync(lambda: _convert(heic_bytes))
+        await get_storage().write(public_path, io.BytesIO(jpeg_bytes), "image/jpeg")
+        return get_storage().public_url(public_path)
 
     async def _convert_heic_url_and_upload(self, heic_url: str) -> str:
         """Download a HEIC image from a URL, convert to JPEG, and upload."""
+        import io
         import anyio
         import httpx
         from ii_agent.agents.utils.heic import convert_heic_to_jpeg
 
-        async def _download_convert_upload():
-            async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
-                resp = await client.get(heic_url)
-                resp.raise_for_status()
-                heic_bytes = resp.content
-
-            def _convert_and_upload():
-                import io
-
-                jpeg_bytes, _ = convert_heic_to_jpeg(heic_bytes)
-                file_id = str(uuid.uuid4())[:8]
-                public_path = f"video_generation_frames/{file_id}.jpg"
-                return media_storage.upload_and_get_permanent_url(
-                    io.BytesIO(jpeg_bytes), public_path, "image/jpeg"
-                )
-
-            return await anyio.to_thread.run_sync(_convert_and_upload)
-
         logger.info(f"[VIDEO_TOOL] Converting HEIC URL frame to JPEG")
-        return await _download_convert_upload()
+
+        async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+            resp = await client.get(heic_url)
+            resp.raise_for_status()
+            heic_bytes = resp.content
+
+        def _convert(data: bytes) -> bytes:
+            jpeg_bytes, _ = convert_heic_to_jpeg(data)
+            return jpeg_bytes
+
+        jpeg_bytes = await anyio.to_thread.run_sync(lambda: _convert(heic_bytes))
+        file_id = str(uuid.uuid4())[:8]
+        public_path = f"video_generation_frames/{file_id}.jpg"
+        await get_storage().write(public_path, io.BytesIO(jpeg_bytes), "image/jpeg")
+        return get_storage().public_url(public_path)
 
     async def _copy_to_public_storage(
         self, file_id: str, source_path: str, content_type: str | None

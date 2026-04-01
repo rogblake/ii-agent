@@ -80,11 +80,13 @@ from ii_agent.chat.types import (
     TextResultContent,
     ToolCall,
 )
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.db import get_db_session_local
 from ii_agent.core.storage.client import get_storage
 from ii_agent.core.storage.path_resolver import path_resolver
 from ii_agent.files.models import FileAsset, SessionAsset
+from ii_agent.files.types import AssetType
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +210,7 @@ class OpenAIProvider(LLMClient):
                     select(ChatProviderContainer)
                     .where(
                         ChatProviderContainer.session_id == session_id,
-                        ChatProviderContainer.provider == APITypes.OPENAI.value,
+                        ChatProviderContainer.provider == Provider.OPENAI.value,
                         ChatProviderContainer.status == "running",
                     )
                     .order_by(ChatProviderContainer.created_at.desc())
@@ -244,7 +246,7 @@ class OpenAIProvider(LLMClient):
 
                     new_container = ChatProviderContainer(
                         session_id=session_id,
-                        provider=APITypes.OPENAI.value,
+                        provider=Provider.OPENAI.value,
                         container_id=response.id,
                         status=response.status,
                         name=response.name,
@@ -291,7 +293,7 @@ class OpenAIProvider(LLMClient):
             return FileResponseObject(
                 id=file_info.id,
                 provider_file_id=file_obj.id,
-                provider=APITypes.OPENAI.value,
+                provider=Provider.OPENAI.value,
                 raw_file_object=file_obj,
                 content_type=file_info.content_type,
                 file_name=file_info.file_name,
@@ -318,7 +320,7 @@ class OpenAIProvider(LLMClient):
                 select(ChatProviderFile).where(
                     ChatProviderFile.file_id.in_(user_message.file_ids),
                     ChatProviderFile.session_id == user_message.session_id,
-                    ChatProviderFile.provider == APITypes.OPENAI.value,
+                    ChatProviderFile.provider == Provider.OPENAI.value,
                     or_(
                         ChatProviderFile.expires_at.is_(None),
                         ChatProviderFile.created_at
@@ -363,7 +365,7 @@ class OpenAIProvider(LLMClient):
                 for file_response in new_provider_records:
                     provider_file = ChatProviderFile(
                         file_id=file_response.id,
-                        provider=APITypes.OPENAI.value,
+                        provider=Provider.OPENAI.value,
                         session_id=user_message.session_id,
                         provider_file_id=file_response.provider_file_id,
                         raw_file_object=file_response.raw_file_object.model_dump(),
@@ -710,7 +712,8 @@ class OpenAIProvider(LLMClient):
 
                     file_uuid = str(uuid.uuid4())
                     ext = file_name.rsplit(".", 1)[-1] if "." in file_name else "bin"
-                    storage_path = path_resolver.user_file(user_id, file_uuid, ext)
+                    asset_type = AssetType.from_content_type(content_type)
+                    storage_path = path_resolver.user_file(user_id, asset_type, file_uuid, ext)
 
                     # Create file-like object from bytes
                     file_obj_io = io.BytesIO(file_bytes)
@@ -737,7 +740,7 @@ class OpenAIProvider(LLMClient):
                     file_response = FileResponseObject(
                         id=file_uuid,
                         provider_file_id=file_id,
-                        provider=APITypes.OPENAI.value,
+                        provider=Provider.OPENAI.value,
                         content_type=content_type,
                         file_name=file_name,
                         raw_file_object=file_obj,
@@ -770,7 +773,7 @@ class OpenAIProvider(LLMClient):
                 .join(FileAsset, ChatProviderFile.file_id == FileAsset.id)
                 .where(
                     ChatProviderFile.session_id == session_id,
-                    ChatProviderFile.provider == APITypes.OPENAI.value,
+                    ChatProviderFile.provider == Provider.OPENAI.value,
                     or_(
                         ChatProviderFile.expires_at.is_(None),
                         ChatProviderFile.created_at
@@ -1035,7 +1038,7 @@ class OpenAIProvider(LLMClient):
                 if message.role == MessageRole.ASSISTANT:
                     previous_response_id = (
                         (message.provider_metadata or {})
-                        .get(APITypes.OPENAI.value, {})
+                        .get(Provider.OPENAI.value, {})
                         .get("response_id")
                     )
                     break  # Stop after finding first (last) assistant message
@@ -1302,7 +1305,7 @@ class OpenAIProvider(LLMClient):
                     )
 
                 provider_metadata = {
-                    APITypes.OPENAI.value: {"response_id": event.response.id}
+                    Provider.OPENAI.value: {"response_id": event.response.id}
                 }
                 yield RunResponseEvent(
                     type=EventType.COMPLETE,

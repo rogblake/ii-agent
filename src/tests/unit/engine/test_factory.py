@@ -1,10 +1,8 @@
-from ii_agent.core.config.llm_config import APITypes
-from ii_agent.agents.types import Provider
-from ii_agent.agents.factory.agent import PROVIDER_SPEC_MAP
+from ii_agent.settings.llm import Provider
 
 
-def test_provider_spec_map_contains_expected_bindings():
-    assert PROVIDER_SPEC_MAP[APITypes.OPENAI] == Provider.OPENAI
-    assert PROVIDER_SPEC_MAP[APITypes.ANTHROPIC] == Provider.ANTHROPIC
-    assert PROVIDER_SPEC_MAP[APITypes.GEMINI] == Provider.GOOGLE
-    assert PROVIDER_SPEC_MAP[APITypes.CUSTOM] == Provider.CUSTOM
+def test_provider_enum_has_expected_members():
+    assert Provider.OPENAI == "OpenAI"
+    assert Provider.ANTHROPIC == "Anthropic"
+    assert Provider.GOOGLE == "Google"
+    assert Provider.CUSTOM == "Custom"

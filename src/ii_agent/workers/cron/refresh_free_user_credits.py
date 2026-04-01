@@ -48,6 +48,12 @@ async def refresh_free_user_credits() -> None:
     return
 
     async with get_db_session_local() as db:  # noqa: E501  # unreachable until migrated
+        # TODO: obtain these services from the container once the billing
+        # customer service is migrated to the new DDD structure.
+        from ii_agent.core.container import get_app_container
+        _container = get_app_container()
+        billing_customer_service = _container.billing_service  # placeholder
+        credit_service = _container.credit_service
         result = await db.execute(select(User).where(User.is_active.is_(True)))
         users = result.scalars().all()
         customers_by_user = await billing_customer_service.list_by_user_ids(

@@ -18,7 +18,7 @@ from ii_agent.core.exceptions import InternalError, ValidationError
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.content.media.dependencies import MediaTemplateServiceDep
-from ii_agent.core.storage.dependencies import StorageDep
+from ii_agent.core.storage.dependencies import StorageServiceDep
 from ii_agent.content.media.schemas import (
     ImageModelsResponse,
     MediaModelConfig,
@@ -128,7 +128,7 @@ async def generate_reference_image(
     session_service: SessionServiceDep,
     user_service: UserServiceDep,
     file_service: FileServiceDep,
-    default_storage: StorageDep,
+    default_storage: StorageServiceDep,
     media_template_service: MediaTemplateServiceDep,
 ):
     """Generate a reference image based on type (subject/scene/style).

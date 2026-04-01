@@ -6,7 +6,7 @@ import httpx
 from pydantic import BaseModel
 
 from ii_agent.agents.models.anthropic.claude import Claude as AnthropicClaude
-from ii_agent.agents.models.provider import Provider
+from ii_agent.settings.llm import Provider
 from ii_agent.agents.utils.http import get_default_async_client
 from ii_agent.agents.models.anthropic.claude import format_tools_for_model
 from ii_agent.core.logger import logger

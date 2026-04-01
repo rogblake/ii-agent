@@ -6,7 +6,8 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 
 from litellm import acompletion
 
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.billing.schemas import TokenUsage
 from ii_agent.chat.types import (
     ImageUrlContentPart,
@@ -45,9 +46,9 @@ class CustomProvider(LLMClient):
 
     def __init__(self, llm_config: LLMConfig):
         dummy_llm_config = deepcopy(llm_config)
-        if llm_config.api_type == APITypes.GEMINI:
+        if llm_config.provider == Provider.GOOGLE:
             dummy_llm_config.model = f"gemini/{dummy_llm_config.model}"
-            dummy_llm_config.api_type = APITypes.CUSTOM
+            dummy_llm_config.provider = Provider.CUSTOM
         self.llm_config = dummy_llm_config
         self.model_name = dummy_llm_config.model
         self.base_url = dummy_llm_config.base_url

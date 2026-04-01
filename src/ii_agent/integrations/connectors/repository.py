@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.db.repository import BaseRepository
+from ii_agent.core.db.base import BaseRepository
 from ii_agent.integrations.connectors.models import Connector
 
 

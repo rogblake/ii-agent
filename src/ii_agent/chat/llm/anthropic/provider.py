@@ -34,9 +34,11 @@ from anthropic.types.beta import (
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.storage.path_resolver import path_resolver
 from ii_agent.files.models import FileAsset, SessionAsset
+from ii_agent.files.types import AssetType
 from ii_agent.sessions.models import Session
 from ii_agent.chat.providers.models import ChatProviderFile
 from ii_agent.core.db import get_db_session_local
@@ -164,7 +166,7 @@ class AnthropicProvider(LLMClient):
                 return FileResponseObject(
                     id=file_info.id,
                     provider_file_id=uploaded_file.id,
-                    provider=APITypes.ANTHROPIC.value,
+                    provider=Provider.ANTHROPIC.value,
                     content_type=file_info.content_type,
                     file_name=file_info.file_name,
                     file_size=file_info.file_size,
@@ -205,7 +207,7 @@ class AnthropicProvider(LLMClient):
                 select(ChatProviderFile).where(
                     ChatProviderFile.file_id.in_(user_message.file_ids),
                     ChatProviderFile.session_id == session_id,
-                    ChatProviderFile.provider == APITypes.ANTHROPIC.value,
+                    ChatProviderFile.provider == Provider.ANTHROPIC.value,
                 )
             )
 
@@ -240,7 +242,7 @@ class AnthropicProvider(LLMClient):
                 for file_response in upload_results:
                     provider_file = ChatProviderFile(
                         file_id=file_response.id,
-                        provider=APITypes.ANTHROPIC.value,
+                        provider=Provider.ANTHROPIC.value,
                         session_id=session_id,
                         provider_file_id=file_response.provider_file_id,
                         raw_file_object=file_response.raw_file_object,
@@ -265,7 +267,7 @@ class AnthropicProvider(LLMClient):
                         FileResponseObject(
                             id=file_id,
                             provider_file_id=pf.provider_file_id,
-                            provider=APITypes.ANTHROPIC.value,
+                            provider=Provider.ANTHROPIC.value,
                             content_type=file_upload.content_type,
                             file_name=file_upload.file_name,
                             file_size=file_upload.file_size,
@@ -622,7 +624,7 @@ class AnthropicProvider(LLMClient):
         container_id = None
         for msg in reversed(messages):
             if msg.provider_metadata:
-                anthropic_meta = msg.provider_metadata.get(APITypes.ANTHROPIC.value, {})
+                anthropic_meta = msg.provider_metadata.get(Provider.ANTHROPIC.value, {})
                 container = anthropic_meta.get("container", {})
                 if container and container.get("id"):
                     container_id = container["id"]
@@ -944,7 +946,8 @@ class AnthropicProvider(LLMClient):
                     # Generate storage path under user prefix
                     file_uuid = str(uuid.uuid4())
                     ext = file_name.rsplit(".", 1)[-1] if "." in file_name else "bin"
-                    storage_path = path_resolver.user_file(user_id, file_uuid, ext)
+                    asset_type = AssetType.from_content_type(content_type)
+                    storage_path = path_resolver.user_file(user_id, asset_type, file_uuid, ext)
 
                     # Create file-like object from bytes
                     file_obj_io = io.BytesIO(file_bytes)

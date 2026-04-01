@@ -92,13 +92,13 @@ class ProjectDesignService:
         repo: ProjectDesignRepository,
         sandbox_service: SandboxService,
         event_service: EventService | None = None,
-        llm_setting_service: ModelSettingService,
+        model_setting_service: ModelSettingService,
         config: Settings,
     ) -> None:
         self._repo = repo
         self._sandbox_service = sandbox_service
         self._event_service = event_service
-        self._llm_setting_service = llm_setting_service
+        self._model_setting_service = model_setting_service
         self._config = config
 
     async def _get_session_for_request(
@@ -539,7 +539,7 @@ class ProjectDesignService:
         if isinstance(setting_id, str) and setting_id.strip():
             model_id = setting_id.strip()
             try:
-                resolved = await self._llm_setting_service.get_user_llm_config(
+                resolved = await self._model_setting_service.get_user_llm_config(
                     db,
                     setting_id=model_id,
                     user_id=user_id,
@@ -547,7 +547,7 @@ class ProjectDesignService:
                 return resolved.model_copy(deep=True)
             except Exception:
                 try:
-                    resolved = await self._llm_setting_service.resolve_system_config(
+                    resolved = await self._model_setting_service.resolve_system_config(
                         db, setting_id=model_id
                     )
                     return resolved.model_copy(deep=True)
@@ -560,7 +560,7 @@ class ProjectDesignService:
 
         # Fallback: use "default" system config from DB
         try:
-            resolved = await self._llm_setting_service.resolve_system_config(
+            resolved = await self._model_setting_service.resolve_system_config(
                 db, setting_id="default"
             )
             return resolved.model_copy(deep=True)

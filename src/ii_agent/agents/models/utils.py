@@ -2,7 +2,7 @@ from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.agents.models.base import Model
 from ii_agent.agents.models.custom.custom import OpenAIChatCustom
 from ii_agent.agents.models.google.gemini import Gemini
-from ii_agent.agents.models.provider import Provider
+from ii_agent.settings.llm import Provider
 
 
 def get_model(model_provider: Provider, llm_config: LLMConfig, **kwargs) -> Model:

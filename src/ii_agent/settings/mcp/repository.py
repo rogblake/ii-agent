@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.db.repository import BaseRepository
+from ii_agent.core.db.base import BaseRepository
 from ii_agent.settings.mcp.models import MCPSetting
 
 

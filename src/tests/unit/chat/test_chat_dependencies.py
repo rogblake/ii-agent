@@ -171,7 +171,7 @@ class TestGetChatMessageHistory:
 class TestGetChatService:
     def _make_mocks(self):
         return {
-            "llm_setting_service": MagicMock(),
+            "model_setting_service": MagicMock(),
             "credit_service": MagicMock(),
             "file_processor": MagicMock(),
             "tool_service": MagicMock(),
@@ -196,6 +196,6 @@ class TestGetChatService:
         assert result._message_history is mocks["message_history"]
         assert result._message_service is mocks["message_service"]
         assert result._session_repo is mocks["session_repo"]
-        assert result._llm_setting_service is mocks["llm_setting_service"]
+        assert result._model_setting_service is mocks["model_setting_service"]
         assert result._credit_service is mocks["credit_service"]
         assert result._container is mocks["container"]

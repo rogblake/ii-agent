@@ -7,7 +7,7 @@ from ii_agent.agents.tools.base import BaseAgentTool, ToolResult
 from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
-    from ii_agent.realtime.pubsub import AsyncIOPubSub
+    from ii_agent.realtime.pubsub import AsyncIOPubSub as EventStream
     from ii_agent.sessions.schemas import SessionInfo
 
 class PlanModificationSuggestionsTool(BaseAgentTool):

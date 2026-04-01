@@ -57,7 +57,7 @@ def _make_service(**overrides) -> ProjectDesignService:
     repo = MagicMock()
     sandbox_service = MagicMock()
     event_service = MagicMock()
-    llm_setting_service = MagicMock()
+    model_setting_service = MagicMock()
     config = MagicMock()
     config.llm_configs = {}
 
@@ -65,7 +65,7 @@ def _make_service(**overrides) -> ProjectDesignService:
         "repo": repo,
         "sandbox_service": sandbox_service,
         "event_service": event_service,
-        "llm_setting_service": llm_setting_service,
+        "model_setting_service": model_setting_service,
         "config": config,
     }
     kwargs.update(overrides)
@@ -1146,9 +1146,7 @@ class TestResolveLlmConfigForSessionR4:
         svc = _make_service()
         # No setting_id on session — falls back to resolve_system_config("default")
         default_config = LLMConfig(model="gpt-4o")
-        svc._llm_setting_service.resolve_system_config = AsyncMock(
-            return_value=default_config
-        )
+        svc._model_setting_service.resolve_system_config = AsyncMock(return_value=default_config)
         session = _make_session(llm_setting_id=None)
         result = await svc._resolve_llm_config_for_session(
             AsyncMock(),
@@ -1165,7 +1163,7 @@ class TestResolveLlmConfigForSessionR4:
         svc = _make_service()
         mock_config = MagicMock(spec=LLMConfig)
         mock_config.model_copy = MagicMock(return_value=mock_config)
-        svc._llm_setting_service.get_user_llm_config = AsyncMock(return_value=mock_config)
+        svc._model_setting_service.get_user_llm_config = AsyncMock(return_value=mock_config)
         session = _make_session(llm_setting_id="some-model-id")
         result = await svc._resolve_llm_config_for_session(
             AsyncMock(),
@@ -1173,7 +1171,7 @@ class TestResolveLlmConfigForSessionR4:
             user_id="u1",
             session=session,
         )
-        svc._llm_setting_service.get_user_llm_config.assert_called_once()
+        svc._model_setting_service.get_user_llm_config.assert_called_once()
         assert result is mock_config
 
     @pytest.mark.asyncio
@@ -1181,10 +1179,12 @@ class TestResolveLlmConfigForSessionR4:
         from ii_agent.core.config.llm_config import LLMConfig
 
         svc = _make_service()
-        svc._llm_setting_service.get_user_llm_config = AsyncMock(side_effect=Exception("not found"))
+        svc._model_setting_service.get_user_llm_config = AsyncMock(
+            side_effect=Exception("not found")
+        )
         # resolve_system_config also fails, falls to "default" fallback
         system_config = LLMConfig(model="gpt-4o")
-        svc._llm_setting_service.resolve_system_config = AsyncMock(
+        svc._model_setting_service.resolve_system_config = AsyncMock(
             side_effect=[Exception("not found"), system_config]
         )
         session = _make_session(llm_setting_id="gpt-4")

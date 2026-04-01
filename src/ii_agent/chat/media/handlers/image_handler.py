@@ -205,7 +205,7 @@ class ImageMediaHandler(BaseMediaHandler):
             processed_generated = await process_files_for_message(
                 db_session=db_session,
                 file_ids=generated_images,
-                storage=storage,
+                storage=get_storage(),
                 session_id=session_id,
             )
             if processed_generated.binary_parts:

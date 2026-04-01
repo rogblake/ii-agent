@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.integrations.connectors.models import ConnectorTypeEnum
+from ii_agent.integrations.connectors.models import ConnectorType
 from .base import BaseConnector
 from .registry import ConnectorRegistry
 
@@ -16,7 +16,7 @@ class ConnectorFactory:
 
     @staticmethod
     def create(
-        connector_type: ConnectorTypeEnum,
+        connector_type: ConnectorType,
         db_session: AsyncSession,
     ) -> BaseConnector:
         """Create a connector instance.
@@ -33,7 +33,7 @@ class ConnectorFactory:
 
         Example:
             connector = ConnectorFactory.create(
-                ConnectorTypeEnum.GOOGLE_DRIVE,
+                ConnectorType.GOOGLE_DRIVE,
                 db_session
             )
             auth_url = await connector.get_auth_url(state)
@@ -65,7 +65,7 @@ class ConnectorFactory:
             )
         """
         try:
-            connector_type = ConnectorTypeEnum(connector_type_name)
+            connector_type = ConnectorType(connector_type_name)
         except ValueError:
             raise ValueError(f"Invalid connector type: {connector_type_name}")
 

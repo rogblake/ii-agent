@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from typing import TYPE_CHECKING
 
 from ii_agent.core.container import ApplicationContainer
 from ii_agent.realtime.pubsub import AsyncIOPubSub
@@ -25,7 +26,6 @@ from ii_agent.integrations.mobile.apple import (
     AppleSessionExpiredError,
     FastlaneAuthClient,
     AppleCredentials,
-    AppleAuthStateEnum,
     AppleAuthState
 )
 from ii_agent.realtime.handlers.base import (
@@ -39,6 +39,9 @@ from ii_agent.realtime.schemas import (
     AppleCheckAuthContent,
     SaveExpoTokenContent,
 )
+
+if TYPE_CHECKING:
+    from ii_agent.sessions.schemas import SessionInfo
 
 logger = logging.getLogger(__name__)
 

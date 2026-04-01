@@ -7,7 +7,7 @@ from sqlalchemy import String, Boolean, ForeignKey, Index, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from typing import Literal, Optional, TYPE_CHECKING
 
-from ii_agent.agents.types import Provider
+from .types import Provider
 from ii_agent.core.db.base import Base
 
 if TYPE_CHECKING:

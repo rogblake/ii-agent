@@ -269,6 +269,23 @@ def upgrade() -> None:
     op.create_index("ix_agent_run_messages_status", "agent_run_messages", ["status"])
 
     op.create_table(
+        "agent_event_logs",
+        sa.Column("id", UUID(as_uuid=True), nullable=False),
+        sa.Column("session_id", sa.String(), nullable=False),
+        sa.Column("run_id", UUID(as_uuid=True), nullable=False),
+        sa.Column("group", sa.String(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("payload", JSONB(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint("id", name="pk_agent_event_logs"),
+    )
+    op.create_index("ix_agent_event_logs_session_id", "agent_event_logs", ["session_id"])
+    op.create_index("ix_agent_event_logs_run_id", "agent_event_logs", ["run_id"])
+    op.create_index("ix_agent_event_logs_session_run", "agent_event_logs", ["session_id", "run_id"])
+    op.create_index("ix_agent_event_logs_name", "agent_event_logs", ["name"])
+    op.create_index("ix_agent_event_logs_created_at", "agent_event_logs", ["created_at"])
+
+    op.create_table(
         "session_summaries",
         sa.Column("id", sa.BigInteger, primary_key=True, autoincrement=True),
         sa.Column("content", sa.String, nullable=False),
@@ -881,6 +898,7 @@ def downgrade() -> None:
     op.drop_table("chat_messages")
     op.drop_table("agent_sandboxes")
     op.drop_table("session_summaries")
+    op.drop_table("agent_event_logs")
     op.drop_table("agent_run_messages")
     op.drop_table("task_logs")
     op.drop_table("run_tasks")

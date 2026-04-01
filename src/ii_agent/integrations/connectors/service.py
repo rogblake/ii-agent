@@ -8,7 +8,7 @@ from typing import Optional, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.settings import Settings, get_settings
-from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
+from ii_agent.integrations.connectors.models import Connector, ConnectorType
 from ii_agent.integrations.connectors.repository import ConnectorRepository
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class ConnectorService:
 
         # Check if user already has an MCP connector
         connector = await self._repo.get_by_user_and_type(
-            db, user_id, ConnectorTypeEnum.CHATGPT_MCP.value
+            db, user_id, ConnectorType.CHATGPT_MCP.value
         )
 
         if connector:
@@ -51,7 +51,7 @@ class ConnectorService:
             connector = Connector(
                 id=str(uuid.uuid4()),
                 user_id=user_id,
-                connector_type=ConnectorTypeEnum.CHATGPT_MCP.value,
+                connector_type=ConnectorType.CHATGPT_MCP.value,
                 access_token=access_token,
                 token_expiry=token_expiry,
                 connector_metadata={
@@ -70,7 +70,7 @@ class ConnectorService:
     ) -> Optional[Dict[str, str]]:
         """Get user info by MCP token."""
         connector = await self._repo.get_by_token_and_type(
-            db, token, ConnectorTypeEnum.CHATGPT_MCP.value
+            db, token, ConnectorType.CHATGPT_MCP.value
         )
 
         if not connector:

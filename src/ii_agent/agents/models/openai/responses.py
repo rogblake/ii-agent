@@ -35,7 +35,7 @@ from ii_agent.files.media import File
 from ii_agent.agents.models.base import Model
 from ii_agent.agents.models.message import Citations, Message, UrlCitation
 from ii_agent.agents.models.metrics import Metrics
-from ii_agent.agents.models.provider import Provider
+from ii_agent.settings.llm import Provider
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.runs.agent import RunOutput
 from ii_agent.agents.utils.http import get_default_async_client, get_default_sync_client

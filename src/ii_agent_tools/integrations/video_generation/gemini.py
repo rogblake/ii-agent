@@ -17,6 +17,7 @@ from google import genai
 from google.cloud import storage
 from google.genai import types
 
+from ii_agent.core.storage.path_resolver import path_resolver
 from .base import (
     BaseVideoGenerationClient,
     VideoGenerationResult,
@@ -134,6 +135,7 @@ class GeminiVideoGenerationClient(BaseVideoGenerationClient):
         person_generation: Literal["allow_all", "allow_adult"] | None = None,
         seed: int | None = None,
         reference_images: list[VideoReferenceImage] | None = None,
+        user_id: uuid.UUID | None = None,
         **kwargs,
     ) -> VideoGenerationResult:
         """
@@ -272,7 +274,7 @@ class GeminiVideoGenerationClient(BaseVideoGenerationClient):
 
             # Upload to GCS and get public URL
             public_url, storage_path, file_name, video_size = await self._upload_video(
-                video_bytes, session_id
+                video_bytes, user_id
             )
 
             # Get mime type - try both naming conventions
@@ -334,7 +336,7 @@ class GeminiVideoGenerationClient(BaseVideoGenerationClient):
             return types.Image(imageBytes=response.content, mimeType="image/png")
 
     async def _upload_video(
-        self, video_bytes: bytes, session_id: str | None
+        self, video_bytes: bytes, user_id: uuid.UUID
     ) -> tuple[str, str, str, int]:
         """
         Upload video bytes to GCS and return (public_url, storage_path, file_name, size).
@@ -342,11 +344,7 @@ class GeminiVideoGenerationClient(BaseVideoGenerationClient):
         video_size = len(video_bytes)
         file_id = str(uuid.uuid4())
         file_name = f"video-{file_id[:8]}.mp4"
-
-        if session_id:
-            blob_name = f"sessions/{session_id}/generated/{file_name}"
-        else:
-            blob_name = f"video_generation/{file_name}"
+        blob_name = path_resolver.user_file(user_id, "video", f"video-{file_id[:8]}", "mp4")
 
         if self.bucket:
             # Upload to GCS

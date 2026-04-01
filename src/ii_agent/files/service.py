@@ -37,7 +37,6 @@ from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.repository import SessionRepository
 
 # Constants
-IMAGE_CONTENT_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
 SEVEN_DAY_SECONDS = 7 * 24 * 3600
 # Re-generate signed URL 5 minutes before it actually expires
 SIGNED_URL_BUFFER_SECONDS = 5 * 60
@@ -120,27 +119,6 @@ class FileService:
             created_at=asset.created_at,
         )
 
-    @staticmethod
-    def _detect_asset_type(content_type: str | None) -> str:
-        """Infer AssetType from a MIME content type."""
-        if not content_type:
-            return AssetType.OTHER
-        if content_type.startswith("image/"):
-            return AssetType.IMAGE
-        if content_type.startswith("video/"):
-            return AssetType.VIDEO
-        if content_type.startswith("audio/"):
-            return AssetType.AUDIO
-        if content_type.startswith("text/"):
-            return AssetType.DOCUMENT
-        if content_type in (
-            "application/pdf",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ):
-            return AssetType.DOCUMENT
-        return AssetType.OTHER
-
     # ==================== File CRUD ====================
 
     async def get_file_by_id(self, db: AsyncSession, file_id: uuid.UUID) -> FileDataResponse:
@@ -193,7 +171,7 @@ class FileService:
             storage_path=storage_path,
             content_type=content_type,
             file_size=file_size,
-            asset_type=self._detect_asset_type(content_type),
+            asset_type=AssetType.from_content_type(content_type),
             source=AssetSource.GENERATED,
             upload_status=UploadStatus.COMPLETE,
         )
@@ -220,7 +198,8 @@ class FileService:
 
         file_id = uuid.uuid4()
         ext = os.path.splitext(file_name)[1].lstrip(".") or "bin"
-        storage_path = path_resolver.user_file(str(user_id), str(file_id), ext)
+        asset_type = AssetType.from_content_type(content_type)
+        storage_path = path_resolver.user_file(str(user_id), asset_type, str(file_id), ext)
 
         asset = await self._file_repo.create_asset(
             db,
@@ -230,7 +209,7 @@ class FileService:
             storage_path=storage_path,
             content_type=content_type,
             file_size=file_size,
-            asset_type=self._detect_asset_type(content_type),
+            asset_type=asset_type,
             source=AssetSource.GENERATED,
         )
         await self._file_repo.link_to_session(db, file_id, session_id)
@@ -290,18 +269,16 @@ class FileService:
                 )
             )
 
-            # Detect images by content_type or file extension fallback
-            is_image = file_data.content_type in IMAGE_CONTENT_TYPES
+            # Detect images via centralized AssetType detection
+            detected = AssetType.from_content_type(file_data.content_type)
             mime_type = file_data.content_type
-            # Fall back to extension when content_type is missing or generic
-            if not is_image and file_data.name:
+            if not detected.is_image and file_data.name:
                 ext = file_data.name.rsplit(".", 1)[-1].lower() if "." in file_data.name else ""
-                if ext in ("png", "jpg", "jpeg", "gif", "webp", "heic", "heif"):
-                    is_image = True
-                    if not mime_type or mime_type == "application/octet-stream":
-                        mime_type = f"image/{ext}" if ext not in ("jpg",) else "image/jpeg"
+                detected = AssetType.from_ext(ext)
+                if detected.is_image and (not mime_type or mime_type == "application/octet-stream"):
+                    mime_type = f"image/{ext}" if ext != "jpg" else "image/jpeg"
 
-            if is_image:
+            if detected.is_image:
                 images.append(MediaImage(url=file_data.url, mime_type=mime_type))
 
         return images, files
@@ -327,7 +304,8 @@ class FileService:
 
         file_id = uuid.uuid4()
         ext = os.path.splitext(file_name)[1].lstrip(".") or "bin"
-        blob_name = path_resolver.user_upload(str(user_id), str(file_id), ext)
+        asset_type = AssetType.from_content_type(content_type)
+        blob_name = path_resolver.user_file(str(user_id), asset_type, str(file_id), ext)
         signed_url = await self._storage.signed_upload_url(blob_name, content_type)
 
         await self._file_repo.create_asset(
@@ -338,7 +316,7 @@ class FileService:
             storage_path=blob_name,
             content_type=content_type,
             file_size=file_size,
-            asset_type=self._detect_asset_type(content_type),
+            asset_type=asset_type,
             source=AssetSource.USER_UPLOAD,
             upload_status=UploadStatus.PENDING,
         )
@@ -560,10 +538,11 @@ class FileService:
         file_content,
         file_extension: str,
     ) -> str:
-        """Upload or update an avatar image. Returns public URL."""
-        destination_blob_name = path_resolver.public_avatar(str(user_id), file_extension)
-        await self._storage.write(path=destination_blob_name, content=file_content)
-        return self._storage.public_url(destination_blob_name)
+        """Upload or update an avatar image. Returns storage path."""
+        file_id = str(uuid.uuid4())
+        blob_name = path_resolver.user_avatar(str(user_id), file_id, file_extension)
+        await self._storage.write(path=blob_name, content=file_content)
+        return blob_name
 
     def get_avatar_url(self, avatar_blob_name: str) -> str:
         """Get the public URL for an avatar."""
@@ -584,7 +563,7 @@ class FileService:
             raise FileUploadNotFoundError(file_id)
 
         ext = os.path.splitext(asset.file_name)[1].lstrip(".") or "bin"
-        public_path = path_resolver.public_shared(str(asset.id), ext)
+        public_path = f"shared/{asset.id}.{ext}"
         await self._storage.copy(asset.storage_path, public_path)
         public_url = self._storage.public_url(public_path)
 

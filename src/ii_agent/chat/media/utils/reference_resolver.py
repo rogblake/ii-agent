@@ -7,10 +7,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.files.models import FileAsset, SessionAsset
+from ii_agent.files.types import AssetSource, AssetType
 from ii_agent.chat.types import MediaReference
 from ii_agent.chat.api.schemas import AdvancedModeReference
 from ii_agent.core.storage.client import get_storage
-from ii_agent.core.storage.path_resolver import path_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ class ReferenceResolver:
         Get all generated images from conversation history in this session.
 
         Returns list of file_ids for images that were generated (not uploaded by user).
-        Generated images are identified by storage_path starting with 'sessions/{session_id}/generated/'
+        Generated images are identified by source=GENERATED and asset_type=IMAGE.
 
         Args:
             db_session: Database session
@@ -116,7 +116,8 @@ class ReferenceResolver:
                 .join(SessionAsset, SessionAsset.asset_id == FileAsset.id)
                 .where(
                     SessionAsset.session_id == session_id,
-                    FileAsset.storage_path.like(path_resolver.user_generated_pattern())
+                    FileAsset.source == AssetSource.GENERATED,
+                    FileAsset.asset_type == AssetType.IMAGE,
                 )
                 .order_by(FileAsset.created_at.asc())
             )

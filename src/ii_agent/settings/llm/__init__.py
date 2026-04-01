@@ -1,10 +1,13 @@
-"""LLM configuration domain module."""
+"""LLM configuration domain module.
 
-from .dependencies import ModelSettingServiceDep
+Services and dependencies are accessed via DI — import from their
+own modules or use the Dep aliases in settings/llm/dependencies.py.
+Router is registered in app/routers.py.
+"""
+
 from .exceptions import LLMSettingNotFoundError
 from .models import ModelSetting
 from .repository import ModelSettingRepository
-from .router import router
 from .schemas import (
     ModelConfig,
     ModelParams,
@@ -17,19 +20,16 @@ from .schemas import (
     ModelSettingUpdate,
     PricingInfo,
 )
-from .service import ModelSettingService, get_system_model_config_from_db
-from .types import ConfigType
+from .types import ConfigType, Provider
 
 __all__ = [
     # Types
     "ConfigType",
+    "Provider",
     # Models
     "ModelSetting",
     # Repository
     "ModelSettingRepository",
-    # Service
-    "ModelSettingService",
-    "get_system_model_config_from_db",
     # Schemas
     "ModelConfig",
     "ModelParams",
@@ -41,10 +41,6 @@ __all__ = [
     "ModelSettingList",
     "ModelSettingUpdate",
     "PricingInfo",
-    # Dependencies
-    "ModelSettingServiceDep",
     # Exceptions
     "LLMSettingNotFoundError",
-    # Router
-    "router",
 ]

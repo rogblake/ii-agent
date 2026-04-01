@@ -30,6 +30,7 @@ from ii_agent.files.models import FileAsset, SessionAsset
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.storage.providers.base import StorageProvider
 from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.files.types import AssetType
 
 logger = logging.getLogger(__name__)
 
@@ -240,7 +241,8 @@ class CodeInterpreter(BaseTool):
                 file_name = f"code_output_{openai_file_id}{ext}"
                 file_ext = ext.lstrip(".") or "bin"
                 file_uuid = str(uuid.uuid4())
-                storage_path = path_resolver.user_file(self.user_id, file_uuid, file_ext)
+                asset_type = AssetType.from_content_type(content_type)
+                storage_path = path_resolver.user_file(self.user_id, asset_type, file_uuid, file_ext)
 
                 # Upload to GCS
                 await self.storage.write(storage_path, file_obj, content_type)

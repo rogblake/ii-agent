@@ -2,8 +2,6 @@
 
 from .models import MediaTemplate
 from .repository import MediaTemplateRepository
-from .service import MediaTemplateService
-from .router import router
 from .schemas import (
     MediaModelConfig,
     MediaTemplateInfo,
@@ -22,10 +20,6 @@ __all__ = [
     "MediaTemplate",
     # Repository
     "MediaTemplateRepository",
-    # Service
-    "MediaTemplateService",
-    # Router
-    "router",
     # Schemas
     "MediaModelConfig",
     "MediaTemplateInfo",

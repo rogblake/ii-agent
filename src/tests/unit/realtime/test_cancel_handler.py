@@ -16,7 +16,7 @@ def _mock_container(**overrides):
     container.run_task_service = overrides.get("run_task_service", MagicMock())
     container.session_service = MagicMock()
     container.credit_service = MagicMock()
-    container.llm_setting_service = MagicMock()
+    container.model_setting_service = MagicMock()
     container.file_service = MagicMock()
     container.event_service = MagicMock()
     return container

@@ -11,7 +11,7 @@ import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
+from ii_agent.integrations.connectors.models import Connector, ConnectorType
 
 from .base import BaseConnector, ConnectorData
 
@@ -40,13 +40,13 @@ class GitHubConnector(BaseConnector):
         super().__init__(db_session)
 
     @property
-    def connector_type(self) -> ConnectorTypeEnum:
+    def connector_type(self) -> ConnectorType:
         """Return GitHub connector type.
 
         Returns:
-            ConnectorTypeEnum: GITHUB enum value
+            ConnectorType: GITHUB enum value
         """
-        return ConnectorTypeEnum.GITHUB
+        return ConnectorType.GITHUB
 
     @property
     def scopes(self) -> list[str]:

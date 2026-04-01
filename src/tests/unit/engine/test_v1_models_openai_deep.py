@@ -37,7 +37,7 @@ from ii_agent.agents.exceptions import (
     ModelProviderError,
 )
 from ii_agent.files.media import File, Audio, Image
-from ii_agent.agents.types import Provider
+from ii_agent.settings.llm import Provider
 
 
 # ---------------------------------------------------------------------------

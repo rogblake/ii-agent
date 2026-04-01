@@ -10,7 +10,7 @@ from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from ii_agent.agents.types import Provider
+from ii_agent.settings.llm import Provider
 from ii_agent.core.logger import logger
 
 

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 
 class BillingContextValue(StrEnum):
@@ -53,3 +55,12 @@ class BillingScope:
             "session_id": self.session_id,
             "billing_context": str(self.billing_context),
         }
+
+
+@dataclass
+class BillingResult:
+    """Result of a billable operation carrying actual cost information."""
+
+    value: Any
+    actual_usd: float = 0.0
+    usage_payload: dict[str, Any] = field(default_factory=dict)

@@ -9,6 +9,7 @@ import httpx
 from google.cloud import storage
 from openai import AsyncOpenAI
 
+from ii_agent.core.storage.path_resolver import path_resolver
 from .base import BaseImageGenerationClient, ImageGenerationResult, ImageGenerationError
 from .registry import register_provider
 from .constants import ImageGenerationProvider
@@ -75,7 +76,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         image_urls = kwargs.get("image_urls")
         image_size = kwargs.get("image_size")
         metadata = kwargs.get("metadata", {})
-        session_id = metadata.get("session_id")
+        user_id = kwargs.get("user_id") or metadata.get("user_id")
         background = kwargs.get("background")
 
         # Route to appropriate method based on whether reference images are provided
@@ -85,7 +86,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
                 image_urls=image_urls,
                 aspect_ratio=aspect_ratio,
                 image_size=image_size,
-                session_id=session_id,
+                user_id=user_id,
                 background=background,
             )
         else:
@@ -93,7 +94,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
                 prompt=prompt,
                 aspect_ratio=aspect_ratio,
                 image_size=image_size,
-                session_id=session_id,
+                user_id=user_id,
                 background=background,
             )
 
@@ -102,12 +103,10 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         prompt: str,
         aspect_ratio: Literal["1:1", "2:3", "3:2"] = "1:1",
         image_size: str | None = None,
-        session_id: str | None = None,
+        user_id: uuid.UUID | None = None,
         background: Literal["transparent", "opaque", "auto"] | None = None,
         **kwargs: Any,
     ) -> ImageGenerationResult:
-        # Note: session_id parameter added for API consistency but not used in OpenAI client
-        # OpenAI returns temporary URLs that expire, so session-based storage isn't applicable
         size = ASPECT_RATIO_TO_SIZE.get(aspect_ratio, "1024x1024")
 
         try:
@@ -143,7 +142,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         file_name = None
         if self.bucket:
             url, storage_path, file_name = await self._upload_bytes(
-                image_bytes, session_id
+                image_bytes, user_id
             )
         elif image_data.url:
             url = image_data.url
@@ -204,11 +203,10 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         image_urls: List[str],
         aspect_ratio: Literal["1:1", "2:3", "3:2"] = "1:1",
         image_size: str | None = None,
-        session_id: str | None = None,
+        user_id: uuid.UUID | None = None,
         background: Literal["transparent", "opaque", "auto"] | None = None,
         **kwargs: Any,
     ) -> ImageGenerationResult:
-        # Note: session_id parameter added for API consistency but not used in OpenAI client
         if not image_urls:
             raise ImageGenerationError(
                 "At least one image URL is required for image editing"
@@ -264,7 +262,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         file_name = None
         if self.bucket:
             url, storage_path, file_name = await self._upload_bytes(
-                result_image_bytes, session_id
+                result_image_bytes, user_id
             )
         elif image_data.url:
             url = image_data.url
@@ -286,18 +284,12 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         )
 
     async def _upload_bytes(
-        self, image_bytes: bytes, session_id: str | None = None
+        self, image_bytes: bytes, user_id: uuid.UUID
     ) -> tuple[str, str, str]:
         """Upload image bytes to GCS and return (public_url, storage_path, file_name)."""
-        # Use session-based path if session_id is provided, otherwise use blob_name_prefix
-        if session_id:
-            file_id = str(uuid.uuid4())
-            file_name = f"generated-{file_id[:8]}.png"
-            blob_name = f"sessions/{session_id}/generated/{file_name}"
-        else:
-            file_id = str(uuid.uuid4())
-            file_name = f"{file_id}.png"
-            blob_name = f"{self.blob_name_prefix}/{file_name}"
+        file_id = str(uuid.uuid4())
+        file_name = f"{file_id}.png"
+        blob_name = path_resolver.user_file(user_id, "image", file_id, "png")
 
         def _upload_sync() -> str:
             blob = self.bucket.blob(blob_name)

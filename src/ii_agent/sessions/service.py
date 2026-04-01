@@ -18,7 +18,6 @@ from ii_agent.realtime.events.repository import EventRepository
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
-from ii_agent.agents.sandboxes.repository import SandboxRepository
 from ii_agent.sessions.schemas import SessionEventDetail, SessionInfo, ValidatedSessionResult
 from ii_agent.sessions.title_service import SessionTitleService
 from ii_agent.core.config.settings import Settings
@@ -26,6 +25,7 @@ from ii_agent.core.redis.cache import EntityCache
 from ii_agent.core.storage.providers.base import StorageProvider
 
 if TYPE_CHECKING:
+    from ii_agent.agents.sandboxes.repository import SandboxRepository
     from ii_agent.credits.service import CreditService
     from ii_agent.settings.llm.service import ModelSettingService
 

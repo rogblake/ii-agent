@@ -197,7 +197,7 @@ class TestGetDefaultLlmConfig:
             llm_configs={
                 "default": {
                     "model": "gpt-4o",
-                    "api_type": "openai",
+                    "provider": "OpenAI",
                     "api_key": "test-key",
                 }
             }
@@ -210,7 +210,7 @@ class TestGetDefaultLlmConfig:
         from ii_agent.core.config.llm_config import LLMConfig
         from pydantic import SecretStr
 
-        llm_config = LLMConfig(model="gpt-4o", api_type="openai", api_key=SecretStr("key"))
+        llm_config = LLMConfig(model="gpt-4o", provider="OpenAI", api_key=SecretStr("key"))
         config = SimpleNamespace(llm_configs={"default": llm_config})
         result = _get_default_llm_config(config)
         assert result is llm_config

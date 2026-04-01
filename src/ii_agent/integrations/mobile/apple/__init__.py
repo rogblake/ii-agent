@@ -19,7 +19,7 @@ from ii_agent.integrations.mobile.apple.exceptions import (
     AppleTeamAccessError,
 )
 from ii_agent.integrations.mobile.apple.fastlane_auth import FastlaneAuthClient
-from ii_agent.integrations.mobile.apple.models import AppleAuthStateEnum, AppleCredential
+from ii_agent.integrations.mobile.apple.models import AppleAuthState, AppleCredential
 from ii_agent.integrations.mobile.apple.repository import AppleCredentialRepository
 from ii_agent.integrations.mobile.apple.service import AppleCredentialService, AppleCredentials
 from ii_agent.integrations.mobile.apple.types import AppleAuthState, AppleSession, AppleTeam
@@ -45,7 +45,7 @@ __all__ = [
     "AppleAuthState",
     "AppleSession",
     "AppleTeam",
-    "AppleAuthStateEnum",
+    "AppleAuthState",
     "AppleCredential",
     "AppleCredentialRepository",
     "AppleCredentialService",

@@ -1,7 +1,7 @@
 import pytest
 
 from ii_agent.credits.pricing import ModelPricing
-from ii_agent.agents.types import Provider
+from ii_agent.settings.llm import Provider
 
 pytestmark = pytest.mark.unit
 

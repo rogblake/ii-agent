@@ -48,7 +48,8 @@ from ii_agent.agents.factory.tools import (  # noqa: E402
     TOOL_CONFIRM_MAP,
     COMMON_TOOLS,
 )
-from ii_agent.agents.types import AgentType, Provider  # noqa: E402
+from ii_agent.agents.types import AgentType  # noqa: E402
+from ii_agent.settings.llm import Provider  # noqa: E402
 
 
 # ---------------------------------------------------------------------------

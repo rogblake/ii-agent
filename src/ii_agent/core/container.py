@@ -20,7 +20,8 @@ from typing import Any
 from pydantic import SecretStr
 
 from ii_agent.core.config.settings import Settings, get_settings
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.redis.client import get_redis_client
 from ii_agent.core.redis.cache import EntityCache, TypedEntityCache, get_entity_cache
 from ii_agent.core.redis import client as _redis_client_mod
@@ -311,7 +312,7 @@ class ApplicationContainer:
             config=cfg,
         )
 
-        llm_setting_svc = ModelSettingService(
+        model_setting_svc = ModelSettingService(
             repo=model_setting_repo,
             session_repo=session_repo,
         )
@@ -363,7 +364,7 @@ class ApplicationContainer:
         storybook_ai_edit_svc = StorybookAIEditService(
             session_service=session_svc,
             user_service=user_svc,
-            llm_setting_service=llm_setting_svc,
+            model_setting_service=model_setting_svc,
             credit_service=credit_svc,
             config=cfg,
         )
@@ -396,7 +397,7 @@ class ApplicationContainer:
         nano_banana_llm_config = LLMConfig(
             model=nb_config.model,
             api_key=SecretStr(nb_config.api_key) if nb_config.api_key else None,
-            api_type=APITypes(nb_config.api_type),
+            provider=Provider(nb_config.provider),
             temperature=nb_config.temperature,
             base_url=nb_config.base_url,
             vertex_project_id=nb_config.vertex_project_id,
@@ -419,7 +420,7 @@ class ApplicationContainer:
         project_design_svc = ProjectDesignService(
             repo=project_design_repo,
             sandbox_service=sandbox_svc,
-            llm_setting_service=llm_setting_svc,
+            model_setting_service=model_setting_svc,
             config=cfg,
         )
 
@@ -435,7 +436,7 @@ class ApplicationContainer:
             session_wishlist_service=session_wishlist_svc,
             file_service=file_svc,
             run_task_service=run_task_svc,
-            llm_setting_service=llm_setting_svc,
+            model_setting_service=model_setting_svc,
             mcp_setting_service=mcp_setting_svc,
             skill_service=skill_svc,
             project_service=project_svc,

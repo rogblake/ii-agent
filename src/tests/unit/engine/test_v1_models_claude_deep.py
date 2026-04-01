@@ -40,7 +40,7 @@ from ii_agent.agents.exceptions import (
     ModelRateLimitError,
 )
 from ii_agent.files.media import Image, File
-from ii_agent.agents.types import Provider
+from ii_agent.settings.llm import Provider
 
 
 # ---------------------------------------------------------------------------

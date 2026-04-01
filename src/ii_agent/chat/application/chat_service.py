@@ -57,7 +57,7 @@ class ChatService:
         message_history: ChatMessageHistoryService,
         message_service: MessageService,
         session_repo: SessionRepository,
-        llm_setting_service,
+        model_setting_service,
         credit_service: CreditService | None = None,
         container: ApplicationContainer,
         title_service: SessionTitleService,
@@ -68,7 +68,7 @@ class ChatService:
         self._message_history = message_history
         self._message_service = message_service
         self._session_repo = session_repo
-        self._llm_setting_service = llm_setting_service
+        self._model_setting_service = model_setting_service
         self._credit_service = credit_service
         self._container = container
         self._title_service = title_service
@@ -153,7 +153,9 @@ class ChatService:
         if not session or session.user_id != user_id:
             raise SessionNotFoundError("Session not found or access denied")
 
-    async def validate_public_session_access(self, db: AsyncSession, *, session_id: uuid.UUID) -> None:
+    async def validate_public_session_access(
+        self, db: AsyncSession, *, session_id: uuid.UUID
+    ) -> None:
         session = await self._session_repo.get_public_by_id(db, session_id)
         if not session:
             raise SessionNotFoundError("Session not found or not public")
@@ -161,7 +163,7 @@ class ChatService:
     async def validate_model_for_chat(
         self, db: AsyncSession, *, model_id: str, user_id: uuid.UUID
     ) -> None:
-        all_models = await self._llm_setting_service.get_all_available_models(
+        all_models = await self._model_setting_service.get_all_available_models(
             db,
             user_id=user_id,
         )
@@ -169,17 +171,17 @@ class ChatService:
         if not model_info:
             raise ModelNotFoundError(f"Model not found: {model_id}")
 
-    async def get_llm_config(self, db: AsyncSession, *, model_id: str, user_id: uuid.UUID) -> LLMConfig:
+    async def get_llm_config(
+        self, db: AsyncSession, *, model_id: str, user_id: uuid.UUID
+    ) -> LLMConfig:
         try:
-            return await self._llm_setting_service.get_user_llm_config(
+            return await self._model_setting_service.get_user_llm_config(
                 db,
                 model_id=model_id,
                 user_id=user_id,
             )
         except ValueError:
-            return await self._llm_setting_service.resolve_system_config(
-                db, model_id=model_id
-            )
+            return await self._model_setting_service.resolve_system_config(db, model_id=model_id)
 
     async def build_message_history_response(
         self,
@@ -454,7 +456,7 @@ class ChatService:
         await cancel.register_run(run_id)
         logger.info(f"Started council run {run_id} for session {session_id}")
 
-        # Process file uploads (provider-neutral with api_type=None)
+        # Process file uploads (provider-neutral with provider=None)
         await self._file_processor.process_uploads(
             db,
             user_id=user_id,
@@ -497,7 +499,7 @@ class ChatService:
 
         llm_configs = {}
         model_names = {}
-        all_models = await self._llm_setting_service.get_all_available_models(db, user_id=user_id)
+        all_models = await self._model_setting_service.get_all_available_models(db, user_id=user_id)
         failed_models = []
         for mid in all_model_ids:
             try:
@@ -645,15 +647,15 @@ class ChatService:
     async def clear_messages(self, db: AsyncSession, *, session_id: uuid.UUID) -> int:
         return await self._message_history._repo.delete_by_session(db, session_id)
 
-    async def stop_conversation(self, db: AsyncSession, *, session_id: uuid.UUID) -> Optional[uuid.UUID]:
+    async def stop_conversation(
+        self, db: AsyncSession, *, session_id: uuid.UUID
+    ) -> Optional[uuid.UUID]:
         session = await self._session_repo.get_by_id(db, session_id)
         if not session:
             raise SessionNotFoundError("Session not found")
 
         # Find the last user message whose assistant reply is still incomplete
-        running_msg = await self._message_history._repo.find_running_by_session(
-            db, session_id
-        )
+        running_msg = await self._message_history._repo.find_running_by_session(db, session_id)
 
         if running_msg and running_msg.parent_message_id:
             run_id = str(running_msg.parent_message_id)

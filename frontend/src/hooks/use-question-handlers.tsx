@@ -47,6 +47,7 @@ import {
     AGENT_TYPE,
     BUILD_MODE,
     ChatMessagePayload,
+    CommandPayload,
     CommandType,
     Milestone,
     TAB,
@@ -333,9 +334,9 @@ export function useQuestionHandlers() {
         // Prepare the query content
         const queryContent = {
             model_id: selectedModel.id,
-            provider: selectedModel.api_type,
+            provider: selectedModel.provider,
             source: selectedModel.source,
-            agent_type: selectedFeature,
+            agent_type: selectedFeature ?? undefined,
             tool_args,
             thinking_tokens,
             metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
@@ -409,7 +410,7 @@ export function useQuestionHandlers() {
                 content: {
                     command: commandType,
                     ...queryContent
-                }
+                } as CommandPayload
             })
         }
     }
@@ -448,9 +449,9 @@ export function useQuestionHandlers() {
         // Prepare the query content for milestone execution
         const queryContent = {
             model_id: selectedModel.id,
-            provider: selectedModel.api_type,
+            provider: selectedModel.provider,
             source: selectedModel.source,
-            agent_type: selectedFeature,
+            agent_type: selectedFeature ?? undefined,
             tool_args,
             thinking_tokens,
             // Query params
@@ -473,7 +474,7 @@ export function useQuestionHandlers() {
             content: {
                 command: CommandType.QUERY,
                 ...queryContent
-            }
+            } as CommandPayload
         })
     }
 
@@ -512,9 +513,9 @@ export function useQuestionHandlers() {
         // Prepare the query content for building all milestones
         const queryContent = {
             model_id: selectedModel.id,
-            provider: selectedModel.api_type,
+            provider: selectedModel.provider,
             source: selectedModel.source,
-            agent_type: selectedFeature,
+            agent_type: selectedFeature ?? undefined,
             tool_args,
             thinking_tokens,
             // Query params
@@ -537,7 +538,7 @@ export function useQuestionHandlers() {
             content: {
                 command: CommandType.QUERY,
                 ...queryContent
-            }
+            } as CommandPayload
         })
     }
 
@@ -560,9 +561,9 @@ export function useQuestionHandlers() {
         // Send modify_plan_suggestions request to get AI-generated suggestions
         const queryContent = {
             model_id: selectedModel.id,
-            provider: selectedModel.api_type,
+            provider: selectedModel.provider,
             source: selectedModel.source,
-            agent_type: selectedFeature,
+            agent_type: selectedFeature ?? undefined,
             tool_args,
             thinking_tokens,
             // Query params
@@ -580,7 +581,7 @@ export function useQuestionHandlers() {
             content: {
                 command: CommandType.PLAN,
                 ...queryContent
-            }
+            } as CommandPayload
         })
     }
 
@@ -619,9 +620,9 @@ export function useQuestionHandlers() {
         // Send modify_plan request with the modification text
         const queryContent = {
             model_id: selectedModel.id,
-            provider: selectedModel.api_type,
+            provider: selectedModel.provider,
             source: selectedModel.source,
-            agent_type: selectedFeature,
+            agent_type: selectedFeature ?? undefined,
             tool_args,
             thinking_tokens,
             // Query params
@@ -639,7 +640,7 @@ export function useQuestionHandlers() {
             content: {
                 command: CommandType.PLAN,
                 ...queryContent
-            }
+            } as CommandPayload
         })
     }
 

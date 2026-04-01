@@ -120,7 +120,7 @@ class TestSeedWithExistingAdmin:
         configs = {
             "model-1": {
                 "model": "claude-3-5-sonnet-20241022",
-                "api_type": "anthropic",
+                "provider": "Anthropic",
                 "api_key": None,
                 "base_url": None,
                 "max_retries": 5,
@@ -160,7 +160,7 @@ class TestSeedWithExistingAdmin:
         configs = {
             "existing-model": {
                 "model": "gpt-4o-mini",
-                "api_type": "openai",
+                "provider": "OpenAI",
                 "api_key": None,
                 "base_url": None,
                 "max_retries": 3,
@@ -200,7 +200,7 @@ class TestSeedWithExistingAdmin:
         """If an error occurs inside the DB block, rollback handled by get_db_session_local."""
         mock_settings = MagicMock()
         mock_settings.llm_configs_json = json.dumps(
-            {"m": {"model": "x", "api_type": "openai", "api_key": None}}
+            {"m": {"model": "x", "provider": "OpenAI", "api_key": None}}
         )
 
         ctx, db = _make_ctx_db()
@@ -222,7 +222,7 @@ class TestSeedWithExistingAdmin:
         configs = {
             "keyed-model": {
                 "model": "gpt-4o",
-                "api_type": "openai",
+                "provider": "OpenAI",
                 "api_key": "sk-real-key",
             }
         }

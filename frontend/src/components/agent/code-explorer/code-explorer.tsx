@@ -7,6 +7,7 @@ import {
     CodeIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CommandType } from '@/typings/agent'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -138,8 +139,8 @@ export function CodeExplorer({ className }: CodeExplorerProps) {
             // Cache miss — fetch from backend
             dispatch(setFileLoading(true))
             const sent = sendMessage({
-                type: 'file_content',
-                content: { path }
+                session_uuid: '',
+                content: { command: CommandType.FILE_CONTENT, path }
             })
             if (!sent) {
                 dispatch(setFileLoading(false))

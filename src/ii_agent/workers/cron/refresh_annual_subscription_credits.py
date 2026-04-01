@@ -96,6 +96,12 @@ async def refresh_annual_subscription_credits() -> None:
 
     async with get_db_session_local() as db:  # noqa: E501  # unreachable until migrated
         # Subscription state now lives in billing_customers.
+        # TODO: obtain these services from the container once the billing
+        # customer service is migrated to the new DDD structure.
+        from ii_agent.core.container import get_app_container
+        _container = get_app_container()
+        billing_customer_service = _container.billing_service  # placeholder
+        credit_service = _container.credit_service
         bc_rows = await billing_customer_service.list_by_subscription(
             db,
             provider="stripe",

@@ -6,7 +6,7 @@ from typing import List, Optional, Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
+from ii_agent.integrations.connectors.models import Connector, ConnectorType
 from ii_agent.agents.tools.base import BaseAgentTool
 from ii_agent.agents.tools.connectors.github import GitHubAgentTool
 
@@ -52,7 +52,7 @@ async def load_connector_tools(
     # Process each connector and instantiate appropriate tools
     for connector in connectors:
         try:
-            if connector.connector_type == ConnectorTypeEnum.GITHUB.value:
+            if connector.connector_type == ConnectorType.GITHUB.value:
                 # Enable GitHub tool
                 github_token = connector.access_token
                 github_metadata = connector.connector_metadata or {}

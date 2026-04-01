@@ -77,7 +77,7 @@ class CapturingEventStream:
 def _base_kwargs(**overrides):
     return {
         "session_service": MagicMock(),
-        "llm_setting_service": MagicMock(),
+        "model_setting_service": MagicMock(),
         "file_service": MagicMock(),
         "event_service": MagicMock(),
         "run_task_service": MagicMock(),
@@ -135,8 +135,8 @@ def _mock_services(**overrides) -> dict:
         return_value="https://app.vercel.app"
     )
 
-    llm_setting_service = MagicMock()
-    llm_setting_service.get_llm_settings = AsyncMock(return_value=MagicMock())
+    model_setting_service = MagicMock()
+    model_setting_service.get_llm_settings = AsyncMock(return_value=MagicMock())
 
     plan_service = MagicMock()
     plan_service.has_existing_plan = AsyncMock(return_value=False)
@@ -153,7 +153,7 @@ def _mock_services(**overrides) -> dict:
     services = {
         # Base 5
         "session_service": session_service,
-        "llm_setting_service": llm_setting_service,
+        "model_setting_service": model_setting_service,
         "file_service": file_service,
         "event_service": event_service,
         "run_task_service": run_task_service,
@@ -215,8 +215,8 @@ def _mock_container(**overrides) -> MagicMock:
         return_value="https://app.vercel.app"
     )
     container.session_service.validate_and_prepare_session = AsyncMock()
-    container.llm_setting_service = MagicMock()
-    container.llm_setting_service.get_llm_settings = AsyncMock(return_value=MagicMock())
+    container.model_setting_service = MagicMock()
+    container.model_setting_service.get_llm_settings = AsyncMock(return_value=MagicMock())
     container.plan_service = MagicMock()
     container.plan_service.has_existing_plan = AsyncMock(return_value=False)
     container.plan_service.get_plan_data = AsyncMock(return_value=None)
@@ -283,7 +283,9 @@ class TestCommandHandlerBase:
         stream = CapturingEventStream()
         handler = self._make_handler(stream=stream)
         session_id = uuid.uuid4()
-        await handler._send_error_event(session_id, error_code=ErrorCode.EXECUTION_ERROR, message="oops")
+        await handler._send_error_event(
+            session_id, error_code=ErrorCode.EXECUTION_ERROR, message="oops"
+        )
         assert len(stream.events) == 1
         ev = stream.events[0]
         assert ev.name == "system.error"
@@ -307,11 +309,13 @@ class TestCommandHandlerBase:
         stream = CapturingEventStream()
         handler = self._make_handler(stream=stream)
         session_id = uuid.uuid4()
-        await handler.send_event(SystemNotificationEvent(
-            session_id=session_id,
-            message="deployment done",
-            content={"message": "deployment done", "extra_key": "extra_val"},
-        ))
+        await handler.send_event(
+            SystemNotificationEvent(
+                session_id=session_id,
+                message="deployment done",
+                content={"message": "deployment done", "extra_key": "extra_val"},
+            )
+        )
         ev = stream.events[0]
         assert ev.name == "system.notification"
         assert ev.content["message"] == "deployment done"
@@ -335,7 +339,8 @@ class TestPublishProjectHandlerExtractApiKey:
         from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         return PublishProjectHandler(
-            pubsub=CapturingEventStream(), container=_mock_container(),
+            pubsub=CapturingEventStream(),
+            container=_mock_container(),
         )
 
     def _content(self, **kwargs):
@@ -386,7 +391,8 @@ class TestPublishProjectHandlerParseEnvFile:
         from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         return PublishProjectHandler(
-            pubsub=CapturingEventStream(), container=_mock_container(),
+            pubsub=CapturingEventStream(),
+            container=_mock_container(),
         )
 
     def test_parses_simple_key_value(self):
@@ -442,7 +448,8 @@ class TestPublishProjectHandlerParseEnvPayload:
         from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         return PublishProjectHandler(
-            pubsub=CapturingEventStream(), container=_mock_container(),
+            pubsub=CapturingEventStream(),
+            container=_mock_container(),
         )
 
     def test_parses_dict_payload(self):
@@ -478,7 +485,8 @@ class TestPublishProjectHandlerFormatEnvFlags:
         from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         return PublishProjectHandler(
-            pubsub=CapturingEventStream(), container=_mock_container(),
+            pubsub=CapturingEventStream(),
+            container=_mock_container(),
         )
 
     def test_builds_env_flags(self):
@@ -501,7 +509,8 @@ class TestPublishProjectHandlerExtractToolOutput:
         from ii_agent.realtime.handlers.publish import PublishProjectHandler
 
         return PublishProjectHandler(
-            pubsub=CapturingEventStream(), container=_mock_container(),
+            pubsub=CapturingEventStream(),
+            container=_mock_container(),
         )
 
     def test_returns_string_user_display_content(self):
@@ -600,7 +609,8 @@ class TestPublishProjectHandlerHandle:
         from ii_agent.realtime.handlers.base import CommandType
 
         handler = PublishProjectHandler(
-            pubsub=CapturingEventStream(), container=_mock_container(),
+            pubsub=CapturingEventStream(),
+            container=_mock_container(),
         )
         assert handler.get_command_type() == CommandType.PUBLISH_PROJECT
 
@@ -617,7 +627,8 @@ class TestCloudRunPublishHandlerHelpers:
         )
 
         return CloudRunPublishHandler(
-            pubsub=CapturingEventStream(), container=_mock_container(),
+            pubsub=CapturingEventStream(),
+            container=_mock_container(),
         )
 
     def test_get_command_type(self):
@@ -654,9 +665,7 @@ class TestCloudRunPublishHandlerHelpers:
             patch(
                 "ii_agent.realtime.handlers.cloud_run_publish.CloudRunConfig.from_env"
             ) as mock_cfg,
-            patch(
-                "ii_agent.realtime.handlers.cloud_run_publish.CloudRunPublisher"
-            ) as mock_pub,
+            patch("ii_agent.realtime.handlers.cloud_run_publish.CloudRunPublisher") as mock_pub,
         ):
             mock_cfg.return_value = MagicMock()
             mock_pub.return_value = MagicMock(spec=CloudRunPublisher)
@@ -780,7 +789,8 @@ class TestAppleAppSetupHandlerValidateBundleId:
         )
 
         return AppleAppSetupHandler(
-            pubsub=CapturingEventStream(), container=_mock_container(),
+            pubsub=CapturingEventStream(),
+            container=_mock_container(),
         )
 
     def test_valid_bundle_id(self):
@@ -1022,7 +1032,8 @@ class TestAppleListAppsHandlerHandle:
         from ii_agent.realtime.handlers.base import CommandType
 
         handler = AppleListAppsHandler(
-            pubsub=CapturingEventStream(), container=_mock_container(),
+            pubsub=CapturingEventStream(),
+            container=_mock_container(),
         )
         assert handler.get_command_type() == CommandType.APPLE_LIST_APPS
 
@@ -1394,7 +1405,9 @@ class TestAppleAuthSelectTeamHandlerHandle:
         )
         from ii_agent.realtime.handlers.base import CommandType
 
-        handler = AppleAuthSelectTeamHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        handler = AppleAuthSelectTeamHandler(
+            pubsub=CapturingEventStream(), container=_mock_container()
+        )
         assert handler.get_command_type() == CommandType.APPLE_AUTH_SELECT_TEAM
 
 
@@ -1551,7 +1564,8 @@ class TestSubmitTestflightHandlerExtractToolOutput:
         )
 
         return SubmitTestflightHandler(
-            pubsub=CapturingEventStream(), container=_mock_container(),
+            pubsub=CapturingEventStream(),
+            container=_mock_container(),
         )
 
     def test_returns_string_display_content(self):
@@ -1755,7 +1769,9 @@ class TestSubmitTestflightHandlerHandle:
         )
         from ii_agent.realtime.handlers.base import CommandType
 
-        handler = SubmitTestflightHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        handler = SubmitTestflightHandler(
+            pubsub=CapturingEventStream(), container=_mock_container()
+        )
         assert handler.get_command_type() == CommandType.SUBMIT_TESTFLIGHT
 
 
@@ -1799,9 +1815,7 @@ class TestPlanHandlerHandle:
         val_result.error_message = "Insufficient credits"
         val_result.error_type = "credit_error"
         val_result.session_info = None
-        container.session_service.validate_and_prepare_session = AsyncMock(
-            return_value=val_result
-        )
+        container.session_service.validate_and_prepare_session = AsyncMock(return_value=val_result)
 
         handler = PlanHandler(pubsub=stream, container=container)
         session_info = _make_session_info()
@@ -1827,9 +1841,7 @@ class TestPlanHandlerHandle:
         val_result.error_message = None
         val_result.session_info = _make_session_info()
         val_result.llm_config = MagicMock()
-        container.session_service.validate_and_prepare_session = AsyncMock(
-            return_value=val_result
-        )
+        container.session_service.validate_and_prepare_session = AsyncMock(return_value=val_result)
 
         task_result = MagicMock()
         task_result.task = MagicMock()
@@ -1878,9 +1890,7 @@ class TestPlanHandlerHandle:
         val_result.error_message = None
         val_result.session_info = _make_session_info()
         val_result.llm_config = MagicMock()
-        container.session_service.validate_and_prepare_session = AsyncMock(
-            return_value=val_result
-        )
+        container.session_service.validate_and_prepare_session = AsyncMock(return_value=val_result)
         container.execution_service.create_task_with_lock = AsyncMock(return_value=None)
 
         handler = PlanHandler(pubsub=stream, container=container)
@@ -1984,9 +1994,7 @@ class TestContinueRunHandlerHandle:
 
         stream = CapturingEventStream()
         container = _mock_container()
-        with patch(
-            "ii_agent.realtime.handlers.continue_run.AgentFactory"
-        ) as mock_factory:
+        with patch("ii_agent.realtime.handlers.continue_run.AgentFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             handler = ContinueRunHandler(pubsub=stream, container=container)
 
@@ -2003,9 +2011,7 @@ class TestContinueRunHandlerHandle:
 
         stream = CapturingEventStream()
         container = _mock_container()
-        with patch(
-            "ii_agent.realtime.handlers.continue_run.AgentFactory"
-        ) as mock_factory:
+        with patch("ii_agent.realtime.handlers.continue_run.AgentFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             handler = ContinueRunHandler(pubsub=stream, container=container)
 
@@ -2023,18 +2029,14 @@ class TestContinueRunHandlerHandle:
 
         stream = CapturingEventStream()
         container = _mock_container()
-        with patch(
-            "ii_agent.realtime.handlers.continue_run.AgentFactory"
-        ) as mock_factory:
+        with patch("ii_agent.realtime.handlers.continue_run.AgentFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             handler = ContinueRunHandler(pubsub=stream, container=container)
 
         session_info = _make_session_info()
         run_id = str(uuid.uuid4())
 
-        with patch(
-            "ii_agent.realtime.handlers.continue_run.AgentSessionStore"
-        ) as mock_store_cls:
+        with patch("ii_agent.realtime.handlers.continue_run.AgentSessionStore") as mock_store_cls:
             mock_store = MagicMock()
             mock_store.get_by_run_id = AsyncMock(return_value=None)
             mock_store_cls.return_value = mock_store
@@ -2053,9 +2055,7 @@ class TestContinueRunHandlerHandle:
         from ii_agent.realtime.handlers.continue_run import ContinueRunHandler
         from ii_agent.realtime.handlers.base import CommandType
 
-        with patch(
-            "ii_agent.realtime.handlers.continue_run.AgentFactory"
-        ) as mock_factory:
+        with patch("ii_agent.realtime.handlers.continue_run.AgentFactory") as mock_factory:
             mock_factory.return_value = MagicMock()
             handler = ContinueRunHandler(pubsub=CapturingEventStream(), container=_mock_container())
         assert handler.get_command_type() == CommandType.CONTINUE_RUN

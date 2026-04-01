@@ -50,7 +50,7 @@ def _make_llm_config(
 ) -> LLMConfig:
     kwargs: Dict[str, Any] = dict(
         model=model,
-        api_type="openai",
+        provider="OpenAI",
         api_key=SecretStr(api_key),
     )
     if azure_endpoint is not None:

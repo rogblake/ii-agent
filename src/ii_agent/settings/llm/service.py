@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.secrets.encryption import encryption_manager
-from ii_agent.sessions.repository import SessionRepository
-from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.settings.llm.exceptions import LLMSettingNotFoundError
+
+if TYPE_CHECKING:
+    from ii_agent.sessions.repository import SessionRepository
+    from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.settings.llm.models import ModelSetting
 from ii_agent.settings.llm.repository import ModelSettingRepository
 from ii_agent.settings.llm.schemas import (
@@ -203,7 +206,7 @@ class ModelSettingService:
         """Get all available models from DB (system + user settings).
 
         The database is the single source of truth. System models are seeded
-        from ``LLM_CONFIGS`` env var at startup via ``seed_admin_llm_settings``.
+        from ``MODEL_CONFIGS`` env var at startup via ``seed_admin_llm_settings``.
         """
         models: list[LLMModelInfo] = []
 

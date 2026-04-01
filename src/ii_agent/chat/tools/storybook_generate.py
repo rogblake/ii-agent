@@ -19,10 +19,11 @@ from ii_agent.chat.types import (
     ErrorTextContent,
     MediaPreferences,
     StorybookProgressContent,
-    StorybookResultContent,
     StorybookPageResult,
 )
 from ii_agent.core.storage.client import get_storage
+from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.files.types import AssetType
 from ii_agent.content.storybook.html_generator import (
     generate_storybook_page_html,
     generate_text_only_page_html,
@@ -119,6 +120,7 @@ class StorybookGenerationTool(BaseTool):
     ):
         self._container = container
         self.session_id = session_id
+        self._user_id: uuid.UUID | None = None
         self.media_preferences = media_preferences
         self._name = "generate_storybook"
 
@@ -145,6 +147,19 @@ class StorybookGenerationTool(BaseTool):
             self.manga_layout = False
 
         self._voice_service = None
+
+    async def _resolve_user_id(self) -> uuid.UUID:
+        if self._user_id:
+            return self._user_id
+        from sqlalchemy import select
+        from ii_agent.sessions.models import Session
+        async with get_db_session_local() as db:
+            result = await db.execute(
+                select(Session).where(Session.id == self.session_id)
+            )
+            session = result.scalar_one()
+            self._user_id = session.user_id
+        return self._user_id
 
     @property
     def name(self) -> str:
@@ -668,7 +683,7 @@ class StorybookGenerationTool(BaseTool):
                 expires=STORYBOOK_TASK_EXPIRES_SECONDS,
                 headers={
                     "session_id": self.session_id,
-                    "user_id": str(session_info.user_id),
+                    "user_id": str(session.user_id),
                 },
             )
 
@@ -1005,10 +1020,9 @@ class StorybookGenerationTool(BaseTool):
     ) -> str:
         """Upload composite image to GCS and persist metadata."""
         file_id = str(uuid.uuid4())
-        file_name = f"storybook-scene-{scene_number}-{file_id[:8]}.png"
-        # TODO: Migrate to path_resolver.user_storybook(user_id, file_id, "png")
-        # once self.user_id is available on StorybookGenerationTool
-        storage_path = f"sessions/{self.session_id}/storybook/{file_name}"
+        file_name = f"storybook_scene_{scene_number}.png"
+        user_id = await self._resolve_user_id()
+        storage_path = path_resolver.user_file(user_id, AssetType.IMAGE, file_id, "png")
 
         last_error: Optional[Exception] = None
 

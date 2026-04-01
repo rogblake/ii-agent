@@ -82,7 +82,7 @@ ChatMessageHistoryServiceDep = Annotated[
 
 
 def get_chat_service(
-    llm_setting_service: ModelSettingServiceDep,
+    model_setting_service: ModelSettingServiceDep,
     credit_service: CreditServiceDep,
     file_processor: ChatFileProcessorDep,
     tool_service: ChatToolServiceDep,
@@ -100,7 +100,7 @@ def get_chat_service(
         message_history=message_history,
         message_service=message_service,
         session_repo=session_repo,
-        llm_setting_service=llm_setting_service,
+        model_setting_service=model_setting_service,
         credit_service=credit_service,
         container=container,
         title_service=title_service,

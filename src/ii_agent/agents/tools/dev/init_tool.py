@@ -2,7 +2,7 @@ import json
 import shlex
 from typing import TYPE_CHECKING, Any
 
-from ii_agent.projects.databases.models import DatabaseSourceEnum, ProjectDatabase
+from ii_agent.projects.databases.models import DatabaseSource, ProjectDatabase
 from ii_agent.projects.databases.repository import ProjectDatabaseRepository
 from ii_agent.core.container import get_app_container
 from ii_agent.core.db import get_db_session_local
@@ -200,7 +200,7 @@ class FullStackInitTool(BaseSandboxTool):
                                 db,
                                 ProjectDatabase(
                                     session_id=session_id,
-                                    source=DatabaseSourceEnum.SUPABASE,
+                                    source=DatabaseSource.SUPABASE,
                                     connection_string="pending_supabase_setup",
                                     db_metadata={"database_source": "supabase"},
                                 ),
@@ -245,7 +245,7 @@ class FullStackInitTool(BaseSandboxTool):
                             db,
                             ProjectDatabase(
                                 session_id=session_id,
-                                source=DatabaseSourceEnum.NEONDB,
+                                source=DatabaseSource.NEONDB,
                                 connection_string=db_connection.get("connection_string", ""),
                                 host=db_connection.get("host"),
                                 database_name=db_connection.get("database_name"),

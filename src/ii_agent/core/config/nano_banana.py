@@ -19,9 +19,9 @@ class NanoBananaConfig(BaseSettings):
         default=None,
         description="API key for the detection model provider",
     )
-    api_type: str = Field(
-        default="gemini",
-        description="Provider type: gemini, openai, anthropic, custom",
+    provider: str = Field(
+        default="Google",
+        description="Provider name: Google, OpenAI, Anthropic, Custom",
     )
     temperature: float = Field(
         default=0.1,

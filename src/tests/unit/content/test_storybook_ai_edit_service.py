@@ -38,7 +38,7 @@ def _make_service():
     return StorybookAIEditService(
         session_service=MagicMock(),
         user_service=MagicMock(),
-        llm_setting_service=MagicMock(),
+        model_setting_service=MagicMock(),
         credit_service=credit_svc,
         config=MagicMock(),
     )
@@ -192,9 +192,7 @@ async def test_rewrite_content_raises_when_no_text_returned():
     service._resolve_storybook_llm_config = AsyncMock(return_value=(_llm_config_stub(), "default"))
 
     user_client = AsyncMock()
-    user_client.send = AsyncMock(
-        return_value=SimpleNamespace(content=[ImageURLContent(url="x")])
-    )
+    user_client.send = AsyncMock(return_value=SimpleNamespace(content=[ImageURLContent(url="x")]))
 
     with patch_client():
         with patch(
@@ -365,8 +363,8 @@ async def test_resolve_storybook_llm_config_invalid_session_and_valid_setting():
     fallback = SimpleNamespace(model_copy=MagicMock(return_value="fallback_copy"))
     setting = SimpleNamespace(model_copy=MagicMock(return_value="setting_copy"))
 
-    # The service now uses self._llm_setting_service.resolve_system_config for fallback
-    service._llm_setting_service.resolve_system_config = AsyncMock(return_value=fallback)
+    # The service now uses self._model_setting_service.resolve_system_config for fallback
+    service._model_setting_service.resolve_system_config = AsyncMock(return_value=fallback)
 
     config, model_id = await service._resolve_storybook_llm_config(
         db=MagicMock(),
@@ -379,7 +377,7 @@ async def test_resolve_storybook_llm_config_invalid_session_and_valid_setting():
     service._session_service.get_session_by_id = AsyncMock(
         return_value=SimpleNamespace(llm_setting_id="m1")
     )
-    service._llm_setting_service.get_user_llm_config = AsyncMock(return_value=setting)
+    service._model_setting_service.get_user_llm_config = AsyncMock(return_value=setting)
 
     config, model_id = await service._resolve_storybook_llm_config(
         db=MagicMock(),
@@ -400,19 +398,27 @@ async def test_check_and_deduct_storybook_credits_zero_cost_skips():
     credit_svc.has_sufficient_credits = AsyncMock(return_value=True)
     credit_svc.deduct = AsyncMock()
     scope = BillingScope.for_session(
-        user_id="u1", app_kind="chat", session_id="s1",
+        user_id="u1",
+        app_kind="chat",
+        session_id="s1",
         billing_context=BillingContextValue.STORYBOOK,
     )
 
     await check_and_deduct_storybook_credits(
-        MagicMock(), credit_service=credit_svc, scope=scope,
-        amount_usd=0.0, tool_name="test",
+        MagicMock(),
+        credit_service=credit_svc,
+        scope=scope,
+        amount_usd=0.0,
+        tool_name="test",
     )
     credit_svc.deduct.assert_not_awaited()
 
     await check_and_deduct_storybook_credits(
-        MagicMock(), credit_service=credit_svc, scope=scope,
-        amount_usd=-0.5, tool_name="test",
+        MagicMock(),
+        credit_service=credit_svc,
+        scope=scope,
+        amount_usd=-0.5,
+        tool_name="test",
     )
     credit_svc.deduct.assert_not_awaited()
 
@@ -428,14 +434,19 @@ async def test_check_and_deduct_storybook_credits_insufficient_raises():
     credit_svc.has_sufficient_credits = AsyncMock(return_value=False)
     credit_svc.deduct = AsyncMock()
     scope = BillingScope.for_session(
-        user_id="u1", app_kind="chat", session_id="s1",
+        user_id="u1",
+        app_kind="chat",
+        session_id="s1",
         billing_context=BillingContextValue.STORYBOOK,
     )
 
     with pytest.raises(InsufficientCreditsError):
         await check_and_deduct_storybook_credits(
-            MagicMock(), credit_service=credit_svc, scope=scope,
-            amount_usd=0.5, tool_name="test",
+            MagicMock(),
+            credit_service=credit_svc,
+            scope=scope,
+            amount_usd=0.5,
+            tool_name="test",
         )
     credit_svc.deduct.assert_not_awaited()
 

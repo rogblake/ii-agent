@@ -1,29 +1,18 @@
 """Pydantic schemas (DTOs) for llm_settings domain."""
 
 from __future__ import annotations
-from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from typing import Optional
 from uuid import UUID
 
-from ii_agent.core.config.llm_config import APITypes
+from .types import Provider
 from ii_agent.settings.llm.types import ConfigType
 
 
 # ---------------------------------------------------------------------------
 # Nested JSONB schemas
 # ---------------------------------------------------------------------------
-
-
-class Provider(StrEnum):
-    OPENAI = "OpenAI"
-    ANTHROPIC = "Anthropic"
-    VERTEX_AI = "VertexAI"
-    GOOGLE = "Google"
-    AZURE = "Azure"
-    CEREBRAS = "Cerebras"
-    CUSTOM = "Custom"
 
 
 class ModelParams(BaseModel):
@@ -60,6 +49,23 @@ class PricingInfo(BaseModel):
     )
 
 
+class ModelConfigEntry(BaseModel):
+    """A single model configuration entry for seeding.
+
+    Used in ``MODEL_CONFIGS`` env var (JSON list) or ``MODEL_CONFIGS_FILE``
+    (YAML list). Maps directly to a ``ModelSetting`` DB row.
+    """
+
+    model_id: str
+    provider: Provider
+    api_key: str | None = None
+    base_url: str | None = None
+    display_name: str | None = None
+    is_default: bool = False
+    params: ModelParams = Field(default_factory=ModelParams)
+    pricing: PricingInfo | None = None
+
+
 class ModelConfig(BaseModel):
     """Resolved model configuration for agent / LLM provider construction.
 
@@ -70,7 +76,7 @@ class ModelConfig(BaseModel):
 
     id: UUID
     model_id: str
-    provider: str
+    provider: Provider
     api_key: SecretStr | None = None
     base_url: str | None = None
     display_name: str | None = None
@@ -92,10 +98,6 @@ class ModelConfig(BaseModel):
     @property
     def model(self) -> str:
         return self.model_id
-
-    @property
-    def api_type(self) -> APITypes:
-        return _provider_to_api_type(self.provider)
 
     @property
     def temperature(self) -> float:
@@ -240,18 +242,3 @@ class LLMModelList(BaseModel):
     models: list[LLMModelInfo]
 
 
-# ---------------------------------------------------------------------------
-# Private helpers
-# ---------------------------------------------------------------------------
-
-_PROVIDER_TO_API_TYPE: dict[str, APITypes] = {
-    "anthropic": APITypes.ANTHROPIC,
-    "openai": APITypes.OPENAI,
-    "google": APITypes.GEMINI,
-    "custom": APITypes.CUSTOM,
-}
-
-
-def _provider_to_api_type(provider: str) -> APITypes:
-    """Map provider display name to APITypes enum for LLMConfig."""
-    return _PROVIDER_TO_API_TYPE.get(provider.lower(), APITypes.CUSTOM)

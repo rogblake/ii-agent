@@ -1,18 +1,10 @@
-from enum import Enum
 from typing import Literal
 from pydantic import BaseModel, Field, SecretStr, SerializationInfo, field_serializer
 from pydantic.json import pydantic_encoder
 
+from ii_agent.settings.llm import Provider
+
 DEFAULT_MODEL = "claude-sonnet-4@20250514"
-
-
-class APITypes(str, Enum):
-    """Types of API keys."""
-
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    GEMINI = "gemini"
-    CUSTOM = "custom"
 
 
 class LLMConfig(BaseModel):
@@ -28,7 +20,7 @@ class LLMConfig(BaseModel):
         temperature: The temperature to use. (optional)
         vertex_region: The region to use for Vertex AI. (optional)
         vertex_project_id: The project ID to use for Vertex AI. (optional)
-        api_type: The type of API to use.
+        provider: The LLM provider to use.
         thinking_tokens: The number of tokens to use for thinking. (optional)
         azure_endpoint: The endpoint to use for Azure. (optional)
         azure_api_version: The API version to use for Azure. (optional)
@@ -49,7 +41,7 @@ class LLMConfig(BaseModel):
     temperature: float = Field(default=0.0)
     vertex_region: str | None = Field(default=None)
     vertex_project_id: str | None = Field(default=None)
-    api_type: APITypes = Field(default=APITypes.ANTHROPIC)
+    provider: Provider = Field(default=Provider.ANTHROPIC)
     thinking_tokens: int = Field(default=16000)
     azure_endpoint: str | None = Field(default=None)
     azure_api_version: str | None = Field(default=None)

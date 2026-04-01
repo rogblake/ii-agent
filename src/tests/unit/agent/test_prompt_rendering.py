@@ -6,7 +6,7 @@ from ii_agent.agents.prompts.agent_prompts import get_system_prompt_for_agent_ty
 from ii_agent.agents.prompts.system_prompt import get_system_prompt
 from ii_agent.agents.factory.tools import AgentConfigManager, COMMON_TOOLS
 from ii_agent.agents.types import AgentType
-from ii_agent.core.config.llm_config import APITypes
+from ii_agent.settings.llm import Provider
 
 
 def _tool_names(agent_type: AgentType) -> set[str]:
@@ -26,7 +26,7 @@ async def test_all_agent_prompts_render(agent_type: AgentType) -> None:
         media=False,
         a2a_agents=False,
         task_agent=False,
-        api_type=APITypes.OPENAI,
+        provider=Provider.OPENAI,
         available_tools=_tool_names(agent_type),
     )
 
@@ -54,13 +54,13 @@ async def test_research_prompts_match_tool_surfaces() -> None:
     researcher_prompt = await get_system_prompt_for_agent_type(
         agent_type=AgentType.RESEARCHER,
         workspace_path="/workspace",
-        api_type=APITypes.OPENAI,
+        provider=Provider.OPENAI,
         available_tools=_tool_names(AgentType.RESEARCHER),
     )
     fast_prompt = await get_system_prompt_for_agent_type(
         agent_type=AgentType.FAST_RESEARCH,
         workspace_path="/workspace",
-        api_type=APITypes.OPENAI,
+        provider=Provider.OPENAI,
         available_tools=_tool_names(AgentType.FAST_RESEARCH),
     )
 
@@ -79,7 +79,7 @@ async def test_design_document_prompt_keeps_specialist_overlay() -> None:
         agent_type=AgentType.DESIGN_DOCUMENT,
         workspace_path="/workspace",
         design_document=False,
-        api_type=APITypes.OPENAI,
+        provider=Provider.OPENAI,
         available_tools=_tool_names(AgentType.DESIGN_DOCUMENT),
     )
 
@@ -92,7 +92,7 @@ async def test_research_to_website_prompt_keeps_specialist_overlay() -> None:
     prompt = await get_system_prompt_for_agent_type(
         agent_type=AgentType.RESEARCH_TO_WEBSITE,
         workspace_path="/workspace",
-        api_type=APITypes.OPENAI,
+        provider=Provider.OPENAI,
         available_tools=_tool_names(AgentType.RESEARCH_TO_WEBSITE),
     )
 

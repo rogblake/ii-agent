@@ -5,7 +5,8 @@ import pytest
 
 pytest.skip("ii_agent.agents.application was removed during refactoring", allow_module_level=True)
 
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.agents.application.agent_service import AgentService
 
 
@@ -23,7 +24,7 @@ async def test_create_plan_agent_adds_plan_tools(settings_factory, in_memory_sto
     monkeypatch.setattr(service._agent_factory, "create_agent", _create_agent)
 
     session_info = SimpleNamespace(id=str(uuid4()), user_id="u1")
-    llm_config = LLMConfig(model="gpt-4o", api_type=APITypes.OPENAI)
+    llm_config = LLMConfig(model="gpt-4o", provider=Provider.OPENAI)
     tool = object()
     agent = await service.create_plan_agent_v1(
         session_info=session_info,

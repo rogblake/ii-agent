@@ -5,7 +5,6 @@ import uuid
 from fastapi import APIRouter, UploadFile, File, Query
 from fastapi.responses import JSONResponse
 
-from ii_agent.core.storage.path_resolver import path_resolver
 from ii_agent.files.dependencies import FileServiceDep
 
 from ii_agent.auth.dependencies import CurrentUser
@@ -166,7 +165,7 @@ async def upload_avatar(
         file_extension=file_extension,
     )
 
-    current_user.avatar = path_resolver.public_avatar(current_user.id, file_extension)
+    current_user.avatar = url
     await db.commit()
     await db.refresh(current_user)
 

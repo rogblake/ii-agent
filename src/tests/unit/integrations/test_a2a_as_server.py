@@ -166,7 +166,7 @@ class TestGetDefaultLlmConfig:
         server._config.llm_configs = {
             "default": {
                 "model": "gpt-4o",
-                "api_type": "openai",
+                "provider": "OpenAI",
                 "api_key": "key",
             }
         }
@@ -178,7 +178,7 @@ class TestGetDefaultLlmConfig:
         from pydantic import SecretStr
 
         server = _make_server()
-        config_obj = LLMConfig(model="gpt-4o", api_type="openai", api_key=SecretStr("key"))
+        config_obj = LLMConfig(model="gpt-4o", provider="OpenAI", api_key=SecretStr("key"))
         server._config = MagicMock()
         server._config.llm_configs = {"default": config_obj}
         result = server._get_default_llm_config()

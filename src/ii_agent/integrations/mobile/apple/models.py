@@ -22,8 +22,6 @@ class AppleAuthState(StrEnum):
     AUTHENTICATED = "authenticated"
     EXPIRED = "expired"
 
-# Backward compat alias
-AppleAuthStateEnum = AppleAuthState
 
 
 class AppleCredential(Base):

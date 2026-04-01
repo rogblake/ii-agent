@@ -10,6 +10,7 @@ from google import genai
 from google.cloud import storage
 from google.genai import types
 
+from ii_agent.core.storage.path_resolver import path_resolver
 from .base import BaseImageGenerationClient, ImageGenerationError, ImageGenerationResult
 from .constants import ImageGenerationProvider
 from .pricing import calculate_vertex_genai_cost
@@ -70,7 +71,7 @@ class GeminiImageGenerationClient(BaseImageGenerationClient):
         image_urls = kwargs.get("image_urls")
         image_size = kwargs.get("image_size", "1K")
         metadata = kwargs.get("metadata", {})
-        session_id = metadata.get("session_id")
+        user_id = kwargs.get("user_id") or metadata.get("user_id")
         background = kwargs.get("background")
 
         if background:
@@ -82,14 +83,14 @@ class GeminiImageGenerationClient(BaseImageGenerationClient):
                 image_urls=image_urls,
                 aspect_ratio=aspect_ratio,
                 image_size=image_size,
-                session_id=session_id,
+                user_id=user_id,
             )
 
         return await self._generate_without_images(
             prompt=prompt,
             aspect_ratio=aspect_ratio,
             image_size=image_size,
-            session_id=session_id,
+            user_id=user_id,
         )
 
     async def _download_image(self, url: str) -> tuple[bytes, str]:
@@ -117,7 +118,7 @@ class GeminiImageGenerationClient(BaseImageGenerationClient):
         image_urls: List[str],
         aspect_ratio: SUPPORTED_GEMINI_ASPECT_RATIOS = "1:1",
         image_size: str = "1K",
-        session_id: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> ImageGenerationResult:
         if not image_urls:
             raise ImageGenerationError(
@@ -151,14 +152,14 @@ class GeminiImageGenerationClient(BaseImageGenerationClient):
                 tools=[types.Tool(googleSearch=types.GoogleSearch())],
             ),
         )
-        return await self._response_to_result(response, session_id)
+        return await self._response_to_result(response, user_id)
 
     async def _generate_without_images(
         self,
         prompt: str,
         aspect_ratio: str,
         image_size: str,
-        session_id: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> ImageGenerationResult:
         response = await self.client.aio.models.generate_content(
             model=self.model_name,
@@ -171,12 +172,12 @@ class GeminiImageGenerationClient(BaseImageGenerationClient):
                 ),
             ),
         )
-        return await self._response_to_result(response, session_id)
+        return await self._response_to_result(response, user_id)
 
     async def _response_to_result(
         self,
         response: types.GenerateContentResponse,
-        session_id: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> ImageGenerationResult:
         cost = self._calculate_genai_usage_cost(response.usage_metadata)
 
@@ -191,7 +192,7 @@ class GeminiImageGenerationClient(BaseImageGenerationClient):
             if image:
                 image_bytes = image.image_bytes
                 url, storage_path, file_name = await self._upload_bytes(
-                    image_bytes, session_id
+                    image_bytes, user_id
                 )
                 return ImageGenerationResult(
                     url=url,
@@ -204,7 +205,7 @@ class GeminiImageGenerationClient(BaseImageGenerationClient):
             if getattr(part, "inline_data", None) and part.inline_data.data:
                 image_bytes = part.inline_data.data
                 url, storage_path, file_name = await self._upload_bytes(
-                    image_bytes, session_id
+                    image_bytes, user_id
                 )
                 return ImageGenerationResult(
                     url=url,
@@ -218,16 +219,11 @@ class GeminiImageGenerationClient(BaseImageGenerationClient):
         raise ImageGenerationError("No image data returned from Gemini model")
 
     async def _upload_bytes(
-        self, image_bytes: bytes, session_id: str | None = None
+        self, image_bytes: bytes, user_id: uuid.UUID
     ) -> tuple[str, str, str]:
-        if session_id:
-            file_id = str(uuid.uuid4())
-            file_name = f"generated-{file_id[:8]}.png"
-            blob_name = f"sessions/{session_id}/generated/{file_name}"
-        else:
-            file_id = str(uuid.uuid4())
-            file_name = f"{file_id}.png"
-            blob_name = f"image_generation/{file_name}"
+        file_id = str(uuid.uuid4())
+        file_name = f"{file_id}.png"
+        blob_name = path_resolver.user_file(user_id, "image", file_id, "png")
 
         def _upload_sync() -> str:
             blob = self.bucket.blob(blob_name)

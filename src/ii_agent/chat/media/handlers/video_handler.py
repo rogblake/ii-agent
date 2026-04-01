@@ -12,6 +12,7 @@ from ii_agent.chat.types import (
     BinaryContent,
     TextContent,
     MediaPreferences,
+    VideoFrameReference,
     VideoSettings,
 )
 from ii_agent.chat.tools.base import BaseTool
@@ -31,7 +32,6 @@ from ii_agent.chat.application.file_processor import (
     DEFAULT_IMAGE_LIMIT,
 )
 from ii_agent.core.storage.client import get_storage
-from ii_agent.core.storage.path_resolver import path_resolver
 from ..modes.base import BaseModeStrategy
 from ..modes.normal_mode import NormalModeStrategy
 from ..registry import register_handler
@@ -399,27 +399,28 @@ class VideoMediaHandler(BaseMediaHandler):
 
     async def _convert_heic_storage_to_jpeg(self, file_id: str, source_path: str) -> str:
         """Read HEIC from storage, convert to JPEG, upload to public storage."""
+        import io
         import anyio
         from ii_agent.agents.utils.heic import convert_heic_to_jpeg
 
+        logger.info(f"[VIDEO_HANDLER] Converting HEIC frame {file_id} to JPEG")
         public_path = f"video_generation_frames/{file_id[:8]}.jpg"
 
-        def _do():
-            import io
+        file_obj = await get_storage().read(source_path)
+        heic_bytes = file_obj.read()
+        file_obj.close()
 
-            file_obj = storage.read(source_path)
-            heic_bytes = file_obj.read()
-            file_obj.close()
-            jpeg_bytes, _ = convert_heic_to_jpeg(heic_bytes)
-            return media_storage.upload_and_get_permanent_url(
-                io.BytesIO(jpeg_bytes), public_path, "image/jpeg"
-            )
+        def _convert(data: bytes) -> bytes:
+            jpeg_bytes, _ = convert_heic_to_jpeg(data)
+            return jpeg_bytes
 
-        logger.info(f"[VIDEO_HANDLER] Converting HEIC frame {file_id} to JPEG")
-        return await anyio.to_thread.run_sync(_do)
+        jpeg_bytes = await anyio.to_thread.run_sync(lambda: _convert(heic_bytes))
+        await get_storage().write(public_path, io.BytesIO(jpeg_bytes), "image/jpeg")
+        return get_storage().public_url(public_path)
 
     async def _convert_heic_url_to_jpeg(self, heic_url: str) -> str | None:
         """Download HEIC from URL, convert to JPEG, upload to public storage."""
+        import io
         import anyio
         import httpx
         import uuid as _uuid
@@ -432,17 +433,15 @@ class VideoMediaHandler(BaseMediaHandler):
 
             heic_bytes = resp.content
 
-            def _convert_and_upload():
-                import io
+            def _convert(data: bytes) -> bytes:
+                jpeg_bytes, _ = convert_heic_to_jpeg(data)
+                return jpeg_bytes
 
-                jpeg_bytes, _ = convert_heic_to_jpeg(heic_bytes)
-                fid = str(_uuid.uuid4())[:8]
-                public_path = f"video_generation_frames/{fid}.jpg"
-                return media_storage.upload_and_get_permanent_url(
-                    io.BytesIO(jpeg_bytes), public_path, "image/jpeg"
-                )
-
-            url = await anyio.to_thread.run_sync(_convert_and_upload)
+            jpeg_bytes = await anyio.to_thread.run_sync(lambda: _convert(heic_bytes))
+            fid = str(_uuid.uuid4())[:8]
+            public_path = f"video_generation_frames/{fid}.jpg"
+            await get_storage().write(public_path, io.BytesIO(jpeg_bytes), "image/jpeg")
+            url = get_storage().public_url(public_path)
             logger.info(f"[VIDEO_HANDLER] Converted HEIC URL to JPEG: {url}")
             return url
         except Exception as e:
@@ -454,7 +453,7 @@ class VideoMediaHandler(BaseMediaHandler):
     ) -> str:
         """Copy a file from private storage to public storage."""
         ext = source_path.rsplit(".", 1)[-1] if "." in source_path else "png"
-        public_path = path_resolver.public_shared(file_id[:8], ext)
+        public_path = f"shared/{file_id[:8]}.{ext}"
         await get_storage().copy(source_path, public_path)
         return get_storage().public_url(public_path)
 

@@ -5,7 +5,7 @@ from typing import List, Optional, Dict, Set
 from sqlalchemy import select
 
 from ii_agent.core.db import get_db_session_local
-from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
+from ii_agent.integrations.connectors.models import Connector, ConnectorType
 from ii_server.core.workspace import WorkspaceManager
 from ii_agent.agents.tools.base import BaseAgentTool
 from ii_agent.agents.connector.base import BaseConnectorTool
@@ -66,7 +66,7 @@ class ConnectorTool(BaseConnectorTool):
                 continue
 
             try:
-                if connector.connector_type == ConnectorTypeEnum.GITHUB.value:
+                if connector.connector_type == ConnectorType.GITHUB.value:
                     github_tool = GitHubAgentTool(
                         github_token=connector.access_token,
                         workspace_manager=workspace_manager,

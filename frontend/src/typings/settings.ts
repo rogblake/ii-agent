@@ -13,12 +13,14 @@ export interface ValidateApiKeyResponse {
     valid: boolean
 }
 
+/** Must match BE Provider StrEnum values in agents/types.py */
+export type ProviderType = 'OpenAI' | 'Anthropic' | 'Google' | 'VertexAI' | 'Azure' | 'Cerebras' | 'Custom'
+
 export interface IModel {
     id: string
     model: string
     model_id?: string
-    provider?: string
-    api_type?: 'openai' | 'anthropic' | 'gemini' | 'custom'
+    provider?: ProviderType
     base_url?: string
     api_key?: string
     display_name?: string

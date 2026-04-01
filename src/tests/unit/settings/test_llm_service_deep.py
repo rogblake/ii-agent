@@ -22,7 +22,7 @@ import ii_agent.projects.databases.models  # noqa: F401
 import ii_agent.projects.subdomains.models  # noqa: F401
 import ii_agent.projects.deployments.models  # noqa: F401
 
-from ii_agent.core.config.llm_config import APITypes
+from ii_agent.settings.llm import Provider
 from ii_agent.settings.llm.exceptions import LLMSettingNotFoundError
 from ii_agent.settings.llm.schemas import (
     ModelParams,
@@ -575,7 +575,7 @@ async def test_get_llm_settings_no_llm_setting_id_uses_system():
     svc.resolve_system_config = AsyncMock(
         return_value=SimpleNamespace(
             model="gpt-4o",
-            api_type=APITypes.OPENAI,
+            provider=Provider.OPENAI,
             setting_id="gpt-4o",
             config_type="system",
         )
@@ -633,7 +633,7 @@ async def test_get_llm_settings_with_llm_setting_id_falls_back_to_system(monkeyp
     svc.resolve_config_by_setting_id = AsyncMock(
         return_value=SimpleNamespace(
             model="gpt-4o",
-            api_type=APITypes.OPENAI,
+            provider=Provider.OPENAI,
             setting_id=llm_setting_id,
             config_type="system",
         )

@@ -153,6 +153,7 @@ class UserQueryHandler(BaseCommandHandler[QueryCommandContent]):
             final_status = await self.process_agent_event_stream(
                 event_stream, session_info, run_id=run_task.id,
                 is_user_key=llm_config.is_user_model(),
+                llm_config=llm_config,
             )
 
             # Update milestones after successful run
@@ -165,7 +166,7 @@ class UserQueryHandler(BaseCommandHandler[QueryCommandContent]):
                 )
 
         except Exception as e:
-            logger.error(f"Error processing v1 query: {e}", exc_info=True)
+            logger.opt(exception=True).error("Error processing v1 query: {}", str(e))
             # Transition RunTask to FAILED so it doesn't stay stuck in RUNNING
             async with get_db_session_local() as db:
                 await run_service.transition_status(

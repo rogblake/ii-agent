@@ -267,6 +267,7 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
             await self.process_agent_event_stream(
                 event_stream, session_info, run_id=running_task.id,
                 is_user_key=llm_config.is_user_model(),
+                llm_config=llm_config,
             )
 
         except Exception as e:
@@ -370,6 +371,7 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
             await self.process_agent_event_stream(
                 event_stream, session_info, run_id=running_task.id,
                 is_user_key=llm_config.is_user_model(),
+                llm_config=llm_config,
             )
 
         except Exception as e:
@@ -503,6 +505,7 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
             await self.process_agent_event_stream(
                 event_stream, session_info, run_id=running_task.id,
                 is_user_key=llm_config.is_user_model(),
+                llm_config=llm_config,
             )
 
         except Exception as e:

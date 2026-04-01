@@ -7,6 +7,7 @@ from pathlib import Path
 import aiohttp
 import anyio
 
+from ii_agent.core.storage.path_resolver import path_resolver
 from ii_agent_tools.logger import get_logger
 
 logger = get_logger(__name__)
@@ -374,17 +375,17 @@ def generate_unique_video_name(length=12):
     return uuid.uuid4().hex[:length]
 
 
-def construct_blob_path(file_name: str, session_id: str | None = None) -> str:
-    """
-    Construct the blob storage path for a video file.
+def construct_blob_path(user_id: uuid.UUID | None, file_name: str) -> str:
+    """Construct the blob storage path for a video file.
 
     Args:
-        file_name: Name of the video file
-        session_id: Optional session ID for organizing by session
+        user_id: Owner user ID
+        file_name: Name of the video file (e.g. ``"abc123.mp4"``)
 
     Returns:
-        Storage path string
+        Storage path string built via the centralized path resolver.
     """
-    if session_id:
-        return f"sessions/{session_id}/generated/video_generation/{file_name}"
-    return f"video_generation/{file_name}"
+    stem, _, ext = file_name.rpartition(".")
+    file_id = stem or file_name
+    asset_type = "image" if ext in ("png", "jpg", "jpeg", "webp") else "video"
+    return path_resolver.user_file(user_id, asset_type, file_id, ext or "mp4")

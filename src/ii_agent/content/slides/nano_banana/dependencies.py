@@ -8,7 +8,8 @@ from fastapi import Depends
 from pydantic import SecretStr
 
 from ii_agent.content.slides.dependencies import SlideRepositoryDep
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.config.nano_banana import NanoBananaConfig
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.dependencies import SettingsDep
@@ -34,7 +35,7 @@ def _build_llm_config(nb_config: NanoBananaConfig) -> LLMConfig:
     return LLMConfig(
         model=nb_config.model,
         api_key=SecretStr(nb_config.api_key) if nb_config.api_key else None,
-        api_type=APITypes(nb_config.api_type),
+        provider=Provider(nb_config.provider),
         temperature=nb_config.temperature,
         base_url=nb_config.base_url,
         vertex_project_id=nb_config.vertex_project_id,

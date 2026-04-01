@@ -89,33 +89,40 @@ class StorageService:
         return self._provider.public_url(path)
 
     # ------------------------------------------------------------------
-    # User files
+    # User files (unified by asset type)
     # ------------------------------------------------------------------
 
     async def upload_user_file(
         self,
         user_id: str,
+        asset_type: str,
         file_id: str,
         ext: str,
         content: BinaryIO,
         content_type: str | None = None,
     ) -> str:
         """Upload a user file. Returns the storage path."""
-        path = self._paths.user_upload(user_id, file_id, ext)
+        path = self._paths.user_file(user_id, asset_type, file_id, ext)
         return await self._provider.write(path, content, content_type)
 
     async def upload_user_file_from_url(
         self,
         user_id: str,
+        asset_type: str,
         file_id: str,
         ext: str,
         source_url: str,
         content_type: str | None = None,
     ) -> str:
-        path = self._paths.user_upload(user_id, file_id, ext)
+        """Download from URL and store as user file. Returns path."""
+        path = self._paths.user_file(user_id, asset_type, file_id, ext)
         return await self._provider.write_from_url(source_url, path, content_type)
 
-    async def upload_user_generated(
+    # ------------------------------------------------------------------
+    # Avatars
+    # ------------------------------------------------------------------
+
+    async def upload_avatar(
         self,
         user_id: str,
         file_id: str,
@@ -123,20 +130,13 @@ class StorageService:
         content: BinaryIO,
         content_type: str | None = None,
     ) -> str:
-        path = self._paths.user_generated(user_id, file_id, ext)
+        """Upload a user avatar. Returns the storage path."""
+        path = self._paths.user_avatar(user_id, file_id, ext)
         return await self._provider.write(path, content, content_type)
 
-    async def upload_user_generated_from_url(
-        self,
-        user_id: str,
-        file_id: str,
-        ext: str,
-        source_url: str,
-        content_type: str | None = None,
-    ) -> str:
-        """Download from URL and store as user generated content. Returns path."""
-        path = self._paths.user_generated(user_id, file_id, ext)
-        return await self._provider.write_from_url(source_url, path, content_type)
+    def avatar_path(self, user_id: str, file_id: str, ext: str) -> str:
+        """Return the storage path for an avatar (no I/O)."""
+        return self._paths.user_avatar(user_id, file_id, ext)
 
     # ------------------------------------------------------------------
     # Skills
@@ -214,40 +214,6 @@ class StorageService:
         path = self._paths.slide_asset(content_hash, ext)
         return await self._provider.write(path, content, content_type)
 
-    async def upload_slide_design(
-        self,
-        design_id: str,
-        ext: str,
-        content: BinaryIO,
-        content_type: str | None = None,
-    ) -> str:
-        path = self._paths.slide_design(design_id, ext)
-        return await self._provider.write(path, content, content_type)
-
-    # ------------------------------------------------------------------
-    # Public
-    # ------------------------------------------------------------------
-
-    async def upload_avatar(
-        self,
-        user_id: str,
-        ext: str,
-        content: BinaryIO,
-        content_type: str | None = None,
-    ) -> str:
-        path = self._paths.public_avatar(user_id, ext)
-        return await self._provider.write(path, content, content_type)
-
-    def avatar_url(self, user_id: str, ext: str) -> str:
-        path = self._paths.public_avatar(user_id, ext)
-        return self._provider.public_url(path)
-
-    async def publish(self, source_path: str, asset_id: str, ext: str) -> str:
-        """Copy a private asset to public/shared/ and return the public URL."""
-        dest = self._paths.public_shared(asset_id, ext)
-        await self._provider.copy(source_path, dest)
-        return self._provider.public_url(dest)
-
     # ------------------------------------------------------------------
     # System
     # ------------------------------------------------------------------
@@ -277,10 +243,3 @@ class StorageService:
     ) -> str:
         path = self._paths.temp_file(token, filename, ext)
         return await self._provider.write(path, content, content_type)
-
-    # ------------------------------------------------------------------
-    # Queries
-    # ------------------------------------------------------------------
-
-    def is_public(self, path: str) -> bool:
-        return self._paths.is_public(path)

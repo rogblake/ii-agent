@@ -14,7 +14,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-pytest.skip("Transitive google-genai dependency not available in this environment", allow_module_level=True)
+pytest.skip(
+    "Transitive google-genai dependency not available in this environment", allow_module_level=True
+)
 
 from ii_agent.realtime.handlers.base import (
     BaseCommandHandler,
@@ -37,7 +39,7 @@ def _mock_event_stream():
 def _base_kwargs(**overrides):
     return {
         "session_service": MagicMock(),
-        "llm_setting_service": MagicMock(),
+        "model_setting_service": MagicMock(),
         "file_service": MagicMock(),
         "event_service": MagicMock(),
         "run_task_service": MagicMock(),
@@ -57,7 +59,7 @@ def _mock_container():
     container.file_service = MagicMock()
     container.file_service.get_file_by_id = AsyncMock()
     container.session_service.validate_and_prepare_session = AsyncMock()
-    container.llm_setting_service = MagicMock()
+    container.model_setting_service = MagicMock()
     return container
 
 
@@ -148,7 +150,9 @@ class TestBaseCommandHandlerSendErrorEvent:
         event_bus = _mock_event_stream()
         handler = ConcreteHandler(event_bus=event_bus, **_base_kwargs())
         session_id = uuid.uuid4()
-        await handler._send_error_event(session_id, error_code=ErrorCode.INTERNAL_ERROR, message="Test error")
+        await handler._send_error_event(
+            session_id, error_code=ErrorCode.INTERNAL_ERROR, message="Test error"
+        )
         event_bus.publish.assert_awaited_once()
         published_event = event_bus.publish.call_args[0][1]
         assert published_event.name == EventType.ERROR
@@ -159,7 +163,9 @@ class TestBaseCommandHandlerSendErrorEvent:
     async def test_sends_error_with_specific_code(self):
         event_bus = _mock_event_stream()
         handler = ConcreteHandler(event_bus=event_bus, **_base_kwargs())
-        await handler._send_error_event(uuid.uuid4(), error_code=ErrorCode.AUTH_ERROR, message="Auth failed")
+        await handler._send_error_event(
+            uuid.uuid4(), error_code=ErrorCode.AUTH_ERROR, message="Auth failed"
+        )
         published_event = event_bus.publish.call_args[0][1]
         assert published_event.error_code == ErrorCode.AUTH_ERROR
         assert published_event.content["error_code"] == "auth_error"

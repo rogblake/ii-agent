@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from ii_agent.core.config.settings import get_settings
 from ii_agent.integrations.connectors.composio.router import router as composio_router
-from ii_agent.integrations.connectors import ConnectorTypeEnum, ConnectorFactory
+from ii_agent.integrations.connectors import ConnectorType, ConnectorFactory
 from ii_agent.integrations.connectors.exceptions import (
     ConnectorNotFoundError,
     ConnectorConfigError,
@@ -23,8 +23,9 @@ from ii_agent.integrations.connectors.github import GitHubConnector
 from ii_agent.integrations.connectors.google_drive import GoogleDriveConnector
 from ii_agent.integrations.connectors.revenuecat import RevenueCatConnector
 from ii_agent.auth.dependencies import CurrentUser, DBSession
-from ii_agent.core.storage.dependencies import StorageDep
+from ii_agent.core.storage.dependencies import StorageServiceDep
 from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.files.types import AssetType
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +167,7 @@ async def get_google_drive_auth_url(
 ) -> ConnectorAuthUrlResponse:
     """Generate Google Drive OAuth URL."""
     try:
-        connector = ConnectorFactory.create(ConnectorTypeEnum.GOOGLE_DRIVE, db)
+        connector = ConnectorFactory.create(ConnectorType.GOOGLE_DRIVE, db)
         state = _create_state_token(current_user.id, "google_drive", frontend_url)
         auth_url = await connector.get_auth_url(state)
 
@@ -184,7 +185,7 @@ async def google_drive_callback(
     """Handle Google Drive OAuth callback."""
     _verify_state_token(request.state, current_user.id)
 
-    connector = ConnectorFactory.create(ConnectorTypeEnum.GOOGLE_DRIVE, db)
+    connector = ConnectorFactory.create(ConnectorType.GOOGLE_DRIVE, db)
     connector_data = await connector.handle_callback(request.code, request.state)
     await connector.connect(current_user.id, connector_data)
 
@@ -197,7 +198,7 @@ async def get_google_drive_status(
     current_user: CurrentUser,
 ) -> ConnectorStatusResponse:
     """Check if user has connected Google Drive."""
-    connector = ConnectorFactory.create(ConnectorTypeEnum.GOOGLE_DRIVE, db)
+    connector = ConnectorFactory.create(ConnectorType.GOOGLE_DRIVE, db)
     status = await connector.get_status(current_user.id)
 
     return ConnectorStatusResponse(
@@ -217,7 +218,7 @@ async def get_google_drive_picker_config(
     current_user: CurrentUser,
 ) -> GoogleDrivePickerConfigResponse:
     """Return configuration required to launch the Google Drive picker."""
-    connector = ConnectorFactory.create(ConnectorTypeEnum.GOOGLE_DRIVE, db)
+    connector = ConnectorFactory.create(ConnectorType.GOOGLE_DRIVE, db)
 
     if not isinstance(connector, GoogleDriveConnector):
         raise ConnectorConfigError("Invalid connector type")
@@ -232,7 +233,7 @@ async def download_google_drive_files(
     request: GoogleDriveFilePickRequest,
     db: DBSession,
     current_user: CurrentUser,
-    storage: StorageDep,
+    storage: StorageServiceDep,
 ):
     """Download selected files from Google Drive.
 
@@ -248,7 +249,7 @@ async def download_google_drive_files(
 
     from ii_agent.files import FileAsset
 
-    connector = ConnectorFactory.create(ConnectorTypeEnum.GOOGLE_DRIVE, db)
+    connector = ConnectorFactory.create(ConnectorType.GOOGLE_DRIVE, db)
 
     if not isinstance(connector, GoogleDriveConnector):
         raise ConnectorConfigError("Invalid connector type")
@@ -365,7 +366,8 @@ async def download_google_drive_files(
                     status, done = downloader.next_chunk()
 
                 ext = file_metadata['name'].rsplit('.', 1)[-1] if '.' in file_metadata['name'] else 'bin'
-                storage_path = path_resolver.user_upload(current_user.id, file_id, ext)
+                asset_type = AssetType.from_content_type(file_metadata.get("mimeType"))
+                storage_path = path_resolver.user_file(current_user.id, asset_type, file_id, ext)
                 fh.seek(0)
                 await storage.write(storage_path, fh, file_metadata.get("mimeType"))
 
@@ -431,7 +433,7 @@ async def disconnect_google_drive(
     current_user: CurrentUser,
 ):
     """Disconnect Google Drive and revoke access token."""
-    connector = ConnectorFactory.create(ConnectorTypeEnum.GOOGLE_DRIVE, db)
+    connector = ConnectorFactory.create(ConnectorType.GOOGLE_DRIVE, db)
 
     if not await connector.get_connector(current_user.id):
         raise ConnectorNotFoundError("Google Drive is not connected")
@@ -454,7 +456,7 @@ async def get_github_auth_url(
                      If not provided, uses server-side config.
     """
     try:
-        connector = ConnectorFactory.create(ConnectorTypeEnum.GITHUB, db)
+        connector = ConnectorFactory.create(ConnectorType.GITHUB, db)
         state = _create_state_token(current_user.id, "github", redirect_uri=redirect_uri)
 
         if not isinstance(connector, GitHubConnector):
@@ -479,7 +481,7 @@ async def github_callback(
     # Use redirect_uri from request, or fall back to state token
     redirect_uri = request.redirect_uri or state_data.get("redirect_uri")
 
-    connector = ConnectorFactory.create(ConnectorTypeEnum.GITHUB, db)
+    connector = ConnectorFactory.create(ConnectorType.GITHUB, db)
 
     if not isinstance(connector, GitHubConnector):
         raise ConnectorConfigError("Invalid connector type")
@@ -498,7 +500,7 @@ async def get_github_status(
     current_user: CurrentUser,
 ) -> ConnectorStatusResponse:
     """Get GitHub connection status."""
-    connector = ConnectorFactory.create(ConnectorTypeEnum.GITHUB, db)
+    connector = ConnectorFactory.create(ConnectorType.GITHUB, db)
     status = await connector.get_status(current_user.id)
 
     return ConnectorStatusResponse(
@@ -515,7 +517,7 @@ async def disconnect_github(
     current_user: CurrentUser,
 ):
     """Disconnect GitHub."""
-    connector = ConnectorFactory.create(ConnectorTypeEnum.GITHUB, db)
+    connector = ConnectorFactory.create(ConnectorType.GITHUB, db)
 
     if not await connector.get_connector(current_user.id):
         raise ConnectorNotFoundError("GitHub is not connected")
@@ -529,7 +531,7 @@ async def get_github_app_config(
     db: DBSession,
 ) -> GitHubAppConfigResponse:
     """Get GitHub App configuration for installation."""
-    connector = ConnectorFactory.create(ConnectorTypeEnum.GITHUB, db)
+    connector = ConnectorFactory.create(ConnectorType.GITHUB, db)
 
     if not isinstance(connector, GitHubConnector):
         raise ConnectorConfigError("Invalid connector type")
@@ -545,7 +547,7 @@ async def get_github_repositories(
     current_user: CurrentUser,
 ) -> GitHubRepositoriesResponse:
     """Get list of GitHub repositories the user has access to."""
-    connector = ConnectorFactory.create(ConnectorTypeEnum.GITHUB, db)
+    connector = ConnectorFactory.create(ConnectorType.GITHUB, db)
 
     if not isinstance(connector, GitHubConnector):
         raise ConnectorConfigError("Invalid connector type")
@@ -581,7 +583,7 @@ async def get_revenuecat_auth_url(
 ) -> ConnectorAuthUrlResponse:
     """Generate RevenueCat OAuth URL."""
     try:
-        connector = ConnectorFactory.create(ConnectorTypeEnum.REVENUECAT, db)
+        connector = ConnectorFactory.create(ConnectorType.REVENUECAT, db)
 
         if not isinstance(connector, RevenueCatConnector):
             raise ConnectorConfigError("Invalid connector type")
@@ -614,7 +616,7 @@ async def revenuecat_callback(
     redirect_uri = request.redirect_uri or state_data.get("redirect_uri")
     code_verifier = state_data.get("code_verifier")
 
-    connector = ConnectorFactory.create(ConnectorTypeEnum.REVENUECAT, db)
+    connector = ConnectorFactory.create(ConnectorType.REVENUECAT, db)
     if not isinstance(connector, RevenueCatConnector):
         raise ConnectorConfigError("Invalid connector type")
 
@@ -635,7 +637,7 @@ async def get_revenuecat_status(
     current_user: CurrentUser,
 ) -> ConnectorStatusResponse:
     """Get RevenueCat connection status."""
-    connector = ConnectorFactory.create(ConnectorTypeEnum.REVENUECAT, db)
+    connector = ConnectorFactory.create(ConnectorType.REVENUECAT, db)
     status = await connector.get_status(current_user.id)
 
     return ConnectorStatusResponse(
@@ -652,7 +654,7 @@ async def disconnect_revenuecat(
     current_user: CurrentUser,
 ):
     """Disconnect RevenueCat."""
-    connector = ConnectorFactory.create(ConnectorTypeEnum.REVENUECAT, db)
+    connector = ConnectorFactory.create(ConnectorType.REVENUECAT, db)
 
     if not await connector.get_connector(current_user.id):
         raise ConnectorNotFoundError("RevenueCat is not connected")

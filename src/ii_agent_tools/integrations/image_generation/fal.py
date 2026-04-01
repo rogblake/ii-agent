@@ -89,16 +89,16 @@ class FalImageGenerationClient(BaseImageGenerationClient):
             raise ImageGenerationError("fal image generation returned no image asset")
 
         mime_type = asset.mime_type or infer_mime_type(asset.url, "image/png")
-        session_id = kwargs.get("session_id")
+        user_id = kwargs.get("user_id")
         metadata = kwargs.get("metadata") or {}
-        if session_id is None and isinstance(metadata, dict):
-            session_id = metadata.get("session_id")
+        if user_id is None and isinstance(metadata, dict):
+            user_id = metadata.get("user_id")
         public_url, storage_path, file_name, size = await persist_fal_media_asset(
             asset,
             media_kind="image",
             output_bucket=self.output_bucket,
             project_id=self.project_id,
-            session_id=session_id,
+            user_id=user_id,
             default_mime_type=mime_type,
         )
         return ImageGenerationResult(

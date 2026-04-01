@@ -24,7 +24,7 @@ pytestmark = pytest.mark.unit
 def _base_kwargs(**overrides):
     return {
         "session_service": MagicMock(),
-        "llm_setting_service": MagicMock(),
+        "model_setting_service": MagicMock(),
         "file_service": MagicMock(),
         "event_service": MagicMock(),
         "run_task_service": MagicMock(),
@@ -68,8 +68,8 @@ def _mock_services(**overrides) -> dict:
     session_service.get_session_by_id = AsyncMock(return_value=MagicMock(llm_setting_id="model-1"))
     session_service.validate_and_prepare_session = AsyncMock()
 
-    llm_setting_service = MagicMock()
-    llm_setting_service.get_llm_settings = AsyncMock(
+    model_setting_service = MagicMock()
+    model_setting_service.get_llm_settings = AsyncMock(
         return_value=MagicMock(is_user_model=MagicMock(return_value=False))
     )
 
@@ -109,7 +109,7 @@ def _mock_services(**overrides) -> dict:
 
     services = {
         "session_service": session_service,
-        "llm_setting_service": llm_setting_service,
+        "model_setting_service": model_setting_service,
         "file_service": file_service,
         "event_service": event_service,
         "run_task_service": run_task_service,
@@ -185,7 +185,7 @@ class TestQueryHandlerRuntimeBillingCutover:
         h = UserQueryHandler(
             event_bus=stream,
             session_service=services["session_service"],
-            llm_setting_service=services["llm_setting_service"],
+            model_setting_service=services["model_setting_service"],
             file_service=services["file_service"],
             event_service=services["event_service"],
             run_task_service=services["run_task_service"],
@@ -207,9 +207,7 @@ class TestQueryHandlerRuntimeBillingCutover:
         with (
             patch.object(h, "_agent_service") as mock_agent_svc,
             patch.object(h, "_execution_service") as mock_exec_svc,
-            patch(
-                "ii_agent.realtime.handlers.query.get_db_session_local", new=_noop_db_cm
-            ),
+            patch("ii_agent.realtime.handlers.query.get_db_session_local", new=_noop_db_cm),
             patch(
                 "ii_agent.realtime.handlers.query.convert_agent_event_to_realtime",
                 return_value=None,
@@ -267,9 +265,7 @@ class TestQueryHandlerRuntimeBillingCutover:
         with (
             patch.object(h, "_agent_service") as mock_agent_svc,
             patch.object(h, "_execution_service") as mock_exec_svc,
-            patch(
-                "ii_agent.realtime.handlers.query.get_db_session_local", new=_noop_db_cm
-            ),
+            patch("ii_agent.realtime.handlers.query.get_db_session_local", new=_noop_db_cm),
             patch(
                 "ii_agent.realtime.handlers.query.convert_agent_event_to_realtime",
                 return_value=None,
@@ -327,7 +323,7 @@ class TestContinueRunHandlerRuntimeBillingCutover:
             h = ContinueRunHandler(
                 event_bus=stream,
                 session_service=services["session_service"],
-                llm_setting_service=services["llm_setting_service"],
+                model_setting_service=services["model_setting_service"],
                 file_service=services["file_service"],
                 event_service=services["event_service"],
                 run_task_service=services["run_task_service"],
@@ -355,9 +351,7 @@ class TestContinueRunHandlerRuntimeBillingCutover:
         mock_agent.acontinue_run = AsyncMock(return_value=fake_continue())
 
         with (
-            patch(
-                "ii_agent.realtime.handlers.continue_run.AgentSessionStore"
-            ) as mock_store_cls,
+            patch("ii_agent.realtime.handlers.continue_run.AgentSessionStore") as mock_store_cls,
             patch(
                 "ii_agent.realtime.handlers.continue_run.get_db_session_local",
                 new=_noop_db_cm,
@@ -397,9 +391,7 @@ class TestContinueRunHandlerRuntimeBillingCutover:
         mock_agent.acontinue_run = AsyncMock(return_value=fake_continue())
 
         with (
-            patch(
-                "ii_agent.realtime.handlers.continue_run.AgentSessionStore"
-            ) as mock_store_cls,
+            patch("ii_agent.realtime.handlers.continue_run.AgentSessionStore") as mock_store_cls,
             patch(
                 "ii_agent.realtime.handlers.continue_run.get_db_session_local",
                 new=_noop_db_cm,
@@ -430,7 +422,7 @@ class TestPlanHandlerRuntimeBillingCutover:
         h = PlanHandler(
             event_bus=stream,
             session_service=services["session_service"],
-            llm_setting_service=services["llm_setting_service"],
+            model_setting_service=services["model_setting_service"],
             file_service=services["file_service"],
             event_service=services["event_service"],
             run_task_service=services["run_task_service"],
@@ -450,9 +442,7 @@ class TestPlanHandlerRuntimeBillingCutover:
             yield _make_run_completed_event()
 
         with (
-            patch(
-                "ii_agent.realtime.handlers.plan.get_db_session_local", new=_noop_db_cm
-            ),
+            patch("ii_agent.realtime.handlers.plan.get_db_session_local", new=_noop_db_cm),
             patch(
                 "ii_agent.realtime.handlers.plan.convert_agent_event_to_realtime",
                 return_value=None,
@@ -472,9 +462,7 @@ class TestPlanHandlerRuntimeBillingCutover:
             yield _make_run_cancelled_event()
 
         with (
-            patch(
-                "ii_agent.realtime.handlers.plan.get_db_session_local", new=_noop_db_cm
-            ),
+            patch("ii_agent.realtime.handlers.plan.get_db_session_local", new=_noop_db_cm),
             patch(
                 "ii_agent.realtime.handlers.plan.convert_agent_event_to_realtime",
                 return_value=None,

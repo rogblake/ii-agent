@@ -86,7 +86,7 @@ async def test_validate_session_returns_error_when_session_missing():
     result = await service.validate_and_prepare_session(
         db=FakeDB(),
         session_id=uuid4(),
-        llm_setting_service=FakeLLMSettingService(LLMConfig(model="gpt-4o", api_type="openai")),
+        model_setting_service=FakeLLMSettingService(LLMConfig(model="gpt-4o", provider="OpenAI")),
     )
 
     assert result.is_valid is False
@@ -128,7 +128,7 @@ async def test_validate_session_bypasses_billing_check_for_user_model(monkeypatc
         completion_tokens=0,
         cost=0.0,
     )
-    llm_config = LLMConfig(model="gpt-4o", api_type="openai", config_type="user")
+    llm_config = LLMConfig(model="gpt-4o", provider="OpenAI", config_type="user")
 
     service = _make_service(session=session)
 
@@ -136,7 +136,7 @@ async def test_validate_session_bypasses_billing_check_for_user_model(monkeypatc
         db=FakeDB(),
         session_id=uuid4(),
         query_text="hello",
-        llm_setting_service=FakeLLMSettingService(llm_config),
+        model_setting_service=FakeLLMSettingService(llm_config),
     )
 
     assert result.is_valid is True
@@ -179,7 +179,7 @@ async def test_validate_session_rejects_reconciliation_required(monkeypatch):
         completion_tokens=0,
         cost=0.0,
     )
-    llm_config = LLMConfig(model="gpt-4o", api_type="openai")
+    llm_config = LLMConfig(model="gpt-4o", provider="OpenAI")
 
     service = _make_service(
         session=session,
@@ -190,7 +190,7 @@ async def test_validate_session_rejects_reconciliation_required(monkeypatch):
         db=FakeDB(),
         session_id=uuid4(),
         query_text="hello",
-        llm_setting_service=FakeLLMSettingService(llm_config),
+        model_setting_service=FakeLLMSettingService(llm_config),
     )
 
     assert result.is_valid is False
@@ -233,7 +233,7 @@ async def test_validate_session_does_not_precheck_credit_amount(monkeypatch):
         completion_tokens=0,
         cost=0.0,
     )
-    llm_config = LLMConfig(model="gpt-4o", api_type="openai")
+    llm_config = LLMConfig(model="gpt-4o", provider="OpenAI")
 
     service = _make_service(
         session=session,
@@ -244,7 +244,7 @@ async def test_validate_session_does_not_precheck_credit_amount(monkeypatch):
         db=FakeDB(),
         session_id=uuid4(),
         query_text="hello",
-        llm_setting_service=FakeLLMSettingService(llm_config),
+        model_setting_service=FakeLLMSettingService(llm_config),
     )
 
     assert result.is_valid is True

@@ -15,8 +15,6 @@ from ii_agent.projects.databases.types import DatabaseSource
 if TYPE_CHECKING:
     from ii_agent.sessions.models import Session
 
-# Backward compat alias
-DatabaseSourceEnum = DatabaseSource
 
 
 class ProjectDatabase(Base):

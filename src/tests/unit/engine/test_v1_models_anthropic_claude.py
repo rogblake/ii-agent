@@ -40,7 +40,7 @@ from ii_agent.agents.exceptions import (
     ModelProviderError,
     ModelRateLimitError,
 )
-from ii_agent.agents.types import Provider
+from ii_agent.settings.llm import Provider
 
 
 # ---------------------------------------------------------------------------

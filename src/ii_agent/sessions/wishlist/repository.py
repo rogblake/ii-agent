@@ -7,7 +7,7 @@ from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ii_agent.core.db.repository import BaseRepository
+from ii_agent.core.db.base import BaseRepository
 from ii_agent.sessions.wishlist.models import SessionWishlist
 
 

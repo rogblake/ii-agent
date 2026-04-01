@@ -147,6 +147,12 @@ export enum AgentEvent {
     STATUS_UPDATE = 'agent.status.update',
 
     // Session events
+    SESSION_CREATED = 'session.created',
+    SESSION_UPDATED = 'session.updated',
+    SESSION_DELETED = 'session.deleted',
+    SESSION_FORKED = 'session.forked',
+    SESSION_SUMMARY_STARTED = 'session.summary.started',
+    SESSION_SUMMARY_COMPLETED = 'session.summary.completed',
     USER_MESSAGE = 'session.user_message',
 
     // Connection events
@@ -154,9 +160,11 @@ export enum AgentEvent {
     WORKSPACE_INFO = 'connection.workspace_info',
 
     // Sandbox events
+    SANDBOX_INITIALIZED = 'sandbox.initialized',
     SANDBOX_STATUS = 'sandbox.status_changed',
 
     // Billing / metrics events
+    CREDITS_DEDUCTED = 'billing.credits.deducted',
     METRICS_UPDATE = 'billing.metrics.updated',
 
     // Plan events
@@ -173,6 +181,8 @@ export enum AgentEvent {
     FILE_TREE_UPDATE = 'file.tree.updated',
 
     // Media events
+    MEDIA_GENERATED = 'media.generated',
+    MEDIA_PROGRESS = 'media.progress',
     BROWSER_USE = 'media.browser_screenshot',
 
     // System events
@@ -767,6 +777,10 @@ export enum CommandType {
     APPLE_CHECK_AUTH = 'apple_check_auth',
     SAVE_EXPO_TOKEN = 'save_expo_token',
 
+    // File explorer
+    FILE_TREE = 'file_tree',
+    FILE_CONTENT = 'file_content',
+
     // Design mode
     DESIGN_GET_STATE = 'design_get_state',
     DESIGN_SAVE_STATE = 'design_save_state',
@@ -938,6 +952,17 @@ interface SlideDeckSyncStatePayload {
     presentation_name: string
 }
 
+interface FileTreePayload {
+    command: CommandType.FILE_TREE
+    [key: string]: unknown
+}
+
+interface FileContentPayload {
+    command: CommandType.FILE_CONTENT
+    path: string
+    [key: string]: unknown
+}
+
 interface EmptyCommandPayload<T extends CommandType> {
     command: T
     [key: string]: unknown
@@ -959,6 +984,8 @@ export type CommandPayload =
     | AppleAppSetupPayload
     | SaveExpoTokenPayload
     | EnhancePromptPayload
+    | FileTreePayload
+    | FileContentPayload
     | EmptyCommandPayload<CommandType.PING>
     | EmptyCommandPayload<CommandType.CANCEL>
     | EmptyCommandPayload<CommandType.SANDBOX_STATUS>

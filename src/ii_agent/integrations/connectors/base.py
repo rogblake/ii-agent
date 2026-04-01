@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
+from ii_agent.integrations.connectors.models import Connector, ConnectorType
 
 
 
@@ -49,11 +49,11 @@ class BaseConnector(ABC):
 
     @property
     @abstractmethod
-    def connector_type(self) -> ConnectorTypeEnum:
+    def connector_type(self) -> ConnectorType:
         """Return the connector type enum value.
 
         Returns:
-            ConnectorTypeEnum: The type of this connector
+            ConnectorType: The type of this connector
         """
         pass
 

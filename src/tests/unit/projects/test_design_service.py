@@ -48,7 +48,7 @@ def _make_service(**overrides) -> ProjectDesignService:
     repo = MagicMock()
     sandbox_service = MagicMock()
     event_service = MagicMock()
-    llm_setting_service = MagicMock()
+    model_setting_service = MagicMock()
     config = MagicMock()
     config.llm_configs = {}  # Use a real empty dict
 
@@ -56,7 +56,7 @@ def _make_service(**overrides) -> ProjectDesignService:
         "repo": repo,
         "sandbox_service": sandbox_service,
         "event_service": event_service,
-        "llm_setting_service": llm_setting_service,
+        "model_setting_service": model_setting_service,
         "config": config,
     }
     kwargs.update(overrides)

@@ -6,6 +6,7 @@ import anyio
 from elevenlabs.client import ElevenLabs
 from google.cloud import storage
 
+from ii_agent.core.storage.path_resolver import path_resolver
 from .base import BaseVoiceGenerationClient, VoiceGenerationError, VoiceGenerationResult
 from .config import normalize_language
 from .constants import VoiceGenerationProvider
@@ -93,10 +94,10 @@ class ElevenLabsVoiceGenerationClient(BaseVoiceGenerationClient):
             ) from e
         content_type = "audio/mpeg"
 
-        session_id = kwargs.get("session_id")
+        user_id = kwargs.get("user_id")
         metadata = kwargs.get("metadata")
-        if session_id is None and isinstance(metadata, dict):
-            session_id = metadata.get("session_id")
+        if user_id is None and isinstance(metadata, dict):
+            user_id = metadata.get("user_id")
 
         if not self.bucket:
             raise VoiceGenerationError(
@@ -106,7 +107,7 @@ class ElevenLabsVoiceGenerationClient(BaseVoiceGenerationClient):
         public_url, storage_path, file_name = await self._upload_bytes(
             audio_bytes,
             content_type,
-            session_id=session_id,
+            user_id=user_id,
         )
 
         cost = calculate_elevenlabs_cost(
@@ -128,15 +129,12 @@ class ElevenLabsVoiceGenerationClient(BaseVoiceGenerationClient):
         self,
         audio_bytes: bytes,
         content_type: str,
-        session_id: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> tuple[str, str, str]:
         extension = self._guess_extension(content_type)
         file_id = uuid.uuid4().hex
         file_name = f"{file_id}.{extension}"
-        if session_id:
-            blob_name = f"sessions/{session_id}/generated/{file_name}"
-        else:
-            blob_name = f"{self.blob_name_prefix}/{file_name}"
+        blob_name = path_resolver.user_file(user_id, "audio", file_id, extension)
 
         def _upload_sync() -> str:
             blob = self.bucket.blob(blob_name)

@@ -24,7 +24,7 @@ from ii_agent.core.middleware import ii_agent_error_handler
 from ii_agent.core.exceptions import IIAgentError, ValidationError
 from ii_agent.core.storage.dependencies import _get_storage_service
 from ii_agent.sessions.dependencies import _get_session_service
-from ii_agent.settings.llm.dependencies import _get_llm_setting_service
+from ii_agent.settings.llm.dependencies import _get_model_setting_service
 
 
 pytestmark = pytest.mark.unit
@@ -148,7 +148,7 @@ def _make_app(*, session_access: bool = True, export_bytes: bytes | None = b"pdf
     app.dependency_overrides[_get_credit_service] = lambda: _CreditService()
     app.dependency_overrides[_get_session_service] = lambda: _SessionService()
     app.dependency_overrides[_get_user_service] = lambda: SimpleNamespace()
-    app.dependency_overrides[_get_llm_setting_service] = lambda: SimpleNamespace()
+    app.dependency_overrides[_get_model_setting_service] = lambda: SimpleNamespace()
     app.dependency_overrides[_get_storage_service] = lambda: _Storage()
     return app
 

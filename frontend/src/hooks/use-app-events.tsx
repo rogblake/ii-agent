@@ -519,7 +519,7 @@ export function useAppEvents() {
                     const errorMessage =
                         (data.content.message as string) ||
                         'An unexpected error occurred.'
-                    const errorCode = (data.content.error_code ?? data.error_code) as ErrorCode | undefined
+                    const errorCode = (data.content.error_code ?? (data as Record<string, unknown>).error_code) as ErrorCode | undefined
                     const sessionIdFromEvent =
                         (data.session_id as string | undefined) ??
                         (data.content.session_id as string | undefined)

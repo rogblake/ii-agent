@@ -12,7 +12,7 @@ from sqlalchemy import select
 from ii_agent.files.models import FileAsset
 from ii_agent.chat.types import BinaryContent, TextContent
 from ii_agent.core.storage.client import get_storage
-from ii_agent.core.config.llm_config import APITypes
+from ii_agent.settings.llm import Provider
 from ii_agent.core.logger import logger
 
 # ============================================================================
@@ -32,10 +32,10 @@ class ImageCompressionError(Exception):
 # Anthropic: 5MB base64 limit → ~3.75MB raw
 # OpenAI/Gemini: 10MB limit
 PROVIDER_IMAGE_LIMITS = {
-    APITypes.ANTHROPIC: int(5 * 1024 * 1024 * 3 / 4),  # ~3.75MB (5MB base64)
-    APITypes.OPENAI: 10 * 1024 * 1024,  # 10MB
-    APITypes.GEMINI: 10 * 1024 * 1024,  # 10MB
-    APITypes.CUSTOM: 10 * 1024 * 1024,  # 10MB default
+    Provider.ANTHROPIC: int(5 * 1024 * 1024 * 3 / 4),  # ~3.75MB (5MB base64)
+    Provider.OPENAI: 10 * 1024 * 1024,  # 10MB
+    Provider.GOOGLE: 10 * 1024 * 1024,  # 10MB
+    Provider.CUSTOM: 10 * 1024 * 1024,  # 10MB default
 }
 DEFAULT_IMAGE_LIMIT = int(5 * 1024 * 1024 * 3 / 4)  # Conservative default (~3.75MB)
 
@@ -317,7 +317,7 @@ async def process_files_for_message(
     file_ids: List[str],
     storage,
     session_id: str,
-    api_type: Optional[APITypes] = None,
+    provider: Provider | None = None,
 ) -> ProcessedFiles:
     """
     Process files and prepare content parts for message.
@@ -335,7 +335,7 @@ async def process_files_for_message(
         file_ids: List of file IDs to process
         storage: Storage client for reading files
         session_id: Session ID for logging
-        api_type: Optional API type for provider-specific image compression
+        provider: Optional provider for provider-specific image compression
 
     Returns:
         ProcessedFiles with content parts and routing info
@@ -434,7 +434,7 @@ async def process_files_for_message(
                 # Compress images if needed for provider limits
                 # Note: PDFs are not compressed, only images
                 if mime_type and mime_type.startswith("image/"):
-                    target_limit = PROVIDER_IMAGE_LIMITS.get(api_type, DEFAULT_IMAGE_LIMIT)
+                    target_limit = PROVIDER_IMAGE_LIMITS.get(provider, DEFAULT_IMAGE_LIMIT)
                     # compress_image_for_provider raises ImageCompressionError if it fails
                     # Let it propagate to service.py error handler
                     file_bytes, mime_type = compress_image_for_provider(

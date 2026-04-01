@@ -6,6 +6,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Annotated, Any, Literal, TypeAlias, Union
 
 from pydantic import BaseModel, ConfigDict, Field
+from ii_agent.settings.llm import PricingInfo, Provider
 from ii_agent.tasks.types import RunStatus
 
 if TYPE_CHECKING:
@@ -540,8 +541,8 @@ class ModelUsageEvent(BillingEvent):
     name: Literal["billing.llm.usage"] = "billing.llm.usage"
     internal: bool = True
     model_id: str = ""
-    provider: str = ""
-    pricing: Pricing
+    provider: Provider = Provider.ANTHROPIC
+    pricing: PricingInfo | None = None
     input_tokens: int = 0
     output_tokens: int = 0
     cache_read_tokens: int = 0

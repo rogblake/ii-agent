@@ -53,8 +53,9 @@ from ii_agent.content.storybook.schemas import (
 )
 from ii_agent.users.dependencies import UserServiceDep
 from ii_agent.content.media.service import _generate_image
-from ii_agent.core.storage.dependencies import StorageDep
+from ii_agent.core.storage.dependencies import StorageServiceDep
 from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.files.types import AssetType
 
 logger = logging.getLogger(__name__)
 
@@ -470,7 +471,7 @@ async def upload_storybook_background(
     current_user: CurrentUser,
     service: StorybookServiceDep,
     session_service: SessionServiceDep,
-    media_storage: StorageDep,
+    media_storage: StorageServiceDep,
     db: DBSession,
     file: UploadFile = File(...),
 ) -> StorybookBackgroundUploadResponse:
@@ -507,8 +508,8 @@ async def upload_storybook_background(
         }
         suffix = ext_map.get(content_type, ".png")
 
-    storage_path = path_resolver.user_storybook(
-        current_user.id, uuid.uuid4().hex, suffix.lstrip(".")
+    storage_path = path_resolver.user_file(
+        current_user.id, AssetType.IMAGE, uuid.uuid4().hex, suffix.lstrip(".")
     )
     await media_storage.write(storage_path, file.file, content_type)
     public_url = media_storage.public_url(storage_path)

@@ -7,7 +7,7 @@ import {
     setTreeLoading
 } from '@/state'
 import { useSocketIOContext } from '@/contexts/websocket-context'
-import { WebSocketConnectionState } from '@/typings/agent'
+import { CommandType, WebSocketConnectionState } from '@/typings/agent'
 
 /**
  * Encapsulates file-tree loading and manual refresh.
@@ -46,7 +46,7 @@ export function useFileTreeSync(sessionId: string | undefined) {
         ) {
             hasRequestedTree.current = true
             dispatch(setTreeLoading(true))
-            const sent = sendMessage({ type: 'file_tree', content: {} })
+            const sent = sendMessage({ session_uuid: '', content: { command: CommandType.FILE_TREE } })
             if (!sent) {
                 hasRequestedTree.current = false
                 dispatch(setTreeLoading(false))
@@ -66,7 +66,7 @@ export function useFileTreeSync(sessionId: string | undefined) {
         }
         hasRequestedTree.current = true
         dispatch(setTreeLoading(true))
-        const sent = sendMessage({ type: 'file_tree', content: {} })
+        const sent = sendMessage({ session_uuid: '', content: { command: CommandType.FILE_TREE } })
         if (!sent) {
             hasRequestedTree.current = false
             dispatch(setTreeLoading(false))

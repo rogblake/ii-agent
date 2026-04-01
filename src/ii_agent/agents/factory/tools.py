@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 from ii_agent.agents.tools.sandbox import RegisterPortTool
-from ii_agent.agents.models.provider import Provider
+from ii_agent.settings.llm import Provider
 from ii_agent.agents.tools.agent import SendUserFile
 from ii_agent.agents.tools.decorator import tool as tool_decorator
 from ii_agent.agents.tools.dev import (

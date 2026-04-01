@@ -2,7 +2,7 @@
 
 from typing import Dict, Type
 
-from ii_agent.integrations.connectors.models import ConnectorTypeEnum
+from ii_agent.integrations.connectors.models import ConnectorType
 from .base import BaseConnector
 
 
@@ -13,10 +13,10 @@ class ConnectorRegistry:
     registered at runtime, making it simple to add new integrations.
     """
 
-    _connectors: Dict[ConnectorTypeEnum, Type[BaseConnector]] = {}
+    _connectors: Dict[ConnectorType, Type[BaseConnector]] = {}
 
     @classmethod
-    def register(cls, connector_type: ConnectorTypeEnum, connector_class: Type[BaseConnector]):
+    def register(cls, connector_type: ConnectorType, connector_class: Type[BaseConnector]):
         """Register a connector implementation.
 
         Args:
@@ -25,14 +25,14 @@ class ConnectorRegistry:
 
         Example:
             ConnectorRegistry.register(
-                ConnectorTypeEnum.GOOGLE_DRIVE,
+                ConnectorType.GOOGLE_DRIVE,
                 GoogleDriveConnector
             )
         """
         cls._connectors[connector_type] = connector_class
 
     @classmethod
-    def get(cls, connector_type: ConnectorTypeEnum) -> Type[BaseConnector]:
+    def get(cls, connector_type: ConnectorType) -> Type[BaseConnector]:
         """Get a connector class by type.
 
         Args:
@@ -49,16 +49,16 @@ class ConnectorRegistry:
         return cls._connectors[connector_type]
 
     @classmethod
-    def get_all(cls) -> Dict[ConnectorTypeEnum, Type[BaseConnector]]:
+    def get_all(cls) -> Dict[ConnectorType, Type[BaseConnector]]:
         """Get all registered connectors.
 
         Returns:
-            Dict[ConnectorTypeEnum, Type[BaseConnector]]: All registered connectors
+            Dict[ConnectorType, Type[BaseConnector]]: All registered connectors
         """
         return cls._connectors.copy()
 
     @classmethod
-    def is_registered(cls, connector_type: ConnectorTypeEnum) -> bool:
+    def is_registered(cls, connector_type: ConnectorType) -> bool:
         """Check if a connector type is registered.
 
         Args:

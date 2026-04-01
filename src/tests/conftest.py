@@ -10,7 +10,7 @@ import pytest
 
 # Ensure modules with import-time model resolution have a default model config.
 os.environ.setdefault("LLM_CONFIGS__default__model", "gpt-4o")
-os.environ.setdefault("LLM_CONFIGS__default__api_type", "openai")
+os.environ.setdefault("LLM_CONFIGS__default__provider", "OpenAI")
 os.environ.setdefault("LLM_CONFIGS__default__api_key", "test-key")
 os.environ.setdefault("COMPOSIO_CACHE_DIR", "/tmp/.composio")
 os.environ.setdefault("II_AGENT_SKIP_MIGRATIONS", "1")

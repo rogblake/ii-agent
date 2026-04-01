@@ -4,7 +4,7 @@ from datetime import datetime
 import platform
 from typing import Any, Dict, Optional
 from ii_agent.agents.types import AgentType
-from ii_agent.core.config.llm_config import APITypes
+from ii_agent.settings.llm import Provider
 from ii_agent.agents.prompts.mobile_prompt import get_mobile_development_prompt
 from ii_agent.agents.prompts.system_prompt import get_system_prompt
 from ii_agent.agents.prompts.deep_research_system_prompt import get_deep_research_prompt
@@ -1048,10 +1048,10 @@ async def get_system_prompt_for_agent_type(
     a2a_agents: bool = True,
     task_agent: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
-    api_type: Optional[APITypes] = None,
+    provider: Optional[Provider] = None,
 ) -> str:
     """Generate a system prompt for a specific agent type."""
-    is_gemini = api_type == APITypes.GEMINI if api_type else False
+    is_gemini = provider == Provider.GOOGLE if provider else False
 
     # Deep Research agent uses its specialized prompt
     if agent_type == AgentType.DEEP_RESEARCH:

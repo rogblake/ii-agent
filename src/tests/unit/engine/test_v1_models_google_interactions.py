@@ -41,7 +41,7 @@ from ii_agent.agents.models.metrics import Metrics
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.exceptions import ModelProviderError
 from ii_agent.files.media import Image
-from ii_agent.agents.types import Provider
+from ii_agent.settings.llm import Provider
 
 # Import streaming event types – some may only exist as stubs injected by conftest.py.
 # Use getattr() to avoid ImportError when the installed SDK lacks these names.

@@ -51,8 +51,12 @@ class FileAsset(Base):
     storage_path: Mapped[str] = mapped_column(String(1000), nullable=False, unique=True)
     content_type: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     file_size: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
-    asset_type: Mapped[AssetType] = mapped_column(String(20), nullable=False, default=AssetType.OTHER)
-    source: Mapped[AssetSource] = mapped_column(String(30), nullable=False, default=AssetSource.USER_UPLOAD)
+    asset_type: Mapped[AssetType] = mapped_column(
+        String(20), nullable=False, default=AssetType.OTHER
+    )
+    source: Mapped[AssetSource] = mapped_column(
+        String(30), nullable=False, default=AssetSource.USER_UPLOAD
+    )
     upload_status: Mapped[UploadStatus] = mapped_column(
         String(20), nullable=False, default=UploadStatus.COMPLETE
     )
@@ -68,9 +72,7 @@ class FileAsset(Base):
         nullable=True,
         comment="When the cached signed_url expires",
     )
-    metadata_: Mapped[Optional[dict]] = mapped_column(
-        "metadata", JSONB, default=dict, nullable=True
-    )
+    data: Mapped[Optional[dict]] = mapped_column("metadata", JSONB, default=dict, nullable=True)
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="file_assets")

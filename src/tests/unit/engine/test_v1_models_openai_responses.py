@@ -31,7 +31,7 @@ from ii_agent.agents.exceptions import (
     ModelAuthenticationError,
     ModelProviderError,
 )
-from ii_agent.agents.types import Provider
+from ii_agent.settings.llm import Provider
 
 
 # ---------------------------------------------------------------------------

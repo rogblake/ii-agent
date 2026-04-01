@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.integrations.connectors.repository import ConnectorRepository
-from ii_agent.integrations.connectors.models import ConnectorTypeEnum
+from ii_agent.integrations.connectors.models import ConnectorType
 from ii_agent.agents.tools.clients import _get_client
 from ii_agent.chat.tools.base import ToolCallInput
 from ii_agent.chat.tools.file_search import FileSearchTool
@@ -137,7 +137,7 @@ class ChatToolService:
         connectors = await self._connector_repo.get_by_user(db, user_id)
 
         for connector in connectors:
-            if connector.connector_type == ConnectorTypeEnum.GITHUB.value:
+            if connector.connector_type == ConnectorType.GITHUB.value:
                 tools["github"] = True
 
                 github_token = connector.access_token

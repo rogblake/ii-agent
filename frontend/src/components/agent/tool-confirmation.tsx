@@ -30,7 +30,7 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
 
     const handleConfirm = (
         confirmed: boolean,
-        userInput?: Record<string, unknown>
+        userInput?: Record<string, string>
     ) => {
         if (isResponding) return
 

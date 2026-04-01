@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Any
 
 from ii_agent.core.container import get_app_container
 from ii_agent.core.db import get_db_session_local
-from ii_agent.projects.databases.models import ProjectDatabase, DatabaseSourceEnum
+from ii_agent.projects.databases.models import ProjectDatabase, DatabaseSource
 from ii_agent.projects.databases.repository import ProjectDatabaseRepository
 from ii_agent.agents.tools.clients import tool_client
 from ii_agent.agents.tools.base import BaseAgentTool, ToolResult
@@ -104,7 +104,7 @@ class GetDatabaseConnection(BaseAgentTool):
                 connection_string = existing_database.get("connection_string")
                 if user_id and connection_string:
                     await self._save_database_url_to_secrets(
-                        session_id=session_id,
+                        session_id=self._session_id,
                         user_id=user_id,
                         database_url=connection_string,
                     )
@@ -115,13 +115,13 @@ class GetDatabaseConnection(BaseAgentTool):
                 )
 
             # Pass session_id as database_name
-            db_result = await tool_client.database_connection(database_type, session_id)
+            db_result = await tool_client.database_connection(database_type, self._session_id)
 
             # Store the database connection in the new ProjectDatabase table
             async with get_db_session_local() as db:
                 new_db_record = ProjectDatabase(
                     session_id=session_uuid,
-                    source=DatabaseSourceEnum.NEONDB,
+                    source=DatabaseSource.NEONDB,
                     connection_string=db_result.get("connection_string", ""),
                     host=db_result.get("host"),
                     database_name=db_result.get("database_name"),
@@ -150,7 +150,7 @@ class GetDatabaseConnection(BaseAgentTool):
             connection_string = db_result.get("connection_string")
             if user_id and connection_string:
                 await self._save_database_url_to_secrets(
-                    session_id=session_id,
+                    session_id=self._session_id,
                     user_id=user_id,
                     database_url=connection_string,
                 )

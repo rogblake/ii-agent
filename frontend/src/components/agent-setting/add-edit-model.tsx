@@ -8,7 +8,18 @@ import { useTranslation } from 'react-i18next'
 
 import { Icon } from '../ui/icon'
 import { Sheet, SheetClose, SheetContent, SheetHeader } from '../ui/sheet'
-import { PROVIDER_MODELS, PROVIDERS_NAME, getProviderKey } from '@/constants/models'
+import { PROVIDER, PROVIDER_MODELS, PROVIDERS_NAME, getProviderKey } from '@/constants/models'
+import { ProviderType } from '@/typings/settings'
+
+/** Map FE UI key to BE Provider enum value. */
+const UI_KEY_TO_PROVIDER: Record<string, ProviderType> = {
+    anthropic: PROVIDER.ANTHROPIC,
+    openai: PROVIDER.OPENAI,
+    gemini: PROVIDER.GOOGLE,
+    vertex: PROVIDER.VERTEX_AI,
+    azure: PROVIDER.AZURE,
+    custom: PROVIDER.CUSTOM,
+}
 import {
     Select,
     SelectContent,
@@ -39,10 +50,7 @@ interface AddEditModelProps {
 
 const FormSchema = z.object({
     model: z
-        .object({
-            model: z.string(),
-            api_type: z.string().optional()
-        })
+        .custom<IModel>()
         .optional(),
     custom_model_name: z.string().optional(),
     api_key: z.string().optional(),
@@ -98,11 +106,7 @@ const AddEditModel = ({
                 model?.model === 'custom' || selectedProvider === 'custom'
                     ? customName
                     : model.model,
-            api_type: selectedProvider as
-                | 'openai'
-                | 'anthropic'
-                | 'gemini'
-                | 'custom',
+            provider: UI_KEY_TO_PROVIDER[selectedProvider] ?? PROVIDER.CUSTOM,
             source: 'user'
         }
 
@@ -154,14 +158,15 @@ const AddEditModel = ({
                 const providerKey = getProviderKey(config)
                 setSelectedProvider(providerKey)
                 setEditModelData(config)
-                let modelObj: { model: string; api_type: string } | undefined =
+                let modelObj: IModel | undefined =
                     PROVIDER_MODELS[
                         providerKey as keyof typeof PROVIDER_MODELS
                     ]?.find((m) => m.model === config?.model)
                 if (!modelObj) {
                     modelObj = {
+                        id: '',
                         model: 'custom',
-                        api_type: providerKey
+                        provider: UI_KEY_TO_PROVIDER[providerKey] ?? PROVIDER.CUSTOM
                     }
                     form.setValue('custom_model_name', config.model)
                 }

@@ -9,6 +9,7 @@ from google import genai
 from google.cloud import storage
 from google.genai import types
 
+from ii_agent.core.storage.path_resolver import path_resolver
 from ii_agent_tools.logger import get_logger
 
 from .base import BaseVideoGenerationClient, VideoGenerationResult, VideoReferenceImage
@@ -144,6 +145,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
         person_generation: Literal["allow_all", "allow_adult"] | None = None,
         seed: int | None = None,
         reference_images: list[VideoReferenceImage] | None = None,
+        user_id: uuid.UUID | None = None,
         **kwargs,
     ) -> VideoGenerationResult:
         """
@@ -315,7 +317,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
 
             # Upload video to GCS
             public_url, storage_path, file_name, video_size = await self._upload_video(
-                video_bytes, session_id
+                video_bytes, user_id
             )
 
             return VideoGenerationResult(
@@ -347,6 +349,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
         generate_audio: bool = True,
         person_generation: Literal["allow_all", "allow_adult"] | None = None,
         end_frame: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> VideoGenerationResult:
         """Extend existing video while maintaining audio/visual coherence.
 
@@ -377,7 +380,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                 "[VertexVideoGeneration] end_frame provided - using frame interpolation instead of extension"
             )
             # Extract last frame from source video and use frame interpolation
-            start_frame_from_video = await self._extract_last_frame_from_video(video_uri)
+            start_frame_from_video = await self._extract_last_frame_from_video(video_uri, user_id=user_id)
             if start_frame_from_video:
                 # Generate final segment with frame interpolation
                 final_segment = await self.generate_video(
@@ -389,11 +392,12 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                     start_frame=start_frame_from_video,
                     end_frame=end_frame,
                     person_generation=person_generation,
+                    user_id=user_id,
                 )
 
                 if final_segment.url:
                     # Concatenate source video + final segment
-                    concatenated = await self._concatenate_videos(video_uri, final_segment.url)
+                    concatenated = await self._concatenate_videos(video_uri, final_segment.url, user_id=user_id)
                     if concatenated:
                         return concatenated
                     else:
@@ -408,7 +412,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
 
         # Generate output path for extended video
         file_id = str(uuid.uuid4())
-        output_blob_name = f"{self.blob_name_prefix}/extended-{file_id[:8]}.mp4"
+        output_blob_name = path_resolver.user_file(user_id, "video", f"extended-{file_id[:8]}", "mp4")
         output_gcs_uri = f"gs://{self.output_bucket}/{output_blob_name}"
 
         # Build config for extension
@@ -518,7 +522,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
 
             # Upload video to GCS (if we downloaded it, or re-upload to ensure it's there)
             public_url, storage_path, file_name, video_size = await self._upload_video(
-                video_bytes, None
+                video_bytes, user_id
             )
 
             return VideoGenerationResult(
@@ -540,14 +544,14 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
         )
 
     async def _upload_video(
-        self, video_bytes: bytes, session_id: str | None
+        self, video_bytes: bytes, user_id: uuid.UUID | None
     ) -> tuple[str, str, str, int]:
         """
         Upload video bytes to GCS.
 
         Args:
             video_bytes: Video bytes to upload
-            session_id: Session ID for storage path organization
+            user_id: Owner user ID for storage path organization
 
         Returns:
             Tuple of (public_url, storage_path, file_name, video_size)
@@ -557,10 +561,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
         # Generate storage path
         file_id = str(uuid.uuid4())
         file_name = f"video-{file_id[:8]}.mp4"
-        if session_id:
-            blob_name = f"sessions/{session_id}/generated/{file_name}"
-        else:
-            blob_name = f"{self.blob_name_prefix}/{file_name}"
+        blob_name = path_resolver.user_file(user_id, "video", f"video-{file_id[:8]}", "mp4")
 
         # Upload to our GCS bucket
         def _upload_sync() -> str:
@@ -606,11 +607,14 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
             response.raise_for_status()
             return types.Image(imageBytes=response.content, mimeType="image/png")
 
-    async def _extract_last_frame_from_video(self, video_uri: str) -> str | None:
+    async def _extract_last_frame_from_video(
+        self, video_uri: str, *, user_id: uuid.UUID | None = None
+    ) -> str | None:
         """Extract the last frame from a video and upload to GCS.
 
         Args:
             video_uri: GCS URI (gs://) or HTTPS URL of the video
+            user_id: Owner user ID for storage path organization
 
         Returns:
             GCS URI of the extracted frame, or None if extraction failed
@@ -676,7 +680,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                     frame_bytes = f.read()
 
                 frame_id = str(uuid.uuid4())[:8]
-                blob_name = f"{self.blob_name_prefix}/frame-{frame_id}.png"
+                blob_name = path_resolver.user_file(user_id, "image", f"frame-{frame_id}", "png")
                 blob = self.bucket.blob(blob_name)
                 blob.cache_control = "public, max-age=31536000"
                 blob.upload_from_file(BytesIO(frame_bytes), content_type="image/png")
@@ -697,13 +701,14 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
             return None
 
     async def _concatenate_videos(
-        self, video1_uri: str, video2_uri: str
+        self, video1_uri: str, video2_uri: str, *, user_id: uuid.UUID | None = None
     ) -> VideoGenerationResult | None:
         """Concatenate two videos using ffmpeg.
 
         Args:
             video1_uri: GCS URI or URL of the first video
             video2_uri: GCS URI or URL of the second video
+            user_id: Owner user ID for storage path organization
 
         Returns:
             VideoGenerationResult with concatenated video, or None if failed
@@ -760,7 +765,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                         video_bytes = f.read()
 
                     file_id = str(uuid.uuid4())[:8]
-                    blob_name = f"{self.blob_name_prefix}/concat-{file_id}.mp4"
+                    blob_name = path_resolver.user_file(user_id, "video", f"concat-{file_id}", "mp4")
                     blob = self.bucket.blob(blob_name)
                     blob.cache_control = "public, max-age=31536000"
                     blob.upload_from_file(BytesIO(video_bytes), content_type="video/mp4")

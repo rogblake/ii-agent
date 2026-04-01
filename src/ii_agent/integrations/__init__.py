@@ -6,8 +6,9 @@ Sub-packages:
     mobile       -- Mobile platform integrations (Apple credentials)
 
 Import pattern:
-    from ii_agent.integrations.connectors import ConnectorService, ConnectorServiceDep
-    from ii_agent.integrations.enhance_prompt import router as enhance_prompt_router
+    from ii_agent.integrations.connectors.service import ConnectorService
+    from ii_agent.integrations.connectors.dependencies import ConnectorServiceDep
+    from ii_agent.integrations.enhance_prompt.router import router as enhance_prompt_router
 """
 
 __all__: list[str] = []

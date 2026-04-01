@@ -16,7 +16,8 @@ from ii_agent.chat.types import (
     TextContent,
 )
 from ii_agent.billing.schemas import TokenUsage
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 
 pytestmark = pytest.mark.unit
 
@@ -45,9 +46,9 @@ def _make_preferences() -> CouncilPreferences:
 
 def _make_llm_configs() -> dict[str, LLMConfig]:
     return {
-        "member-1": LLMConfig(model="member-1", api_type=APITypes.OPENAI),
-        "member-2": LLMConfig(model="member-2", api_type=APITypes.OPENAI),
-        "synth-1": LLMConfig(model="synth-1", api_type=APITypes.OPENAI),
+        "member-1": LLMConfig(model="member-1", provider=Provider.OPENAI),
+        "member-2": LLMConfig(model="member-2", provider=Provider.OPENAI),
+        "synth-1": LLMConfig(model="synth-1", provider=Provider.OPENAI),
     }
 
 

@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.db.repository import BaseRepository
+from ii_agent.core.db.base import BaseRepository
 from ii_agent.settings.skills.models import Skill, SkillSource
 
 

@@ -7,6 +7,7 @@ class DeploymentStatus(StrEnum):
     """Deployment lifecycle status."""
 
     PENDING = "pending"
+    BUILDING = "building"
     DEPLOYING = "deploying"
     DEPLOYED = "deployed"
     FAILED = "failed"

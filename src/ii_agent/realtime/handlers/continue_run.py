@@ -143,6 +143,7 @@ class ContinueRunHandler(BaseCommandHandler[ContinueRunContent]):
             await self.process_agent_event_stream(
                 event_stream, session_info, run_id=UUID(run_response.run_id),
                 is_user_key=llm_config.is_user_model(),
+                llm_config=llm_config,
             )
 
         except ValueError as e:

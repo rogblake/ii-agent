@@ -13,7 +13,7 @@ from googleapiclient.discovery import build
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
+from ii_agent.integrations.connectors.models import Connector, ConnectorType
 
 from .base import BaseConnector, ConnectorData
 
@@ -43,13 +43,13 @@ class GoogleDriveConnector(BaseConnector):
         super().__init__(db_session)
 
     @property
-    def connector_type(self) -> ConnectorTypeEnum:
+    def connector_type(self) -> ConnectorType:
         """Return Google Drive connector type.
 
         Returns:
-            ConnectorTypeEnum: GOOGLE_DRIVE enum value
+            ConnectorType: GOOGLE_DRIVE enum value
         """
-        return ConnectorTypeEnum.GOOGLE_DRIVE
+        return ConnectorType.GOOGLE_DRIVE
 
     @property
     def scopes(self) -> list[str]:

@@ -35,21 +35,22 @@ from ii_agent.chat.types import (
     ToolCall,
     ToolResult,
 )
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 
 _SESSION_ID = "deep-custom-test-001"
 
 
 def _make_config(
     model: str = "custom/gpt-4",
-    api_type: APITypes = APITypes.CUSTOM,
+    provider: Provider = Provider.CUSTOM,
     api_key: Optional[str] = "sk-test",
     base_url: Optional[str] = None,
     temperature: float = 0.0,
 ) -> LLMConfig:
     return LLMConfig(
         model=model,
-        api_type=api_type,
+        provider=provider,
         api_key=api_key,
         base_url=base_url,
         temperature=temperature,
@@ -105,13 +106,13 @@ class TestCustomProviderInitDeep:
 
     def test_non_gemini_api_type_not_prefixed(self):
         """Non-Gemini API type should not add any prefix to model name."""
-        cfg = _make_config(model="gpt-4", api_type=APITypes.OPENAI)
+        cfg = _make_config(model="gpt-4", provider=Provider.OPENAI)
         provider = CustomProvider(cfg)
         assert provider.model_name == "gpt-4"
 
     def test_gemini_api_type_prefixes_model(self):
         """Gemini API type should prefix model with 'gemini/'."""
-        cfg = _make_config(model="gemini-2.0-flash", api_type=APITypes.GEMINI)
+        cfg = _make_config(model="gemini-2.0-flash", provider=Provider.GOOGLE)
         provider = CustomProvider(cfg)
         assert provider.model_name == "gemini/gemini-2.0-flash"
 
@@ -141,7 +142,7 @@ class TestCustomProviderInitDeep:
         """llm_config should be stored and accessible."""
         cfg = LLMConfig(
             model="gpt-4",
-            api_type=APITypes.CUSTOM,
+            provider=Provider.CUSTOM,
             api_key="test-key",
         )
         provider = CustomProvider(cfg)

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.agents.tools.clients import _get_client
 from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.files.types import AssetType
 from ii_agent.content.media.constants import IMAGE_MINI_TOOLS_TYPE
 from ii_agent.content.media.models import MediaTemplate
 from ii_agent.content.media.repository import MediaTemplateRepository
@@ -256,7 +257,7 @@ class MediaTemplateService:
                         session_id=session_id,
                     )
                 else:
-                    user_storage_path = path_resolver.user_generated(user_id, file_id, ext.lstrip("."))
+                    user_storage_path = path_resolver.user_file(user_id, AssetType.IMAGE, file_id, ext.lstrip("."))
                     try:
                         await default_storage.write_from_url(
                             url,

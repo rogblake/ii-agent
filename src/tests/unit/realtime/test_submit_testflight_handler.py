@@ -18,7 +18,7 @@ from ii_agent.realtime.handlers.submit_testflight import (
 def _base_kwargs(**overrides):
     return {
         "session_service": MagicMock(),
-        "llm_setting_service": MagicMock(),
+        "model_setting_service": MagicMock(),
         "file_service": MagicMock(),
         "event_service": MagicMock(),
         "run_task_service": MagicMock(),

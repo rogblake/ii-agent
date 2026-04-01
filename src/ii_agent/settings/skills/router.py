@@ -16,6 +16,7 @@ from ii_agent.settings.skills.schemas import (
 )
 from ii_agent.core.exceptions import ValidationError as CoreValidationError
 from ii_agent.core.storage.client import get_storage
+from ii_agent.core.storage.dependencies import StorageServiceDep
 from ii_agent.settings.skills.github import GitHubSkillError
 from ii_agent.settings.skills.skills_ref.errors import ParseError, ValidationError
 
@@ -115,6 +116,7 @@ async def delete_user_skill(
     current_user: CurrentUser,
     service: SkillServiceDep,
     db: DBSession,
+    storage: StorageServiceDep,
 ):
     """Delete a custom skill."""
     success = await service.delete_skill(

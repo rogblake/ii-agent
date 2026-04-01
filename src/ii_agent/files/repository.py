@@ -36,7 +36,7 @@ class FileRepository(BaseRepository[FileAsset]):
         upload_status: str = UploadStatus.COMPLETE,
         is_public: bool = False,
         sandbox_path: Optional[str] = None,
-        metadata_: Optional[dict] = None,
+        data: Optional[dict] = None,
     ) -> FileAsset:
         """Create a new file asset record."""
         asset = FileAsset(
@@ -51,7 +51,7 @@ class FileRepository(BaseRepository[FileAsset]):
             upload_status=upload_status,
             is_public=is_public,
             sandbox_path=sandbox_path,
-            metadata_=metadata_ or {},
+            data=data or {},
         )
         db.add(asset)
         await db.flush()
@@ -63,9 +63,7 @@ class FileRepository(BaseRepository[FileAsset]):
     ) -> Optional[FileAsset]:
         """Get a file by ID, validating user ownership."""
         result = await db.execute(
-            select(FileAsset).where(
-                and_(FileAsset.id == file_id, FileAsset.user_id == user_id)
-            )
+            select(FileAsset).where(and_(FileAsset.id == file_id, FileAsset.user_id == user_id))
         )
         return result.scalar_one_or_none()
 
@@ -83,24 +81,18 @@ class FileRepository(BaseRepository[FileAsset]):
         )
         return list(result.scalars().all())
 
-    async def get_by_ids(
-        self, db: AsyncSession, file_ids: list[uuid.UUID]
-    ) -> list[FileAsset]:
+    async def get_by_ids(self, db: AsyncSession, file_ids: list[uuid.UUID]) -> list[FileAsset]:
         """Get files by a list of IDs."""
         if not file_ids:
             return []
-        result = await db.execute(
-            select(FileAsset).where(FileAsset.id.in_(file_ids))
-        )
+        result = await db.execute(select(FileAsset).where(FileAsset.id.in_(file_ids)))
         return list(result.scalars().all())
 
     # ------------------------------------------------------------------
     # Session-linked queries (via SessionAsset join)
     # ------------------------------------------------------------------
 
-    async def get_by_session_id(
-        self, db: AsyncSession, session_id: uuid.UUID
-    ) -> list[FileAsset]:
+    async def get_by_session_id(self, db: AsyncSession, session_id: uuid.UUID) -> list[FileAsset]:
         """Get all files linked to a session."""
         result = await db.execute(
             select(FileAsset)
@@ -176,9 +168,7 @@ class FileRepository(BaseRepository[FileAsset]):
     # Upload status lifecycle
     # ------------------------------------------------------------------
 
-    async def mark_complete(
-        self, db: AsyncSession, file_id: uuid.UUID
-    ) -> Optional[FileAsset]:
+    async def mark_complete(self, db: AsyncSession, file_id: uuid.UUID) -> Optional[FileAsset]:
         """Mark an upload as complete."""
         asset = await self.get_by_id(db, file_id)
         if not asset:
@@ -232,8 +222,6 @@ class FileRepository(BaseRepository[FileAsset]):
 
     async def delete_user_assets(self, db: AsyncSession, user_id: uuid.UUID) -> int:
         """GDPR: delete all assets belonging to a user."""
-        result = await db.execute(
-            delete(FileAsset).where(FileAsset.user_id == user_id)
-        )
+        result = await db.execute(delete(FileAsset).where(FileAsset.user_id == user_id))
         await db.flush()
         return result.rowcount

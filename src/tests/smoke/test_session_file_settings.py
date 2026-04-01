@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from ii_agent.core.config.llm_config import APITypes
+from ii_agent.settings.llm import Provider
 from ii_agent.files.exceptions import FileSizeLimitExceededError
 from ii_agent.files.service import FileService
 from ii_agent.sessions.service import SessionService
@@ -123,8 +123,8 @@ async def test_llm_setting_create_and_read_sanity(settings_factory, monkeypatch)
         db=None,
         user_id="u1",
         model_setting_request=ModelSettingCreate(
-            model="gpt-4o",
-            api_type=APITypes.OPENAI,
+            model_id="gpt-4o",
+            provider=Provider.OPENAI,
             api_key="secret",
         ),
     )

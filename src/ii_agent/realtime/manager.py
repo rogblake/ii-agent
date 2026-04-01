@@ -16,7 +16,8 @@ from ii_agent.realtime.pubsub import AsyncIOPubSub
 from ii_agent.realtime.handlers.factory import CommandHandlerFactory
 from ii_agent.realtime.schemas import ChatMessageRequest
 from ii_agent.realtime.session_store import create_session_store
-from ii_agent.sessions import SessionInfo, SessionService
+from ii_agent.sessions import SessionInfo
+from ii_agent.sessions.service import SessionService
 logger = logging.getLogger(__name__)
 
 session_store = create_session_store()

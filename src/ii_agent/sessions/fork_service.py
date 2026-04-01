@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,9 @@ from ii_agent.sessions.exceptions import SessionNotFoundError, SessionValidation
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.core.config.settings import Settings
+
+if TYPE_CHECKING:
+    from ii_agent.sessions.schemas import ForkSessionRequest, ForkSessionResponse
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +52,7 @@ class SessionForkService:
             SessionValidationError: If fork type is invalid for the parent's agent_type.
         """
         from ii_agent.sessions.schemas import (
-            ForkSessionRequest,
             ForkSessionResponse,
-            SandboxMode,
             FORK_TYPE_VALID_SOURCES,
             get_target_agent_type,
             validate_fork_source,

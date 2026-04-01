@@ -111,7 +111,7 @@ async def test_auth_session_chat_flow(settings_factory):
         message_history=SimpleNamespace(),
         message_service=SimpleNamespace(),
         session_repo=session_service._session_repo,
-        llm_setting_service=SimpleNamespace(),
+        model_setting_service=SimpleNamespace(),
         credit_service=None,
         container=SimpleNamespace(),
         title_service=SessionTitleService(config=SessionTitleConfig(openai_api_key=None)),

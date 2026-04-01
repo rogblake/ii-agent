@@ -52,7 +52,7 @@ def _make_llm_config(
 ) -> LLMConfig:
     kwargs: Dict[str, Any] = dict(
         model=model,
-        api_type="anthropic",
+        provider="Anthropic",
         api_key=SecretStr(api_key),
         enable_prompt_caching=enable_prompt_caching,
     )

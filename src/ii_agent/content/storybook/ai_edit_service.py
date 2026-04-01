@@ -6,7 +6,7 @@ import asyncio
 import logging
 import re
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from bs4 import BeautifulSoup
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.users.service import UserService
 from ii_agent.credits.service import CreditService
 from ii_agent.billing.exceptions import InsufficientCreditsError
-from ii_agent.billing.types import BillingScope
 from ii_agent.chat.llm.factory import get_client
 from ii_agent.chat.types import ImageURLContent, MessageRole, TextContent
 from ii_agent.content.media.service import _generate_image
@@ -30,6 +29,9 @@ from ii_agent.chat.llm.utils import make_message, extract_text_content
 from ii_agent.core.request_context import get_or_generate_request_id
 from ii_agent.sessions.service import SessionService
 from ii_agent.settings.llm.service import ModelSettingService
+
+if TYPE_CHECKING:
+    from ii_agent.core.config.llm_config import LLMConfig
 
 logger = logging.getLogger(__name__)
 
@@ -342,13 +344,13 @@ class StorybookAIEditService:
         *,
         session_service: SessionService,
         user_service: UserService,
-        llm_setting_service: ModelSettingService,
+        model_setting_service: ModelSettingService,
         credit_service: CreditService,
         config: Settings,
     ) -> None:
         self._session_service = session_service
         self._user_service = user_service
-        self._llm_setting_service = llm_setting_service
+        self._model_setting_service = model_setting_service
         self._credit_service = credit_service
         self._config = config
 
@@ -613,7 +615,7 @@ class StorybookAIEditService:
         """Resolve the session LLM config with default fallback."""
 
         async def _get_default() -> LLMConfig:
-            return await self._llm_setting_service.resolve_system_config(db, setting_id="default")
+            return await self._model_setting_service.resolve_system_config(db, setting_id="default")
 
         try:
             session_uuid = uuid.UUID(session_id)
@@ -626,7 +628,7 @@ class StorybookAIEditService:
             return (await _get_default()).model_copy(deep=True), "default"
 
         try:
-            llm_config = await self._llm_setting_service.get_user_llm_config(
+            llm_config = await self._model_setting_service.get_user_llm_config(
                 db,
                 setting_id=setting_id,
                 user_id=user_id,
@@ -634,7 +636,7 @@ class StorybookAIEditService:
             return llm_config.model_copy(deep=True), setting_id
         except Exception:
             try:
-                llm_config = await self._llm_setting_service.resolve_system_config(
+                llm_config = await self._model_setting_service.resolve_system_config(
                     db, setting_id=setting_id
                 )
                 return llm_config.model_copy(deep=True), setting_id

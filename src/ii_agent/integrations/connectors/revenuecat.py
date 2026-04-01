@@ -14,7 +14,7 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.config.settings import get_settings
-from ii_agent.integrations.connectors.models import Connector, ConnectorTypeEnum
+from ii_agent.integrations.connectors.models import Connector, ConnectorType
 
 from .base import BaseConnector, ConnectorData
 
@@ -51,8 +51,8 @@ class RevenueCatConnector(BaseConnector):
         super().__init__(db_session)
 
     @property
-    def connector_type(self) -> ConnectorTypeEnum:
-        return ConnectorTypeEnum.REVENUECAT
+    def connector_type(self) -> ConnectorType:
+        return ConnectorType.REVENUECAT
 
     @property
     def scopes(self) -> list[str]:

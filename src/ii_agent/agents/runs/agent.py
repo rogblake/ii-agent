@@ -6,7 +6,7 @@ from time import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Sequence, Union
 
 from pydantic import BaseModel
-from ii_agent.agents.types import Provider
+from ii_agent.settings.llm import Provider
 from ii_agent.files.media import Audio, File, Image, Video
 from ii_agent.agents.models.message import Citations, Message
 from ii_agent.agents.models.metrics import Metrics

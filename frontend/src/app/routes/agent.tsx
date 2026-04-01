@@ -127,40 +127,19 @@ function AgentPageContent() {
         previousResultUrlRef.current = previewUrl ?? ''
     }, [dispatch, isMobile, previewUrl, isMobileChatVisible])
 
-    const handleAwakeClick = useCallback(() => {
-        setIsAwakeLoading(true)
-        if (socket?.connected) {
-            sendMessage({
-                session_uuid: sessionId || '',
-                content: { command: CommandType.AWAKE_SANDBOX }
-            })
-        }
-    }, [socket, sendMessage, sessionId])
-
-    // Single sandbox_status request for both CODE and RESULT tabs.
-    // AgentResult's duplicate effect is removed — both tabs need the same
-    // status + vscode_url info from one response.
+    // Single sandbox_status request for both PROJECT and RESULT tabs.
     useEffect(() => {
         if (
             (activeTab === TAB.PROJECT || activeTab === TAB.RESULT) &&
             wsConnectionState === WebSocketConnectionState.CONNECTED &&
             socket
         ) {
-            if (activeTab === TAB.CODE) {
-                setIframeKey((prev) => prev + 1)
-            }
             sendMessage({
                 session_uuid: sessionId || '',
                 content: { command: CommandType.SANDBOX_STATUS }
             })
         }
     }, [activeTab, sessionId, socket, sendMessage, wsConnectionState])
-
-    useEffect(() => {
-        if (isSandboxIframeAwake) {
-            setIsAwakeLoading(false)
-        }
-    }, [isSandboxIframeAwake])
 
     useEffect(() => {
         dispatch(setQuestionMode(QUESTION_MODE.AGENT))

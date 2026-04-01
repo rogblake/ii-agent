@@ -38,7 +38,7 @@ from ii_agent.agents.models.metrics import Metrics
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.exceptions import ModelProviderError
 from ii_agent.files.media import Image
-from ii_agent.agents.types import Provider
+from ii_agent.settings.llm import Provider
 
 # Real SDK types used for building response mocks
 from google.genai.types import Content, Part

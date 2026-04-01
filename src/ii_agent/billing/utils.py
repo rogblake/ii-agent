@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
+
+from ii_agent.core.logger import logger
 
 # ---------------------------------------------------------------------------
 # Pricing constants
@@ -43,3 +46,32 @@ def credits_to_usd(credits_amount: float | Decimal) -> Decimal:
     Same left-to-right Decimal strategy as :func:`usd_to_credits`.
     """
     return Decimal(str(credits_amount)) * USD_PER_100_CREDITS / CREDITS_PER_100_USD
+
+
+# ---------------------------------------------------------------------------
+# Storybook billing finalization (stub)
+# ---------------------------------------------------------------------------
+
+
+async def finalize_storybook_async_operation(
+    *,
+    reservation_service: Any,
+    scope: Any,
+    reservation_id: str,
+    result: Any | None = None,
+    release_reason: str = "unused",
+    settlement_error: str | None = None,
+) -> None:
+    """Settle or release a credit reservation for a storybook async operation.
+
+    This is a placeholder stub. The credit reservation system was removed
+    during the DDD refactoring. Once the reservation infrastructure is
+    re-introduced, this function should delegate to the reservation service
+    to either settle (when ``result`` is provided) or release the hold.
+    """
+    logger.warning(
+        "finalize_storybook_async_operation called but reservation system is not yet migrated "
+        "(reservation_id={}, release_reason={})",
+        reservation_id,
+        release_reason,
+    )

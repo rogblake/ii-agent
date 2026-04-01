@@ -1,7 +1,7 @@
 """SQLAlchemy models for connectors domain.
 
 Models migrated from core/db/models.py:
-- ConnectorTypeEnum
+- ConnectorType
 - Connector
 - ComposioProfile
 """
@@ -21,8 +21,7 @@ from ii_agent.integrations.connectors.types import ComposioProfileStatus, Connec
 if TYPE_CHECKING:
     from ii_agent.users.models import User
 
-# Backward compat alias
-ConnectorTypeEnum = ConnectorType
+ConnectorType = ConnectorType
 
 
 class Connector(Base):

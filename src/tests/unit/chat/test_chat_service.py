@@ -39,7 +39,7 @@ def chat_service(settings_factory, title_service):
         message_history=SimpleNamespace(),
         message_service=SimpleNamespace(),
         session_repo=FakeSessionRepo(),
-        llm_setting_service=SimpleNamespace(),
+        model_setting_service=SimpleNamespace(),
         credit_service=None,
         container=SimpleNamespace(),
         title_service=title_service,

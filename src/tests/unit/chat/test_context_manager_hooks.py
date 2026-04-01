@@ -4,7 +4,8 @@ import pytest
 
 from ii_agent.chat.application.context_service import ContextWindowManager
 from ii_agent.chat.types import Message, MessageRole, TextContent
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 
 
 @pytest.mark.asyncio
@@ -21,7 +22,7 @@ async def test_compress_context_if_needed_noop_below_threshold():
         )
     ]
 
-    llm_config = LLMConfig(model="gpt-4o", api_type=APITypes.OPENAI)
+    llm_config = LLMConfig(model="gpt-4o", provider=Provider.OPENAI)
 
     result = await ContextWindowManager.compress_context_if_needed(
         db_session=None,

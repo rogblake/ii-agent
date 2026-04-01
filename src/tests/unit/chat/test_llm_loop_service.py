@@ -17,7 +17,8 @@ from ii_agent.chat.types import (
     ToolCall,
     ToolResult,
 )
-from ii_agent.core.config.llm_config import APITypes, LLMConfig
+from ii_agent.settings.llm import Provider
+from ii_agent.core.config.llm_config import LLMConfig
 
 
 class FakeMessageService:
@@ -198,7 +199,7 @@ async def test_llm_turn_loop_emits_usage_and_complete(monkeypatch):
         model_id="gpt-4o",
         user_message=user_message,
         run_id="run-1",
-        llm_config=LLMConfig(model="gpt-4o", api_type=APITypes.OPENAI),
+        llm_config=LLMConfig(model="gpt-4o", provider=Provider.OPENAI),
         chat_request=SimpleNamespace(model_id="gpt-4o"),
         tool_service=SimpleNamespace(),
     ):
@@ -262,7 +263,7 @@ async def test_llm_turn_loop_records_tool_and_llm_invocations(monkeypatch):
         model_id="gpt-4o",
         user_message=user_message,
         run_id=str(uuid4()),
-        llm_config=LLMConfig(model="gpt-4o", api_type=APITypes.OPENAI),
+        llm_config=LLMConfig(model="gpt-4o", provider=Provider.OPENAI),
         chat_request=SimpleNamespace(model_id="gpt-4o"),
         tool_service=SimpleNamespace(execute_tool=_execute_tool),
     ):
@@ -327,7 +328,7 @@ async def test_llm_turn_loop_ignores_telemetry_write_failures(monkeypatch):
         model_id="gpt-4o",
         user_message=user_message,
         run_id=str(uuid4()),
-        llm_config=LLMConfig(model="gpt-4o", api_type=APITypes.OPENAI),
+        llm_config=LLMConfig(model="gpt-4o", provider=Provider.OPENAI),
         chat_request=SimpleNamespace(model_id="gpt-4o"),
         tool_service=SimpleNamespace(execute_tool=_execute_tool),
     ):
@@ -379,7 +380,7 @@ async def test_llm_turn_loop_records_failed_invocation_on_provider_error(monkeyp
             model_id="gpt-4o",
             user_message=user_message,
             run_id="run-1",
-            llm_config=LLMConfig(model="gpt-4o", api_type=APITypes.OPENAI),
+            llm_config=LLMConfig(model="gpt-4o", provider=Provider.OPENAI),
             chat_request=SimpleNamespace(model_id="gpt-4o"),
             tool_service=SimpleNamespace(),
         ):

@@ -13,6 +13,7 @@ from google.cloud import storage
 from google.genai import types
 from vertexai.preview.vision_models import Image, ImageGenerationModel
 
+from ii_agent.core.storage.path_resolver import path_resolver
 from .base import BaseImageGenerationClient, ImageGenerationResult, ImageGenerationError
 from .registry import register_provider
 from .constants import ImageGenerationProvider
@@ -94,7 +95,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
         image_urls = kwargs.get("image_urls")
         image_size = kwargs.get("image_size", "1K")
         metadata = kwargs.get("metadata", {})
-        session_id = metadata.get("session_id")
+        user_id = kwargs.get("user_id") or metadata.get("user_id")
         background = kwargs.get("background")
 
         if background:
@@ -109,23 +110,23 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
                     image_urls=image_urls,
                     aspect_ratio=aspect_ratio,
                     image_size=image_size,
-                    session_id=session_id,
+                    user_id=user_id,
                 )
             return await self._generate_from_images_with_genai(
                 prompt=prompt,
                 image_urls=image_urls,
                 aspect_ratio=aspect_ratio,
                 image_size=image_size,
-                session_id=session_id,
+                user_id=user_id,
             )
         else:
             # Text-to-image generation
             if self.model and self.model_name.startswith("imagen"):
                 return await self._generate_with_imagen(
-                    prompt, aspect_ratio, session_id
+                    prompt, aspect_ratio, user_id
                 )
             return await self._generate_with_genai(
-                prompt, aspect_ratio, image_size, session_id
+                prompt, aspect_ratio, image_size, user_id
             )
 
     async def _download_image(self, url: str) -> tuple[bytes, str]:
@@ -157,7 +158,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
         image_urls: List[str] | None = None,
         aspect_ratio: SUPPORTED_VERTEX_ASPECT_RATIOS = "1:1",
         image_size: str = "1K",
-        session_id: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> ImageGenerationResult:
         """Generate image using Vertex AI API."""
         if not image_urls:
@@ -213,7 +214,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
             if image:
                 image_bytes = image.image_bytes
                 url, storage_path, file_name = await self._upload_bytes(
-                    image_bytes, session_id
+                    image_bytes, user_id
                 )
                 return ImageGenerationResult(
                     url=url,
@@ -226,7 +227,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
             if getattr(part, "inline_data", None) and part.inline_data.data:
                 image_bytes = part.inline_data.data
                 url, storage_path, file_name = await self._upload_bytes(
-                    image_bytes, session_id
+                    image_bytes, user_id
                 )
                 return ImageGenerationResult(
                     url=url,
@@ -240,18 +241,12 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
         raise ImageGenerationError("No image data returned from genai model")
 
     async def _generate_with_imagen(
-        self, prompt: str, aspect_ratio: str, session_id: str | None = None
+        self, prompt: str, aspect_ratio: str, user_id: uuid.UUID
     ) -> ImageGenerationResult:
         """Generate image using the Imagen model."""
-        # Generate storage path based on session_id
-        if session_id:
-            file_id = str(uuid.uuid4())
-            file_name = f"generated-{file_id[:8]}.png"
-            blob_name = f"sessions/{session_id}/generated/{file_name}"
-        else:
-            file_id = str(uuid.uuid4())
-            file_name = f"{file_id}.png"
-            blob_name = f"image_generation/{file_name}"
+        file_id = str(uuid.uuid4())
+        file_name = f"{file_id}.png"
+        blob_name = path_resolver.user_file(user_id, "image", file_id, "png")
 
         # Get the directory path for output_gcs_uri (without filename)
         output_dir = "/".join(blob_name.split("/")[:-1])
@@ -298,7 +293,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
         image_urls: List[str],
         aspect_ratio: str = "1:1",
         image_size: str = "1K",
-        session_id: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> ImageGenerationResult:
         """Edit/generate image from reference images using Imagen model."""
         if not image_urls:
@@ -310,15 +305,9 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
         base_image_bytes, _ = await self._download_image(image_urls[0])
         base_image = Image(image_bytes=base_image_bytes)
 
-        # Generate storage path based on session_id
-        if session_id:
-            file_id = str(uuid.uuid4())
-            file_name = f"generated-{file_id[:8]}.png"
-            blob_name = f"sessions/{session_id}/generated/{file_name}"
-        else:
-            file_id = str(uuid.uuid4())
-            file_name = f"{file_id}.png"
-            blob_name = f"image_generation/{file_name}"
+        file_id = str(uuid.uuid4())
+        file_name = f"{file_id}.png"
+        blob_name = path_resolver.user_file(user_id, "image", file_id, "png")
 
         # Get the directory path for output_gcs_uri (without filename)
         output_dir = "/".join(blob_name.split("/")[:-1])
@@ -367,7 +356,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
         prompt: str,
         aspect_ratio: str,
         image_size: str,
-        session_id: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> ImageGenerationResult:
         """Generate image using genai client (e.g., nano banana)."""
         client = genai.Client(
@@ -400,7 +389,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
             if image:
                 image_bytes = image.image_bytes
                 url, storage_path, file_name = await self._upload_bytes(
-                    image_bytes, session_id
+                    image_bytes, user_id
                 )
                 return ImageGenerationResult(
                     url=url,
@@ -414,18 +403,12 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
         raise ImageGenerationError("No image data returned from genai model")
 
     async def _upload_bytes(
-        self, image_bytes: bytes, session_id: str | None = None
+        self, image_bytes: bytes, user_id: uuid.UUID
     ) -> tuple[str, str, str]:
         """Upload image bytes to GCS and return (public_url, storage_path, file_name)."""
-        # Use session-based path if session_id is provided, otherwise fallback to image_generation
-        if session_id:
-            file_id = str(uuid.uuid4())
-            file_name = f"generated-{file_id[:8]}.png"
-            blob_name = f"sessions/{session_id}/generated/{file_name}"
-        else:
-            file_id = str(uuid.uuid4())
-            file_name = f"{file_id}.png"
-            blob_name = f"image_generation/{file_name}"
+        file_id = str(uuid.uuid4())
+        file_name = f"{file_id}.png"
+        blob_name = path_resolver.user_file(user_id, "image", file_id, "png")
 
         def _upload_sync() -> str:
             blob = self.bucket.blob(blob_name)

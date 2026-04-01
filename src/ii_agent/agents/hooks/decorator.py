@@ -4,6 +4,9 @@ from typing import Any, Callable, TypeVar, Union, overload
 # Type variable for better type hints
 F = TypeVar("F", bound=Callable[..., Any])
 
+# Attribute name used to mark hook functions for background execution
+HOOK_RUN_IN_BACKGROUND_ATTR = "_hook_run_in_background"
+
 
 def _is_async_function(func: Callable) -> bool:
     """

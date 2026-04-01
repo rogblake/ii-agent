@@ -12,7 +12,7 @@ from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.config.llm_config import APITypes
+from ii_agent.settings.llm import Provider
 from ii_agent.core.db import get_db_session_local
 from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.settings.llm.service import get_system_model_config_from_db
@@ -48,7 +48,7 @@ class OpenAIVectorStore(VectorStore):
     def __init__(self) -> None:
         self._llm_config: ModelConfig | None = None
         self._client: AsyncOpenAI | None = None
-        self.provider = APITypes.OPENAI.value
+        self.provider = Provider.OPENAI.value
 
     async def _get_client(self) -> AsyncOpenAI:
         """Lazy-init the OpenAI client from the DB system config."""

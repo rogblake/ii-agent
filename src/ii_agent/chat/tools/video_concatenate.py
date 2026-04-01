@@ -24,6 +24,8 @@ from ii_agent.chat.types import (
     TextContentPart,
 )
 from ii_agent.core.db import get_db_session_local
+from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.files.types import AssetType
 
 from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
 
@@ -45,8 +47,22 @@ class ConcatenateVideosTool(BaseTool):
     def __init__(self, session_id: str, *, container):
         self._container = container
         self.session_id = session_id
+        self._user_id: uuid.UUID | None = None
         self._name = "concatenate_videos"
         self._init_trusted_domains()
+
+    async def _resolve_user_id(self) -> uuid.UUID:
+        if self._user_id:
+            return self._user_id
+        from sqlalchemy import select
+        from ii_agent.sessions.models import Session
+        async with get_db_session_local() as db:
+            result = await db.execute(
+                select(Session).where(Session.id == self.session_id)
+            )
+            session = result.scalar_one()
+            self._user_id = session.user_id
+        return self._user_id
 
     def _init_trusted_domains(self):
         """Initialize trusted domains from config."""
@@ -492,9 +508,8 @@ class ConcatenateVideosTool(BaseTool):
 
             file_id = str(uuid.uuid4())
             file_name = f"video-concat-{file_id[:8]}.mp4"
-            # TODO: Migrate to path_resolver.user_generated(user_id, file_id, ext)
-            # once user_id is available on tool instance
-            blob_path = f"sessions/{self.session_id}/generated/{file_name}"
+            user_id = await self._resolve_user_id()
+            blob_path = path_resolver.user_file(user_id, AssetType.VIDEO, file_id, "mp4")
 
             def _upload_to_gcs() -> tuple[int, str]:
                 from google.cloud import storage as gcs_storage

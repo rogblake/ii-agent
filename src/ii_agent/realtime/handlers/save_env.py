@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from ii_agent.agents.types import AgentType
 from ii_agent.realtime.pubsub import AsyncIOPubSub
@@ -27,6 +27,9 @@ from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.core.config.settings import get_settings
 from ii_server.core.workspace import WorkspaceManager
 from ii_agent.core.logger import logger
+
+if TYPE_CHECKING:
+    from ii_agent.tasks.models import RunTask
 
 
 class SaveEnvHandler(BaseCommandHandler[SaveEnvContent]):

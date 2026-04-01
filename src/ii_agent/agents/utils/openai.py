@@ -3,6 +3,7 @@ import mimetypes
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Union
 
+from ii_agent.agents.utils.heic import convert_heic_to_jpeg, is_heic_format
 from ii_agent.files.media import Image
 from ii_agent.core.logger import logger
 

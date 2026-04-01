@@ -13,6 +13,7 @@ import fal_client
 import httpx
 from google.cloud import storage
 
+from ii_agent.core.storage.path_resolver import path_resolver
 from ii_agent_tools.logger import get_logger
 
 logger = get_logger(__name__)
@@ -797,7 +798,7 @@ async def persist_fal_media_asset(
     media_kind: str,
     output_bucket: str | None,
     project_id: str | None = None,
-    session_id: str | None = None,
+    user_id: uuid.UUID | None = None,
     default_mime_type: str,
 ) -> tuple[str, str, str, int]:
     if not output_bucket:
@@ -812,12 +813,11 @@ async def persist_fal_media_asset(
     )
     file_path = PurePosixPath(file_name)
     unique_suffix = uuid.uuid4().hex[:12]
-    file_name = f"{file_path.stem}-{unique_suffix}{file_path.suffix}"
+    file_id = f"{file_path.stem}-{unique_suffix}"
+    ext = file_path.suffix.lstrip(".")
+    file_name = f"{file_id}.{ext}"
 
-    if session_id:
-        blob_name = f"sessions/{session_id}/generated/{file_name}"
-    else:
-        blob_name = f"{media_kind}_generation/{file_name}"
+    blob_name = path_resolver.user_file(user_id, media_kind, file_id, ext)
 
     client = storage.Client(project=project_id) if project_id else storage.Client()
     bucket = client.bucket(output_bucket)

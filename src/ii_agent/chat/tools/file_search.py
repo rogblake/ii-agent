@@ -7,8 +7,8 @@ from openai import AsyncOpenAI
 from openai.types.shared_params.comparison_filter import ComparisonFilter
 from openai.types.shared_params.compound_filter import CompoundFilter
 from ii_agent.chat.types import ErrorTextContent, JsonResultContent
-from ii_agent.core.container import get_app_container
 from ii_agent.core.db import get_db_session_local
+from ii_agent.settings.llm.repository import ModelSettingRepository
 from ii_agent.settings.llm.schemas import ModelConfig
 
 from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse

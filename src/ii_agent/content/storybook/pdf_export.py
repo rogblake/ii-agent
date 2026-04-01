@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import io
 import logging
-from typing import Optional, Dict, Any, AsyncGenerator
+from typing import Optional, Dict, Any, AsyncGenerator, TYPE_CHECKING
 
 from PIL import Image
 
@@ -14,6 +14,9 @@ from ii_agent.content.storybook.export_utils import (
     prepare_pages_for_export,
     prepare_single_page_for_export,
 )
+
+if TYPE_CHECKING:
+    from pypdf import PdfWriter
 
 logger = logging.getLogger(__name__)
 

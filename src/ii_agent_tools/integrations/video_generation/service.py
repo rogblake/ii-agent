@@ -381,6 +381,7 @@ class VideoGenerationService:
         use_extension_api: bool = True,
         provider_payload: dict[str, Any] | None = None,
         request_mode: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> VideoGenerationResult:
         """
         Generate video with support for long durations.
@@ -607,7 +608,7 @@ class VideoGenerationService:
             logger.info(f"[VideoGenerationService] Last frame extracted: {last_frame_path.stat().st_size} bytes")
 
             # Upload extracted frame to GCS and use URL
-            frame_blob_path = utils.construct_blob_path(f"frame_{uuid.uuid4().hex[:8]}.png")
+            frame_blob_path = utils.construct_blob_path(user_id, f"frame_{uuid.uuid4().hex[:8]}.png")
             await self.storage.write_from_local_path(
                 str(last_frame_path), frame_blob_path, "image/png"
             )
@@ -662,7 +663,7 @@ class VideoGenerationService:
         logger.info(f"[VideoGenerationService] Merge complete: {merged_video_path.stat().st_size} bytes")
 
         name = utils.generate_unique_video_name()
-        blob_path = utils.construct_blob_path(f"{name}.mp4")
+        blob_path = utils.construct_blob_path(user_id, f"{name}.mp4")
         try:
             await self.storage.write_from_local_path(
                 str(merged_video_path),
@@ -696,6 +697,7 @@ class VideoGenerationService:
         person_generation: Literal["allow_all", "allow_adult"] | None = None,
         end_frame: str | None = None,
         provider: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> VideoGenerationResult:
         """Extend an existing video using Veo's video extension API.
 
@@ -723,7 +725,7 @@ class VideoGenerationService:
             )
             try:
                 name = utils.generate_unique_video_name()
-                blob_path = utils.construct_blob_path(f"{name}_source.mp4")
+                blob_path = utils.construct_blob_path(user_id, f"{name}_source.mp4")
                 await self.storage.write_from_url(source_video_url, blob_path, "video/mp4")
 
                 output_bucket = getattr(video_generation_client, 'output_bucket', None)

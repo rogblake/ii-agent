@@ -23,11 +23,10 @@ src/ii_agent/
 ├── billing/        # Stripe webhooks, payment transactions
 ├── credits/        # Credit balance, ledger, transactions (ADR-004 two-table design)
 ├── tasks/          # Unified run lifecycle tracker (RunTask + TaskLog) — canonical domain impl
-├── plans/          # Plan domain (milestones, plan generation)
 ├── sessions/       # Chat sessions, pins, wishlists, fork, title service
 ├── subscribers/    # Event subscribers (decoupled side-effects)
 ├── chat/           # Chat API, application services, messages, runs, providers, media
-├── agents/         # Agent execution, tools (13 categories), skills, sandboxes, LLM models
+├── agents/         # Agent execution, plans, tools (13 categories), skills, sandboxes, LLM models
 ├── realtime/       # Socket.IO manager, 21 command handlers, pubsub, events
 ├── content/        # Slides, storybooks, media templates
 ├── files/          # File upload/download, user & session assets

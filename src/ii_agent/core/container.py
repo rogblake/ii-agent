@@ -99,7 +99,7 @@ from ii_agent.credits.service import CreditService
 from ii_agent.agents.sandboxes.live_terminal_service import LiveTerminalService
 from ii_agent.agents.sandboxes.service import SandboxService
 from ii_agent.agents.sandboxes.explorer import WorkspaceExplorer
-from ii_agent.plans.service import PlanService
+from ii_agent.agents.plans.service import PlanService
 from ii_agent.realtime.events.service import EventService
 
 # ── Storage ───────────────────────────────────────────────────────────────

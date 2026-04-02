@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from ii_agent.plans.types import MilestoneStatus
+from ii_agent.agents.plans.types import MilestoneStatus
 
 
 class MilestoneSchema(BaseModel):

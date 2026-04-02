@@ -94,8 +94,7 @@ class ImageGenerateTool(BaseSandboxTool):
         super().__init__()
 
     async def on_tool_start(self, agent: "IIAgent", fc: "FunctionCall") -> None:
-        if not agent.sandbox:
-            raise ValueError(f"Tool {self.name} requires running sandbox before execution!")
+        await super().on_tool_start(agent, fc)
         self.sandbox = agent.sandbox
         self.session_id = agent.session_id
         return

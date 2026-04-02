@@ -8,23 +8,22 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from ii_agent.plans.service import PlanService
-from ii_agent.plans.types import MilestoneStatus
+from ii_agent.agents.plans.service import PlanService
 from ii_agent.tasks.types import RunStatus
 
 
 def _make_plan_service() -> tuple[PlanService, MagicMock, MagicMock, AsyncMock]:
     """Create PlanService with mocked dependencies."""
     session_svc = MagicMock()
-    event_repo = MagicMock()
+    event_service = MagicMock()
     pubsub = AsyncMock()
 
     svc = PlanService(
         session_service=session_svc,
-        event_repo=event_repo,
+        event_service=event_service,
         pubsub=pubsub,
     )
-    return svc, session_svc, event_repo, pubsub
+    return svc, session_svc, event_service, pubsub
 
 
 def _session_with_plan(
@@ -46,9 +45,17 @@ def _session_with_plan(
 class TestGetMilestoneContext:
     def test_single_milestone_returns_execution_prompt(self) -> None:
         svc, *_ = _make_plan_service()
-        ctx = {"summary": "Build a todo app", "milestones": [
-            {"id": "1", "content": "Setup project", "details": "Init repo", "status": "pending"},
-        ]}
+        ctx = {
+            "summary": "Build a todo app",
+            "milestones": [
+                {
+                    "id": "1",
+                    "content": "Setup project",
+                    "details": "Init repo",
+                    "status": "pending",
+                },
+            ],
+        }
         result = svc.get_milestone_context(plan_context=ctx, milestone_ids=["1"])
 
         assert result is not None
@@ -57,10 +64,18 @@ class TestGetMilestoneContext:
 
     def test_multiple_milestones_returns_combined_context(self) -> None:
         svc, *_ = _make_plan_service()
-        ctx = {"summary": "Build a todo app", "milestones": [
-            {"id": "1", "content": "Setup project", "details": "Init repo", "status": "pending"},
-            {"id": "2", "content": "Add auth", "details": "JWT login", "status": "pending"},
-        ]}
+        ctx = {
+            "summary": "Build a todo app",
+            "milestones": [
+                {
+                    "id": "1",
+                    "content": "Setup project",
+                    "details": "Init repo",
+                    "status": "pending",
+                },
+                {"id": "2", "content": "Add auth", "details": "JWT login", "status": "pending"},
+            ],
+        }
         result = svc.get_milestone_context(plan_context=ctx, milestone_ids=["1", "2"])
 
         assert result is not None
@@ -70,9 +85,12 @@ class TestGetMilestoneContext:
 
     def test_no_matching_milestones_returns_none(self) -> None:
         svc, *_ = _make_plan_service()
-        ctx = {"summary": "Test", "milestones": [
-            {"id": "1", "content": "Setup", "details": "", "status": "pending"},
-        ]}
+        ctx = {
+            "summary": "Test",
+            "milestones": [
+                {"id": "1", "content": "Setup", "details": "", "status": "pending"},
+            ],
+        }
         result = svc.get_milestone_context(plan_context=ctx, milestone_ids=["99"])
         assert result is None
 
@@ -88,9 +106,11 @@ class TestUpdateMilestonesAfterRun:
         svc, session_svc, event_repo, pubsub = _make_plan_service()
         session_id = uuid.uuid4()
 
-        session = _session_with_plan(milestones=[
-            {"id": "1", "content": "Setup", "details": "", "status": "in_progress"},
-        ])
+        session = _session_with_plan(
+            milestones=[
+                {"id": "1", "content": "Setup", "details": "", "status": "in_progress"},
+            ]
+        )
         session_svc.get_session_by_id = AsyncMock(return_value=session)
         event_repo.save_event = AsyncMock()
 
@@ -108,9 +128,11 @@ class TestUpdateMilestonesAfterRun:
         svc, session_svc, event_repo, pubsub = _make_plan_service()
         session_id = uuid.uuid4()
 
-        session = _session_with_plan(milestones=[
-            {"id": "1", "content": "Setup", "details": "", "status": "in_progress"},
-        ])
+        session = _session_with_plan(
+            milestones=[
+                {"id": "1", "content": "Setup", "details": "", "status": "in_progress"},
+            ]
+        )
         session_svc.get_session_by_id = AsyncMock(return_value=session)
         event_repo.save_event = AsyncMock()
 
@@ -139,10 +161,12 @@ class TestResetMilestonesToPending:
         svc, session_svc, event_repo, pubsub = _make_plan_service()
         session_id = uuid.uuid4()
 
-        session = _session_with_plan(milestones=[
-            {"id": "1", "content": "Setup", "details": "", "status": "in_progress"},
-            {"id": "2", "content": "Auth", "details": "", "status": "in_progress"},
-        ])
+        session = _session_with_plan(
+            milestones=[
+                {"id": "1", "content": "Setup", "details": "", "status": "in_progress"},
+                {"id": "2", "content": "Auth", "details": "", "status": "in_progress"},
+            ]
+        )
         session_svc.get_session_by_id = AsyncMock(return_value=session)
         event_repo.save_event = AsyncMock()
 

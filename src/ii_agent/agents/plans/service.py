@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.agents.plans.types import MilestoneStatus
 from ii_agent.agents.prompts.plan_mode_prompt import get_milestone_execution_prompt
 from ii_agent.core.logger import logger
-from ii_agent.plans.types import MilestoneStatus
 from ii_agent.realtime.events.app_events import MilestoneUpdatedEvent
 from ii_agent.realtime.events.service import EventService
 from ii_agent.realtime.pubsub import AsyncIOPubSub
@@ -61,9 +61,7 @@ class PlanService:
                 for i, m in enumerate(milestones)
             )
 
-            target_milestones = [
-                m for m in milestones if str(m.get("id")) in milestone_ids
-            ]
+            target_milestones = [m for m in milestones if str(m.get("id")) in milestone_ids]
             if not target_milestones:
                 logger.warning(f"No milestones found matching IDs: {milestone_ids}")
                 return None
@@ -79,8 +77,7 @@ class PlanService:
                 )
 
             target_list = "\n".join(
-                f"  - {m.get('content', '')}: {m.get('details', '')}"
-                for m in target_milestones
+                f"  - {m.get('content', '')}: {m.get('details', '')}" for m in target_milestones
             )
             return f"""# Project Plan Execution
 
@@ -120,11 +117,17 @@ class PlanService:
 
         if status == RunStatus.COMPLETED:
             await self._update_milestones_status(
-                db, session_id=session_id, milestone_ids=milestone_ids, status=MilestoneStatus.COMPLETED
+                db,
+                session_id=session_id,
+                milestone_ids=milestone_ids,
+                status=MilestoneStatus.COMPLETED,
             )
         elif status in (RunStatus.FAILED, RunStatus.CANCELLED):
             await self._update_milestones_status(
-                db, session_id=session_id, milestone_ids=milestone_ids, status=MilestoneStatus.PENDING
+                db,
+                session_id=session_id,
+                milestone_ids=milestone_ids,
+                status=MilestoneStatus.PENDING,
             )
 
     async def reset_milestones_to_pending(
@@ -168,16 +171,17 @@ class PlanService:
                     session_id=session_id,
                     content={"milestone_id": milestone.get("id"), "status": str(status)},
                     milestone_id=str(milestone.get("id", "")),
-                    status=status if status in (
+                    status=status
+                    if status
+                    in (
                         MilestoneStatus.PENDING,
                         MilestoneStatus.IN_PROGRESS,
                         MilestoneStatus.COMPLETED,
                         MilestoneStatus.FAILED,
-                    ) else MilestoneStatus.PENDING,
+                    )
+                    else MilestoneStatus.PENDING,
                 )
-                await self._event_service.save_event(
-                    db, session_id=session_id, event=event
-                )
+                await self._event_service.save_event(db, session_id=session_id, event=event)
                 if self._pubsub:
                     await self._pubsub.publish(event)
 

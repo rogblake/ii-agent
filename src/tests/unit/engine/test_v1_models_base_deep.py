@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncIterator, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -28,7 +28,9 @@ from ii_agent.agents.models.message import Message
 from ii_agent.agents.models.metrics import Metrics
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.exceptions import AgentRunException, ModelProviderError
+from ii_agent.agents.runs.agent import RunContentEvent
 from ii_agent.agents.tools.function import Function
+from ii_agent.agents.tools.function import FunctionCall, FunctionExecutionResult
 from ii_agent.core.logger import logger
 
 
@@ -615,6 +617,59 @@ class TestPopulateAssistantMessage:
             provider_response=provider_response,
         )
         assert assistant_msg.metrics is not None
+
+
+class TestArunFunctionCallsCleanup:
+    @pytest.mark.asyncio
+    async def test_async_generator_tasks_are_cleaned_up_when_stream_is_closed(self):
+        model = _ConcreteModel()
+        generator_finalized = asyncio.Event()
+        release_generator = asyncio.Event()
+
+        async def _tool_stream():
+            try:
+                yield RunContentEvent(content="partial")
+                await release_generator.wait()
+            finally:
+                generator_finalized.set()
+
+        function = Function(
+            name="stream_tool",
+            description="stream tool",
+            parameters={"type": "object", "properties": {}},
+            entrypoint=lambda: None,
+            skip_entrypoint_processing=True,
+        )
+        function_call = FunctionCall(
+            function=function,
+            arguments={},
+            call_id="call-1",
+            result=_tool_stream(),
+        )
+        execution_result = FunctionExecutionResult(
+            status="success",
+            result=function_call.result,
+        )
+
+        model.arun_function_call = AsyncMock(
+            return_value=(True, MagicMock(elapsed=0.01), function_call, execution_result)
+        )
+
+        stream = model.arun_function_calls(
+            function_calls=[function_call],
+            function_call_results=[],
+        )
+
+        started_event = await anext(stream)
+        assert started_event.event == "ToolCallStarted"
+
+        stream_event = await asyncio.wait_for(anext(stream), timeout=1)
+        assert isinstance(stream_event, RunContentEvent)
+        assert stream_event.content == "partial"
+
+        await stream.aclose()
+
+        await asyncio.wait_for(generator_finalized.wait(), timeout=1)
 
 
 # ---------------------------------------------------------------------------

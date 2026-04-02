@@ -441,7 +441,10 @@ class Model(ABC):
             logger.debug(f"{self.get_provider()} Async Response End")
         finally:
             # Close the Gemini client
-            if self.__class__.__name__ in ["Gemini", "GeminiInteractions"] and self.client is not None:
+            if (
+                self.__class__.__name__ in ["Gemini", "GeminiInteractions"]
+                and self.client is not None
+            ):
                 try:
                     await self.client.aio.aclose()  # type: ignore
                     self.client = None
@@ -787,7 +790,10 @@ class Model(ABC):
             )
         finally:
             # Close the Gemini client
-            if self.__class__.__name__ in ["Gemini", "GeminiInteractions"] and self.client is not None:
+            if (
+                self.__class__.__name__ in ["Gemini", "GeminiInteractions"]
+                and self.client is not None
+            ):
                 try:
                     await self.client.aio.aclose()  # type: ignore
                     self.client = None
@@ -848,7 +854,7 @@ class Model(ABC):
         if model_response_delta.content is not None:
             if model_response_delta.is_delta:
                 stream_data.response_content += model_response_delta.content
-            else: 
+            else:
                 stream_data.response_content = model_response_delta.content
             should_yield = True
 
@@ -865,7 +871,9 @@ class Model(ABC):
                     model_response_delta.redacted_reasoning_content
                 )
             else:
-                stream_data.response_redacted_reasoning_content = model_response_delta.redacted_reasoning_content
+                stream_data.response_redacted_reasoning_content = (
+                    model_response_delta.redacted_reasoning_content
+                )
             should_yield = True
 
         if model_response_delta.citations is not None:
@@ -1307,207 +1315,234 @@ class Model(ABC):
             await event_queue.put(("GENERATOR_DONE", generator_id))
 
         # Start all async generator tasks
-        generator_tasks = []
+        generator_tasks: list[asyncio.Task[Any]] = []
         for i, result in enumerate(async_generator_results):
             task = asyncio.create_task(process_async_generator(result, i))
             generator_tasks.append(task)
 
-        # Stream events from the queue as they arrive
-        completed_generators_count = 0
-        while completed_generators_count < active_generators_count:
-            try:
-                event = await event_queue.get()
+        async def cleanup_generator_tasks() -> None:
+            if not generator_tasks:
+                return
 
-                if isinstance(event, tuple) and event[0] == "GENERATOR_DONE":
-                    completed_generators_count += 1
-                    continue
+            for task in generator_tasks:
+                if not task.done():
+                    task.cancel()
 
-                yield event
-
-            except Exception as e:
-                logger.error(f"Error processing async generator event: {e}")
-                break
-
-        # Now process all results (non-async generators and completed async generators)
-        for i, original_result in enumerate(results):
-            # If result is an exception, skip processing it
-            if isinstance(original_result, BaseException):
-                logger.error(f"Error during function call: {original_result}")
-                raise original_result
-
-            # Unpack result
-            (
-                function_call_success,
-                function_call_timer,
-                function_call,
-                function_execution_result,
-            ) = original_result
-
-            # Check if this was an async generator that was already processed
-            async_function_call_output = None
-            if isinstance(
-                function_call.result,
-                (AsyncGeneratorType, collections.abc.AsyncIterator),
-            ):
-                # Find the corresponding processed result
-                async_gen_index = 0
-                for j, result in enumerate(results[: i + 1]):
-                    if not isinstance(result, BaseException):
-                        _, _, fc, _ = result
-                        if isinstance(
-                            fc.result,
-                            (AsyncGeneratorType, collections.abc.AsyncIterator),
-                        ):
-                            if j == i:  # This is our async generator
-                                if async_gen_index in async_generator_outputs:
-                                    _, async_function_call_output, error = async_generator_outputs[
-                                        async_gen_index
-                                    ]
-                                    if error:
-                                        logger.error(f"Error in async generator: {error}")
-                                        raise error
-                                break
-                            async_gen_index += 1
-
-            updated_session_state = function_execution_result.updated_session_state
-
-            # Handle AgentRunException
-            stop_after_tool_call_from_exception = False
-            if isinstance(function_call_success, AgentRunException):
-                a_exc = function_call_success
-                # Update additional messages from function call
-                _handle_agent_exception(a_exc, additional_input)
-                # If stop_execution is True, mark that we should stop after this tool call
-                if a_exc.stop_execution:
-                    stop_after_tool_call_from_exception = True
-                # Set function call success to False if an exception occurred
-                function_call_success = False
-
-            # Process function call output
-            function_call_output: str = ""
-
-            # Check if this was an async generator that was already processed
-            if async_function_call_output is not None:
-                function_call_output = async_function_call_output
-                # Events from async generators were already yielded in real-time above
-            elif isinstance(function_call.result, (GeneratorType, collections.abc.Iterator)):
-                try:
-                    for item in function_call.result:
-                        # This function yields agent run events
-                        if isinstance(item, tuple(get_args(RunOutputEvent))):
-                            # We only capture content events
-                            if isinstance(item, RunContentEvent):
-                                if item.content is not None and isinstance(item.content, BaseModel):
-                                    function_call_output += item.content.model_dump_json()
-                                else:
-                                    # Capture output
-                                    function_call_output += item.content or ""
-
-                                if function_call.function.show_result and item.content is not None:
-                                    yield ModelResponse(content=item.content)
-                                    continue
-
-                            # Yield the event itself to bubble it up
-                            yield item
-                        else:
-                            function_call_output += str(item)
-                            if function_call.function.show_result and item is not None:
-                                yield ModelResponse(content=str(item))
-                except Exception as e:
-                    logger.error(
-                        f"Error while iterating function result generator for {function_call.function.name}: {e}"
+            cleanup_results = await asyncio.gather(*generator_tasks, return_exceptions=True)
+            for cleanup_result in cleanup_results:
+                if isinstance(cleanup_result, BaseException) and not isinstance(
+                    cleanup_result, asyncio.CancelledError
+                ):
+                    logger.debug(
+                        "Async generator task finished during cleanup with error: %s",
+                        cleanup_result,
                     )
-                    function_call.error = str(e)
+
+        try:
+            # Stream events from the queue as they arrive
+            completed_generators_count = 0
+            while completed_generators_count < active_generators_count:
+                try:
+                    event = await event_queue.get()
+
+                    if isinstance(event, tuple) and event[0] == "GENERATOR_DONE":
+                        completed_generators_count += 1
+                        continue
+
+                    yield event
+
+                except Exception as e:
+                    logger.error(f"Error processing async generator event: {e}")
+                    break
+
+            # Now process all results (non-async generators and completed async generators)
+            for i, original_result in enumerate(results):
+                # If result is an exception, skip processing it
+                if isinstance(original_result, BaseException):
+                    logger.error(f"Error during function call: {original_result}")
+                    raise original_result
+
+                # Unpack result
+                (
+                    function_call_success,
+                    function_call_timer,
+                    function_call,
+                    function_execution_result,
+                ) = original_result
+
+                # Check if this was an async generator that was already processed
+                async_function_call_output = None
+                if isinstance(
+                    function_call.result,
+                    (AsyncGeneratorType, collections.abc.AsyncIterator),
+                ):
+                    # Find the corresponding processed result
+                    async_gen_index = 0
+                    for j, result in enumerate(results[: i + 1]):
+                        if not isinstance(result, BaseException):
+                            _, _, fc, _ = result
+                            if isinstance(
+                                fc.result,
+                                (AsyncGeneratorType, collections.abc.AsyncIterator),
+                            ):
+                                if j == i:  # This is our async generator
+                                    if async_gen_index in async_generator_outputs:
+                                        _, async_function_call_output, error = (
+                                            async_generator_outputs[async_gen_index]
+                                        )
+                                        if error:
+                                            logger.error(f"Error in async generator: {error}")
+                                            raise error
+                                    break
+                                async_gen_index += 1
+
+                updated_session_state = function_execution_result.updated_session_state
+
+                # Handle AgentRunException
+                stop_after_tool_call_from_exception = False
+                if isinstance(function_call_success, AgentRunException):
+                    a_exc = function_call_success
+                    # Update additional messages from function call
+                    _handle_agent_exception(a_exc, additional_input)
+                    # If stop_execution is True, mark that we should stop after this tool call
+                    if a_exc.stop_execution:
+                        stop_after_tool_call_from_exception = True
+                    # Set function call success to False if an exception occurred
                     function_call_success = False
-            else:
-                from ii_agent.agents.tools.function import ToolResult as FunctionToolResult
+
+                # Process function call output
+                function_call_output: str = ""
+
+                # Check if this was an async generator that was already processed
+                if async_function_call_output is not None:
+                    function_call_output = async_function_call_output
+                    # Events from async generators were already yielded in real-time above
+                elif isinstance(function_call.result, (GeneratorType, collections.abc.Iterator)):
+                    try:
+                        for item in function_call.result:
+                            # This function yields agent run events
+                            if isinstance(item, tuple(get_args(RunOutputEvent))):
+                                # We only capture content events
+                                if isinstance(item, RunContentEvent):
+                                    if item.content is not None and isinstance(
+                                        item.content, BaseModel
+                                    ):
+                                        function_call_output += item.content.model_dump_json()
+                                    else:
+                                        # Capture output
+                                        function_call_output += item.content or ""
+
+                                    if (
+                                        function_call.function.show_result
+                                        and item.content is not None
+                                    ):
+                                        yield ModelResponse(content=item.content)
+                                        continue
+
+                                # Yield the event itself to bubble it up
+                                yield item
+                            else:
+                                function_call_output += str(item)
+                                if function_call.function.show_result and item is not None:
+                                    yield ModelResponse(content=str(item))
+                    except Exception as e:
+                        logger.error(
+                            f"Error while iterating function result generator for {function_call.function.name}: {e}"
+                        )
+                        function_call.error = str(e)
+                        function_call_success = False
+                else:
+                    from ii_agent.agents.tools.function import ToolResult as FunctionToolResult
+                    from ii_agent.agents.tools.base import ToolResult as BaseToolResult
+
+                    # Handle ToolResult from BaseAgentTool (has llm_content and user_display_content)
+                    if isinstance(function_execution_result.result, BaseToolResult):
+                        tool_result = function_execution_result.result
+                        # Extract llm_content for the LLM
+                        llm_content = tool_result.llm_content
+                        if isinstance(llm_content, str):
+                            function_call_output = llm_content
+                        elif isinstance(llm_content, list):
+                            # Combine text contents from the list
+                            text_parts = []
+                            for content in llm_content:
+                                if hasattr(content, "text"):
+                                    text_parts.append(content.text)
+                            function_call_output = "\n".join(text_parts) if text_parts else ""
+                        else:
+                            function_call_output = str(llm_content)
+
+                        # Store user_display_content for websocket display
+                        # This will be available in the ToolExecution.result for the converter
+                        function_call.result = tool_result
+
+                    # Handle ToolResult from function.py (legacy, has content field)
+                    elif isinstance(function_execution_result.result, FunctionToolResult):
+                        tool_result = function_execution_result.result
+                        function_call_output = tool_result.content
+
+                        if tool_result.images:
+                            function_execution_result.images = tool_result.images
+                        if tool_result.videos:
+                            function_execution_result.videos = tool_result.videos
+                        if tool_result.audios:
+                            function_execution_result.audios = tool_result.audios
+                        if tool_result.files:
+                            function_execution_result.files = tool_result.files
+                    else:
+                        function_call_output = str(function_call.result)
+
+                    if function_call.function.show_result and function_call_output is not None:
+                        yield ModelResponse(content=function_call_output)
+
+                # Create and yield function call result
+                function_call_result = self.create_function_call_result(
+                    function_call,
+                    success=function_call_success,
+                    output=function_call_output,
+                    timer=function_call_timer,
+                    function_execution_result=function_execution_result,
+                )
+                # Override stop_after_tool_call if set by exception
+                if stop_after_tool_call_from_exception:
+                    function_call_result.stop_after_tool_call = True
+                # Use function_call.result if it's a BaseToolResult (for websocket display),
+                # otherwise fallback to stringified content
                 from ii_agent.agents.tools.base import ToolResult as BaseToolResult
 
-                # Handle ToolResult from BaseAgentTool (has llm_content and user_display_content)
-                if isinstance(function_execution_result.result, BaseToolResult):
-                    tool_result = function_execution_result.result
-                    # Extract llm_content for the LLM
-                    llm_content = tool_result.llm_content
-                    if isinstance(llm_content, str):
-                        function_call_output = llm_content
-                    elif isinstance(llm_content, list):
-                        # Combine text contents from the list
-                        text_parts = []
-                        for content in llm_content:
-                            if hasattr(content, "text"):
-                                text_parts.append(content.text)
-                        function_call_output = "\n".join(text_parts) if text_parts else ""
-                    else:
-                        function_call_output = str(llm_content)
+                tool_execution_result = (
+                    function_call.result
+                    if isinstance(function_call.result, BaseToolResult)
+                    else str(function_call_result.content)
+                )
+                yield ModelResponse(
+                    content=f"{function_call.get_call_str()} completed in {function_call_timer.elapsed:.4f}s. ",
+                    tool_executions=[
+                        ToolExecution(
+                            tool_call_id=function_call_result.tool_call_id,
+                            tool_name=function_call_result.tool_name,
+                            tool_args=function_call_result.tool_args,
+                            tool_call_error=function_call_result.tool_call_error,
+                            result=tool_execution_result,
+                            display_name=function_call.function.display_name,
+                            tool_logo=function_call.function.tool_logo,
+                            stop_after_tool_call=function_call_result.stop_after_tool_call,
+                            metrics=function_call_result.metrics,
+                            sandbox=function_call.get_sandbox_info(),
+                        )
+                    ],
+                    event=ModelResponseEvent.tool_call_completed.value,
+                    updated_session_state=updated_session_state,
+                    images=function_execution_result.images,
+                    videos=function_execution_result.videos,
+                    audios=function_execution_result.audios,
+                    files=function_execution_result.files,
+                )
 
-                    # Store user_display_content for websocket display
-                    # This will be available in the ToolExecution.result for the converter
-                    function_call.result = tool_result
-
-                # Handle ToolResult from function.py (legacy, has content field)
-                elif isinstance(function_execution_result.result, FunctionToolResult):
-                    tool_result = function_execution_result.result
-                    function_call_output = tool_result.content
-
-                    if tool_result.images:
-                        function_execution_result.images = tool_result.images
-                    if tool_result.videos:
-                        function_execution_result.videos = tool_result.videos
-                    if tool_result.audios:
-                        function_execution_result.audios = tool_result.audios
-                    if tool_result.files:
-                        function_execution_result.files = tool_result.files
-                else:
-                    function_call_output = str(function_call.result)
-
-                if function_call.function.show_result and function_call_output is not None:
-                    yield ModelResponse(content=function_call_output)
-
-            # Create and yield function call result
-            function_call_result = self.create_function_call_result(
-                function_call,
-                success=function_call_success,
-                output=function_call_output,
-                timer=function_call_timer,
-                function_execution_result=function_execution_result,
-            )
-            # Override stop_after_tool_call if set by exception
-            if stop_after_tool_call_from_exception:
-                function_call_result.stop_after_tool_call = True
-            # Use function_call.result if it's a BaseToolResult (for websocket display),
-            # otherwise fallback to stringified content
-            from ii_agent.agents.tools.base import ToolResult as BaseToolResult
-            tool_execution_result = (
-                function_call.result
-                if isinstance(function_call.result, BaseToolResult)
-                else str(function_call_result.content)
-            )
-            yield ModelResponse(
-                content=f"{function_call.get_call_str()} completed in {function_call_timer.elapsed:.4f}s. ",
-                tool_executions=[
-                    ToolExecution(
-                        tool_call_id=function_call_result.tool_call_id,
-                        tool_name=function_call_result.tool_name,
-                        tool_args=function_call_result.tool_args,
-                        tool_call_error=function_call_result.tool_call_error,
-                        result=tool_execution_result,
-                        display_name=function_call.function.display_name,
-                        tool_logo=function_call.function.tool_logo,
-                        stop_after_tool_call=function_call_result.stop_after_tool_call,
-                        metrics=function_call_result.metrics,
-                        sandbox=function_call.get_sandbox_info(),
-                    )
-                ],
-                event=ModelResponseEvent.tool_call_completed.value,
-                updated_session_state=updated_session_state,
-                images=function_execution_result.images,
-                videos=function_execution_result.videos,
-                audios=function_execution_result.audios,
-                files=function_execution_result.files,
-            )
-
-            # Add function call result to function call results
-            function_call_results.append(function_call_result)
+                # Add function call result to function call results
+                function_call_results.append(function_call_result)
+        finally:
+            await cleanup_generator_tasks()
 
         # Add any additional messages at the end
         if additional_input:

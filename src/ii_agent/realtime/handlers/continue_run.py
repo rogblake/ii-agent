@@ -105,8 +105,10 @@ class ContinueRunHandler(BaseCommandHandler[ContinueRunContent]):
             if not session_info.model_setting_id:
                 raise ValueError("Session has no model_setting_id for continue_run")
             async with get_db_session_local() as db:
-                llm_config = await self._container.model_setting_service.resolve_config_by_setting_id(
-                    db, setting_id=session_info.model_setting_id
+                llm_config = (
+                    await self._container.model_setting_service.resolve_config_by_setting_id(
+                        db, setting_id=session_info.model_setting_id
+                    )
                 )
 
             # Create agent with same configuration (matches query handler pattern)
@@ -118,6 +120,7 @@ class ContinueRunHandler(BaseCommandHandler[ContinueRunContent]):
                 if session_info.agent_type
                 else AgentType.GENERAL,
                 session_store=session_store,
+                skill_creator=self._create_skill_creator(session_info.user_id),
             )
 
             # Send processing event
@@ -141,7 +144,9 @@ class ContinueRunHandler(BaseCommandHandler[ContinueRunContent]):
             )
 
             await self.process_agent_event_stream(
-                event_stream, session_info, run_id=UUID(run_response.run_id),
+                event_stream,
+                session_info,
+                run_id=UUID(run_response.run_id),
                 is_user_key=llm_config.is_user_model(),
                 llm_config=llm_config,
             )

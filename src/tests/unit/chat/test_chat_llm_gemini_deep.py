@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import base64
-import json
-import uuid
-from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -20,18 +17,13 @@ from ii_agent.chat.llm.gemini import (
     map_googe_finish_reason,
 )
 from ii_agent.chat.types import (
-    BinaryContent,
     EventType,
     FinishReason,
     Message,
     MessageRole,
     ReasoningContent,
-    RunResponseEvent,
     TextContent,
     ToolCall,
-    ToolResult,
-    TextResultContent,
-    JsonResultContent,
 )
 from ii_agent.core.config.llm_config import LLMConfig
 
@@ -93,7 +85,7 @@ class TestGeminiProviderInitDeep:
 
         with patch("ii_agent.chat.llm.gemini.genai") as mock_genai:
             mock_genai.Client.return_value = MagicMock()
-            provider = GeminiProvider(cfg)
+            GeminiProvider(cfg)
             mock_genai.Client.assert_called_once_with(api_key="test-api-key")
 
     def test_vertex_init_uses_vertex_project_and_region(self):
@@ -106,7 +98,7 @@ class TestGeminiProviderInitDeep:
 
         with patch("ii_agent.chat.llm.gemini.genai") as mock_genai:
             mock_genai.Client.return_value = MagicMock()
-            provider = GeminiProvider(cfg)
+            GeminiProvider(cfg)
             mock_genai.Client.assert_called_once_with(
                 vertexai=True,
                 project="my-gcp-project",
@@ -123,7 +115,7 @@ class TestGeminiProviderInitDeep:
 
         with patch("ii_agent.chat.llm.gemini.genai") as mock_genai:
             mock_genai.Client.return_value = MagicMock()
-            provider = GeminiProvider(cfg)
+            GeminiProvider(cfg)
             mock_genai.Client.assert_called_once_with(api_key=None)
 
 
@@ -189,7 +181,7 @@ class TestConvertMessagesDeep:
             mock_types.FunctionCall.return_value = MagicMock()
             mock_types.Part.return_value = MagicMock()
             mock_types.Content.return_value = MagicMock()
-            result = provider._convert_messages([msg])
+            provider._convert_messages([msg])
 
         # Should not raise
         mock_types.FunctionCall.assert_called()
@@ -229,7 +221,7 @@ class TestConvertMessagesDeep:
         with patch("ii_agent.chat.llm.gemini.types") as mock_types:
             mock_types.Content.return_value = MagicMock()
             mock_types.Part.return_value = MagicMock()
-            result = provider._convert_messages([msg])
+            provider._convert_messages([msg])
 
         # Empty text should not add a Part
         mock_types.Part.assert_not_called()
@@ -267,7 +259,7 @@ class TestConvertMessagesDeep:
 
         with patch("ii_agent.chat.llm.gemini.types") as mock_types:
             mock_types.Content.return_value = MagicMock()
-            result = provider._convert_messages([msg])
+            provider._convert_messages([msg])
 
         # Empty text should not add a Part
         mock_types.Part.assert_not_called()
@@ -459,8 +451,8 @@ class TestGeminiProviderSendDeep:
 
         result = await provider.send(messages=[_make_user_message()])
 
-        assert result.usage.prompt_tokens == 100
-        assert result.usage.completion_tokens == 50
+        assert result.usage.input_tokens == 100
+        assert result.usage.output_tokens == 50
         assert result.usage.cache_read_tokens == 20
 
     @pytest.mark.asyncio
@@ -481,8 +473,8 @@ class TestGeminiProviderSendDeep:
 
         result = await provider.send(messages=[_make_user_message()])
 
-        assert result.usage.prompt_tokens == 0
-        assert result.usage.completion_tokens == 0
+        assert result.usage.input_tokens == 0
+        assert result.usage.output_tokens == 0
 
     @pytest.mark.asyncio
     async def test_send_finish_reason_safety_maps_to_error(self):
@@ -680,8 +672,8 @@ class TestGeminiProviderStreamDeep:
 
         complete_events = [e for e in events if e.type == EventType.COMPLETE]
         assert len(complete_events) == 1
-        assert complete_events[0].response.usage.prompt_tokens == 100
-        assert complete_events[0].response.usage.completion_tokens == 50
+        assert complete_events[0].response.usage.input_tokens == 100
+        assert complete_events[0].response.usage.output_tokens == 50
 
     @pytest.mark.asyncio
     async def test_stream_with_no_finish_reason_produces_unknown(self):
@@ -774,8 +766,8 @@ class TestGeminiProviderStreamDeep:
             events.append(event)
 
         complete = [e for e in events if e.type == EventType.COMPLETE][0]
-        assert complete.response.usage.prompt_tokens == 0
-        assert complete.response.usage.completion_tokens == 0
+        assert complete.response.usage.input_tokens == 0
+        assert complete.response.usage.output_tokens == 0
 
 
 # ---------------------------------------------------------------------------

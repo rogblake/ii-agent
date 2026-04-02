@@ -54,9 +54,7 @@ class CustomProvider(LLMClient):
         self.base_url = dummy_llm_config.base_url
 
         self.api_key = (
-            dummy_llm_config.api_key.get_secret_value()
-            if dummy_llm_config.api_key
-            else None
+            dummy_llm_config.api_key.get_secret_value() if dummy_llm_config.api_key else None
         )
 
         if "/" in self.model_name:
@@ -100,9 +98,7 @@ class CustomProvider(LLMClient):
                             elif isinstance(item, ImageUrlContentPart):
                                 parts.append(f"[Image URL: {item.url}]")
                             else:
-                                logger.warning(
-                                    f"Unsupported tool content part type: {item.type}"
-                                )
+                                logger.warning(f"Unsupported tool content part type: {item.type}")
                         content_value = "\n".join(parts)
                     elif isinstance(output, StorybookProgressContent):
                         progress_info = {
@@ -136,9 +132,7 @@ class CustomProvider(LLMClient):
                         content_value = json.dumps(storybook_info)
                     else:
                         # Fallback for unknown types
-                        logger.warning(
-                            f"Unknown tool result output type: {type(output)}"
-                        )
+                        logger.warning(f"Unknown tool result output type: {type(output)}")
                         content_value = str(output)
 
                     converted_messages.append(
@@ -163,9 +157,7 @@ class CustomProvider(LLMClient):
                             }
                         )
                     elif isinstance(part, ImageURLContent):
-                        content_parts.append(
-                            {"type": "image_url", "image_url": {"url": part.url}}
-                        )
+                        content_parts.append({"type": "image_url", "image_url": {"url": part.url}})
                     elif isinstance(part, ToolCall):
                         pass
 
@@ -286,10 +278,16 @@ class CustomProvider(LLMClient):
             usage = TokenUsage()
             if hasattr(response, "usage") and response.usage:
                 usage = TokenUsage(
-                    prompt_tokens=getattr(response.usage, "prompt_tokens", 0),
-                    completion_tokens=getattr(response.usage, "completion_tokens", 0),
-                    cache_write_tokens=0,
-                    cache_read_tokens=0,
+                    input_tokens=getattr(
+                        response.usage,
+                        "input_tokens",
+                        getattr(response.usage, "prompt_tokens", 0),
+                    ),
+                    output_tokens=getattr(
+                        response.usage,
+                        "output_tokens",
+                        getattr(response.usage, "completion_tokens", 0),
+                    ),
                     model_name=self.llm_config.model,
                 )
 
@@ -301,9 +299,7 @@ class CustomProvider(LLMClient):
                 "content_filter": FinishReason.ERROR,
             }
 
-            finish_reason = finish_reason_map.get(
-                choice.finish_reason, FinishReason.UNKNOWN
-            )
+            finish_reason = finish_reason_map.get(choice.finish_reason, FinishReason.UNKNOWN)
 
             # Determine finish reason from content parts
             has_tool_calls = any(isinstance(part, ToolCall) for part in content_parts)
@@ -383,9 +379,7 @@ class CustomProvider(LLMClient):
                         yield RunResponseEvent(type=EventType.CONTENT_START)
                         content_started = True
                     accumulated_text += delta.content
-                    yield RunResponseEvent(
-                        type=EventType.CONTENT_DELTA, content=delta.content
-                    )
+                    yield RunResponseEvent(type=EventType.CONTENT_DELTA, content=delta.content)
 
                 if hasattr(delta, "tool_calls") and delta.tool_calls:
                     for tc_delta in delta.tool_calls:
@@ -393,14 +387,10 @@ class CustomProvider(LLMClient):
 
                         if tc_index not in tool_call_tracking:
                             tool_call_id = (
-                                tc_delta.id
-                                if hasattr(tc_delta, "id")
-                                else f"call_{tc_index}"
+                                tc_delta.id if hasattr(tc_delta, "id") else f"call_{tc_index}"
                             )
                             tool_call_name = ""
-                            if hasattr(tc_delta, "function") and hasattr(
-                                tc_delta.function, "name"
-                            ):
+                            if hasattr(tc_delta, "function") and hasattr(tc_delta.function, "name"):
                                 tool_call_name = tc_delta.function.name or ""
 
                             tool_call_tracking[tc_index] = {
@@ -424,9 +414,7 @@ class CustomProvider(LLMClient):
                             and hasattr(tc_delta.function, "name")
                             and tc_delta.function.name
                         ):
-                            tool_call_tracking[tc_index]["name"] = (
-                                tc_delta.function.name
-                            )
+                            tool_call_tracking[tc_index]["name"] = tc_delta.function.name
 
                         if (
                             hasattr(tc_delta, "function")
@@ -473,12 +461,16 @@ class CustomProvider(LLMClient):
                     usage = TokenUsage()
                     if hasattr(chunk, "usage") and chunk.usage:
                         usage = TokenUsage(
-                            prompt_tokens=getattr(chunk.usage, "prompt_tokens", 0),
-                            completion_tokens=getattr(
-                                chunk.usage, "completion_tokens", 0
+                            input_tokens=getattr(
+                                chunk.usage,
+                                "input_tokens",
+                                getattr(chunk.usage, "prompt_tokens", 0),
                             ),
-                            cache_write_tokens=0,
-                            cache_read_tokens=0,
+                            output_tokens=getattr(
+                                chunk.usage,
+                                "output_tokens",
+                                getattr(chunk.usage, "completion_tokens", 0),
+                            ),
                             model_name=self.llm_config.model,
                         )
 
@@ -490,14 +482,10 @@ class CustomProvider(LLMClient):
                         "content_filter": FinishReason.ERROR,
                     }
 
-                    final_finish_reason = finish_reason_map.get(
-                        finish_reason, FinishReason.UNKNOWN
-                    )
+                    final_finish_reason = finish_reason_map.get(finish_reason, FinishReason.UNKNOWN)
 
                     # Determine finish reason from content parts
-                    has_tool_calls = any(
-                        isinstance(part, ToolCall) for part in content_parts
-                    )
+                    has_tool_calls = any(isinstance(part, ToolCall) for part in content_parts)
                     if has_tool_calls and final_finish_reason == FinishReason.END_TURN:
                         final_finish_reason = FinishReason.TOOL_USE
 

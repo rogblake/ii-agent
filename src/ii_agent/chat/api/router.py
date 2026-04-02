@@ -3,7 +3,6 @@
 import json
 import logging
 from typing import Optional
-from uuid import UUID
 import uuid
 
 from fastapi import APIRouter, Query
@@ -156,9 +155,7 @@ async def send_chat_message(
             session_id=session_id,
             user_id=current_user.id,
         )
-        logger.info(
-            f"Reusing existing session {session_id} for user {current_user.id}"
-        )
+        logger.info(f"Reusing existing session {session_id} for user {current_user.id}")
     else:
         # Create new session
         try:
@@ -197,10 +194,7 @@ async def send_chat_message(
                 yield f"event: session\ndata: {json.dumps(session_event)}\n\n"
 
             # Determine if this is a council request
-            is_council = (
-                request.council_preferences
-                and request.council_preferences.enabled
-            )
+            is_council = request.council_preferences and request.council_preferences.enabled
 
             if is_council:
                 # Validate council config — reject invalid selections explicitly
@@ -295,9 +289,7 @@ async def send_chat_message(
                     tool_call = event.get("tool_call", {})
                     tool_event = {
                         "status": "start",
-                        "id": tool_call.id
-                        if hasattr(tool_call, "id")
-                        else tool_call.get("id"),
+                        "id": tool_call.id if hasattr(tool_call, "id") else tool_call.get("id"),
                         "name": tool_call.name
                         if hasattr(tool_call, "name")
                         else tool_call.get("name"),
@@ -311,9 +303,7 @@ async def send_chat_message(
                     tool_call = event.get("tool_call", {})
                     tool_event = {
                         "status": "delta",
-                        "id": tool_call.id
-                        if hasattr(tool_call, "id")
-                        else tool_call.get("id"),
+                        "id": tool_call.id if hasattr(tool_call, "id") else tool_call.get("id"),
                         "delta": tool_call.input
                         if hasattr(tool_call, "input")
                         else tool_call.get("input", ""),  # Partial JSON
@@ -324,9 +314,7 @@ async def send_chat_message(
                     tool_call = event.get("tool_call", {})
                     tool_event = {
                         "status": "stop",
-                        "id": tool_call.id
-                        if hasattr(tool_call, "id")
-                        else tool_call.get("id"),
+                        "id": tool_call.id if hasattr(tool_call, "id") else tool_call.get("id"),
                         "name": tool_call.name
                         if hasattr(tool_call, "name")
                         else tool_call.get("name"),
@@ -375,8 +363,8 @@ async def send_chat_message(
                         "status": "info",
                         "input_tokens": usage.get("input_tokens", 0),
                         "output_tokens": usage.get("output_tokens", 0),
-                        "cache_creation_tokens": usage.get("cache_creation_tokens", 0),
                         "cache_read_tokens": usage.get("cache_read_tokens", 0),
+                        "cache_write_tokens": usage.get("cache_write_tokens", 0),
                         "total_tokens": usage.get("input_tokens", 0)
                         + usage.get("output_tokens", 0),
                     }
@@ -436,9 +424,7 @@ async def send_chat_message(
     )
 
 
-@router.post(
-    "/conversations/{session_id}/stop", response_model=StopConversationResponse
-)
+@router.post("/conversations/{session_id}/stop", response_model=StopConversationResponse)
 async def stop_conversation(
     session_id: uuid.UUID,
     current_user: CurrentUser,
@@ -514,10 +500,7 @@ async def clear_conversation(
     )
 
     # Clear messages
-    deleted_count = await chat_service.clear_messages(
-        db_session,
-        session_id=session_id
-    )
+    deleted_count = await chat_service.clear_messages(db_session, session_id=session_id)
 
     return ClearHistoryResponse(
         success=True,

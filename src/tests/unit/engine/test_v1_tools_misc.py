@@ -947,7 +947,7 @@ class TestDevToolAttributes:
         assert "commit_message" in required
 
     async def test_save_checkpoint_executes_ii_app_cli(self):
-        from ii_agent.agent.runtime.tools.dev.save_checkpoint import SaveCheckpointTool
+        from ii_agent.agents.tools.dev.save_checkpoint import SaveCheckpointTool
 
         tool = SaveCheckpointTool()
         tool.sandbox = SimpleNamespace(
@@ -980,7 +980,7 @@ class TestDevToolAttributes:
         assert tool.sandbox.run_command.await_args.kwargs["timeout"] == 1800
 
     async def test_save_checkpoint_returns_error_on_cli_failure(self):
-        from ii_agent.agent.runtime.tools.dev.save_checkpoint import SaveCheckpointTool
+        from ii_agent.agents.tools.dev.save_checkpoint import SaveCheckpointTool
 
         tool = SaveCheckpointTool()
         tool.sandbox = SimpleNamespace(run_command=AsyncMock(side_effect=Exception("boom")))
@@ -994,6 +994,84 @@ class TestDevToolAttributes:
 
         assert result.is_error is True
         assert "boom" in result.llm_content
+
+
+class TestGetServerStatusTool:
+    async def test_missing_web_cache_returns_warning(self):
+        from ii_agent.agents.sandboxes.exceptions import SandboxOperationError
+        from ii_agent.agents.tools.dev.server_status import GetServerStatusTool
+
+        tool = GetServerStatusTool()
+        tool.sandbox = SimpleNamespace(
+            run_command=AsyncMock(
+                side_effect=SandboxOperationError(
+                    "run_command",
+                    "Command exited with code 1 and error:\n"
+                    "Error: web cache not found. Expected /workspace/.ii-app/web.json "
+                    "or /workspace/.ii-web-server/cache.json",
+                )
+            )
+        )
+
+        with patch("ii_agent.agents.tools.dev.server_status.logger") as mock_logger:
+            result = await tool.execute({})
+
+        assert result.is_error is False
+        assert "web cache is missing" in result.llm_content.lower()
+        mock_logger.warning.assert_called_once()
+        mock_logger.exception.assert_not_called()
+
+    async def test_other_failures_still_return_error(self):
+        from ii_agent.agents.tools.dev.server_status import GetServerStatusTool
+
+        tool = GetServerStatusTool()
+        tool.sandbox = SimpleNamespace(run_command=AsyncMock(side_effect=RuntimeError("boom")))
+
+        with patch("ii_agent.agents.tools.dev.server_status.logger") as mock_logger:
+            result = await tool.execute({})
+
+        assert result.is_error is True
+        assert "boom" in result.llm_content
+        mock_logger.exception.assert_called_once()
+
+
+class TestRestartServerTool:
+    async def test_missing_web_cache_returns_warning(self):
+        from ii_agent.agents.sandboxes.exceptions import SandboxOperationError
+        from ii_agent.agents.tools.dev.restart_server import RestartServerTool
+
+        tool = RestartServerTool()
+        tool.sandbox = SimpleNamespace(
+            run_command=AsyncMock(
+                side_effect=SandboxOperationError(
+                    "run_command",
+                    "Command exited with code 1 and error:\n"
+                    "Error: web cache not found. Expected /workspace/.ii-app/web.json "
+                    "or /workspace/.ii-web-server/cache.json",
+                )
+            )
+        )
+
+        with patch("ii_agent.agents.tools.dev.restart_server.logger") as mock_logger:
+            result = await tool.execute({})
+
+        assert result.is_error is False
+        assert "web cache is missing" in result.llm_content.lower()
+        mock_logger.warning.assert_called_once()
+        mock_logger.exception.assert_not_called()
+
+    async def test_other_failures_still_return_error(self):
+        from ii_agent.agents.tools.dev.restart_server import RestartServerTool
+
+        tool = RestartServerTool()
+        tool.sandbox = SimpleNamespace(run_command=AsyncMock(side_effect=RuntimeError("boom")))
+
+        with patch("ii_agent.agents.tools.dev.restart_server.logger") as mock_logger:
+            result = await tool.execute({})
+
+        assert result.is_error is True
+        assert "boom" in result.llm_content
+        mock_logger.exception.assert_called_once()
 
 
 class TestRegisterPort:

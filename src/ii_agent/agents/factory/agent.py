@@ -1,6 +1,6 @@
 """Agent factory for creating configured agent instances."""
 
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 from ii_agent.core.config.settings import Settings, get_settings
@@ -10,7 +10,6 @@ from ii_server.core.workspace import WorkspaceManager
 from ii_agent.agents.prompts.agent_prompts import get_system_prompt_for_agent_type
 from ii_agent.agents.sandboxes import Sandbox
 from ii_agent.agents.agent import IIAgent
-from ii_agent.settings.llm import Provider
 from ii_agent.agents.skills.base import SkillCreator
 from ii_agent.agents.connector import BaseConnectorTool
 from ii_agent.agents.factory.tools import AgentConfigManager, AgentType
@@ -19,6 +18,16 @@ from ii_agent.agents.models.utils import get_model
 from ii_agent.agents.sessions import SessionStore
 from ii_agent.agents.tools.task import SYSTEM_PROMPT, TaskAgentTool, DESCRIPTION
 from ii_agent.core.logger import logger
+
+
+def _append_prompt_section(base_prompt: Optional[str], section: Optional[str]) -> Optional[str]:
+    """Append an extra XML/text block to the system prompt when present."""
+    if not section:
+        return base_prompt
+    if not base_prompt:
+        return section
+    return f"{base_prompt}\n\n{section}"
+
 
 class AgentFactory:
     """Factory for creating configured agent instances."""
@@ -99,10 +108,12 @@ class AgentFactory:
         )
 
         # Add SkillTool if skill creator is available
+        skill_prompt_section: Optional[str] = None
         if skill_creator is not None:
             skill_tool = await skill_creator.create_skill_tool()
             if skill_tool:
                 agent_tools.append(skill_tool)
+                skill_prompt_section = skill_tool.description
                 logger.info(f"Added SkillTool with {len(skill_tool._skills_registry)} skills")
 
         # Add connector tools if available
@@ -112,10 +123,16 @@ class AgentFactory:
                     workspace_manager=workspace_manager,
                 )
                 if connector_tools:
-                    logger.info(f"[V1 Factory] Received {len(connector_tools)} connector tools from loader")
-                    logger.debug(f"[V1 Factory] Connector tool names: {[t.name for t in connector_tools]}")
+                    logger.info(
+                        f"[V1 Factory] Received {len(connector_tools)} connector tools from loader"
+                    )
+                    logger.debug(
+                        f"[V1 Factory] Connector tool names: {[t.name for t in connector_tools]}"
+                    )
                     agent_tools.extend(connector_tools)
-                    logger.info(f"[V1 Factory] Successfully added {len(connector_tools)} connector tools to agent")
+                    logger.info(
+                        f"[V1 Factory] Successfully added {len(connector_tools)} connector tools to agent"
+                    )
 
             except Exception as e:
                 logger.error(f"[V1 Factory] Failed to load connector tools: {e}", exc_info=True)
@@ -143,6 +160,8 @@ class AgentFactory:
                 provider=llm_config.provider if llm_config else None,
             )
 
+        system_prompt = _append_prompt_section(system_prompt, skill_prompt_section)
+
         sub_agents = []
         if has_task_agent:
             task_agent = await self.create_task_agent_tool(
@@ -167,7 +186,7 @@ class AgentFactory:
             retries=0,
             stream=True,
             stream_events=True,
-            store_events=True
+            store_events=True,
         )
 
         # Set agent ID

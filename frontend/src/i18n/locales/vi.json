@@ -2434,6 +2434,16 @@
         "newProject": "Dự án mới",
         "header": {
             "tabs": {
+                "code": {
+                    "label": "Mã nguồn",
+                    "title": "Trình duyệt mã nguồn",
+                    "description": "Duyệt và xem mã nguồn của dự án"
+                },
+                "terminal": {
+                    "label": "Terminal",
+                    "title": "Terminal",
+                    "description": "Mở shell tương tác bên trong sandbox của dự án"
+                },
                 "database": {
                     "label": "Cơ sở dữ liệu",
                     "title": "Cơ sở dữ liệu",
@@ -2465,6 +2475,22 @@
                 "unableToLoadProject": "Không thể tải dự án cho phiên này",
                 "unableToLoadSchema": "Không thể tải schema cơ sở dữ liệu cho dự án này",
                 "unableToLoadRecords": "Không thể tải dữ liệu bảng"
+            }
+        },
+        "terminal": {
+            "actions": {
+                "restart": "Khởi động lại"
+            },
+            "status": {
+                "waiting": "Đang chờ kết nối",
+                "connecting": "Đang khởi động terminal",
+                "ready": "Terminal trực tiếp đã kết nối",
+                "closed": "Terminal đã đóng",
+                "error": "Lỗi terminal",
+                "exitCode": "mã thoát {{code}}"
+            },
+            "errors": {
+                "unableToStart": "Không thể khởi động terminal"
             }
         },
         "database": {

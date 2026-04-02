@@ -73,6 +73,19 @@ class ChatService:
         self._container = container
         self._title_service = title_service
 
+    @staticmethod
+    def _find_model_info(all_models, model_id: str):
+        normalized_model_id = str(model_id)
+        return next(
+            (
+                model
+                for model in all_models.models
+                if str(getattr(model, "id", "")) == normalized_model_id
+                or str(getattr(model, "model_id", "")) == normalized_model_id
+            ),
+            None,
+        )
+
     async def create_chat_session(
         self, db: AsyncSession, *, user_message: str, user_id: uuid.UUID, model_id: str
     ) -> SessionMetadata:
@@ -167,21 +180,32 @@ class ChatService:
             db,
             user_id=user_id,
         )
-        model_info = next((m for m in all_models.models if m.id == model_id), None)
+        model_info = self._find_model_info(all_models, model_id)
         if not model_info:
             raise ModelNotFoundError(f"Model not found: {model_id}")
 
     async def get_llm_config(
         self, db: AsyncSession, *, model_id: str, user_id: uuid.UUID
     ) -> LLMConfig:
-        try:
-            return await self._model_setting_service.get_user_llm_config(
-                db,
-                model_id=model_id,
-                user_id=user_id,
-            )
-        except ValueError:
-            return await self._model_setting_service.resolve_system_config(db, model_id=model_id)
+        all_models = await self._model_setting_service.get_all_available_models(
+            db,
+            user_id=user_id,
+        )
+        model_info = self._find_model_info(all_models, model_id)
+
+        if model_info is not None:
+            try:
+                return await self._model_setting_service.resolve_config_by_setting_id(
+                    db,
+                    setting_id=model_info.id,
+                )
+            except ValueError:
+                logger.warning(
+                    "Failed to resolve model config by setting id %s; falling back to model_id",
+                    model_info.id,
+                )
+
+        return await self._model_setting_service.resolve_system_config(db, model_id=model_id)
 
     async def build_message_history_response(
         self,
@@ -320,12 +344,6 @@ class ChatService:
 
         # Phase 2: Build tool registry
         llm_config = await self.get_llm_config(db, model_id=model_id, user_id=user_id)
-        resolved_model_id = (
-            llm_config.setting_id
-            or llm_config.application_model_name
-            or model_id
-            or llm_config.model
-        )
         provider = LLMProviderFactory.create_provider(llm_config)
         is_code_interpreter_enabled = bool(tools and tools.get("code_interpreter"))
 
@@ -341,8 +359,6 @@ class ChatService:
 
         # Phase 3: Run LLM turn loop
         try:
-            assistant_message_id: uuid.UUID | None = None
-            finish_reason: str | None = None
             async for event in self._llm_loop.run(
                 db,
                 messages=messages,
@@ -359,11 +375,6 @@ class ChatService:
                 chat_request=chat_request,
                 tool_service=self._tool_service,
             ):
-                if event.get("type") == EventType.COMPLETE.value:
-                    message_id = event.get("message_id")
-                    finish_reason = event.get("finish_reason")
-                    if message_id:
-                        assistant_message_id = uuid.UUID(str(message_id))
                 yield event
 
             await db.commit()
@@ -504,7 +515,7 @@ class ChatService:
         for mid in all_model_ids:
             try:
                 llm_configs[mid] = await self.get_llm_config(db, model_id=mid, user_id=user_id)
-                model_info = next((m for m in all_models.models if m.id == mid), None)
+                model_info = self._find_model_info(all_models, mid)
                 model_names[mid] = model_info.model if model_info else mid
             except Exception as e:
                 logger.warning(f"Could not resolve config for council model {mid}: {e}")
@@ -528,7 +539,6 @@ class ChatService:
                 f"need at least {MIN_COUNCIL_MODELS}"
             )
 
-        council_had_error = False
         member_outputs_for_persist = {}
         synthesis_content = ""
         synthesis_model_id = council_prefs.synthesis_model_id
@@ -551,11 +561,9 @@ class ChatService:
                     member_outputs_for_persist = event.get("member_outputs", {})
                     synthesis_content = event.get("synthesis_content", "")
                     synthesis_model_id = event.get("synthesis_model_id", synthesis_model_id)
-                    council_had_error = event.get("had_error", False)
                     continue
 
                 if event_type == "council_synthesis_error":
-                    council_had_error = True
                     yield event
                     continue
 
@@ -586,7 +594,6 @@ class ChatService:
                 assistant_parts.append(
                     TextContent(text="[Council execution failed - no model produced output]")
                 )
-                council_had_error = True
 
             assistant_message = await self._message_service.create_message(
                 db,

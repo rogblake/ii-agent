@@ -7,11 +7,10 @@ API-layer schemas (camelCase aliases) are used in router endpoints.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any, Optional
 from uuid import UUID
 
-from typing import Optional
-
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -22,11 +21,24 @@ from pydantic import BaseModel, ConfigDict, Field
 class TokenUsage(BaseModel):
     """Model for token usage tracking."""
 
+    model_config = ConfigDict(extra="ignore")
+
     input_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
+    cache_read_tokens: int = 0
+    cache_write_tokens: int = 0
+    reasoning_tokens: int = 0
+    input_token_details: dict[str, Any] | None = None
+    output_token_details: dict[str, Any] | None = None
     cost_usd: float = 0.0
-    model: Optional[str] = None
+    model_name: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _set_total_tokens(self) -> TokenUsage:
+        if not self.total_tokens and (self.input_tokens or self.output_tokens):
+            self.total_tokens = self.input_tokens + self.output_tokens
+        return self
 
 
 # ---------------------------------------------------------------------------

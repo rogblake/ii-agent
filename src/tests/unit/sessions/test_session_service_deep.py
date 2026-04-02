@@ -38,7 +38,7 @@ def _make_session_ns(**kwargs):
         updated_at=datetime.now(timezone.utc),
         is_deleted=False,
         project=None,
-        llm_setting_id=None,
+        model_setting_id=None,
     )
     defaults.update(kwargs)
     ns = SimpleNamespace(**defaults)
@@ -90,9 +90,7 @@ class FakeSessionRepo:
     async def get_user_sessions(
         self, db, user_id, search_term, page, per_page, public_only, session_type
     ):
-        matching = [
-            s for s in self.sessions.values() if s.user_id == user_id and not s.is_deleted
-        ]
+        matching = [s for s in self.sessions.values() if s.user_id == user_id and not s.is_deleted]
         return matching, len(matching)
 
     async def get_non_deleted_by_ids_and_user(self, db, session_ids, user_id):
@@ -143,6 +141,14 @@ class FakeFileStore:
         return f"signed://{path}"
 
 
+class FakeCache:
+    def __init__(self) -> None:
+        self.evicted_keys: list[str] = []
+
+    async def evict(self, key: str) -> None:
+        self.evicted_keys.append(key)
+
+
 def _make_service(**kwargs) -> SessionService:
     config = SimpleNamespace(
         workspace_path="/tmp/workspace",
@@ -154,6 +160,7 @@ def _make_service(**kwargs) -> SessionService:
         run_task_service=FakeRunTaskService(),
         file_store=FakeFileStore(),
         sandbox_repo=SimpleNamespace(),
+        cache=FakeCache(),
         config=config,
     )
     defaults.update(kwargs)
@@ -631,7 +638,12 @@ class TestBuildSessionInfo:
         assert result.project_id is None
 
     def test_null_timestamps_handled(self):
-        session = _make_session_ns(created_at=None, updated_at=None, last_message_at=None)
+        session = _make_session_ns(
+            user_id=str(uuid.uuid4()),
+            created_at=None,
+            updated_at=None,
+            last_message_at=None,
+        )
         with patch("ii_agent.sessions.service.sa_inspect") as mock_inspect:
             mock_state = MagicMock()
             mock_state.unloaded = {"project"}
@@ -642,10 +654,19 @@ class TestBuildSessionInfo:
         assert result.last_message_at is None
 
     def test_includes_workspace_dir(self):
-        session = _make_session_ns()
+        session = _make_session_ns(user_id=str(uuid.uuid4()))
         with patch("ii_agent.sessions.service.sa_inspect") as mock_inspect:
             mock_state = MagicMock()
             mock_state.unloaded = {"project"}
             mock_inspect.return_value = mock_state
             result = SessionService._build_session_info(session)
         assert session.id in result.workspace_dir
+
+    def test_preserves_legacy_agent_type_values(self):
+        session = _make_session_ns(user_id=str(uuid.uuid4()), agent_type="chat")
+        with patch("ii_agent.sessions.service.sa_inspect") as mock_inspect:
+            mock_state = MagicMock()
+            mock_state.unloaded = {"project"}
+            mock_inspect.return_value = mock_state
+            result = SessionService._build_session_info(session)
+        assert result.agent_type == "chat"

@@ -5,6 +5,7 @@ import { Icon } from '../ui/icon'
 
 export type ProjectTab =
     | 'code'
+    | 'terminal'
     | 'database'
     | 'domain'
     | 'integrations'
@@ -41,6 +42,13 @@ const ProjectHeader = ({
             icon: 'code',
             titleKey: 'project.header.tabs.code.title',
             descriptionKey: 'project.header.tabs.code.description'
+        },
+        {
+            id: 'terminal',
+            labelKey: 'project.header.tabs.terminal.label',
+            icon: 'terminal',
+            titleKey: 'project.header.tabs.terminal.title',
+            descriptionKey: 'project.header.tabs.terminal.description'
         },
         {
             id: 'database',

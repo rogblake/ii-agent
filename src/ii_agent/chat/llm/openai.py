@@ -95,20 +95,14 @@ class OpenAIResponseParams(BaseModel):
     """Pydantic model for OpenAI Responses API parameters."""
 
     model: str = Field(..., description="Model to use for generation")
-    input: Union[str, List[Dict[str, Any]]] = Field(
-        ..., description="Input messages or text"
-    )
+    input: Union[str, List[Dict[str, Any]]] = Field(..., description="Input messages or text")
     instructions: Optional[str] = Field(None, description="System instructions")
     tools: Optional[List[Dict[str, Any]]] = Field(None, description="Available tools")
     temperature: Optional[float] = Field(None, description="Sampling temperature")
     stream: bool = Field(False, description="Enable streaming")
-    max_output_tokens: Optional[int] = Field(
-        None, description="Maximum tokens to generate"
-    )
+    max_output_tokens: Optional[int] = Field(None, description="Maximum tokens to generate")
     reasoning: Optional[dict[str, Any]] = Field(None, description="Reasoning config")
-    previous_response_id: Optional[str] = Field(
-        None, description="Previous response ID"
-    )
+    previous_response_id: Optional[str] = Field(None, description="Previous response ID")
 
     class Config:
         extra = "allow"  # Allow additional fields
@@ -221,9 +215,7 @@ class OpenAIProvider(LLMClient):
                 should_create_new = False
                 now = datetime.now(timezone.utc)
                 if container:
-                    if (now - container.created_at) < timedelta(
-                        minutes=self.CONTAINER_TTL_MINUTES
-                    ):
+                    if (now - container.created_at) < timedelta(minutes=self.CONTAINER_TTL_MINUTES):
                         return container
 
                     old_container_provider = await self.client.containers.retrieve(
@@ -323,8 +315,7 @@ class OpenAIProvider(LLMClient):
                     ChatProviderFile.provider == Provider.OPENAI.value,
                     or_(
                         ChatProviderFile.expires_at.is_(None),
-                        ChatProviderFile.created_at
-                        > (now - timedelta(self.FILE_TTL_SECONDS)),
+                        ChatProviderFile.created_at > (now - timedelta(self.FILE_TTL_SECONDS)),
                     ),
                 )
             )
@@ -394,11 +385,7 @@ class OpenAIProvider(LLMClient):
         # Image formats
         if "png" in file_lower or file_lower.endswith(".png"):
             return "image/png"
-        elif (
-            "jpg" in file_lower
-            or "jpeg" in file_lower
-            or file_lower.endswith((".jpg", ".jpeg"))
-        ):
+        elif "jpg" in file_lower or "jpeg" in file_lower or file_lower.endswith((".jpg", ".jpeg")):
             return "image/jpeg"
         elif "gif" in file_lower or file_lower.endswith(".gif"):
             return "image/gif"
@@ -501,14 +488,10 @@ class OpenAIProvider(LLMClient):
                                 }
                             )
                         else:
-                            logger.warning(
-                                f"Unsupported BinaryContent mime_type: {part.mime_type}"
-                            )
+                            logger.warning(f"Unsupported BinaryContent mime_type: {part.mime_type}")
 
                 if content:
-                    openai_messages.append(
-                        {"type": "message", "role": "user", "content": content}
-                    )
+                    openai_messages.append({"type": "message", "role": "user", "content": content})
 
             elif msg.role == MessageRole.ASSISTANT:
                 # Assistant messages with tool calls should be converted to function_call items
@@ -521,9 +504,7 @@ class OpenAIProvider(LLMClient):
                         {
                             "type": "message",
                             "role": "assistant",
-                            "content": [
-                                {"type": "output_text", "text": text_part.text}
-                            ],
+                            "content": [{"type": "output_text", "text": text_part.text}],
                         }
                     )
 
@@ -559,9 +540,7 @@ class OpenAIProvider(LLMClient):
                         content_parts = []
                         for item in output.value:
                             if isinstance(item, TextContentPart):
-                                content_parts.append(
-                                    {"type": "input_text", "text": item.text}
-                                )
+                                content_parts.append({"type": "input_text", "text": item.text})
                             elif isinstance(item, ImageDataContentPart):
                                 content_parts.append(
                                     {
@@ -592,12 +571,11 @@ class OpenAIProvider(LLMClient):
                                     }
                                 )
                             else:
-                                logger.warning(
-                                    f"Unsupported tool content part type: {item.type}"
-                                )
+                                logger.warning(f"Unsupported tool content part type: {item.type}")
                         content_value = content_parts
                     elif isinstance(output, StorybookProgressContent):
                         import json
+
                         progress_info = {
                             "type": "storybook_progress",
                             "storybook_id": output.storybook_id,
@@ -613,6 +591,7 @@ class OpenAIProvider(LLMClient):
                     elif isinstance(output, StorybookResultContent):
                         # Handle storybook result - convert to structured text for LLM
                         import json
+
                         storybook_info = {
                             "type": "storybook",
                             "storybook_id": output.storybook_id,
@@ -630,9 +609,7 @@ class OpenAIProvider(LLMClient):
                         content_value = json.dumps(storybook_info)
                     else:
                         # Fallback for unknown types
-                        logger.warning(
-                            f"Unknown tool result output type: {type(output)}"
-                        )
+                        logger.warning(f"Unknown tool result output type: {type(output)}")
                         content_value = str(output)
 
                     openai_messages.append(
@@ -669,9 +646,7 @@ class OpenAIProvider(LLMClient):
             # Get user_id from session
             from ii_agent.sessions.models import Session
 
-            result = await db_session.execute(
-                select(Session).where(Session.id == session_id)
-            )
+            result = await db_session.execute(select(Session).where(Session.id == session_id))
             session = result.scalar_one_or_none()
             if not session:
                 logger.error(f"Session {session_id} not found")
@@ -698,10 +673,8 @@ class OpenAIProvider(LLMClient):
 
                     # Download file content from OpenAI
                     # content.retrieve() returns HttpxBinaryResponseContent with .content property
-                    file_content_response = (
-                        await self.client.containers.files.content.retrieve(
-                            file_id=file_obj.id, container_id=citation.container_id
-                        )
+                    file_content_response = await self.client.containers.files.content.retrieve(
+                        file_id=file_obj.id, container_id=citation.container_id
                     )
                     # Get bytes content directly (async read)
                     file_bytes = await file_content_response.aread()
@@ -732,9 +705,7 @@ class OpenAIProvider(LLMClient):
                     )
                     db_session.add(file_upload)
                     # Link to session
-                    db_session.add(
-                        SessionAsset(session_id=session_id, asset_id=file_uuid)
-                    )
+                    db_session.add(SessionAsset(session_id=session_id, asset_id=file_uuid))
 
                     # Create FileResponseObject
                     file_response = FileResponseObject(
@@ -748,9 +719,7 @@ class OpenAIProvider(LLMClient):
                     )
                     file_objects.append(file_response)
 
-                    logger.info(
-                        f"Downloaded and stored file citation: {file_name} ({file_id})"
-                    )
+                    logger.info(f"Downloaded and stored file citation: {file_name} ({file_id})")
                     await db_session.commit()
                 except Exception as e:
                     logger.error(
@@ -763,9 +732,7 @@ class OpenAIProvider(LLMClient):
 
         return ContainerFile(container_id=container_id, files=file_objects)
 
-    async def _get_files_within_session(
-        self, session_id: str, container_id: str
-    ) -> ContainerFile:
+    async def _get_files_within_session(self, session_id: str, container_id: str) -> ContainerFile:
         async with get_db_session_local() as db_session:
             now = datetime.now(timezone.utc)
             result = await db_session.execute(
@@ -856,9 +823,7 @@ class OpenAIProvider(LLMClient):
                 code_interpreter_tool["container"]["file_ids"] = f_ids
 
             converted_tools.append(code_interpreter_tool)
-            logger.info(
-                f"Added code_interpreter tool with container tool: {code_interpreter_tool}"
-            )
+            logger.info(f"Added code_interpreter tool with container tool: {code_interpreter_tool}")
 
         return converted_tools if converted_tools else None
 
@@ -895,9 +860,7 @@ class OpenAIProvider(LLMClient):
         openai_messages = self._convert_messages(messages, None)
 
         # Extract system message as instructions
-        instructions = template.substitute(
-            current_date=datetime.now().strftime("%Y-%m-%d")
-        )
+        instructions = template.substitute(current_date=datetime.now().strftime("%Y-%m-%d"))
         openai_opts = (provider_options or {}).get("openai", {})
         user_messages = []
 
@@ -961,21 +924,17 @@ class OpenAIProvider(LLMClient):
         usage = TokenUsage()
         if response.usage:
             usage = TokenUsage(
-                prompt_tokens=response.usage.input_tokens,
-                completion_tokens=response.usage.output_tokens,
+                input_tokens=response.usage.input_tokens,
+                output_tokens=response.usage.output_tokens,
                 cache_write_tokens=0,
-                cache_read_tokens=getattr(
-                    response.usage.input_tokens_details, "cached_tokens", 0
-                ),
+                cache_read_tokens=getattr(response.usage.input_tokens_details, "cached_tokens", 0),
                 model_name=self.llm_config.model,
                 total_tokens=response.usage.total_tokens,
             )
 
         # Map status to finish reason
         finish_reason_map = {
-            "completed": (
-                FinishReason.END_TURN if not tool_calls else FinishReason.TOOL_USE
-            ),
+            "completed": (FinishReason.END_TURN if not tool_calls else FinishReason.TOOL_USE),
             "failed": FinishReason.ERROR,
             "incomplete": FinishReason.MAX_TOKENS,
             "cancelled": FinishReason.ERROR,
@@ -1043,9 +1002,7 @@ class OpenAIProvider(LLMClient):
                     )
                     break  # Stop after finding first (last) assistant message
         # Extract system message as instructions
-        instructions = template.substitute(
-            current_date=datetime.now().strftime("%Y-%m-%d")
-        )
+        instructions = template.substitute(current_date=datetime.now().strftime("%Y-%m-%d"))
         openai_opts = (provider_options or {}).get("openai", {})
         # Convert tools to Responses API format (with container if code interpreter enabled)
         openai_tools = self._convert_tools(
@@ -1084,9 +1041,7 @@ class OpenAIProvider(LLMClient):
                 if not content_started:
                     yield RunResponseEvent(type=EventType.CONTENT_START)
                     content_started = True
-                yield RunResponseEvent(
-                    type=EventType.CONTENT_DELTA, content=event.delta
-                )
+                yield RunResponseEvent(type=EventType.CONTENT_DELTA, content=event.delta)
 
             # Text content done
             elif isinstance(event, ResponseTextDoneEvent):
@@ -1095,9 +1050,7 @@ class OpenAIProvider(LLMClient):
 
             # Reasoning content delta (for o1/o3/o4 models - full reasoning)
             elif isinstance(event, ResponseReasoningTextDeltaEvent):
-                yield RunResponseEvent(
-                    type=EventType.THINKING_DELTA, thinking=event.delta
-                )
+                yield RunResponseEvent(type=EventType.THINKING_DELTA, thinking=event.delta)
 
             # Reasoning content done
             elif isinstance(event, ResponseReasoningTextDoneEvent):
@@ -1105,9 +1058,7 @@ class OpenAIProvider(LLMClient):
                 pass  # Complete reasoning available in final response
 
             elif isinstance(event, ResponseReasoningSummaryTextDeltaEvent):
-                yield RunResponseEvent(
-                    type=EventType.THINKING_DELTA, thinking=event.delta
-                )
+                yield RunResponseEvent(type=EventType.THINKING_DELTA, thinking=event.delta)
 
             # Reasoning summary done
             elif isinstance(event, ResponseReasoningSummaryTextDoneEvent):
@@ -1115,9 +1066,7 @@ class OpenAIProvider(LLMClient):
 
             # Refusal delta
             elif isinstance(event, ResponseRefusalDeltaEvent):
-                yield RunResponseEvent(
-                    type=EventType.CONTENT_DELTA, content=event.delta
-                )
+                yield RunResponseEvent(type=EventType.CONTENT_DELTA, content=event.delta)
 
             # Refusal done
             elif isinstance(event, ResponseRefusalDoneEvent):
@@ -1184,29 +1133,21 @@ class OpenAIProvider(LLMClient):
 
             # Content part added
             elif isinstance(event, ResponseContentPartAddedEvent):
-                logger.debug(
-                    f"Content part added at index {event.content_index}, event: {event}"
-                )
+                logger.debug(f"Content part added at index {event.content_index}, event: {event}")
 
             # Content part done
             elif isinstance(event, ResponseContentPartDoneEvent):
-                logger.debug(
-                    f"Content part done at index {event.content_index}, event: {event}"
-                )
+                logger.debug(f"Content part done at index {event.content_index}, event: {event}")
 
             elif isinstance(event, ResponseCodeInterpreterCallInProgressEvent):
                 logger.debug(f"Code interpreter start: {event}")
                 yield RunResponseEvent(type=EventType.CONTENT_START)
-                yield RunResponseEvent(
-                    type=EventType.CONTENT_DELTA, content="```python\n"
-                )
+                yield RunResponseEvent(type=EventType.CONTENT_DELTA, content="```python\n")
 
             # Code interpreter events
             elif isinstance(event, ResponseCodeInterpreterCallCodeDeltaEvent):
                 logger.debug(f"Code interpreter delta: {event.delta}")
-                yield RunResponseEvent(
-                    type=EventType.CONTENT_DELTA, content=event.delta
-                )
+                yield RunResponseEvent(type=EventType.CONTENT_DELTA, content=event.delta)
 
             elif isinstance(event, ResponseCodeInterpreterCallCodeDoneEvent):
                 yield RunResponseEvent(type=EventType.CONTENT_DELTA, content="\n```")
@@ -1239,16 +1180,13 @@ class OpenAIProvider(LLMClient):
                     yield RunResponseEvent(type=EventType.CONTENT_STOP)
 
                 content_parts, file_citations = (
-                    self._extract_content_part_file_citation_from_response(
-                        event.response
-                    )
+                    self._extract_content_part_file_citation_from_response(event.response)
                 )
 
                 # Extract usage with proper token details
                 usage = TokenUsage()
                 if event.response.usage:
                     # Extract cache tokens from input_tokens_details
-                    cache_creation = 0
                     cache_read = 0
 
                     if event.response.usage:
@@ -1271,9 +1209,9 @@ class OpenAIProvider(LLMClient):
                         )
 
                     usage = TokenUsage(
-                        prompt_tokens=event.response.usage.input_tokens,
-                        completion_tokens=event.response.usage.output_tokens,
-                        cache_creation_tokens=cache_creation,
+                        input_tokens=event.response.usage.input_tokens,
+                        output_tokens=event.response.usage.output_tokens,
+                        cache_write_tokens=0,
                         cache_read_tokens=cache_read,
                         input_token_details=event.response.usage.input_tokens_details.model_dump(),
                         output_token_details=event.response.usage.output_tokens_details.model_dump(),
@@ -1282,12 +1220,10 @@ class OpenAIProvider(LLMClient):
                     )
 
                     logger.info(
-                        f"Usage - Input: {usage.prompt_tokens}, Output: {usage.completion_tokens}, Reasoning: {reasoning_tokens}, Cache read: {cache_read}"
+                        f"Usage - Input: {usage.input_tokens}, Output: {usage.output_tokens}, Reasoning: {reasoning_tokens}, Cache read: {cache_read}"
                     )
 
-                have_tool_call = any(
-                    isinstance(part, ToolCall) for part in content_parts
-                )
+                have_tool_call = any(isinstance(part, ToolCall) for part in content_parts)
 
                 # Determine finish reason based on response status and tool calls
                 finish_reason = FinishReason.END_TURN
@@ -1304,9 +1240,7 @@ class OpenAIProvider(LLMClient):
                         file_citations=file_citations, session_id=session_id
                     )
 
-                provider_metadata = {
-                    Provider.OPENAI.value: {"response_id": event.response.id}
-                }
+                provider_metadata = {Provider.OPENAI.value: {"response_id": event.response.id}}
                 yield RunResponseEvent(
                     type=EventType.COMPLETE,
                     response=RunResponseOutput(

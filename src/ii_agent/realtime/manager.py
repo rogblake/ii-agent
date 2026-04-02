@@ -34,11 +34,19 @@ class SocketIOManager:
     ``pubsub.publish(event)`` (events route by session_id).
     """
 
-    def __init__(self, sio: socketio.AsyncServer, pubsub: AsyncIOPubSub, container: ApplicationContainer) -> None:
+    def __init__(
+        self,
+        sio: socketio.AsyncServer,
+        pubsub: AsyncIOPubSub,
+        container: ApplicationContainer,
+    ) -> None:
         self.sio = sio
         self.pubsub = pubsub
+        self._container = container
         self.command_factory = CommandHandlerFactory(pubsub=self.pubsub, container=container)
         self.session_service: SessionService = container.session_service
+        self.live_terminal_service = container.live_terminal_service
+        self.live_terminal_service.bind_socketio(self.sio)
 
     async def init(self) -> None:
         await self.command_factory.initialize()
@@ -47,8 +55,13 @@ class SocketIOManager:
         self.sio.on("join_session")(self.join_session)
         self.sio.on("chat_message")(self.chat_message)
         self.sio.on("leave_session")(self.leave_session)
+        self.sio.on("pty_create")(self.pty_create)
+        self.sio.on("pty_input")(self.pty_input)
+        self.sio.on("pty_resize")(self.pty_resize)
+        self.sio.on("pty_close")(self.pty_close)
 
     async def shutdown(self) -> None:
+        await self.live_terminal_service.shutdown()
         await self.sio.shutdown()
 
     async def chat_message(self, sid: str, data: Dict[str, Any]) -> None:
@@ -145,6 +158,7 @@ class SocketIOManager:
 
             old_session_id = session_data.get("session_id")
             if old_session_id and old_session_id != session_id_str:
+                await self.live_terminal_service.close_terminal(sid, emit_event=False)
                 await self._leave_current_session(sid, old_session_id)
 
             await self.sio.enter_room(sid, session_id_str)
@@ -160,12 +174,14 @@ class SocketIOManager:
     async def leave_session(self, sid: str, data: Dict[str, Any]) -> None:
         session_data = await self.sio.get_session(sid)
         session_id = session_data.get("session_id") if session_data else None
+        await self.live_terminal_service.close_terminal(sid, emit_event=False)
         if session_id:
             await self._leave_current_session(sid, session_id)
 
     async def disconnect(self, sid: str) -> None:
         session_data = await self.sio.get_session(sid)
         session_id = session_data.get("session_id") if session_data else None
+        await self.live_terminal_service.close_terminal(sid, emit_event=False)
         if session_id:
             await self._leave_current_session(sid, session_id)
 
@@ -175,6 +191,22 @@ class SocketIOManager:
 
     def _is_session_owner(self, user_id: str, session: SessionInfo) -> bool:
         return str(session.user_id) == str(user_id)
+
+    async def _get_bound_session(
+        self, sid: str
+    ) -> tuple[Dict[str, Any] | None, SessionInfo | None]:
+        session_data = await self.sio.get_session(sid)
+        if not session_data or not session_data.get("authenticated"):
+            return session_data, None
+
+        session_id = session_data.get("session_id")
+        if not session_id:
+            return session_data, None
+
+        try:
+            return session_data, await self._require_session(uuid.UUID(session_id))
+        except ValueError:
+            return session_data, None
 
     async def _leave_current_session(self, sid: str, session_id: str) -> None:
         try:
@@ -204,6 +236,18 @@ class SocketIOManager:
             to=sid,
         )
 
+    async def _emit_terminal_error(
+        self,
+        sid: str,
+        message: str,
+        *,
+        terminal_id: str | None = None,
+    ) -> None:
+        payload: dict[str, Any] = {"message": message}
+        if terminal_id:
+            payload["terminal_id"] = terminal_id
+        await self.sio.emit("pty_error", payload, to=sid)
+
     async def _emit_system(self, sid: str, message: str, **kwargs: Any) -> None:
         """Emit a system message directly to a socket."""
         payload = {
@@ -212,3 +256,66 @@ class SocketIOManager:
             "content": {"message": message, **kwargs},
         }
         await self.sio.emit("chat_event", payload, to=sid)
+
+    async def pty_create(self, sid: str, data: Dict[str, Any] | None) -> None:
+        payload = data or {}
+        terminal_id = payload.get("terminal_id")
+        if not isinstance(terminal_id, str) or not terminal_id:
+            await self._emit_terminal_error(sid, "Missing terminal id")
+            return
+
+        session_data, session = await self._get_bound_session(sid)
+        user_id = session_data.get("user_id") if session_data else None
+        if not session or not user_id or not self._is_session_owner(user_id, session):
+            await self._emit_terminal_error(
+                sid,
+                "Terminal session is not ready",
+                terminal_id=terminal_id,
+            )
+            return
+
+        cols = payload.get("cols")
+        rows = payload.get("rows")
+        await self.live_terminal_service.create_terminal(
+            sid,
+            session_info=session,
+            terminal_id=terminal_id,
+            cols=cols if isinstance(cols, int) else None,
+            rows=rows if isinstance(rows, int) else None,
+        )
+
+    async def pty_input(self, sid: str, data: Dict[str, Any] | None) -> None:
+        payload = data or {}
+        terminal_id = payload.get("terminal_id")
+        text = payload.get("data")
+        if not isinstance(terminal_id, str) or not terminal_id or not isinstance(text, str):
+            return
+
+        await self.live_terminal_service.write_input(
+            sid,
+            terminal_id=terminal_id,
+            data=text,
+        )
+
+    async def pty_resize(self, sid: str, data: Dict[str, Any] | None) -> None:
+        payload = data or {}
+        terminal_id = payload.get("terminal_id")
+        if not isinstance(terminal_id, str) or not terminal_id:
+            return
+
+        cols = payload.get("cols")
+        rows = payload.get("rows")
+        await self.live_terminal_service.resize_terminal(
+            sid,
+            terminal_id=terminal_id,
+            cols=cols if isinstance(cols, int) else None,
+            rows=rows if isinstance(rows, int) else None,
+        )
+
+    async def pty_close(self, sid: str, data: Dict[str, Any] | None) -> None:
+        payload = data or {}
+        terminal_id = payload.get("terminal_id")
+        await self.live_terminal_service.close_terminal(
+            sid,
+            terminal_id=terminal_id if isinstance(terminal_id, str) and terminal_id else None,
+        )

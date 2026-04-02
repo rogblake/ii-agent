@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 import uuid
 import logging
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+from ii_agent.agents.sandboxes.models import AgentSandbox
+from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.sessions.exceptions import SessionNotFoundError, SessionValidationError
@@ -18,6 +21,8 @@ if TYPE_CHECKING:
     from ii_agent.sessions.schemas import ForkSessionRequest, ForkSessionResponse
 
 logger = logging.getLogger(__name__)
+
+_SESSION_METADATA_ADAPTER = TypeAdapter(dict[str, object])
 
 
 class SessionForkService:
@@ -54,6 +59,7 @@ class SessionForkService:
         from ii_agent.sessions.schemas import (
             ForkSessionResponse,
             FORK_TYPE_VALID_SOURCES,
+            SandboxMode,
             get_target_agent_type,
             validate_fork_source,
         )
@@ -82,22 +88,29 @@ class SessionForkService:
         if model_setting_id is None and parent.model_setting_id:
             model_setting_id = parent.model_setting_id
 
+        shared_sandbox = None
+        if request.sandbox_mode == SandboxMode.SHARE:
+            shared_sandbox = await self._sandbox_repo.get_by_session_id(db, parent_session_id)
+
         # 6. Build fork metadata and create session
         new_session_uuid = uuid.uuid4()
         parent_name = parent.name or "Untitled"
         new_name = f"Continue from: {parent_name}"
-        session_metadata = {
-            "fork_info": {
-                "fork_type": request.fork_type.value,
-                "parent_session_id": parent_session_id,
-                "parent_agent_type": parent_agent_type,
-                "context": {
-                    "attachments": request.context.attachments,
-                    "additional_instruction": request.context.additional_instruction,
-                },
-                "forked_at": datetime.now(timezone.utc).isoformat(),
-            }
-        }
+        session_metadata = _SESSION_METADATA_ADAPTER.dump_python(
+            {
+                "fork_info": {
+                    "fork_type": request.fork_type.value,
+                    "parent_session_id": parent_session_id,
+                    "parent_agent_type": parent_agent_type,
+                    "context": {
+                        "attachments": request.context.attachments,
+                        "additional_instruction": request.context.additional_instruction,
+                    },
+                    "forked_at": datetime.now(timezone.utc).isoformat(),
+                }
+            },
+            mode="json",
+        )
 
         new_session = Session(
             id=new_session_uuid,
@@ -111,6 +124,19 @@ class SessionForkService:
             api_version="v1",
         )
         await self._session_repo.save(db, new_session)
+
+        if shared_sandbox is not None:
+            await self._sandbox_repo.save(
+                db,
+                AgentSandbox(
+                    session_id=new_session.id,
+                    provider=shared_sandbox.provider,
+                    provider_sandbox_id=shared_sandbox.provider_sandbox_id,
+                    status=shared_sandbox.status,
+                    expired_at=shared_sandbox.expired_at,
+                    provider_data=deepcopy(shared_sandbox.provider_data),
+                ),
+            )
 
         logger.info(
             f"Created forked session {new_session.id} from parent {parent_session_id} "

@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import json
-import uuid
-from typing import Any, Dict, List, Optional
+from typing import Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -14,26 +13,20 @@ from ii_agent.chat.types import (
     ArrayResultContent,
     BinaryContent,
     ErrorJsonContent,
-    ErrorTextContent,
     EventType,
-    ExecutionDeniedContent,
     FileDataContentPart,
     FinishReason,
-    ImageDataContentPart,
     ImageURLContent,
     ImageUrlContentPart,
-    JsonResultContent,
     Message,
     MessageRole,
     ReasoningContent,
-    RunResponseEvent,
     StorybookProgressContent,
     StorybookResultContent,
     TextContent,
     TextContentPart,
     TextResultContent,
     ToolCall,
-    ToolResult,
 )
 from ii_agent.settings.llm import Provider
 from ii_agent.core.config.llm_config import LLMConfig
@@ -415,7 +408,7 @@ class TestCustomProviderSendDeep:
         with patch(
             "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
         ) as mock_acomp:
-            result = await provider.send([msg], tools=tools)
+            await provider.send([msg], tools=tools)
 
         call_kwargs = mock_acomp.call_args[1]
         assert "tools" in call_kwargs
@@ -455,15 +448,15 @@ class TestCustomProviderSendDeep:
         mock_choice.message.tool_calls = None
         mock_choice.finish_reason = "stop"
         mock_response.choices = [mock_choice]
-        mock_response.usage = MagicMock(prompt_tokens=200, completion_tokens=100)
+        mock_response.usage = MagicMock(input_tokens=200, output_tokens=100)
 
         with patch(
             "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
         ):
             result = await provider.send([msg])
 
-        assert result.usage.prompt_tokens == 200
-        assert result.usage.completion_tokens == 100
+        assert result.usage.input_tokens == 200
+        assert result.usage.output_tokens == 100
 
     @pytest.mark.asyncio
     async def test_send_finish_reason_content_filter_maps_to_error(self):
@@ -853,8 +846,8 @@ class TestCustomProviderStreamDeep:
         msg = _user_message("Hello")
 
         mock_usage = MagicMock()
-        mock_usage.prompt_tokens = 50
-        mock_usage.completion_tokens = 25
+        mock_usage.input_tokens = 50
+        mock_usage.output_tokens = 25
 
         chunks = [
             self._make_chunk(content="Hello world"),

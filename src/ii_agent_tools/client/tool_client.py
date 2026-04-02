@@ -72,24 +72,14 @@ class IIToolClient:
 
     def init_services(self, settings: ToolClientSettings):
         self.web_search_service = WebSearchService(settings.web_search_config)
-        self.web_visit_service = WebVisitService(
-            self.llm_client, settings.web_visit_config
-        )
-        self.image_generation_service = ImageGenerationService(
-            settings.image_generate_config
-        )
-        self.audio_generation_service = AudioGenerationService(
-            settings.audio_generate_config
-        )
-        self.image_search_service = ImageSearchService(
-            settings.image_search_config, self.storage
-        )
+        self.web_visit_service = WebVisitService(self.llm_client, settings.web_visit_config)
+        self.image_generation_service = ImageGenerationService(settings.image_generate_config)
+        self.audio_generation_service = AudioGenerationService(settings.audio_generate_config)
+        self.image_search_service = ImageSearchService(settings.image_search_config, self.storage)
         self.video_generation_service = VideoGenerationService(
             settings.video_generate_config, self.llm_client, self.storage
         )
-        self.voice_generation_service = VoiceGenerationService(
-            settings.voice_generate_config
-        )
+        self.voice_generation_service = VoiceGenerationService(settings.voice_generate_config)
 
     async def web_search(
         self,
@@ -98,9 +88,7 @@ class IIToolClient:
         service_type: WebSearchServiceType | None = None,
     ) -> WebSearchResult:
         self.input_validator.validate_str("query", query, min_len=1, max_len=500)
-        self.input_validator.validate_int(
-            "max_results", max_results, min_val=1, max_val=50
-        )
+        self.input_validator.validate_int("max_results", max_results, min_val=1, max_val=50)
         if service_type is not None:
             self.input_validator.validate_choice(
                 "service_type", service_type, WEB_SEARCH_SERVICE_TYPES
@@ -117,17 +105,13 @@ class IIToolClient:
         self.input_validator.validate_list("queries", queries, min_len=1, max_len=10)
         for query in queries:
             self.input_validator.validate_str("query", query)
-        self.input_validator.validate_int(
-            "max_results", max_results, min_val=1, max_val=50
-        )
+        self.input_validator.validate_int("max_results", max_results, min_val=1, max_val=50)
         if service_type is not None:
             self.input_validator.validate_choice(
                 "service_type", service_type, WEB_SEARCH_SERVICE_TYPES
             )
 
-        return await self.web_search_service.batch_search(
-            queries, max_results, service_type
-        )
+        return await self.web_search_service.batch_search(queries, max_results, service_type)
 
     async def generate_image(
         self,
@@ -157,9 +141,7 @@ class IIToolClient:
         **kwargs,
     ) -> ImageGenerationResult:
         self.input_validator.validate_str("prompt", prompt)
-        self.input_validator.validate_choice(
-            "aspect_ratio", aspect_ratio, IMAGE_ASPECT_RATIOS
-        )
+        self.input_validator.validate_choice("aspect_ratio", aspect_ratio, IMAGE_ASPECT_RATIOS)
         self.input_validator.validate_str("image_size", image_size)
         if image_urls is not None:
             self.input_validator.validate_list("image_urls", image_urls, min_len=0)
@@ -208,12 +190,8 @@ class IIToolClient:
         max_results: int = 5,
     ) -> ImageSearchResult:
         self.input_validator.validate_str("query", query)
-        self.input_validator.validate_choice(
-            "aspect_ratio", aspect_ratio, IMAGE_SEARCH_ASPECTS
-        )
-        self.input_validator.validate_choice(
-            "image_type", image_type, IMAGE_SEARCH_TYPES
-        )
+        self.input_validator.validate_choice("aspect_ratio", aspect_ratio, IMAGE_SEARCH_ASPECTS)
+        self.input_validator.validate_choice("image_type", image_type, IMAGE_SEARCH_TYPES)
         self.input_validator.validate_int("min_width", min_width)
         self.input_validator.validate_int("min_height", min_height)
         self.input_validator.validate_int("max_results", max_results)
@@ -268,6 +246,10 @@ class IIToolClient:
         # Frame URLs (passed directly to Veo API)
         start_frame: str | None = None,
         end_frame: str | None = None,
+        start_frame_base64: str | None = None,
+        start_frame_mime_type: Literal["image/png", "image/jpeg", "image/webp"] | None = None,
+        end_frame_base64: str | None = None,
+        end_frame_mime_type: Literal["image/png", "image/jpeg", "image/webp"] | None = None,
         # Veo 3.1 additional parameters
         negative_prompt: str | None = None,
         person_generation: Literal["allow_all", "allow_adult"] | None = None,
@@ -292,6 +274,10 @@ class IIToolClient:
             multishot_mode: Whether to enable multishot mode when supported
             start_frame: URL of start frame image (https:// or gs://)
             end_frame: URL of end frame image (https:// or gs://)
+            start_frame_base64: Base64-encoded start frame image content
+            start_frame_mime_type: MIME type for inline start frame content
+            end_frame_base64: Base64-encoded end frame image content
+            end_frame_mime_type: MIME type for inline end frame content
             negative_prompt: Description of unwanted content in the video
             person_generation: Person generation mode ("allow_all" or "allow_adult")
             seed: Random seed for reproducibility (Veo 3.x)
@@ -299,12 +285,30 @@ class IIToolClient:
             use_extension_api: Use video extension API for long videos (maintains audio coherence)
         """
         self.input_validator.validate_str("prompt", prompt)
-        self.input_validator.validate_choice(
-            "aspect_ratio", aspect_ratio, VIDEO_ASPECT_RATIOS
-        )
+        self.input_validator.validate_choice("aspect_ratio", aspect_ratio, VIDEO_ASPECT_RATIOS)
         self.input_validator.validate_int(
             "duration_seconds", duration_seconds, min_val=3, max_val=30
         )
+        if start_frame is not None:
+            self.input_validator.validate_str("start_frame", start_frame, min_len=1)
+        if end_frame is not None:
+            self.input_validator.validate_str("end_frame", end_frame, min_len=1)
+        if start_frame and start_frame_base64:
+            raise ValueError("start_frame accepts either a URL or base64 content, not both")
+        if end_frame and end_frame_base64:
+            raise ValueError("end_frame accepts either a URL or base64 content, not both")
+        if start_frame_base64 is not None:
+            self.input_validator.validate_str("start_frame_base64", start_frame_base64, min_len=1)
+        if start_frame_mime_type is not None:
+            self.input_validator.validate_choice(
+                "start_frame_mime_type", start_frame_mime_type, IMAGE_MIME_TYPES
+            )
+        if end_frame_base64 is not None:
+            self.input_validator.validate_str("end_frame_base64", end_frame_base64, min_len=1)
+        if end_frame_mime_type is not None:
+            self.input_validator.validate_choice(
+                "end_frame_mime_type", end_frame_mime_type, IMAGE_MIME_TYPES
+            )
         if negative_prompt is not None:
             self.input_validator.validate_str("negative_prompt", negative_prompt)
         if person_generation is not None:
@@ -334,6 +338,10 @@ class IIToolClient:
             multishot_mode=multishot_mode,
             start_frame=start_frame,
             end_frame=end_frame,
+            start_frame_base64=start_frame_base64,
+            start_frame_mime_type=start_frame_mime_type,
+            end_frame_base64=end_frame_base64,
+            end_frame_mime_type=end_frame_mime_type,
             negative_prompt=negative_prompt,
             person_generation=person_generation,
             seed=seed,
@@ -440,9 +448,7 @@ class IIToolClient:
                 "previous_request_ids", previous_request_ids, min_len=0
             )
         if next_request_ids is not None:
-            self.input_validator.validate_list(
-                "next_request_ids", next_request_ids, min_len=0
-            )
+            self.input_validator.validate_list("next_request_ids", next_request_ids, min_len=0)
         if optimize_streaming_latency is not None:
             self.input_validator.validate_int(
                 "optimize_streaming_latency", optimize_streaming_latency, min_val=0
@@ -492,9 +498,7 @@ class IIToolClient:
         if model_name is not None:
             self.input_validator.validate_str("model_name", model_name)
         if music_length_ms is not None:
-            self.input_validator.validate_int(
-                "music_length_ms", music_length_ms, min_val=1000
-            )
+            self.input_validator.validate_int("music_length_ms", music_length_ms, min_val=1000)
         if output_format is not None:
             self.input_validator.validate_str("output_format", output_format)
         if seed is not None:

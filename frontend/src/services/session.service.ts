@@ -13,6 +13,7 @@ import {
     UpdateSessionRequest,
     SessionFile
 } from '@/typings/session'
+import { normalizeSession, normalizeSessions } from './session-normalizer'
 
 class SessionService {
     async getSessions({
@@ -26,20 +27,21 @@ class SessionService {
                 params: { page, per_page: limit, public_only }
             }
         )
-        return response.data.sessions || []
+        return normalizeSessions(response.data.sessions || [])
     }
+
     async getSession(sessionId: string): Promise<ISession> {
         const response = await axiosInstance.get<ISession>(
             `/v1/sessions/${sessionId}`
         )
-        return response.data
+        return normalizeSession(response.data)
     }
 
     async getPublicSession(sessionId: string): Promise<ISession> {
         const response = await axiosInstance.get<ISession>(
             `/v1/public/sessions/${sessionId}`
         )
-        return response.data
+        return normalizeSession(response.data)
     }
 
     async getSessionEvents(sessionId: string): Promise<SessionEventsResponse> {
@@ -67,7 +69,7 @@ class SessionService {
 
     async createSession(data: CreateSessionRequest): Promise<ISession> {
         const response = await axiosInstance.post<ISession>('/v1/sessions', data)
-        return response.data
+        return normalizeSession(response.data)
     }
 
     async deleteSession(sessionId: string): Promise<void> {
@@ -82,7 +84,7 @@ class SessionService {
             `/v1/sessions/${sessionId}`,
             data
         )
-        return response.data
+        return normalizeSession(response.data)
     }
 
     async getSessionSlides(

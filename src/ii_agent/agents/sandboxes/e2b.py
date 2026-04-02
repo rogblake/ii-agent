@@ -3,30 +3,33 @@
 Pure provider — all database persistence is handled by :class:`SandboxService`.
 """
 
-import logging
+import asyncio
 import os
+import posixpath
+import shlex
 import stat as _stat_mod
+import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-from typing import IO, AsyncIterator, Dict, Any, List, Literal, Optional
+from pathlib import PurePosixPath
+from typing import IO, Any, AsyncIterator, Dict, List, Literal, Optional
 
-from e2b import CommandResult, SandboxState
-from e2b_code_interpreter import AsyncSandbox
-from e2b_code_interpreter.models import Execution
+from e2b import CommandResult, PtySize, SandboxState
 from e2b.exceptions import (
-    NotFoundException,
     AuthenticationException,
+    NotFoundException,
     TimeoutException,
 )
+from e2b_code_interpreter import AsyncSandbox
+from e2b_code_interpreter.models import Execution
 from fastmcp import Client
-
 from ii_agent.agents.sandboxes.base import Sandbox
 from ii_agent.agents.sandboxes.exceptions import (
     SandboxAuthenticationError,
     SandboxNotFoundException,
-    SandboxTimeoutException,
     SandboxNotInitializedError,
     SandboxOperationError,
+    SandboxTimeoutException,
 )
 from ii_agent.agents.sandboxes.schemas import (
     EXCLUDED_DIRS,
@@ -43,9 +46,43 @@ from ii_agent.agents.sandboxes.schemas import (
     is_binary_file_path,
     is_image_file_path,
 )
+from ii_agent.agents.sandboxes.shell import (
+    ShellBusyError,
+    ShellCommandTimeoutError,
+    ShellInvalidSessionNameError,
+    ShellOperationError,
+    ShellResult,
+    ShellRunDirNotFoundError,
+    ShellSessionExistsError,
+    ShellSessionNotFoundError,
+    ShellSessionRecord,
+    ShellSessionState,
+    sanitize_shell_output,
+    strip_ansi,
+)
+from ii_agent.agents.sandboxes.terminal import (
+    LiveTerminalHandle,
+    LiveTerminalNotFoundError,
+    TerminalDataCallback,
+)
 from ii_agent.agents.sandboxes.types import SandboxProviderType, SandboxStatus
 from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.core.logger import logger
+
+_DEFAULT_SHELL_TIMEOUT = 60
+_MAX_SHELL_TIMEOUT = 180
+_SHELL_POLL_INTERVAL = 0.25
+_DEFAULT_PROMPT_PREFIX = "root@sandbox"
+_PROMPT_FORMAT = r"\[\033[01;32m\]{PREFIX}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ ".format(
+    PREFIX=_DEFAULT_PROMPT_PREFIX
+)
+_SHELL_STORAGE_DIRNAME = ".ii_agent/pty"
+_SHELL_LOG_TAIL_BYTES = 65536
+_SHELL_OUTPUT_TAIL_BYTES = 131072
+_SHELL_UTILITY_TIMEOUT = 30
+_ENV_SOURCE_CMD = "source /app/.user_env.sh"
+_ENV_SOURCE_SAFE_CMD = f"{_ENV_SOURCE_CMD} >/dev/null 2>&1 || true"
+_SHELL_LOCKS: dict[str, asyncio.Lock] = {}
 
 
 def _is_dir_entry(entry: Any) -> bool:
@@ -92,6 +129,46 @@ def e2b_exception_handler(func):
             raise SandboxOperationError(func.__name__, str(e)) from e
 
     return wrapper
+
+
+class E2BLiveTerminalHandle(LiveTerminalHandle):
+    """Provider-agnostic wrapper around E2B PTY handles."""
+
+    def __init__(self, *, pty, handle) -> None:
+        self._pty = pty
+        self._handle = handle
+
+    @property
+    def pid(self) -> int:
+        return self._handle.pid
+
+    async def send_input(self, data: bytes) -> None:
+        try:
+            await self._pty.send_stdin(self.pid, data)
+        except NotFoundException as exc:
+            raise LiveTerminalNotFoundError(f"PTY process {self.pid} not found") from exc
+
+    async def resize(self, cols: int, rows: int) -> None:
+        try:
+            await self._pty.resize(self.pid, PtySize(cols=cols, rows=rows))
+        except NotFoundException as exc:
+            raise LiveTerminalNotFoundError(f"PTY process {self.pid} not found") from exc
+
+    async def kill(self) -> bool:
+        try:
+            return await self._handle.kill()
+        except NotFoundException as exc:
+            raise LiveTerminalNotFoundError(f"PTY process {self.pid} not found") from exc
+
+    async def disconnect(self) -> None:
+        await self._handle.disconnect()
+
+    async def wait(self) -> int | None:
+        try:
+            result = await self._handle.wait()
+        except NotFoundException as exc:
+            raise LiveTerminalNotFoundError(f"PTY process {self.pid} not found") from exc
+        return getattr(result, "exit_code", None)
 
 
 class E2BSandbox(Sandbox):
@@ -151,6 +228,684 @@ class E2BSandbox(Sandbox):
             vscode_url=vscode_url,
         )
 
+    @staticmethod
+    def _discard_pty_data(_: bytes) -> None:
+        return None
+
+    @staticmethod
+    def _shell_timestamp() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    @staticmethod
+    def _normalize_shell_output(text: str) -> str:
+        return sanitize_shell_output(text)
+
+    @staticmethod
+    def _validate_shell_session_name(session_name: str) -> None:
+        if not session_name or not session_name.replace("_", "").replace("-", "").isalnum():
+            raise ShellInvalidSessionNameError(
+                "Invalid session name. Only alphanumeric characters, hyphens, and underscores are allowed."
+            )
+
+    def _get_shell_lock(self):
+        return _SHELL_LOCKS.setdefault(self.sandbox_id, asyncio.Lock())
+
+    def _get_shell_storage_dir(self) -> str:
+        return str(PurePosixPath(get_settings().workspace_path) / _SHELL_STORAGE_DIRNAME)
+
+    def _get_shell_log_path(self, session_name: str) -> str:
+        return str(PurePosixPath(self._get_shell_storage_dir()) / f"{session_name}.log")
+
+    def _get_shell_state_path(self, session_name: str) -> str:
+        return str(PurePosixPath(self._get_shell_storage_dir()) / f"{session_name}.state")
+
+    async def _run_shell_utility_command(
+        self,
+        command: str,
+        *,
+        timeout: int = _SHELL_UTILITY_TIMEOUT,
+    ) -> str:
+        await self._ensure_sandbox_connection()
+        result = await self.sandbox.commands.run(
+            command,
+            background=False,
+            timeout=timeout,
+        )
+
+        if not isinstance(result, CommandResult):
+            raise ShellOperationError(
+                "run_shell_utility_command",
+                f"Unexpected result: {result}",
+            )
+
+        if result.exit_code != 0:
+            error_msg = result.stderr or result.stdout or f"Exit code: {result.exit_code}"
+            raise ShellOperationError("run_shell_utility_command", error_msg)
+
+        return result.stdout
+
+    async def _load_provider_data(self) -> dict[str, Any]:
+        from ii_agent.agents.sandboxes.repository import SandboxRepository
+        from ii_agent.core.db import get_db_session_local
+
+        async with get_db_session_local() as db_session:
+            sandbox_record = await SandboxRepository().get_by_id(
+                db_session, uuid.UUID(self.sandbox_id)
+            )
+            if sandbox_record is None:
+                raise ShellOperationError(
+                    "load_provider_data",
+                    f"Sandbox record not found: {self.sandbox_id}",
+                )
+            provider_data = dict(sandbox_record.provider_data or {})
+
+        self.metadata = provider_data
+        return provider_data
+
+    async def _persist_provider_data(self, provider_data: dict[str, Any]) -> None:
+        from ii_agent.agents.sandboxes.repository import SandboxRepository
+        from ii_agent.core.db import get_db_session_local
+
+        async with get_db_session_local() as db_session:
+            sandbox_record = await SandboxRepository().get_by_id(
+                db_session, uuid.UUID(self.sandbox_id)
+            )
+            if sandbox_record is None:
+                raise ShellOperationError(
+                    "persist_provider_data",
+                    f"Sandbox record not found: {self.sandbox_id}",
+                )
+            sandbox_record.provider_data = provider_data
+
+        self.metadata = provider_data
+
+    async def _load_shell_sessions(self) -> dict[str, ShellSessionRecord]:
+        provider_data = await self._load_provider_data()
+        raw_sessions = provider_data.get("pty_sessions") or {}
+        if not isinstance(raw_sessions, dict):
+            return {}
+
+        sessions: dict[str, ShellSessionRecord] = {}
+        for session_name, raw_record in raw_sessions.items():
+            try:
+                sessions[session_name] = ShellSessionRecord.model_validate(raw_record)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "Invalid PTY session metadata for sandbox %s session %s: %s",
+                    self.sandbox_id,
+                    session_name,
+                    exc,
+                )
+        return sessions
+
+    async def _save_shell_sessions(self, sessions: dict[str, ShellSessionRecord]) -> None:
+        provider_data = await self._load_provider_data()
+        provider_data["pty_sessions"] = {
+            session_name: record.model_dump(mode="json")
+            for session_name, record in sessions.items()
+        }
+        await self._persist_provider_data(provider_data)
+
+    async def _normalize_shell_directory(self, directory: str) -> str:
+        normalized = posixpath.normpath(directory.strip())
+        normalized = str(PurePosixPath(normalized))
+        if not normalized.startswith("/"):
+            raise ShellRunDirNotFoundError(
+                "Start directory must be an absolute path inside the workspace."
+            )
+
+        workspace_path = str(PurePosixPath(get_settings().workspace_path))
+        if normalized != workspace_path and not normalized.startswith(f"{workspace_path}/"):
+            raise ShellRunDirNotFoundError(f"Directory must be inside workspace: {workspace_path}")
+
+        quoted_dir = shlex.quote(normalized)
+        try:
+            await self._run_shell_utility_command(f"test -d {quoted_dir}")
+        except ShellOperationError as exc:
+            raise ShellRunDirNotFoundError(
+                f"Directory does not exist or is not a directory: {normalized}"
+            ) from exc
+
+        return normalized
+
+    async def _read_shell_state(
+        self,
+        state_path: str,
+    ) -> tuple[int | None, str | None]:
+        await self._ensure_sandbox_connection()
+        try:
+            if not await self.sandbox.files.exists(state_path):
+                return None, None
+            content = await self.sandbox.files.read(state_path, format="text")
+        except Exception:  # noqa: BLE001
+            return None, None
+
+        if isinstance(content, bytes):
+            content = content.decode("utf-8", errors="replace")
+
+        lines = content.splitlines()
+        if len(lines) < 2:
+            return None, None
+
+        try:
+            prompt_seq = int(lines[0].strip())
+        except ValueError:
+            return None, None
+
+        cwd = lines[1].strip() or None
+        return prompt_seq, cwd
+
+    async def _wait_for_shell_prompt(
+        self,
+        state_path: str,
+        *,
+        minimum_prompt_seq: int,
+        timeout: int,
+    ) -> tuple[int, str | None]:
+        deadline = asyncio.get_running_loop().time() + timeout
+        while asyncio.get_running_loop().time() < deadline:
+            prompt_seq, cwd = await self._read_shell_state(state_path)
+            if prompt_seq is not None and prompt_seq >= minimum_prompt_seq:
+                return prompt_seq, cwd
+            await asyncio.sleep(_SHELL_POLL_INTERVAL)
+
+        raise ShellCommandTimeoutError(
+            f"Timed out waiting for shell prompt after {timeout} seconds."
+        )
+
+    async def _get_file_size(self, file_path: str) -> int:
+        quoted_path = shlex.quote(file_path)
+        output = await self._run_shell_utility_command(
+            f"if [ -f {quoted_path} ]; then wc -c < {quoted_path}; else echo 0; fi"
+        )
+        try:
+            return int(output.strip() or "0")
+        except ValueError:
+            return 0
+
+    async def _read_shell_log(
+        self,
+        log_path: str,
+        *,
+        start_offset: int | None = None,
+        max_bytes: int,
+    ) -> str:
+        file_size = await self._get_file_size(log_path)
+        if file_size <= 0:
+            return ""
+
+        quoted_path = shlex.quote(log_path)
+        if start_offset is not None:
+            start_offset = max(start_offset, 0)
+            bytes_remaining = file_size - start_offset
+            if bytes_remaining <= 0:
+                return ""
+            if bytes_remaining <= max_bytes:
+                command = f"tail -c +{start_offset + 1} {quoted_path}"
+            else:
+                command = f"tail -c {max_bytes} {quoted_path}"
+        else:
+            command = f"tail -c {max_bytes} {quoted_path}"
+
+        output = await self._run_shell_utility_command(
+            f"if [ -f {quoted_path} ]; then {command}; fi"
+        )
+        return self._normalize_shell_output(output)
+
+    async def _get_shell_result(
+        self,
+        log_path: str,
+        *,
+        start_offset: int | None = None,
+        max_bytes: int,
+    ) -> ShellResult:
+        ansi_output = await self._read_shell_log(
+            log_path,
+            start_offset=start_offset,
+            max_bytes=max_bytes,
+        )
+        clean_output = strip_ansi(ansi_output)
+        return ShellResult(
+            clean_output=clean_output,
+            ansi_output=ansi_output,
+        )
+
+    async def _is_shell_session_live(self, record: ShellSessionRecord) -> bool:
+        await self._ensure_sandbox_connection()
+        try:
+            handle = await self.sandbox.pty.connect(
+                record.pid,
+                on_data=self._discard_pty_data,
+                timeout=0,
+            )
+            await handle.disconnect()
+        except NotFoundException:
+            return False
+        except Exception as exc:  # noqa: BLE001
+            raise ShellOperationError(
+                "is_shell_session_live",
+                f"Failed to connect to PTY {record.pid}: {exc}",
+            ) from exc
+
+        return await self.sandbox.files.exists(record.state_path)
+
+    async def _refresh_shell_session_record(
+        self,
+        session_name: str,
+        record: ShellSessionRecord,
+        *,
+        persist: bool = False,
+    ) -> ShellSessionRecord:
+        prompt_seq, cwd = await self._read_shell_state(record.state_path)
+        changed = False
+
+        if prompt_seq is not None and prompt_seq != record.prompt_seq:
+            record.prompt_seq = prompt_seq
+            changed = True
+        if cwd and cwd != record.cwd:
+            record.cwd = cwd
+            changed = True
+
+        if record.pending_prompt_seq is not None:
+            if prompt_seq is not None and prompt_seq >= record.pending_prompt_seq:
+                record.pending_prompt_seq = None
+                record.status = ShellSessionState.IDLE
+                changed = True
+            elif record.status != ShellSessionState.BUSY:
+                record.status = ShellSessionState.BUSY
+                changed = True
+        elif record.status != ShellSessionState.IDLE:
+            record.status = ShellSessionState.IDLE
+            changed = True
+
+        if changed:
+            record.updated_at = self._shell_timestamp()
+            if persist:
+                sessions = await self._load_shell_sessions()
+                sessions[session_name] = record
+                await self._save_shell_sessions(sessions)
+
+        return record
+
+    async def _remove_stale_shell_session(self, session_name: str) -> None:
+        sessions = await self._load_shell_sessions()
+        if session_name in sessions:
+            sessions.pop(session_name, None)
+            await self._save_shell_sessions(sessions)
+
+    def _build_outer_shell_bootstrap(
+        self,
+        *,
+        log_path: str,
+        state_path: str,
+    ) -> str:
+        storage_dir = self._get_shell_storage_dir()
+        lines = [
+            f"export II_AGENT_LOG_PATH={shlex.quote(log_path)}",
+            f"export II_AGENT_STATE_PATH={shlex.quote(state_path)}",
+            f"mkdir -p {shlex.quote(storage_dir)}",
+            f": > {shlex.quote(log_path)}",
+            f"rm -f {shlex.quote(state_path)} {shlex.quote(state_path + '.tmp')}",
+            "export TERM='xterm-256color'",
+            f"script -q -f {shlex.quote(log_path)} -c 'bash --noprofile --norc -i'",
+        ]
+        return "\n".join(lines) + "\n"
+
+    def _build_inner_shell_bootstrap(self) -> str:
+        prompt_value = shlex.quote(_PROMPT_FORMAT)
+        return (
+            "export TERM='xterm-256color'\n"
+            f"export PS1={prompt_value}\n"
+            "__ii_agent_prompt() {\n"
+            f"  {_ENV_SOURCE_SAFE_CMD}\n"
+            "  II_AGENT_PROMPT_SEQ=$(( ${II_AGENT_PROMPT_SEQ:-0} + 1 ))\n"
+            '  __ii_agent_state_tmp="${II_AGENT_STATE_PATH}.tmp"\n'
+            "  {\n"
+            "    printf '%s\\n' \"$II_AGENT_PROMPT_SEQ\"\n"
+            "    pwd\n"
+            '  } > "$__ii_agent_state_tmp"\n'
+            '  mv "$__ii_agent_state_tmp" "$II_AGENT_STATE_PATH"\n'
+            "}\n"
+            "PROMPT_COMMAND='__ii_agent_prompt'\n"
+            "clear\n"
+        )
+
+    async def get_all_shell_sessions(self) -> list[str]:
+        async with self._get_shell_lock():
+            sessions = await self._load_shell_sessions()
+            live_sessions: dict[str, ShellSessionRecord] = {}
+            stale_session_names: list[str] = []
+
+            for session_name, record in sessions.items():
+                if await self._is_shell_session_live(record):
+                    live_sessions[session_name] = record
+                else:
+                    stale_session_names.append(session_name)
+
+            if stale_session_names:
+                logger.info(
+                    "Pruning stale PTY sessions for sandbox %s: %s",
+                    self.sandbox_id,
+                    stale_session_names,
+                )
+                await self._save_shell_sessions(live_sessions)
+
+            return sorted(live_sessions.keys())
+
+    async def create_shell_session(
+        self,
+        session_name: str,
+        start_directory: str,
+        timeout: int = _DEFAULT_SHELL_TIMEOUT,
+    ) -> None:
+        self._validate_shell_session_name(session_name)
+        start_directory = await self._normalize_shell_directory(start_directory)
+
+        async with self._get_shell_lock():
+            sessions = await self._load_shell_sessions()
+            existing_record = sessions.get(session_name)
+            if existing_record is not None:
+                if await self._is_shell_session_live(existing_record):
+                    raise ShellSessionExistsError(f"Session '{session_name}' already exists")
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sessions)
+
+            await self._ensure_sandbox_connection()
+            terminal = await self.sandbox.pty.create(
+                PtySize(cols=120, rows=40),
+                on_data=self._discard_pty_data,
+                cwd=start_directory,
+                timeout=0,
+            )
+
+            log_path = self._get_shell_log_path(session_name)
+            state_path = self._get_shell_state_path(session_name)
+
+            try:
+                await self.sandbox.pty.send_stdin(
+                    terminal.pid,
+                    self._build_outer_shell_bootstrap(
+                        log_path=log_path,
+                        state_path=state_path,
+                    ).encode(),
+                )
+                await asyncio.sleep(0.5)
+                await self.sandbox.pty.send_stdin(
+                    terminal.pid,
+                    self._build_inner_shell_bootstrap().encode(),
+                )
+                prompt_seq, cwd = await self._wait_for_shell_prompt(
+                    state_path,
+                    minimum_prompt_seq=1,
+                    timeout=timeout,
+                )
+            except Exception:
+                try:
+                    await self.sandbox.pty.kill(terminal.pid)
+                except Exception:  # noqa: BLE001
+                    logger.warning(
+                        "Failed to clean up PTY %s during shell session bootstrap",
+                        terminal.pid,
+                        exc_info=True,
+                    )
+                raise
+            finally:
+                await terminal.disconnect()
+
+            sessions[session_name] = ShellSessionRecord(
+                pid=terminal.pid,
+                cwd=cwd or start_directory,
+                log_path=log_path,
+                state_path=state_path,
+                status=ShellSessionState.IDLE,
+                prompt_seq=prompt_seq,
+                updated_at=self._shell_timestamp(),
+            )
+            await self._save_shell_sessions(sessions)
+
+    async def delete_shell_session(self, session_name: str) -> None:
+        async with self._get_shell_lock():
+            sessions = await self._load_shell_sessions()
+            record = sessions.get(session_name)
+            if record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            await self._ensure_sandbox_connection()
+            try:
+                await self.sandbox.pty.kill(record.pid)
+            except NotFoundException:
+                logger.info("PTY %s already exited for session %s", record.pid, session_name)
+
+            sessions.pop(session_name, None)
+            await self._save_shell_sessions(sessions)
+
+    async def run_shell_command(
+        self,
+        session_name: str,
+        command: str,
+        run_dir: str | None = None,
+        timeout: int = _DEFAULT_SHELL_TIMEOUT,
+        wait_for_output: bool = True,
+    ) -> ShellResult:
+        if timeout > _MAX_SHELL_TIMEOUT:
+            raise ShellOperationError(
+                "run_shell_command",
+                f"Timeout must be less than {_MAX_SHELL_TIMEOUT} seconds",
+            )
+
+        normalized_run_dir = None
+        if run_dir:
+            normalized_run_dir = await self._normalize_shell_directory(run_dir)
+
+        sessions = await self._load_shell_sessions()
+        existing_record = sessions.get(session_name)
+        default_directory = normalized_run_dir or (
+            existing_record.cwd if existing_record is not None else get_settings().workspace_path
+        )
+
+        if existing_record is None:
+            try:
+                await self.create_shell_session(session_name, default_directory, timeout=timeout)
+            except ShellSessionExistsError:
+                pass
+        elif not await self._is_shell_session_live(existing_record):
+            await self._remove_stale_shell_session(session_name)
+            try:
+                await self.create_shell_session(session_name, default_directory, timeout=timeout)
+            except ShellSessionExistsError:
+                pass
+
+        async with self._get_shell_lock():
+            sessions = await self._load_shell_sessions()
+            record = sessions.get(session_name)
+            if record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            record = await self._refresh_shell_session_record(session_name, record)
+            if record.status == ShellSessionState.BUSY:
+                raise ShellBusyError("Session is busy, the last command is not finished.")
+
+            log_offset = await self._get_file_size(record.log_path)
+            commands_to_send: list[str] = []
+            if normalized_run_dir:
+                commands_to_send.append(f"cd {shlex.quote(normalized_run_dir)}")
+            if _ENV_SOURCE_CMD not in command:
+                commands_to_send.append(_ENV_SOURCE_SAFE_CMD)
+            commands_to_send.append("clear")
+            commands_to_send.append(command)
+
+            command_id = str(uuid.uuid4())
+            expected_prompt_seq = record.prompt_seq + len(commands_to_send)
+            record.status = ShellSessionState.BUSY
+            record.last_command_id = command_id
+            record.pending_prompt_seq = expected_prompt_seq
+            record.updated_at = self._shell_timestamp()
+            sessions[session_name] = record
+            await self._save_shell_sessions(sessions)
+
+            try:
+                await self.sandbox.pty.send_stdin(
+                    record.pid,
+                    ("\n".join(commands_to_send) + "\n").encode(),
+                )
+            except NotFoundException as exc:
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sessions)
+                raise ShellSessionNotFoundError(
+                    f"Session '{session_name}' is no longer available"
+                ) from exc
+
+        if not wait_for_output:
+            return await self.get_shell_session_output(session_name)
+
+        await self._wait_for_shell_prompt(
+            record.state_path,
+            minimum_prompt_seq=expected_prompt_seq,
+            timeout=timeout,
+        )
+
+        async with self._get_shell_lock():
+            sessions = await self._load_shell_sessions()
+            latest_record = sessions.get(session_name)
+            if latest_record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+            latest_record = await self._refresh_shell_session_record(
+                session_name,
+                latest_record,
+            )
+            sessions[session_name] = latest_record
+            await self._save_shell_sessions(sessions)
+
+        return await self._get_shell_result(
+            record.log_path,
+            start_offset=log_offset,
+            max_bytes=_SHELL_OUTPUT_TAIL_BYTES,
+        )
+
+    async def kill_shell_command(
+        self,
+        session_name: str,
+        timeout: int = _DEFAULT_SHELL_TIMEOUT,
+    ) -> ShellResult:
+        async with self._get_shell_lock():
+            sessions = await self._load_shell_sessions()
+            record = sessions.get(session_name)
+            if record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            if not await self._is_shell_session_live(record):
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sessions)
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            log_offset = await self._get_file_size(record.log_path)
+            current_prompt_seq = record.prompt_seq
+            record.status = ShellSessionState.BUSY
+            record.pending_prompt_seq = current_prompt_seq + 1
+            record.updated_at = self._shell_timestamp()
+            sessions[session_name] = record
+            await self._save_shell_sessions(sessions)
+
+            try:
+                await self.sandbox.pty.send_stdin(record.pid, b"\x03")
+            except NotFoundException as exc:
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sessions)
+                raise ShellSessionNotFoundError(
+                    f"Session '{session_name}' is no longer available"
+                ) from exc
+
+        await self._wait_for_shell_prompt(
+            record.state_path,
+            minimum_prompt_seq=current_prompt_seq + 1,
+            timeout=timeout,
+        )
+
+        async with self._get_shell_lock():
+            sessions = await self._load_shell_sessions()
+            latest_record = sessions.get(session_name)
+            if latest_record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+            latest_record = await self._refresh_shell_session_record(
+                session_name,
+                latest_record,
+            )
+            sessions[session_name] = latest_record
+            await self._save_shell_sessions(sessions)
+
+        return await self._get_shell_result(
+            record.log_path,
+            start_offset=log_offset,
+            max_bytes=_SHELL_OUTPUT_TAIL_BYTES,
+        )
+
+    async def get_shell_session_state(self, session_name: str) -> ShellSessionState:
+        sessions = await self._load_shell_sessions()
+        record = sessions.get(session_name)
+        if record is None:
+            raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+        if not await self._is_shell_session_live(record):
+            await self._remove_stale_shell_session(session_name)
+            raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+        record = await self._refresh_shell_session_record(
+            session_name,
+            record,
+            persist=True,
+        )
+        return record.status
+
+    async def get_shell_session_output(self, session_name: str) -> ShellResult:
+        sessions = await self._load_shell_sessions()
+        record = sessions.get(session_name)
+        if record is None:
+            raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+        if not await self._is_shell_session_live(record):
+            await self._remove_stale_shell_session(session_name)
+            raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+        await self._refresh_shell_session_record(
+            session_name,
+            record,
+            persist=True,
+        )
+        return await self._get_shell_result(
+            record.log_path,
+            max_bytes=_SHELL_LOG_TAIL_BYTES,
+        )
+
+    async def write_to_shell_process(
+        self,
+        session_name: str,
+        data: str,
+        press_enter: bool,
+    ) -> ShellResult:
+        async with self._get_shell_lock():
+            sessions = await self._load_shell_sessions()
+            record = sessions.get(session_name)
+            if record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            if not await self._is_shell_session_live(record):
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sessions)
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            stdin_data = data + ("\n" if press_enter else "")
+            try:
+                await self.sandbox.pty.send_stdin(record.pid, stdin_data.encode())
+            except NotFoundException as exc:
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sessions)
+                raise ShellSessionNotFoundError(
+                    f"Session '{session_name}' is no longer available"
+                ) from exc
+
+        await asyncio.sleep(_SHELL_POLL_INTERVAL)
+        return await self.get_shell_session_output(session_name)
+
     async def get_status(self) -> SandboxStatus:
         if self.sandbox is None:
             return SandboxStatus.INITIALIZING
@@ -182,9 +937,7 @@ class E2BSandbox(Sandbox):
         if metadata:
             sandbox_metadata.update(metadata)
 
-        expired_at = datetime.now(timezone.utc) + timedelta(
-            seconds=cfg.sandbox.timeout_seconds
-        )
+        expired_at = datetime.now(timezone.utc) + timedelta(seconds=cfg.sandbox.timeout_seconds)
 
         sandbox = await AsyncSandbox.beta_create(
             template=cfg.sandbox.e2b_template_id,
@@ -309,6 +1062,26 @@ class E2BSandbox(Sandbox):
 
         return result.results[0].text or ""
 
+    async def create_live_terminal(
+        self,
+        *,
+        cols: int,
+        rows: int,
+        cwd: str,
+        on_data: TerminalDataCallback,
+        envs: dict[str, str] | None = None,
+        timeout: float | None = 0,
+    ) -> LiveTerminalHandle:
+        await self._ensure_sandbox_connection()
+        handle = await self.sandbox.pty.create(
+            PtySize(cols=cols, rows=rows),
+            on_data=on_data,
+            cwd=cwd,
+            envs=envs,
+            timeout=timeout,
+        )
+        return E2BLiveTerminalHandle(pty=self.sandbox.pty, handle=handle)
+
     # ── File operations ───────────────────────────────────────────────────
 
     @e2b_exception_handler
@@ -331,10 +1104,7 @@ class E2BSandbox(Sandbox):
         await self._ensure_sandbox_connection()
         files_data = [{"path": file.path, "data": file.content} for file in files]
         results = await self.sandbox.files.write_files(files_data)
-        return [
-            SandboxFileInfo(name=r.name, type=r.type, path=r.path)
-            for r in results
-        ]
+        return [SandboxFileInfo(name=r.name, type=r.type, path=r.path) for r in results]
 
     @e2b_exception_handler
     async def upload_file(
@@ -432,11 +1202,15 @@ class E2BSandbox(Sandbox):
                         children.append(subtree)
                     except Exception:
                         children.append(
-                            FileTreeNode(name=entry_name, path=entry_path, type="directory", children=[])
+                            FileTreeNode(
+                                name=entry_name, path=entry_path, type="directory", children=[]
+                            )
                         )
                 else:
                     children.append(
-                        FileTreeNode(name=entry_name, path=entry_path, type="directory", children=[])
+                        FileTreeNode(
+                            name=entry_name, path=entry_path, type="directory", children=[]
+                        )
                     )
             else:
                 children.append(
@@ -468,7 +1242,10 @@ class E2BSandbox(Sandbox):
                 for child in node.children:
                     await _collect(child, current_depth=current_depth + 1)
             elif node.type == "file":
-                if inline_content_max_depth is not None and current_depth > inline_content_max_depth:
+                if (
+                    inline_content_max_depth is not None
+                    and current_depth > inline_content_max_depth
+                ):
                     return
                 if is_binary_file_path(node.path):
                     return
@@ -510,7 +1287,9 @@ class E2BSandbox(Sandbox):
                 for entry in entries:
                     if entry.name == basename:
                         if _is_dir_entry(entry):
-                            raise SandboxOperationError("read_file_content", f"path '{file_path}' is a directory")
+                            raise SandboxOperationError(
+                                "read_file_content", f"path '{file_path}' is a directory"
+                            )
                         if hasattr(entry, "size") and entry.size:
                             entry_size = int(entry.size)
                         break
@@ -520,23 +1299,44 @@ class E2BSandbox(Sandbox):
                 pass
 
         if is_image_file_path(file_path, include_svg=False):
-            return FileContentResponse(path=file_path, file_kind="image", mime_type=mime_type or "application/octet-stream")
+            return FileContentResponse(
+                path=file_path, file_kind="image", mime_type=mime_type or "application/octet-stream"
+            )
 
         if entry_size is not None and entry_size > MAX_FILE_CONTENT_SIZE:
-            return FileContentResponse(path=file_path, file_kind="binary", mime_type=mime_type, message="File too big. Open VS Code to view.", too_big=True)
+            return FileContentResponse(
+                path=file_path,
+                file_kind="binary",
+                mime_type=mime_type,
+                message="File too big. Open VS Code to view.",
+                too_big=True,
+            )
 
         if is_binary_file_path(file_path):
-            return FileContentResponse(path=file_path, file_kind="binary", mime_type=mime_type, message="Binary preview is not supported here. Open VS Code to view.")
+            return FileContentResponse(
+                path=file_path,
+                file_kind="binary",
+                mime_type=mime_type,
+                message="Binary preview is not supported here. Open VS Code to view.",
+            )
 
         content = await self.sandbox.files.read(file_path, format="text")
         if isinstance(content, bytes):
             content = content.decode("utf-8", errors="replace")
 
         if len(content) > MAX_FILE_CONTENT_SIZE:
-            return FileContentResponse(path=file_path, file_kind="binary", mime_type=mime_type, message="File too big. Open VS Code to view.", too_big=True)
+            return FileContentResponse(
+                path=file_path,
+                file_kind="binary",
+                mime_type=mime_type,
+                message="File too big. Open VS Code to view.",
+                too_big=True,
+            )
 
         language = detect_language(file_path)
-        return FileContentResponse(path=file_path, content=content, language=language, mime_type=mime_type)
+        return FileContentResponse(
+            path=file_path, content=content, language=language, mime_type=mime_type
+        )
 
     async def watch_dir(
         self,

@@ -48,9 +48,7 @@ class GeminiProvider(LLMClient):
                 location=llm_config.vertex_region,
             )
         else:
-            api_key = (
-                llm_config.api_key.get_secret_value() if llm_config.api_key else None
-            )
+            api_key = llm_config.api_key.get_secret_value() if llm_config.api_key else None
             self.client = genai.Client(api_key=api_key)
 
     @staticmethod
@@ -103,9 +101,7 @@ class GeminiProvider(LLMClient):
                                     )
                                 )
                             case _:
-                                logger.warning(
-                                    f"Unsupported user message part type: {type(part)}"
-                                )
+                                logger.warning(f"Unsupported user message part type: {type(part)}")
                     contents.append(types.Content(role="user", parts=parts))
                 case MessageRole.ASSISTANT:
                     parts = []
@@ -179,9 +175,7 @@ class GeminiProvider(LLMClient):
                     logger.warning(f"Unsupported message role: {msg.role}")
         return contents
 
-    def _convert_tools(
-        self, tools: Optional[List[Dict[str, Any]]]
-    ) -> Optional[List[types.Tool]]:
+    def _convert_tools(self, tools: Optional[List[Dict[str, Any]]]) -> Optional[List[types.Tool]]:
         """
         Convert OpenAI function format to Gemini tools format.
 
@@ -334,18 +328,11 @@ class GeminiProvider(LLMClient):
                     if is_thought:
                         # Create ReasoningContent for thinking parts
                         signature = ""
-                        if (
-                            hasattr(part, "thought_signature")
-                            and part.thought_signature
-                        ):
+                        if hasattr(part, "thought_signature") and part.thought_signature:
                             try:
-                                signature = base64.b64encode(
-                                    part.thought_signature
-                                ).decode("utf-8")
+                                signature = base64.b64encode(part.thought_signature).decode("utf-8")
                             except Exception as e:
-                                logger.warning(
-                                    f"Failed to encode thought_signature: {e}"
-                                )
+                                logger.warning(f"Failed to encode thought_signature: {e}")
 
                         reasoning_content = ReasoningContent(
                             thinking=part.text,
@@ -361,22 +348,17 @@ class GeminiProvider(LLMClient):
                         text_content = TextContent(text=part.text)
 
                         # Extract thought_signature from Gemini response
-                        if (
-                            hasattr(part, "thought_signature")
-                            and part.thought_signature
-                        ):
+                        if hasattr(part, "thought_signature") and part.thought_signature:
                             try:
                                 # Convert bytes to base64 string for JSON serialization
-                                signature_b64 = base64.b64encode(
-                                    part.thought_signature
-                                ).decode("utf-8")
+                                signature_b64 = base64.b64encode(part.thought_signature).decode(
+                                    "utf-8"
+                                )
                                 text_content.provider_options = {
                                     "google": {"thoughtSignature": signature_b64}
                                 }
                             except Exception as e:
-                                logger.warning(
-                                    f"Failed to encode thought_signature: {e}"
-                                )
+                                logger.warning(f"Failed to encode thought_signature: {e}")
 
                         content_parts.append(text_content)
 
@@ -393,9 +375,7 @@ class GeminiProvider(LLMClient):
                     if hasattr(part, "thought_signature") and part.thought_signature:
                         try:
                             # Convert bytes to base64 string for JSON serialization
-                            signature_b64 = base64.b64encode(
-                                part.thought_signature
-                            ).decode("utf-8")
+                            signature_b64 = base64.b64encode(part.thought_signature).decode("utf-8")
                             tool_call.provider_options = {
                                 "google": {"thoughtSignature": signature_b64}
                             }
@@ -406,23 +386,17 @@ class GeminiProvider(LLMClient):
 
         # Extract usage
         usage = TokenUsage(
-            prompt_tokens=(
-                response.usage_metadata.prompt_token_count
-                if response.usage_metadata
-                else 0
+            input_tokens=(
+                response.usage_metadata.prompt_token_count if response.usage_metadata else 0
             )
             or 0,
-            completion_tokens=(
-                response.usage_metadata.candidates_token_count
-                if response.usage_metadata
-                else 0
+            output_tokens=(
+                response.usage_metadata.candidates_token_count if response.usage_metadata else 0
             )
             or 0,
             cache_write_tokens=0,
             cache_read_tokens=(
-                response.usage_metadata.cached_content_token_count
-                if response.usage_metadata
-                else 0
+                response.usage_metadata.cached_content_token_count if response.usage_metadata else 0
             )
             or 0,
             model_name=self.llm_config.model,
@@ -466,9 +440,7 @@ class GeminiProvider(LLMClient):
 
         Files are preprocessed in the service layer and added as BinaryContent parts.
         """
-        is_code_interpreter_enabled = (
-            False  # NOTE: disable code interpreter for Gemini for now
-        )
+        is_code_interpreter_enabled = False  # NOTE: disable code interpreter for Gemini for now
 
         gemini_messages = self._convert_messages(messages)
         gemini_opts = (provider_options or {}).get("gemini", {})
@@ -533,12 +505,10 @@ class GeminiProvider(LLMClient):
 
             usage_metadata = chunk.usage_metadata
             if usage_metadata:
-                usage.prompt_tokens = (
-                    usage_metadata.prompt_token_count
-                    if usage_metadata.prompt_token_count
-                    else 0
+                usage.input_tokens = (
+                    usage_metadata.prompt_token_count if usage_metadata.prompt_token_count else 0
                 )
-                usage.completion_tokens = (
+                usage.output_tokens = (
                     usage_metadata.candidates_token_count
                     if usage_metadata.candidates_token_count
                     else 0
@@ -550,9 +520,7 @@ class GeminiProvider(LLMClient):
                 )
                 usage.cache_write_tokens = 0
                 usage.total_tokens = (
-                    usage_metadata.total_token_count
-                    if usage_metadata.total_token_count
-                    else 0
+                    usage_metadata.total_token_count if usage_metadata.total_token_count else 0
                 )
 
             candidate = chunk.candidates[0]

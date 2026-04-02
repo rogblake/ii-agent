@@ -77,7 +77,9 @@ class SessionService:
         saved = await self._session_repo.save(db, session)
         return self._build_session_info(saved, api_version=api_version)
 
-    async def get_session_by_id(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[SessionInfo]:
+    async def get_session_by_id(
+        self, db: AsyncSession, session_id: uuid.UUID
+    ) -> Optional[SessionInfo]:
         """Get a session by its UUID with project loaded."""
         session = await self._session_repo.get_by_id_with_project(db, session_id)
         if session is None:
@@ -93,7 +95,9 @@ class SessionService:
             return None
         return self._build_session_info(session)
 
-    async def get_public_session_details(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[SessionInfo]:
+    async def get_public_session_details(
+        self, db: AsyncSession, session_id: uuid.UUID
+    ) -> Optional[SessionInfo]:
         """Get detailed information for a public session."""
         session = await self._session_repo.get_public_by_id(db, session_id)
         if not session:
@@ -106,7 +110,9 @@ class SessionService:
         """Evict a session from the cache."""
         await self._cache.evict(self.KEY_PATTERN.format(session_id=str(session_id)))
 
-    async def update_session_fields(self, db: AsyncSession, session_id: uuid.UUID, **fields) -> None:
+    async def update_session_fields(
+        self, db: AsyncSession, session_id: uuid.UUID, **fields
+    ) -> None:
         """Update one or more fields on a session by keyword argument."""
         session = await self._session_repo.get_by_id(db, session_id)
         if session:
@@ -163,7 +169,9 @@ class SessionService:
 
     # ==================== Session State ====================
 
-    async def soft_delete_session(self, db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    async def soft_delete_session(
+        self, db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID
+    ) -> None:
         """Soft delete a session by setting is_deleted flag."""
         session = await self._session_repo.get_by_id_and_user(db, session_id, user_id)
         if not session:
@@ -493,11 +501,13 @@ class SessionService:
             user_id=session.user_id,
             name=session.name,
             status=session.status,
-            agent_type=session.agent_type,
+            agent_type=str(session.agent_type) if session.agent_type is not None else None,
             app_kind=session.app_kind,
             created_at=session.created_at.isoformat() if session.created_at else "",
             updated_at=session.updated_at.isoformat() if session.updated_at else None,
-            last_message_at=session.last_message_at.isoformat() if session.last_message_at else None,
+            last_message_at=session.last_message_at.isoformat()
+            if session.last_message_at
+            else None,
             workspace_dir=session.get_workspace_dir(),
             is_public=session.is_public,
             public_url=session.public_url,

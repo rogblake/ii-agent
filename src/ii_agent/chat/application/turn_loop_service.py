@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import logging
 from typing import AsyncIterator, Dict, List, Any, TYPE_CHECKING
-import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -100,6 +98,8 @@ class LLMTurnLoopService:
                     "usage": {
                         "input_tokens": run_response.usage.input_tokens,
                         "output_tokens": run_response.usage.output_tokens,
+                        "cache_read_tokens": run_response.usage.cache_read_tokens,
+                        "cache_write_tokens": run_response.usage.cache_write_tokens,
                     },
                 }
 
@@ -238,9 +238,7 @@ class LLMTurnLoopService:
                 "type": "complete",
                 "message_id": assistant_message.id,
                 "finish_reason": (
-                    run_response.finish_reason.value
-                    if run_response.finish_reason
-                    else "end_turn"
+                    run_response.finish_reason.value if run_response.finish_reason else "end_turn"
                 ),
                 "files": file_parts,
             }

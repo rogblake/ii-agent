@@ -1,5 +1,8 @@
+import base64
+import binascii
 import uuid
 from functools import lru_cache
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Literal
 
@@ -22,12 +25,7 @@ from ii_agent_tools.storage.base import BaseStorage
 logger = get_logger(__name__)
 
 VIDEO_MODEL_CONFIG_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "ii_agent"
-    / "content"
-    / "media"
-    / "config"
-    / "video.yaml"
+    Path(__file__).resolve().parents[3] / "ii_agent" / "content" / "media" / "config" / "video.yaml"
 )
 VIDEO_MODEL_CONFIG_ALIASES = {
     "fal-ai/kling-video/o3/pro/reference-to-video": "fal-ai/kling-video/o3/pro/text-to-video",
@@ -38,6 +36,11 @@ VIDEO_MODEL_CONFIG_ALIASES = {
     "fal-ai/sora-2/image-to-video/pro": "fal-ai/sora-2/text-to-video/pro",
 }
 DEFAULT_DIRECT_SEGMENT_DURATIONS = (4, 6, 8)
+INLINE_FRAME_MIME_TYPES = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp",
+}
 
 
 def _normalize_model_name(model_name: str | None) -> str:
@@ -176,9 +179,68 @@ class VideoGenerationService:
             extra={"temp_dir": str(self.base_temp_dir.absolute())},
         )
 
-    def _get_client(
-        self, provider: str | None = None
-    ) -> BaseVideoGenerationClient:
+    async def _normalize_frame_input(
+        self,
+        *,
+        frame_name: str,
+        frame_url: str | None,
+        frame_base64: str | None,
+        frame_mime_type: str | None,
+        user_id: uuid.UUID | None,
+    ) -> str | None:
+        """Normalize inline frame content to a storage-backed public URL."""
+        if frame_url and frame_base64:
+            raise ValueError(f"{frame_name} accepts either a URL or base64 content, not both")
+        if frame_url:
+            return frame_url
+        if not frame_base64:
+            return None
+
+        encoded_payload = frame_base64.strip()
+        mime_type = frame_mime_type
+
+        if encoded_payload.startswith("data:"):
+            header, separator, encoded_payload = encoded_payload.partition(",")
+            if not separator or ";base64" not in header:
+                raise ValueError(f"{frame_name}_base64 must be raw base64 or a base64 data URL")
+            data_url_mime_type = header[5:].split(";", 1)[0]
+            if mime_type and mime_type != data_url_mime_type:
+                raise ValueError(f"{frame_name}_mime_type does not match the data URL MIME type")
+            mime_type = data_url_mime_type
+
+        if not mime_type:
+            raise ValueError(
+                f"{frame_name}_mime_type is required when {frame_name}_base64 is provided"
+            )
+
+        extension = INLINE_FRAME_MIME_TYPES.get(mime_type)
+        if not extension:
+            raise ValueError(
+                f"{frame_name}_mime_type must be one of: {', '.join(INLINE_FRAME_MIME_TYPES)}"
+            )
+
+        try:
+            frame_bytes = base64.b64decode(encoded_payload, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError(f"{frame_name}_base64 must be valid base64") from exc
+
+        if not frame_bytes:
+            raise ValueError(f"{frame_name}_base64 must not be empty")
+
+        blob_path = utils.construct_blob_path(
+            user_id,
+            f"{frame_name}_{uuid.uuid4().hex[:8]}.{extension}",
+        )
+        await self.storage.write(BytesIO(frame_bytes), blob_path, mime_type)
+        public_url = self.storage.get_public_url(blob_path)
+        logger.info(
+            "[VideoGenerationService] Uploaded inline %s to %s",
+            frame_name,
+            public_url,
+        )
+        return public_url
+
+    def _get_client(self, provider: str | None = None) -> BaseVideoGenerationClient:
         """Get or create a video generation client based on provider."""
         if not provider:
             if self._default_client is None:
@@ -247,12 +309,16 @@ class VideoGenerationService:
         total_cost += result.cost
 
         if not result.storage_path:
-            logger.warning("[VideoGenerationService] No storage_path returned, cannot use extension API")
+            logger.warning(
+                "[VideoGenerationService] No storage_path returned, cannot use extension API"
+            )
             return result
 
-        output_bucket = getattr(video_generation_client, 'output_bucket', None)
+        output_bucket = getattr(video_generation_client, "output_bucket", None)
         if not output_bucket:
-            logger.warning("[VideoGenerationService] No output_bucket configured, cannot use extension API")
+            logger.warning(
+                "[VideoGenerationService] No output_bucket configured, cannot use extension API"
+            )
             return result
 
         current_video_uri = f"gs://{output_bucket}/{result.storage_path}"
@@ -286,7 +352,9 @@ class VideoGenerationService:
 
             if not extension_result.url or extension_result.error:
                 error_msg = extension_result.error or "Extension failed"
-                logger.warning(f"[VideoGenerationService] Extension {extension_count} failed: {error_msg}")
+                logger.warning(
+                    f"[VideoGenerationService] Extension {extension_count} failed: {error_msg}"
+                )
                 break
 
             total_cost += extension_result.cost
@@ -373,6 +441,10 @@ class VideoGenerationService:
         # Frame URLs (passed directly to Veo API)
         start_frame: str | None = None,
         end_frame: str | None = None,
+        start_frame_base64: str | None = None,
+        start_frame_mime_type: str | None = None,
+        end_frame_base64: str | None = None,
+        end_frame_mime_type: str | None = None,
         session_id: str | None = None,
         negative_prompt: str | None = None,
         person_generation: Literal["allow_all", "allow_adult"] | None = None,
@@ -390,6 +462,21 @@ class VideoGenerationService:
             start_frame: URL of start frame image (https:// or gs://)
             end_frame: URL of end frame image (https:// or gs://)
         """
+        start_frame = await self._normalize_frame_input(
+            frame_name="start_frame",
+            frame_url=start_frame,
+            frame_base64=start_frame_base64,
+            frame_mime_type=start_frame_mime_type,
+            user_id=user_id,
+        )
+        end_frame = await self._normalize_frame_input(
+            frame_name="end_frame",
+            frame_url=end_frame,
+            frame_base64=end_frame_base64,
+            frame_mime_type=end_frame_mime_type,
+            user_id=user_id,
+        )
+
         provider_key = (provider or "").lower()
         if model_name is None and provider_key not in {"fal", "fal-ai", "fal_ai"}:
             model_name = "veo-3.1-generate-preview"
@@ -401,9 +488,7 @@ class VideoGenerationService:
             video_generation_client, "supports_long_generation", True
         )
         supported_durations = get_model_supported_duration_seconds(model_name)
-        direct_supported_durations = get_model_direct_supported_duration_seconds(
-            model_name
-        )
+        direct_supported_durations = get_model_direct_supported_duration_seconds(model_name)
         max_direct_duration_seconds = get_max_direct_video_duration_seconds(model_name)
 
         logger.info(
@@ -411,7 +496,8 @@ class VideoGenerationService:
             f"max_direct_duration_seconds={max_direct_duration_seconds}, "
             f"supports_long_generation={supports_long_generation}, "
             f"use_extension_api={use_extension_api}, audio_included={audio_included}, "
-            f"llm_client={self.llm_client is not None}")
+            f"llm_client={self.llm_client is not None}"
+        )
 
         if duration_seconds <= max_direct_duration_seconds:
             direct_duration_seconds = utils.get_nearest_valid_duration(
@@ -513,9 +599,7 @@ class VideoGenerationService:
         if self.llm_client:
             try:
                 scene_breakdown_prompt = utils.get_scene_breakdown_prompt(prompt, n_scenes)
-                scene_breakdown_response = await self.llm_client.generate(
-                    scene_breakdown_prompt
-                )
+                scene_breakdown_response = await self.llm_client.generate(scene_breakdown_prompt)
                 scene_breakdown_content = scene_breakdown_response.content
                 scene_breakdown_cost = scene_breakdown_response.cost
                 parsed_scenes = utils.parse_scenes(scene_breakdown_content)
@@ -580,24 +664,28 @@ class VideoGenerationService:
                 error_msg = scene_0_result.error or "no video URL returned"
                 raise RuntimeError(f"Scene 0 video generation failed - {error_msg}")
 
-            logger.info(f"[VideoGenerationService] Scene 0 generated successfully: {scene_0_result.url}")
+            logger.info(
+                f"[VideoGenerationService] Scene 0 generated successfully: {scene_0_result.url}"
+            )
 
             scene_0_path = temp_video_dir / "scene_0.mp4"
             logger.info(f"[VideoGenerationService] Downloading scene 0 to {scene_0_path}...")
             await utils.download_video(scene_0_result.url, scene_0_path)
-            logger.info(f"[VideoGenerationService] Scene 0 downloaded: {scene_0_path.stat().st_size} bytes")
+            logger.info(
+                f"[VideoGenerationService] Scene 0 downloaded: {scene_0_path.stat().st_size} bytes"
+            )
             scene_video_paths.append(scene_0_path)
         except Exception:
-            logger.exception(
-                "Failed to generate first scene", extra={"scene": scenes[0]}
-            )
+            logger.exception("Failed to generate first scene", extra={"scene": scenes[0]})
             raise
 
         cost = scene_0_result.cost + scene_breakdown_cost
 
         # Generate subsequent scenes
         for i, scene in enumerate(scenes[1:], 1):
-            logger.info(f"[VideoGenerationService] Generating scene {i} of {n_scenes} ({durations[i]}s)...")
+            logger.info(
+                f"[VideoGenerationService] Generating scene {i} of {n_scenes} ({durations[i]}s)..."
+            )
             prev_video_path = scene_video_paths[-1]
             last_frame_path = temp_video_dir / f"last_frame_{i - 1}.png"
             logger.info(f"[VideoGenerationService] Extracting last frame from {prev_video_path}...")
@@ -605,10 +693,14 @@ class VideoGenerationService:
 
             if not last_frame_path.exists():
                 raise RuntimeError(f"Failed to extract last frame from {prev_video_path}")
-            logger.info(f"[VideoGenerationService] Last frame extracted: {last_frame_path.stat().st_size} bytes")
+            logger.info(
+                f"[VideoGenerationService] Last frame extracted: {last_frame_path.stat().st_size} bytes"
+            )
 
             # Upload extracted frame to GCS and use URL
-            frame_blob_path = utils.construct_blob_path(user_id, f"frame_{uuid.uuid4().hex[:8]}.png")
+            frame_blob_path = utils.construct_blob_path(
+                user_id, f"frame_{uuid.uuid4().hex[:8]}.png"
+            )
             await self.storage.write_from_local_path(
                 str(last_frame_path), frame_blob_path, "image/png"
             )
@@ -616,7 +708,7 @@ class VideoGenerationService:
             logger.info(f"[VideoGenerationService] Uploaded frame to: {last_frame_url}")
 
             try:
-                is_last_scene = (i == n_scenes - 1)
+                is_last_scene = i == n_scenes - 1
                 scene_end_frame = end_frame if is_last_scene else None
 
                 scene_video_result = await video_generation_client.generate_video(
@@ -637,21 +729,23 @@ class VideoGenerationService:
                     request_mode=request_mode,
                 )
             except Exception:
-                logger.exception(
-                    "Failed to generate scene", extra={"scene": scene}
-                )
+                logger.exception("Failed to generate scene", extra={"scene": scene})
                 raise
 
             if not scene_video_result.url:
                 error_msg = scene_video_result.error or "no video URL returned"
                 raise RuntimeError(f"Scene {i} video generation failed - {error_msg}")
 
-            logger.info(f"[VideoGenerationService] Scene {i} generated successfully: {scene_video_result.url}")
+            logger.info(
+                f"[VideoGenerationService] Scene {i} generated successfully: {scene_video_result.url}"
+            )
 
             scene_video_path = temp_video_dir / f"scene_{i}.mp4"
             logger.info(f"[VideoGenerationService] Downloading scene {i} to {scene_video_path}...")
             await utils.download_video(scene_video_result.url, scene_video_path)
-            logger.info(f"[VideoGenerationService] Scene {i} downloaded: {scene_video_path.stat().st_size} bytes")
+            logger.info(
+                f"[VideoGenerationService] Scene {i} downloaded: {scene_video_path.stat().st_size} bytes"
+            )
 
             scene_video_paths.append(scene_video_path)
             cost += scene_video_result.cost
@@ -660,7 +754,9 @@ class VideoGenerationService:
         logger.info(f"[VideoGenerationService] Merging {len(scene_video_paths)} scenes...")
         merged_video_path = temp_video_dir / "merged_video.mp4"
         await utils.merge_videos(scene_video_paths, merged_video_path, temp_video_dir)
-        logger.info(f"[VideoGenerationService] Merge complete: {merged_video_path.stat().st_size} bytes")
+        logger.info(
+            f"[VideoGenerationService] Merge complete: {merged_video_path.stat().st_size} bytes"
+        )
 
         name = utils.generate_unique_video_name()
         blob_path = utils.construct_blob_path(user_id, f"{name}.mp4")
@@ -671,9 +767,7 @@ class VideoGenerationService:
                 "video/mp4",
             )
         except Exception:
-            logger.exception(
-                "Failed to upload merged video", extra={"blob_path": blob_path}
-            )
+            logger.exception("Failed to upload merged video", extra={"blob_path": blob_path})
             raise
 
         public_url = self.storage.get_public_url(blob_path)
@@ -728,9 +822,9 @@ class VideoGenerationService:
                 blob_path = utils.construct_blob_path(user_id, f"{name}_source.mp4")
                 await self.storage.write_from_url(source_video_url, blob_path, "video/mp4")
 
-                output_bucket = getattr(video_generation_client, 'output_bucket', None)
+                output_bucket = getattr(video_generation_client, "output_bucket", None)
                 if not output_bucket:
-                    output_bucket = getattr(self.storage, 'bucket_name', None)
+                    output_bucket = getattr(self.storage, "bucket_name", None)
 
                 if output_bucket:
                     video_uri = f"gs://{output_bucket}/{blob_path}"

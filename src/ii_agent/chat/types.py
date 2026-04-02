@@ -69,7 +69,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional, Union, Dict, Any, Literal
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ii_agent.billing.schemas import TokenUsage
 
@@ -127,9 +127,7 @@ class VideoSettings(BaseModel):
     aspect_ratio: VideoAspectRatioType = Field(
         "16:9", description="Video aspect ratio (16:9 or 9:16)"
     )
-    audio_included: bool = Field(
-        True, description="Whether to generate audio with the video"
-    )
+    audio_included: bool = Field(True, description="Whether to generate audio with the video")
     multishot_mode: bool = Field(
         True, description="Whether to split prompt into scenes with camera cuts"
     )
@@ -143,9 +141,7 @@ class VideoFrameReference(BaseModel):
     type: Literal["start", "end"] = Field(
         ..., description="Frame type - 'start' for first frame, 'end' for last frame"
     )
-    file_id: str | None = Field(
-        None, description="Optional file ID if the frame was uploaded"
-    )
+    file_id: str | None = Field(None, description="Optional file ID if the frame was uploaded")
 
 
 class StorybookContext(BaseModel):
@@ -180,20 +176,29 @@ class MediaPreferences(BaseModel):
     aspect_ratio: str | None = None
     resolution: str | None = None
     page_count: int | Literal["unlimited"] | None = Field(
-        None, description="Number of content pages for storybook generation (cover page is not counted). Use 'unlimited' for no page limit."
+        None,
+        description="Number of content pages for storybook generation (cover page is not counted). Use 'unlimited' for no page limit.",
     )
-    text_position: Literal["none", "left", "right", "top", "bottom", "separate_page"] | None = Field(
-        None, description="Default text position for storybook layouts"
+    text_position: Literal["none", "left", "right", "top", "bottom", "separate_page"] | None = (
+        Field(None, description="Default text position for storybook layouts")
     )
     language: Literal["English", "Vietnamese", "Japanese", "Hindi", "Korean"] | None = Field(
         None, description="Language for storybook content generation"
     )
-    genre: Literal[
-        "fun_playful", "classic_horror", "superhero_action", "dark_scifi",
-        "high_fantasy", "neon_noir", "wasteland_apocalypse", "lighthearted_comedy", "teen_drama"
-    ] | None = Field(
-        None, description="Genre for storybook content generation"
-    )
+    genre: (
+        Literal[
+            "fun_playful",
+            "classic_horror",
+            "superhero_action",
+            "dark_scifi",
+            "high_fantasy",
+            "neon_noir",
+            "wasteland_apocalypse",
+            "lighthearted_comedy",
+            "teen_drama",
+        ]
+        | None
+    ) = Field(None, description="Genre for storybook content generation")
     manga_layout: bool | None = Field(
         None, description="Enable manga-style panel layouts for storybook"
     )
@@ -239,9 +244,7 @@ class CouncilPreferences(BaseModel):
     council_models: List[CouncilModelConfig] = Field(
         default_factory=list, description="List of models to run in parallel"
     )
-    synthesis_model_id: str = Field(
-        "", description="Model ID used to synthesize council outputs"
-    )
+    synthesis_model_id: str = Field("", description="Model ID used to synthesize council outputs")
 
 
 class TokenDetailsCompletion(BaseModel):
@@ -281,9 +284,7 @@ class MessageRole(str, Enum):
 class ProviderFileInfo(BaseModel):
     """Provider-specific file information stored in message metadata."""
 
-    provider: str = Field(
-        ..., description="Provider name (e.g., 'openai', 'anthropic')"
-    )
+    provider: str = Field(..., description="Provider name (e.g., 'openai', 'anthropic')")
     file_ids: List[str] = Field(..., description="List of provider-specific file IDs")
     container_id: Optional[str] = Field(
         default=None,
@@ -378,9 +379,7 @@ class ToolCall(BaseContentPart):
     input: str
     function_type: str = Field(default="function", alias="function_type")
     finished: bool = True
-    provider_executed: bool = (
-        False  # NOTE: whether the tool call was executed by the provider
-    )
+    provider_executed: bool = False  # NOTE: whether the tool call was executed by the provider
 
 
 # Content part types for array results
@@ -756,6 +755,11 @@ class Message(BaseModel):
     provider_metadata: Optional[Dict] = None
     finish_reason: Optional[str] = None
 
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def _normalize_session_id(cls, value: str | UUID) -> str:
+        return str(value)
+
     def content(self) -> Optional[TextContent]:
         """Extract first text content part."""
         for part in self.parts:
@@ -765,9 +769,7 @@ class Message(BaseModel):
 
     def tool_calls(self) -> List[ToolCall]:
         """Extract all tool call parts."""
-        return [
-            p for p in self.parts if isinstance(p, ToolCall) and not p.provider_executed
-        ]
+        return [p for p in self.parts if isinstance(p, ToolCall) and not p.provider_executed]
 
     def tool_results(self) -> List[ToolResult]:
         """Extract all tool result parts."""

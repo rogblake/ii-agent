@@ -45,7 +45,7 @@ export interface ForkSessionRequest {
     fork_type: ForkType
     sandbox_mode: SandboxMode
     context: ForkContext
-    llm_setting_id?: string | null
+    model_setting_id?: string | null
 }
 
 export interface ForkSessionResponse {
@@ -55,5 +55,5 @@ export interface ForkSessionResponse {
     agent_type: string
     sandbox_id?: string | null
     sandbox_mode: SandboxMode
-    llm_setting_id?: string | null
+    model_setting_id?: string | null
 }

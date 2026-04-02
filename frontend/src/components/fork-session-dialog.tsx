@@ -58,7 +58,7 @@ export function ForkSessionDialog({
                         attachments,
                         additional_instruction: additionalInstruction || null
                     },
-                    llm_setting_id: selectedModelId || null
+                    model_setting_id: selectedModelId || null
                 }
             }).unwrap()
 

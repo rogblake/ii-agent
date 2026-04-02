@@ -11,14 +11,18 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from ii_agent.agents.runs.agent import (
     ModelTurnMetricsEvent,
+    RunCancelledEvent,
     RunCompletedEvent,
+    RunErrorEvent,
     RunOutput,
+    RunPausedEvent,
     ToolCallCompletedEvent,
 )
 from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.core.container import ApplicationContainer
 from ii_agent.core.db import get_db_session_local
 from ii_agent.core.logger import logger
+from ii_agent.core.storage.client import get_storage
 from ii_agent.realtime.events.app_events import (
     AgentStreamCompleteEvent,
     BaseEvent,
@@ -97,6 +101,12 @@ class BaseCommandHandler(ABC, Generic[TContent]):
 
     async def send_event(self, event: BaseEvent) -> None:
         await self._pubsub.publish(event)
+
+    def _create_skill_creator(self, user_id: uuid.UUID | str):
+        """Build the per-user skill loader used by realtime agents."""
+        from ii_agent.agents.skills.db_creator import DbSkillCreator
+
+        return DbSkillCreator(user_id=str(user_id), storage=get_storage())
 
     async def _send_error_event(
         self,
@@ -283,7 +293,7 @@ class BaseCommandHandler(ABC, Generic[TContent]):
         (e.g. update milestones, emit extra events).
         """
         run_service = self._container.run_task_service
-        final_status = RunStatus.FAILED  # sentinel — overwritten on RunOutput
+        final_status: RunStatus | None = None
 
         async for event in event_stream:
             realtime_event = convert_agent_event_to_realtime(
@@ -343,6 +353,7 @@ class BaseCommandHandler(ABC, Generic[TContent]):
                     )
 
             if isinstance(event, RunCompletedEvent):
+                final_status = RunStatus.COMPLETED
                 metrics_content: dict[str, Any] = {
                     "api_version": session_info.api_version,
                 }
@@ -356,25 +367,25 @@ class BaseCommandHandler(ABC, Generic[TContent]):
                     )
                 )
 
+            if isinstance(event, RunPausedEvent):
+                final_status = RunStatus.PAUSED
+
+            if isinstance(event, RunCancelledEvent):
+                final_status = RunStatus.CANCELLED
+
+            if isinstance(event, RunErrorEvent):
+                final_status = RunStatus.FAILED
+
             if isinstance(event, RunOutput):
                 # Determine final status from the agent's run output
                 if event.status == RunStatus.PAUSED:
                     final_status = RunStatus.PAUSED
                 elif event.status == RunStatus.CANCELLED:
                     final_status = RunStatus.CANCELLED
+                elif event.status == RunStatus.FAILED:
+                    final_status = RunStatus.FAILED
                 else:
                     final_status = RunStatus.COMPLETED
-
-                # Only transition RunTask for terminal states;
-                # PAUSED runs stay active for continue_run to resume.
-                if final_status in RunStatus.terminal_states():
-                    async with get_db_session_local() as db:
-                        await run_service.transition_status(
-                            db,
-                            task_id=run_id,
-                            to_status=final_status,
-                        )
-                        await db.commit()
 
                 await self.send_event(
                     AgentStreamCompleteEvent(
@@ -387,9 +398,11 @@ class BaseCommandHandler(ABC, Generic[TContent]):
                     )
                 )
 
-        # If no RunOutput was received the stream ended normally
-        if final_status == RunStatus.FAILED:
+        # If no explicit terminal/pause status was observed, treat the stream end as success.
+        if final_status is None:
             final_status = RunStatus.COMPLETED
+
+        if final_status in [*RunStatus.terminal_states(), RunStatus.PAUSED]:
             async with get_db_session_local() as db:
                 await run_service.transition_status(
                     db,

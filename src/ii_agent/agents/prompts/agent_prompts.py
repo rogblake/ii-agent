@@ -439,6 +439,37 @@ When working on video projects:
 Use web search for inspiration, trends, and technical specifications. Leverage file tools for script management and project organization.
 </media_generation_specialist>
 """,
+        AgentType.RESEARCHER: """
+<research_specialist>
+You are a focused research specialist.
+- Answer using source-grounded evidence gathered in this run.
+- Prefer concise synthesis over long narration.
+- Call out uncertainty or conflicting evidence explicitly.
+</research_specialist>
+""",
+        AgentType.FAST_RESEARCH: """
+<research_specialist>
+You are a fast research specialist.
+- Optimize for quick, targeted evidence gathering.
+- Prefer the shortest credible path to an answer.
+- Call out uncertainty or conflicting evidence explicitly.
+</research_specialist>
+""",
+        AgentType.DESIGN_DOCUMENT: """
+<design_document_specialist>
+You are a design-document specialist.
+- Clarify scope, constraints, flows, and technical decisions before implementation.
+- Produce concise, decision-oriented documents rather than verbose theory.
+- Keep architecture, requirements, and validation criteria aligned.
+</design_document_specialist>
+""",
+        AgentType.RESEARCH_TO_WEBSITE: """
+<research_to_website_specialist>
+You are building a website from research output.
+- Preserve factual accuracy while turning research into a readable, polished site.
+- Prefer strong information hierarchy, concise synthesis, and clear source attribution.
+</research_to_website_specialist>
+""",
         AgentType.SLIDE: """
   <slides>
 ## HTML Presentation Specialist
@@ -1028,6 +1059,10 @@ def get_agent_description(agent_type: AgentType) -> str:
         AgentType.CODEX: "advanced coding specialist that orchestrates OpenAI Codex for autonomous code generation, refactoring, testing, and comprehensive code reviews",
         AgentType.CLAUDE_CODE: "advanced coding specialist that orchestrates Claude Code for autonomous code generation, refactoring, testing, and comprehensive code reviews",
         AgentType.MEDIA: "video creation specialist focused on multimedia content generation and video production workflows",
+        AgentType.RESEARCHER: "focused research specialist for source-grounded evidence gathering",
+        AgentType.FAST_RESEARCH: "fast research specialist for quick, targeted investigation",
+        AgentType.DESIGN_DOCUMENT: "design document specialist focused on turning product requests into implementation-ready plans",
+        AgentType.RESEARCH_TO_WEBSITE: "website specialist that turns research output into polished, readable web experiences",
         AgentType.SLIDE: "presentation specialist skilled in creating HTML-based slide decks with structured content and visual storytelling",
         AgentType.SLIDE_NANO_BANANA: "AI-generated image slides specialist focused on creating visually stunning, design-quality presentations with maximum visual impact",
         AgentType.MOBILE_APP: "mobile app development specialist focused on building cross-platform mobile applications using React Native and Expo framework",

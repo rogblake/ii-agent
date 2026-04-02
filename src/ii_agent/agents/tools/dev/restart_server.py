@@ -19,6 +19,8 @@ DESCRIPTION = (
 INPUT_SCHEMA = {"type": "object", "properties": {}, "required": []}
 
 DEFAULT_TIMEOUT = 180
+_WEB_CACHE_NOT_FOUND_MARKER = "web cache not found."
+_WEB_CACHE_PATHS = "/workspace/.ii-app/web.json or /workspace/.ii-web-server/cache.json"
 
 
 class RestartServerTool(BaseSandboxTool):
@@ -43,6 +45,19 @@ class RestartServerTool(BaseSandboxTool):
                 user_display_content=result,
             )
         except Exception as e:
+            if _WEB_CACHE_NOT_FOUND_MARKER in str(e).lower():
+                message = (
+                    "Server restart is unavailable because the web cache is missing. "
+                    f"Expected {_WEB_CACHE_PATHS}. The web app may not be initialized "
+                    "yet, or a previous init failed and cleaned up the cache."
+                )
+                result = ToolResult(
+                    llm_content=message,
+                    user_display_content=message,
+                    is_error=False,
+                )
+                logger.warning(result.llm_content)
+                return result
             logger.exception("Failed to restart servers")
             return ToolResult(
                 llm_content=f"Failed to restart servers: {e}",

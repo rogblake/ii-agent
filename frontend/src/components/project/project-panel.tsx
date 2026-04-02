@@ -15,6 +15,7 @@ import ProjectDatabase from './project-database'
 import ProjectDeployment from './project-deployment'
 import ProjectIntegrations from './project-integrations'
 import ProjectSecret from './project-secret'
+import ProjectTerminal from './project-terminal'
 import { CodeExplorer } from '@/components/agent/code-explorer'
 import { setPublished, useAppDispatch } from '@/state'
 
@@ -452,6 +453,8 @@ const ProjectPanel = ({
                 return (
                     <CodeExplorer className="h-[calc(100vh-280px)] overflow-hidden rounded-lg border border-border bg-background" />
                 )
+            case 'terminal':
+                return <ProjectTerminal sessionId={sessionId} />
             case 'database':
                 return (
                     <div className="relative">

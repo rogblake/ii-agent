@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from ii_agent.agent.runtime.agents.sandbox_provider import SandboxProvider
+from ii_agent.agents.sandbox_provider import SandboxProvider
 
 pytestmark = pytest.mark.unit
 

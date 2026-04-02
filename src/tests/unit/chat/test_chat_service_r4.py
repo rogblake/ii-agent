@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import uuid
 import pytest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -45,6 +46,26 @@ def _make_file_upload(
         content_type=content_type,
         storage_path=storage_path,
     )
+
+
+# ============================================================================
+# message types
+# ============================================================================
+
+
+class TestMessageTypes:
+    def test_message_coerces_uuid_session_id_to_string(self):
+        from ii_agent.chat.types import Message, MessageRole, TextContent
+
+        session_id = uuid.uuid4()
+        message = Message(
+            id=uuid.uuid4(),
+            role=MessageRole.USER,
+            session_id=session_id,
+            parts=[TextContent(text="hello")],
+        )
+
+        assert message.session_id == str(session_id)
 
 
 # ============================================================================
@@ -617,7 +638,7 @@ class TestChatFileProcessor:
                 mock_vs,
             ),
         ):
-            vector_store = await processor.process_uploads(
+            await processor.process_uploads(
                 AsyncMock(),
                 user_id="user-1",
                 session_id="sess-1",
@@ -753,11 +774,103 @@ class TestChatServiceValidateModelForChat:
             )
 
     @pytest.mark.asyncio
-    async def test_passes_for_known_model(self):
-        model = SimpleNamespace(id="claude-3-sonnet")
+    async def test_passes_for_known_model_setting_uuid(self):
+        model = SimpleNamespace(id=uuid.uuid4(), model_id="claude-3-sonnet")
         service = self._make_service(models=[model])
         # Should not raise
-        await service.validate_model_for_chat(AsyncMock(), model_id="claude-3-sonnet", user_id="u1")
+        await service.validate_model_for_chat(
+            AsyncMock(),
+            model_id=str(model.id),
+            user_id="u1",
+        )
+
+    @pytest.mark.asyncio
+    async def test_passes_for_known_provider_model_id(self):
+        model = SimpleNamespace(id=uuid.uuid4(), model_id="claude-3-sonnet")
+        service = self._make_service(models=[model])
+
+        await service.validate_model_for_chat(
+            AsyncMock(),
+            model_id="claude-3-sonnet",
+            user_id="u1",
+        )
+
+
+class TestChatServiceGetLlmConfig:
+    def _make_service(self, model_setting_service):
+        from ii_agent.chat.application.chat_service import ChatService
+
+        return ChatService(
+            file_processor=SimpleNamespace(_config=_make_settings()),
+            tool_service=SimpleNamespace(),
+            llm_loop=SimpleNamespace(),
+            message_history=SimpleNamespace(),
+            message_service=SimpleNamespace(),
+            session_repo=SimpleNamespace(),
+            model_setting_service=model_setting_service,
+            credit_service=None,
+            container=SimpleNamespace(),
+            title_service=_make_title_service(),
+        )
+
+    @pytest.mark.asyncio
+    async def test_resolves_config_by_setting_id_for_selected_model_uuid(self):
+        setting_id = uuid.uuid4()
+        expected_config = SimpleNamespace(model="claude-3-sonnet")
+
+        class FakeLLMSettingService:
+            async def get_all_available_models(self, db, user_id):
+                return SimpleNamespace(
+                    models=[SimpleNamespace(id=setting_id, model_id="claude-3-sonnet")]
+                )
+
+            resolve_config_by_setting_id = AsyncMock(return_value=expected_config)
+            resolve_system_config = AsyncMock()
+
+        setting_service = FakeLLMSettingService()
+        service = self._make_service(setting_service)
+        db = AsyncMock()
+
+        result = await service.get_llm_config(
+            db,
+            model_id=str(setting_id),
+            user_id="u1",
+        )
+
+        assert result is expected_config
+        setting_service.resolve_config_by_setting_id.assert_awaited_once_with(
+            db,
+            setting_id=setting_id,
+        )
+        setting_service.resolve_system_config.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_system_model_lookup_for_legacy_model_id(self):
+        expected_config = SimpleNamespace(model="gpt-4o")
+
+        class FakeLLMSettingService:
+            async def get_all_available_models(self, db, user_id):
+                return SimpleNamespace(models=[])
+
+            resolve_config_by_setting_id = AsyncMock()
+            resolve_system_config = AsyncMock(return_value=expected_config)
+
+        setting_service = FakeLLMSettingService()
+        service = self._make_service(setting_service)
+        db = AsyncMock()
+
+        result = await service.get_llm_config(
+            db,
+            model_id="gpt-4o",
+            user_id="u1",
+        )
+
+        assert result is expected_config
+        setting_service.resolve_config_by_setting_id.assert_not_awaited()
+        setting_service.resolve_system_config.assert_awaited_once_with(
+            db,
+            model_id="gpt-4o",
+        )
 
 
 # ============================================================================

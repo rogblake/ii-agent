@@ -502,8 +502,8 @@ class TestPublishProjectHandlerFormatEnvFlags:
         assert result == ""
 
 
-class TestPublishProjectHandlerExtractToolOutput:
-    """Test _extract_tool_output method."""
+class TestPublishProjectHandlerShellHelpers:
+    """Test sandbox-backed shell helpers."""
 
     def _get_handler(self):
         from ii_agent.realtime.handlers.publish import PublishProjectHandler
@@ -513,40 +513,61 @@ class TestPublishProjectHandlerExtractToolOutput:
             container=_mock_container(),
         )
 
-    def test_returns_string_user_display_content(self):
+    @pytest.mark.asyncio
+    async def test_ensure_shell_session_creates_missing_session(self):
         handler = self._get_handler()
-        result_mock = MagicMock()
-        result_mock.structured_content = {"user_display_content": "hello output"}
-        result_mock.content = []
-        assert handler._extract_tool_output(result_mock) == "hello output"
+        sandbox = MagicMock()
+        sandbox.get_all_shell_sessions = AsyncMock(return_value=["other-session"])
+        sandbox.create_shell_session = AsyncMock()
 
-    def test_returns_joined_list_user_display_content(self):
-        handler = self._get_handler()
-        result_mock = MagicMock()
-        result_mock.structured_content = {"user_display_content": ["line1", "line2"]}
-        result_mock.content = []
-        assert handler._extract_tool_output(result_mock) == "line1\nline2"
+        await handler._ensure_shell_session(
+            sandbox,
+            "deploy-session",
+            "/workspace/project",
+        )
 
-    def test_falls_back_to_content_blocks(self):
-        handler = self._get_handler()
-        result_mock = MagicMock()
-        result_mock.structured_content = {}
-        block = MagicMock()
-        block.text = "block text"
-        result_mock.content = [block]
-        assert handler._extract_tool_output(result_mock) == "block text"
+        sandbox.create_shell_session.assert_awaited_once_with(
+            "deploy-session",
+            "/workspace/project",
+        )
 
-    def test_skips_blocks_without_text(self):
+    @pytest.mark.asyncio
+    async def test_ensure_shell_session_skips_existing_session(self):
         handler = self._get_handler()
-        result_mock = MagicMock()
-        result_mock.structured_content = {}
-        block = MagicMock()
-        del block.text
-        block.__class__ = type("NoText", (), {})
-        result_mock.content = [block]
-        # Should not raise
-        output = handler._extract_tool_output(result_mock)
-        assert isinstance(output, str)
+        sandbox = MagicMock()
+        sandbox.get_all_shell_sessions = AsyncMock(return_value=["deploy-session"])
+        sandbox.create_shell_session = AsyncMock()
+
+        await handler._ensure_shell_session(
+            sandbox,
+            "deploy-session",
+            "/workspace/project",
+        )
+
+        sandbox.create_shell_session.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_run_shell_command_returns_clean_output(self):
+        handler = self._get_handler()
+        sandbox = MagicMock()
+        sandbox.run_shell_command = AsyncMock(return_value=MagicMock(clean_output="command output"))
+
+        output = await handler._run_shell_command(
+            sandbox,
+            "deploy-session",
+            "pwd",
+            description="Print working directory",
+            timeout=42,
+            wait_for_output=False,
+        )
+
+        assert output == "command output"
+        sandbox.run_shell_command.assert_awaited_once_with(
+            "deploy-session",
+            "pwd",
+            timeout=42,
+            wait_for_output=False,
+        )
 
 
 class TestPublishProjectHandlerHandle:

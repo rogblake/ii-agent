@@ -62,19 +62,8 @@ class SandboxService:
 
         Returns the ready-to-use :class:`Sandbox`.
         """
-        # 1. Try existing record
-        record = await self._sandbox_repo.get_active_by_session_id(db, session_id)
-
-        # 2. Check for shared sandbox (forked sessions via parent_session_id)
-        if record is None:
-            session = await self._session_repo.get_by_id(db, session_id)
-            if session and session.parent_session_id:
-                parent_record = await self._sandbox_repo.get_active_by_session_id(
-                    db, session.parent_session_id
-                )
-                if parent_record:
-                    logger.info(f"Session {session_id} sharing sandbox from parent {session.parent_session_id}")
-                    record = parent_record
+        # 1. Try existing record, then fall back to the parent's sandbox for forks.
+        record = await self._resolve_sandbox_record(db, session_id)
 
         # 3. Create new record if none found
         is_new = False
@@ -117,14 +106,26 @@ class SandboxService:
         session_id: uuid.UUID,
     ) -> Optional[Sandbox]:
         """Get existing sandbox for a session without creating one."""
-        record = await self._sandbox_repo.get_active_by_session_id(db, session_id)
-        if record is None or record.provider_sandbox_id is None:
+        record = await self._resolve_sandbox_record(
+            db,
+            session_id,
+            require_provider_sandbox_id=True,
+        )
+        if record is None:
             return None
         try:
             return await self._connect_provider(record)
         except Exception:
             logger.warning(f"Failed to connect to sandbox {record.id}", exc_info=True)
             return None
+
+    async def get_by_session_id(
+        self,
+        db: AsyncSession,
+        session_id: uuid.UUID,
+    ) -> Optional[AgentSandbox]:
+        """Get the active sandbox record for a session, falling back to the parent."""
+        return await self._resolve_sandbox_record(db, session_id)
 
     async def pause_sandbox(
         self,
@@ -186,6 +187,41 @@ class SandboxService:
             )
         raise SandboxCreationError(f"Unsupported provider: {record.provider}")
 
+    async def _resolve_sandbox_record(
+        self,
+        db: AsyncSession,
+        session_id: uuid.UUID,
+        *,
+        require_provider_sandbox_id: bool = False,
+    ) -> Optional[AgentSandbox]:
+        """Resolve the active sandbox record for a session or its parent."""
+
+        def _usable(record: AgentSandbox | None) -> bool:
+            return record is not None and (
+                not require_provider_sandbox_id or record.provider_sandbox_id is not None
+            )
+
+        record = await self._sandbox_repo.get_active_by_session_id(db, session_id)
+        if _usable(record):
+            return record
+
+        session = await self._session_repo.get_by_id(db, session_id)
+        if session and session.parent_session_id:
+            parent_record = await self._sandbox_repo.get_active_by_session_id(
+                db, session.parent_session_id
+            )
+            if _usable(parent_record):
+                logger.info(
+                    "Session %s sharing sandbox from parent %s",
+                    session_id,
+                    session.parent_session_id,
+                )
+                return parent_record
+
+        if require_provider_sandbox_id:
+            return None
+        return record
+
     # ── MCP configuration ─────────────────────────────────────────────────
 
     async def _configure_mcp(
@@ -199,7 +235,6 @@ class SandboxService:
             sandbox_url = await sandbox.expose_port(self._config.mcp.port)
             # Build and set credentials
             sandbox.get_mcp_client(sandbox_url=sandbox_url)
-
 
             # Register user MCP servers
             await self._register_user_mcp_servers(sandbox, user_id, sandbox_url, db)
@@ -221,9 +256,7 @@ class SandboxService:
         from ii_server.mcp.client import MCPClient
 
         mcp_svc = MCPSettingService(repo=MCPSettingRepository(), config=self._config)
-        mcp_settings = await mcp_svc.list_mcp_settings(
-            db, user_id=str(user_id), only_active=True
-        )
+        mcp_settings = await mcp_svc.list_mcp_settings(db, user_id=str(user_id), only_active=True)
 
         combined_config = (
             mcp_settings.get_combined_active_config() if mcp_settings.settings else None
@@ -241,9 +274,7 @@ class SandboxService:
 
         async with MCPClient(sandbox_url) as client:
             if combined_config:
-                is_codex = any(
-                    isinstance(m, CodexMetadata) for m in combined_config.metadatas
-                )
+                is_codex = any(isinstance(m, CodexMetadata) for m in combined_config.metadatas)
                 for md in combined_config.metadatas:
                     if isinstance(md, CodexMetadata):
                         store_path = f"{self._config.sandbox.user}/.codex/auth.json"
@@ -257,9 +288,7 @@ class SandboxService:
                     await client.register_codex()
 
             if merged_mcp_servers:
-                logger.info(
-                    f"Registering {len(merged_mcp_servers)} MCP servers for user {user_id}"
-                )
+                logger.info(f"Registering {len(merged_mcp_servers)} MCP servers for user {user_id}")
                 await client.register_custom_mcp({"mcpServers": merged_mcp_servers})
 
     async def _get_composio_mcp_servers(
@@ -269,8 +298,6 @@ class SandboxService:
     ) -> Optional[dict]:
         """Get user's Composio MCP server configurations."""
         try:
-            from ii_agent.integrations.connectors.composio.service import ComposioService
-
             # Use the composio service to get decrypted MCP configs
             from ii_agent.core.container import get_app_container
 
@@ -281,7 +308,9 @@ class SandboxService:
             if not composio_mcp_servers:
                 return None
 
-            logger.info(f"Found {len(composio_mcp_servers)} Composio MCP servers for user {user_id}")
+            logger.info(
+                f"Found {len(composio_mcp_servers)} Composio MCP servers for user {user_id}"
+            )
             return composio_mcp_servers
         except Exception as e:
             logger.error(f"Failed to get Composio MCP servers for user {user_id}: {e}")

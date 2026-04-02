@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
 
@@ -11,7 +11,6 @@ from ii_agent.chat.llm.custom import CustomProvider
 from ii_agent.chat.types import (
     ArrayResultContent,
     BinaryContent,
-    ErrorJsonContent,
     ErrorTextContent,
     EventType,
     ExecutionDeniedContent,
@@ -20,16 +19,12 @@ from ii_agent.chat.types import (
     JsonResultContent,
     Message,
     MessageRole,
-    RunResponseEvent,
-    StorybookProgressContent,
-    StorybookResultContent,
     TextContent,
     TextResultContent,
     ToolCall,
     TextContentPart,
     ImageDataContentPart,
     FileDataContentPart,
-    ImageUrlContentPart,
 )
 from ii_agent.settings.llm import Provider
 from ii_agent.core.config.llm_config import LLMConfig
@@ -375,12 +370,12 @@ class TestCustomProviderSend:
         mock_choice.message.tool_calls = None
         mock_choice.finish_reason = "stop"
         mock_response.choices = [mock_choice]
-        mock_response.usage = MagicMock(prompt_tokens=10, completion_tokens=5)
+        mock_response.usage = MagicMock(input_tokens=10, output_tokens=5)
 
         with patch(
             "ii_agent.chat.llm.custom.acompletion", new=AsyncMock(return_value=mock_response)
         ) as mock_acomp:
-            result = await provider.send([msg])
+            await provider.send([msg])
 
         # Verify system message was added
         call_kwargs = mock_acomp.call_args

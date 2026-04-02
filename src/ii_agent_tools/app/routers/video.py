@@ -22,22 +22,35 @@ class VideoGenerationRequest(BaseModel):
     aspect_ratio: Literal["auto", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"] = "16:9"
     duration_seconds: int = Field(..., ge=3, le=30)
     resolution: Literal["480p", "720p", "1080p", "4k"] = Field(
-        default="720p",
-        description="Video resolution (480p, 720p, 1080p, or 4k)"
+        default="720p", description="Video resolution (480p, 720p, 1080p, or 4k)"
     )
     audio_included: bool = Field(default=True, description="Whether to generate audio")
     multishot_mode: bool = Field(
-        default=True,
-        description="Whether to use multishot mode when supported"
+        default=True, description="Whether to use multishot mode when supported"
     )
     # Frame URLs (https:// or gs://) passed directly to Veo API
     start_frame: str | None = None
     end_frame: str | None = None
+    start_frame_base64: str | None = Field(
+        default=None,
+        description="Optional base64-encoded start frame image content.",
+    )
+    start_frame_mime_type: Literal["image/png", "image/jpeg", "image/webp"] | None = Field(
+        default=None,
+        description="MIME type for inline start frame content.",
+    )
+    end_frame_base64: str | None = Field(
+        default=None,
+        description="Optional base64-encoded end frame image content.",
+    )
+    end_frame_mime_type: Literal["image/png", "image/jpeg", "image/webp"] | None = Field(
+        default=None,
+        description="MIME type for inline end frame content.",
+    )
     # Veo 3.1 additional parameters
     negative_prompt: str | None = Field(default=None, description="What to exclude from video")
     person_generation: Literal["allow_all", "allow_adult"] | None = Field(
-        default=None,
-        description="Person generation mode"
+        default=None, description="Person generation mode"
     )
     seed: int | None = Field(default=None, description="Random seed for reproducibility")
     reference_images: list[VideoReferenceImage] | None = Field(
@@ -46,8 +59,7 @@ class VideoGenerationRequest(BaseModel):
     )
     # Extension API for long videos
     use_extension_api: bool = Field(
-        default=True,
-        description="Use extension API for long videos (maintains audio coherence)"
+        default=True, description="Use extension API for long videos (maintains audio coherence)"
     )
     provider_payload: Dict[str, Any] | None = None
     request_mode: str | None = None
@@ -55,31 +67,22 @@ class VideoGenerationRequest(BaseModel):
 
 class VideoExtensionRequest(BaseModel):
     """Request to extend an existing video using Veo's extension API."""
+
     source_video_url: str = Field(
-        ...,
-        description="URL of the video to extend. Can be HTTP(S) URL or GCS URI."
+        ..., description="URL of the video to extend. Can be HTTP(S) URL or GCS URI."
     )
-    prompt: str = Field(
-        ...,
-        description="Text prompt describing how the video should continue."
-    )
+    prompt: str = Field(..., description="Text prompt describing how the video should continue.")
     extension_seconds: int = Field(
-        default=7,
-        ge=1,
-        le=7,
-        description="Duration to extend by (max 7s per call)."
+        default=7, ge=1, le=7, description="Duration to extend by (max 7s per call)."
     )
     generate_audio: bool = Field(
-        default=True,
-        description="Whether to continue generating synchronized audio."
+        default=True, description="Whether to continue generating synchronized audio."
     )
     person_generation: Literal["allow_all", "allow_adult"] | None = Field(
-        default=None,
-        description="Person generation mode."
+        default=None, description="Person generation mode."
     )
     end_frame: str | None = Field(
-        default=None,
-        description="URL of end frame image (https:// or gs://)."
+        default=None, description="URL of end frame image (https:// or gs://)."
     )
 
 
@@ -114,6 +117,10 @@ async def video_generation(
             multishot_mode=request.multishot_mode,
             start_frame=request.start_frame,
             end_frame=request.end_frame,
+            start_frame_base64=request.start_frame_base64,
+            start_frame_mime_type=request.start_frame_mime_type,
+            end_frame_base64=request.end_frame_base64,
+            end_frame_mime_type=request.end_frame_mime_type,
             negative_prompt=request.negative_prompt,
             person_generation=request.person_generation,
             seed=request.seed,

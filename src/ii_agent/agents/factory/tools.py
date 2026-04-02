@@ -150,43 +150,42 @@ class AgentConfig:
 
 
 RESEARCH_TOOL_CONFIG = AgentToolConfig(
-            core_tools=[
-                # Shell tools
-                ShellInit.name,
-                ShellRunCommand.name,
-                ShellView.name,
-                ShellList.name,
-                # File tools
-                FileReadTool.name,
-                FileWriteTool.name,
-                FileEditTool.name,
-                # Web tools
-                WebSearchTool.name,
-                WebVisitTool.name,
-                # Productivity
-                TodoWriteTool.name,
-                # Communicate
-                SendUserFile.name,
-            ],
-            model_exclusions={
-                Provider.OPENAI: [
-                    FileWriteTool.name,
-                    FileEditTool.name,
-                    ShellList.name,
-                    ShellWriteToProcessTool.name,
-                ],
-                Provider.ANTHROPIC: [
-                    FileWriteTool.name,
-                    FileEditTool.name,
-                    ShellList.name,
-                    ShellWriteToProcessTool.name,
-                ],
-            },
-            model_additions={
-                Provider.OPENAI: [ApplyPatchTool.name],
-                Provider.ANTHROPIC: [StrReplaceEditorTool.name],
-            },
-        )
+    core_tools=[
+        # Shell tools
+        ShellRunCommand.name,
+        ShellView.name,
+        ShellList.name,
+        # File tools
+        FileReadTool.name,
+        FileWriteTool.name,
+        FileEditTool.name,
+        # Web tools
+        WebSearchTool.name,
+        WebVisitTool.name,
+        # Productivity
+        TodoWriteTool.name,
+        # Communicate
+        SendUserFile.name,
+    ],
+    model_exclusions={
+        Provider.OPENAI: [
+            FileWriteTool.name,
+            FileEditTool.name,
+            ShellList.name,
+            ShellWriteToProcessTool.name,
+        ],
+        Provider.ANTHROPIC: [
+            FileWriteTool.name,
+            FileEditTool.name,
+            ShellList.name,
+            ShellWriteToProcessTool.name,
+        ],
+    },
+    model_additions={
+        Provider.OPENAI: [ApplyPatchTool.name],
+        Provider.ANTHROPIC: [StrReplaceEditorTool.name],
+    },
+)
 
 # Agent configurations
 AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
@@ -243,7 +242,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         description="Task execution sub-agent for focused tasks",
         tool_config=AgentToolConfig(
             core_tools=[
-                ShellInit.name,
                 ShellRunCommand.name,
                 ShellView.name,
                 ShellList.name,
@@ -295,7 +293,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         tool_config=AgentToolConfig(
             core_tools=[
                 # MessageUserTool.name,
-                ShellInit.name,
                 ShellRunCommand.name,
                 ShellView.name,
                 ShellList.name,
@@ -339,7 +336,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         tool_config=AgentToolConfig(
             core_tools=[
                 # MessageUserTool.name,
-                ShellInit.name,
                 ShellRunCommand.name,
                 ShellView.name,
                 ShellList.name,
@@ -397,7 +393,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         description="Code analysis and documentation agent",
         tool_config=AgentToolConfig(
             core_tools=[
-                ShellInit.name,
                 ShellRunCommand.name,
                 ShellView.name,
                 ShellList.name,
@@ -424,7 +419,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         description="Claude Code integration agent for enhanced development workflows",
         tool_config=AgentToolConfig(
             core_tools=[
-                ShellInit.name,
                 ShellRunCommand.name,
                 ShellView.name,
                 ShellList.name,
@@ -466,7 +460,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         tool_config=AgentToolConfig(
             core_tools=[
                 # Same as WEBSITE_BUILD
-                ShellInit.name,
                 ShellRunCommand.name,
                 ShellView.name,
                 ShellList.name,
@@ -498,8 +491,6 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
         description="Mobile app development specialist using React Native and Expo",
         tool_config=AgentToolConfig(
             core_tools=[
-                # Shell tools for Expo CLI and bun commands
-                ShellInit.name,
                 ShellRunCommand.name,
                 ShellView.name,
                 ShellList.name,

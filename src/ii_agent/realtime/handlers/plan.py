@@ -141,8 +141,7 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
             existing_task = await svc.find_active_by_session(db, session_info.id)
             if existing_task:
                 logger.info(
-                    f"Already running task for session {session_info.id}, "
-                    f"task: {existing_task.id}"
+                    f"Already running task for session {session_info.id}, task: {existing_task.id}"
                 )
                 return None
 
@@ -227,6 +226,7 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
                 tool_args=query_command.tool_args,
                 metadata=query_command.metadata,
                 system_prompt=get_plan_mode_prompt(),
+                skill_creator=self._create_skill_creator(session_info.user_id),
             )
 
             # Add plan-specific tools
@@ -241,12 +241,16 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
                 sandbox_svc = container.sandbox_service
                 async with get_db_session_local() as db:
                     sandbox = await sandbox_svc.init_sandbox(
-                        db, session_id=session_info.id, user_id=session_info.user_id,
+                        db,
+                        session_id=session_info.id,
+                        user_id=session_info.user_id,
                     )
                 agent.sandbox = sandbox
                 await sandbox.create_directory(sandbox.upload_path, exist_ok=True)
                 sandbox_files, sandbox_images = await upload_media_to_sandbox(
-                    sandbox=sandbox, files=files or [], images=images or [],
+                    sandbox=sandbox,
+                    files=files or [],
+                    images=images or [],
                     upload_path=sandbox.upload_path,
                 )
                 if sandbox_files:
@@ -265,7 +269,9 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
             )
 
             await self.process_agent_event_stream(
-                event_stream, session_info, run_id=running_task.id,
+                event_stream,
+                session_info,
+                run_id=running_task.id,
                 is_user_key=llm_config.is_user_model(),
                 llm_config=llm_config,
             )
@@ -357,6 +363,7 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
                 tool_args=query_command.tool_args,
                 metadata=query_command.metadata,
                 system_prompt=suggestions_prompt,
+                skill_creator=self._create_skill_creator(session_info.user_id),
             )
             agent.add_tool(suggestions_tool)
 
@@ -369,7 +376,9 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
             )
 
             await self.process_agent_event_stream(
-                event_stream, session_info, run_id=running_task.id,
+                event_stream,
+                session_info,
+                run_id=running_task.id,
                 is_user_key=llm_config.is_user_model(),
                 llm_config=llm_config,
             )
@@ -468,6 +477,7 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
                 tool_args=query_command.tool_args,
                 metadata=query_command.metadata,
                 system_prompt=modification_prompt,
+                skill_creator=self._create_skill_creator(session_info.user_id),
             )
             agent.add_tool(milestone_tool)
 
@@ -479,12 +489,16 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
                 sandbox_svc = container.sandbox_service
                 async with get_db_session_local() as db:
                     sandbox = await sandbox_svc.init_sandbox(
-                        db, session_id=session_info.id, user_id=session_info.user_id,
+                        db,
+                        session_id=session_info.id,
+                        user_id=session_info.user_id,
                     )
                 agent.sandbox = sandbox
                 await sandbox.create_directory(sandbox.upload_path, exist_ok=True)
                 sandbox_files, sandbox_images = await upload_media_to_sandbox(
-                    sandbox=sandbox, files=files or [], images=images or [],
+                    sandbox=sandbox,
+                    files=files or [],
+                    images=images or [],
                     upload_path=sandbox.upload_path,
                 )
                 if sandbox_files:
@@ -503,7 +517,9 @@ class PlanHandler(BaseCommandHandler[PlanCommandContent]):
             )
 
             await self.process_agent_event_stream(
-                event_stream, session_info, run_id=running_task.id,
+                event_stream,
+                session_info,
+                run_id=running_task.id,
                 is_user_key=llm_config.is_user_model(),
                 llm_config=llm_config,
             )

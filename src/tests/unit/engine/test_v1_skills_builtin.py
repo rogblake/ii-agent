@@ -12,6 +12,7 @@ Covers:
 
 from __future__ import annotations
 
+import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -419,6 +420,23 @@ class TestGetUserSkills:
         docx_skills = [s for s in skills if s.name == "docx"]
         # The user override (disabled) takes precedence over enabled builtin
         assert len(docx_skills) == 0
+
+    async def test_uuid_user_override_matches_string_user_id(self):
+        from ii_agent.settings.skills.loader import get_user_skills
+
+        user_id = uuid.uuid4()
+        builtin = self._make_skill("pdf", user_id=None, is_enabled=True)
+        user_override = self._make_skill("pdf", user_id=user_id, is_enabled=True)
+
+        mock_db = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [builtin, user_override]
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        skills = await get_user_skills(mock_db, user_id=str(user_id))
+        pdf_skills = [s for s in skills if s.name == "pdf"]
+        assert len(pdf_skills) == 1
+        assert pdf_skills[0].user_id == user_id
 
     async def test_enabled_only_false_returns_disabled_skills(self):
         from ii_agent.settings.skills.loader import get_user_skills

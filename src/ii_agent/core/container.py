@@ -15,7 +15,6 @@ handlers, subscribers, cron tasks — ultimately read services from here.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from pydantic import SecretStr
 
@@ -23,8 +22,7 @@ from ii_agent.core.config.settings import Settings, get_settings
 from ii_agent.settings.llm import Provider
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.redis.client import get_redis_client
-from ii_agent.core.redis.cache import EntityCache, TypedEntityCache, get_entity_cache
-from ii_agent.core.redis import client as _redis_client_mod
+from ii_agent.core.redis.cache import TypedEntityCache, get_entity_cache
 
 # ── Repository classes ────────────────────────────────────────────────────
 from ii_agent.users.repository import APIKeyRepository, UserRepository
@@ -50,7 +48,6 @@ from ii_agent.content.slides.repository import SlideContentRepository
 from ii_agent.content.slides.templates.repository import SlideTemplateRepository
 from ii_agent.content.slides.nano_banana.repository import NanoBananaRepository
 from ii_agent.content.slides.design.repository import SlideDesignRepository
-from ii_agent.chat.messages.repository import ChatMessageRepository
 from ii_agent.credits.repository import CreditBalanceRepository, CreditTransactionRepository
 from ii_agent.agents.sandboxes.repository import SandboxRepository
 
@@ -99,6 +96,7 @@ from ii_agent.content.slides.design.service import SlideDesignService
 from ii_agent.projects.design.service import ProjectDesignService
 from ii_agent.chat.messages.service import MessageService
 from ii_agent.credits.service import CreditService
+from ii_agent.agents.sandboxes.live_terminal_service import LiveTerminalService
 from ii_agent.agents.sandboxes.service import SandboxService
 from ii_agent.agents.sandboxes.explorer import WorkspaceExplorer
 from ii_agent.plans.service import PlanService
@@ -158,6 +156,7 @@ class ApplicationContainer:
     message_service: MessageService
     credit_service: CreditService
     sandbox_service: SandboxService
+    live_terminal_service: LiveTerminalService
     plan_service: PlanService
     event_service: EventService
     workspace_explorer_service: WorkspaceExplorer
@@ -267,6 +266,10 @@ class ApplicationContainer:
             sandbox_repo=sandbox_repo,
             cache=sessions_cache,
             config=cfg,
+        )
+
+        live_terminal_svc = LiveTerminalService(
+            sandbox_service=sandbox_svc,
         )
 
         workspace_explorer_svc = WorkspaceExplorer(
@@ -460,6 +463,7 @@ class ApplicationContainer:
             message_service=message_svc,
             credit_service=credit_svc,
             sandbox_service=sandbox_svc,
+            live_terminal_service=live_terminal_svc,
             plan_service=plan_svc,
             event_service=event_svc,
             workspace_explorer_service=workspace_explorer_svc,

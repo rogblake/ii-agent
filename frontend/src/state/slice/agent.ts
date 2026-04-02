@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { BUILD_STEP, WebSocketConnectionState } from '@/typings/agent'
+import { BUILD_STEP, RunStatus, WebSocketConnectionState } from '@/typings/agent'
 
 interface PendingQuery {
     // Init agent params
@@ -144,7 +144,13 @@ export const selectIsCompleted = (state: { agent: AgentState }) =>
     state.agent.runStatus === 'completed'
 export const selectIsStopped = (state: { agent: AgentState }) => {
     const status = state.agent.runStatus
-    return status === 'aborted' || status === 'failed' || status === 'error' || status === 'system_interrupted'
+    return (
+        status === RunStatus.ABORTED ||
+        status === RunStatus.CANCELLED ||
+        status === RunStatus.FAILED ||
+        status === RunStatus.ERROR ||
+        status === RunStatus.SYSTEM_INTERRUPTED
+    )
 }
 export const selectIsCancelling = (state: { agent: AgentState }) =>
     state.agent.isCancelling

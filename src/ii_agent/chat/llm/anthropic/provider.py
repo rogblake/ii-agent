@@ -130,9 +130,7 @@ class AnthropicProvider(LLMClient):
 
             self.client = anthropic.AsyncAnthropic(**client_kwargs)
 
-    async def _upload_single_file(
-        self, file_info: FileAsset
-    ) -> Optional[FileResponseObject]:
+    async def _upload_single_file(self, file_info: FileAsset) -> Optional[FileResponseObject]:
         """Upload a single file to Anthropic Files API.
 
         Args:
@@ -148,9 +146,7 @@ class AnthropicProvider(LLMClient):
             )
 
             # Anthropic SDK requires a Path object, so write to temp file
-            with tempfile.NamedTemporaryFile(
-                delete=False, suffix=f"_{file_info.file_name}"
-            ) as tmp:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file_info.file_name}") as tmp:
                 tmp.write(file_content.read())
                 tmp_path = tmp.name
 
@@ -211,9 +207,7 @@ class AnthropicProvider(LLMClient):
                 )
             )
 
-            existing_provider_files = {
-                pf.file_id: pf for pf in existing_result.scalars().all()
-            }
+            existing_provider_files = {pf.file_id: pf for pf in existing_result.scalars().all()}
 
             # Get FileAsset records
             result = await db_session.execute(
@@ -222,9 +216,7 @@ class AnthropicProvider(LLMClient):
             file_uploads = result.scalars().all()
 
             # Filter files that need uploading
-            files_to_upload = [
-                f for f in file_uploads if f.id not in existing_provider_files
-            ]
+            files_to_upload = [f for f in file_uploads if f.id not in existing_provider_files]
 
             # Upload new files concurrently
             upload_results = []
@@ -350,9 +342,7 @@ class AnthropicProvider(LLMClient):
             enable_caching=self.enable_caching,
             provider_files=provider_files,
         )
-        container_config = (
-            anthropic_options.get("container") if anthropic_options else None
-        )
+        container_config = anthropic_options.get("container") if anthropic_options else None
         has_skills = (
             container_config is not None
             and container_config.get("skills") is not None
@@ -363,9 +353,7 @@ class AnthropicProvider(LLMClient):
             "model": self.model_name,
             "messages": anthropic_messages,
             "max_tokens": (
-                anthropic_options.get("max_tokens", 8192)
-                if anthropic_options
-                else 8192
+                anthropic_options.get("max_tokens", 8192) if anthropic_options else 8192
             ),
         }
 
@@ -397,7 +385,7 @@ class AnthropicProvider(LLMClient):
         betas = []
         if enable_thinking:
             # Extended thinking is not compatible with temperature modifications
-            # Minimum budget is 1,024 tokens, recommended 16k+ for complex tasks  
+            # Minimum budget is 1,024 tokens, recommended 16k+ for complex tasks
             if anthropic_tools:
                 params["thinking"] = {
                     "type": "enabled",
@@ -454,9 +442,7 @@ class AnthropicProvider(LLMClient):
                             )
                         )
                     else:
-                        logger.warning(
-                            f"Unknown server tool use block name: {block.name}"
-                        )
+                        logger.warning(f"Unknown server tool use block name: {block.name}")
                 case AnthropicThinkingBlock() | AnthropicBetaThinkingBlock():
                     content.append(
                         ReasoningContent(
@@ -527,16 +513,12 @@ class AnthropicProvider(LLMClient):
 
             if last_user_message and last_user_message.file_ids and session_id:
                 try:
-                    provider_files = await self.upload_files(
-                        last_user_message, session_id
-                    )
+                    provider_files = await self.upload_files(last_user_message, session_id)
                     logger.info(f"Uploaded {len(provider_files)} files for send")
                 except Exception as e:
                     logger.error(f"Failed to upload files for send: {e}", exc_info=True)
 
-        anthropic_options = (
-            provider_options.get("anthropic", {}) if provider_options else {}
-        )
+        anthropic_options = provider_options.get("anthropic", {}) if provider_options else {}
         params, betas = self._prepare_request_params(
             messages, tools, anthropic_options, provider_files
         )
@@ -545,8 +527,8 @@ class AnthropicProvider(LLMClient):
 
         # Extract usage
         usage = TokenUsage(
-            prompt_tokens=response.usage.input_tokens,
-            completion_tokens=response.usage.output_tokens,
+            input_tokens=response.usage.input_tokens,
+            output_tokens=response.usage.output_tokens,
             cache_write_tokens=response.usage.cache_creation_input_tokens or 0,
             cache_read_tokens=response.usage.cache_read_input_tokens or 0,
             model_name=self.llm_config.model,
@@ -560,9 +542,7 @@ class AnthropicProvider(LLMClient):
             "stop_sequence": FinishReason.END_TURN,
             "pause_turn": FinishReason.PAUSE_TURN,
         }
-        finish_reason = finish_reason_map.get(
-            response.stop_reason, FinishReason.UNKNOWN
-        )
+        finish_reason = finish_reason_map.get(response.stop_reason, FinishReason.UNKNOWN)
 
         return RunResponseOutput(
             content=self._extract_content_part_from_message(response),
@@ -575,9 +555,7 @@ class AnthropicProvider(LLMClient):
         """Ensure inline base64 images respect Anthropic's 5 MB limit (base64 encoded)."""
         for message in messages:
             for part in getattr(message, "parts", []) or []:
-                if isinstance(part, BinaryContent) and part.mime_type.startswith(
-                    "image/"
-                ):
+                if isinstance(part, BinaryContent) and part.mime_type.startswith("image/"):
                     data = part.data or b""
                     # Calculate base64 size: ceil(n/3)*4
                     base64_size = ((len(data) + 2) // 3) * 4
@@ -610,14 +588,10 @@ class AnthropicProvider(LLMClient):
                 and isinstance(self.client, anthropic.AsyncAnthropic)
             ):
                 try:
-                    provider_files = await self.upload_files(
-                        last_user_message, session_id
-                    )
+                    provider_files = await self.upload_files(last_user_message, session_id)
                     logger.info(f"Uploaded {len(provider_files)} files for streaming")
                 except Exception as e:
-                    logger.error(
-                        f"Failed to upload files for streaming: {e}", exc_info=True
-                    )
+                    logger.error(f"Failed to upload files for streaming: {e}", exc_info=True)
 
         self._validate_inline_image_sizes(messages)
 
@@ -634,9 +608,7 @@ class AnthropicProvider(LLMClient):
             provider_options,
             container_id=container_id,
         )
-        anthropic_options = (
-            provider_options.get("anthropic", {}) if provider_options else {}
-        )
+        anthropic_options = provider_options.get("anthropic", {}) if provider_options else {}
 
         params, betas = self._prepare_request_params(
             messages, tools, anthropic_options, provider_files
@@ -709,9 +681,7 @@ class AnthropicProvider(LLMClient):
                         match delta_type:
                             case "text_delta":
                                 text = event.delta.text
-                                yield RunResponseEvent(
-                                    type=EventType.CONTENT_DELTA, content=text
-                                )
+                                yield RunResponseEvent(type=EventType.CONTENT_DELTA, content=text)
                             case "thinking_delta":
                                 yield RunResponseEvent(
                                     type=EventType.THINKING_DELTA,
@@ -733,16 +703,12 @@ class AnthropicProvider(LLMClient):
                                         ]
                                         else tool_call.name
                                     )
-                                    tool_call = accumulated_tool_calls[
-                                        current_tool_call_id
-                                    ]
+                                    tool_call = accumulated_tool_calls[current_tool_call_id]
                                     if tool_call.input == "" and tool_call.name in [
                                         "text_editor_code_execution",
                                         "bash_code_execution",
                                     ]:
-                                        delta = (
-                                            f'{{"type": "{tool_call.name}",{delta[2:]}'
-                                        )
+                                        delta = f'{{"type": "{tool_call.name}",{delta[2:]}'
                                     tool_call.input += delta
                                     yield RunResponseEvent(
                                         type=EventType.TOOL_USE_DELTA,
@@ -783,9 +749,7 @@ class AnthropicProvider(LLMClient):
                                     current_tool_call_id
                                     and current_tool_call_id in accumulated_tool_calls
                                 ):
-                                    tool_call = accumulated_tool_calls[
-                                        current_tool_call_id
-                                    ]
+                                    tool_call = accumulated_tool_calls[current_tool_call_id]
                                     tool_call.finished = True
                                     yield RunResponseEvent(
                                         type=EventType.TOOL_USE_STOP,
@@ -813,9 +777,7 @@ class AnthropicProvider(LLMClient):
                                 tool_result = ToolResult(
                                     tool_call_id=part.tool_use_id,
                                     name="code_execution",
-                                    output=JsonResultContent(
-                                        value=part.content.model_dump()
-                                    ),
+                                    output=JsonResultContent(value=part.content.model_dump()),
                                 )
                                 yield RunResponseEvent(
                                     type=EventType.TOOL_RESULT,
@@ -830,14 +792,12 @@ class AnthropicProvider(LLMClient):
                         message = await stream.get_final_message()
 
                         usage = TokenUsage(
-                            prompt_tokens=message.usage.input_tokens,
-                            completion_tokens=message.usage.output_tokens,
+                            input_tokens=message.usage.input_tokens,
+                            output_tokens=message.usage.output_tokens,
                             cache_write_tokens=getattr(
                                 message.usage, "cache_creation_input_tokens", 0
                             ),
-                            cache_read_tokens=getattr(
-                                message.usage, "cache_read_input_tokens", 0
-                            ),
+                            cache_read_tokens=getattr(message.usage, "cache_read_input_tokens", 0),
                             model_name=self.llm_config.model,
                         )
 
@@ -863,29 +823,19 @@ class AnthropicProvider(LLMClient):
 
                         file_ids = extract_file_ids(message)
 
-                        files = await self._download_file_and_upload(
-                            file_ids, session_id
-                        )
+                        files = await self._download_file_and_upload(file_ids, session_id)
                         logger.debug(f"Downloaded files: {files}")
                         yield RunResponseEvent(
                             type=EventType.COMPLETE,
                             response=RunResponseOutput(
-                                content=self._extract_content_part_from_message(
-                                    message
-                                ),
+                                content=self._extract_content_part_from_message(message),
                                 usage=usage,
                                 finish_reason=finish_reason,
                                 files=files,
                                 provider_metadata=provider_metadata,
                             ),
                         )
-                    case (
-                        "text"
-                        | "thinking"
-                        | "signature"
-                        | "message_start"
-                        | "message_delta"
-                    ):
+                    case "text" | "thinking" | "signature" | "message_start" | "message_delta":
                         # These events are handled in their respective block events
                         continue
                     case _:
@@ -913,9 +863,7 @@ class AnthropicProvider(LLMClient):
 
         async with get_db_session_local() as db_session:
             # Get session to retrieve user_id
-            result = await db_session.execute(
-                select(Session).where(Session.id == session_id)
-            )
+            result = await db_session.execute(select(Session).where(Session.id == session_id))
             session = result.scalar_one_or_none()
             if not session:
                 logger.error(f"Session {session_id} not found")
@@ -927,14 +875,10 @@ class AnthropicProvider(LLMClient):
             for file_id in file_ids:
                 try:
                     # Retrieve file metadata from Anthropic
-                    file_metadata = await self.client.beta.files.retrieve_metadata(
-                        file_id=file_id
-                    )
+                    file_metadata = await self.client.beta.files.retrieve_metadata(file_id=file_id)
 
                     # Download file content from Anthropic
-                    file_content_response = await self.client.beta.files.download(
-                        file_id=file_id
-                    )
+                    file_content_response = await self.client.beta.files.download(file_id=file_id)
                     # AsyncBinaryAPIResponse requires read() to get bytes
                     file_bytes = await file_content_response.read()
 
@@ -966,9 +910,7 @@ class AnthropicProvider(LLMClient):
                     )
                     db_session.add(file_upload)
                     # Link to session
-                    db_session.add(
-                        SessionAsset(session_id=session_id, asset_id=file_uuid)
-                    )
+                    db_session.add(SessionAsset(session_id=session_id, asset_id=file_uuid))
 
                     # Add to response list
                     file_objects.append(

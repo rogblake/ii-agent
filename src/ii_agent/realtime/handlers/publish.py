@@ -9,8 +9,6 @@ import shlex
 import uuid
 from typing import Any
 
-from fastmcp.client.client import CallToolResult
-
 from ii_agent.realtime.pubsub import AsyncIOPubSub
 from ii_agent.realtime.events.app_events import (
     AgentStatusUpdateEvent,
@@ -26,9 +24,8 @@ from ii_agent.realtime.handlers.base import (
     CommandType,
 )
 from ii_agent.realtime.schemas import PublishProjectContent
-from ii_agent.agents.sandboxes import E2BSandbox
+from ii_agent.agents.sandboxes import E2BSandbox, Sandbox
 from ii_agent.agents.sandboxes.repository import SandboxRepository
-from ii_server.mcp.client import MCPClient
 
 
 class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
@@ -108,12 +105,12 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
 
         sandbox_repo = SandboxRepository()
 
+        sandbox_manager: Sandbox | None = None
+
         if session_info.api_version == "v1":
             async with get_db_session_local() as db:
                 # First try to get sandbox by session_id
-                sandbox_record = await sandbox_repo.get_by_session_id(
-                    db, session_id=session_id
-                )
+                sandbox_record = await sandbox_repo.get_by_session_id(db, session_id=session_id)
 
                 if sandbox_record and sandbox_record.provider_sandbox_id:
                     # Connect to existing sandbox (this wakes it up)
@@ -122,13 +119,11 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
                         session_id=str(sandbox_record.session_id),
                         provider_sandbox_id=sandbox_record.provider_sandbox_id,
                     )
-                    mcp_port = container.config.mcp.port
-                    sandbox_url = await sandbox_manager.expose_port(mcp_port)
                 else:
                     if deployment_id:
-                        async with get_db_session_local() as db:
+                        async with get_db_session_local() as status_db:
                             await container.deployments_service.update_deployment_status(
-                                db,
+                                status_db,
                                 deployment_id=deployment_id,
                                 status="failed",
                                 error_message="No sandbox found for session",
@@ -138,178 +133,193 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
                     raise ValueError("No sandbox found for session")
         else:
             async with get_db_session_local() as db:
-                sandbox = await container.sandbox_service.get_sandbox_for_session(
+                sandbox_manager = await container.sandbox_service.get_sandbox_for_session(
                     db, session_id=session_id
                 )
-            mcp_port = container.config.mcp.port
-            sandbox_url = await sandbox.expose_port(mcp_port)
+            if sandbox_manager is None:
+                if deployment_id:
+                    async with get_db_session_local() as db:
+                        await container.deployments_service.update_deployment_status(
+                            db,
+                            deployment_id=deployment_id,
+                            status="failed",
+                            error_message="No sandbox found for session",
+                            error_phase="upload",
+                            error_details={"code": "SANDBOX_NOT_FOUND"},
+                        )
+                raise ValueError("No sandbox found for session")
 
-        async with MCPClient(sandbox_url) as client:
-            await self._ensure_shell_session(
-                client,
-                shell_session_name,
-                project_path,
-            )
+        await self._ensure_shell_session(
+            sandbox_manager,
+            shell_session_name,
+            workspace_project_path,
+        )
 
-            await self.send_event(AgentStatusUpdateEvent(
+        await self.send_event(
+            AgentStatusUpdateEvent(
                 session_id=session_id,
                 message=f"Linking {vercel_project_id} with Vercel...",
                 status="linking",
                 content={"message": f"Linking {vercel_project_id} with Vercel..."},
-            ))
+            )
+        )
 
-            # Update status to building
+        # Update status to building
+        if deployment_id:
+            async with get_db_session_local() as db:
+                await container.deployments_service.update_deployment_status(
+                    db,
+                    deployment_id=deployment_id,
+                    status="building",
+                )
+
+        link_command = self._append_success_marker(
+            f"cd {self._shell_quote(workspace_project_path)} && "
+            "rm -rf .vercel && "
+            f"vercel link --yes --project {self._shell_quote(vercel_project_id)} --token {self._shell_quote(vercel_api_key)}"
+        )
+
+        try:
+            link_output = await self._run_shell_command(
+                sandbox_manager,
+                shell_session_name,
+                link_command,
+                description="Link Vercel project",
+                timeout=179,
+            )
+        except Exception as exc:  # noqa: BLE001
             if deployment_id:
                 async with get_db_session_local() as db:
                     await container.deployments_service.update_deployment_status(
                         db,
                         deployment_id=deployment_id,
-                        status="building",
+                        status="failed",
+                        error_message=f"Failed to link project with Vercel: {exc}",
+                        error_phase="deploy",
+                        error_details={
+                            "code": "VERCEL_LINK_FAILED",
+                            "message": str(exc),
+                        },
                     )
-
-            link_command = self._append_success_marker(
-                f"cd {self._shell_quote(workspace_project_path)} && "
-                "rm -rf .vercel && "
-                f"vercel link --yes --project {self._shell_quote(vercel_project_id)} --token {self._shell_quote(vercel_api_key)}"
+            await self._send_error_event(
+                session_id,
+                error_code=ErrorCode.DEPLOY_LINK_FAILED,
+                message=f"Failed to link project with Vercel.\nDetails: {exc}",
             )
+            return
 
-            try:
-                link_output = await self._run_shell_command(
-                    client,
-                    shell_session_name,
-                    link_command,
-                    description="Link Vercel project",
-                    timeout=179,
-                )
-            except Exception as exc:  # noqa: BLE001
-                if deployment_id:
-                    async with get_db_session_local() as db:
-                        await container.deployments_service.update_deployment_status(
-                            db,
-                            deployment_id=deployment_id,
-                            status="failed",
-                            error_message=f"Failed to link project with Vercel: {exc}",
-                            error_phase="deploy",
-                            error_details={
-                                "code": "VERCEL_LINK_FAILED",
-                                "message": str(exc),
-                            },
-                        )
-                await self._send_error_event(
-                    session_id,
-                    error_code=ErrorCode.DEPLOY_LINK_FAILED,
-                    message=f"Failed to link project with Vercel.\nDetails: {exc}",
-                )
-                return
+        if not self._command_succeeded(link_output):
+            if deployment_id:
+                async with get_db_session_local() as db:
+                    await container.deployments_service.update_deployment_status(
+                        db,
+                        deployment_id=deployment_id,
+                        status="failed",
+                        error_message="Failed to link project with Vercel",
+                        error_phase="deploy",
+                        error_details={
+                            "code": "VERCEL_LINK_FAILED",
+                            "output": self._cleanup_output_for_display(link_output),
+                        },
+                    )
+            await self._send_error_event(
+                session_id,
+                error_code=ErrorCode.DEPLOY_LINK_FAILED,
+                message=(
+                    "Failed to link project with Vercel.\n"
+                    f"Output: {self._cleanup_output_for_display(link_output) or 'No output returned.'}"
+                ),
+            )
+            return
 
-            if not self._command_succeeded(link_output):
-                if deployment_id:
-                    async with get_db_session_local() as db:
-                        await container.deployments_service.update_deployment_status(
-                            db,
-                            deployment_id=deployment_id,
-                            status="failed",
-                            error_message="Failed to link project with Vercel",
-                            error_phase="deploy",
-                            error_details={
-                                "code": "VERCEL_LINK_FAILED",
-                                "output": self._cleanup_output_for_display(link_output),
-                            },
-                        )
-                await self._send_error_event(
-                    session_id,
-                    error_code=ErrorCode.DEPLOY_LINK_FAILED,
-                    message=(
-                        "Failed to link project with Vercel.\n"
-                        f"Output: {self._cleanup_output_for_display(link_output) or 'No output returned.'}"
-                    ),
-                )
-                return
-
-            await self.send_event(AgentStatusUpdateEvent(
+        await self.send_event(
+            AgentStatusUpdateEvent(
                 session_id=session_id,
                 message="Project linked successfully.",
                 status="linked",
                 content={"message": "Project linked successfully."},
-            ))
+            )
+        )
 
-            await self.send_event(AgentStatusUpdateEvent(
+        await self.send_event(
+            AgentStatusUpdateEvent(
                 session_id=session_id,
                 message="Running production deployment...",
                 status="deploying",
                 content={"message": "Running production deployment..."},
-            ))
+            )
+        )
 
-            # Update status to deploying
+        # Update status to deploying
+        if deployment_id:
+            async with get_db_session_local() as db:
+                await container.deployments_service.update_deployment_status(
+                    db,
+                    deployment_id=deployment_id,
+                    status="deploying",
+                )
+
+        deploy_command = (
+            f"cd {self._shell_quote(workspace_project_path)} && "
+            f"vercel --prod --token {self._shell_quote(vercel_api_key)} -y"
+        )
+        deploy_command = self._append_success_marker(deploy_command)
+
+        try:
+            deploy_output = await self._run_shell_command(
+                sandbox_manager,
+                shell_session_name,
+                deploy_command,
+                description="Deploy project to Vercel",
+                timeout=179,
+            )
+        except Exception as exc:  # noqa: BLE001
             if deployment_id:
                 async with get_db_session_local() as db:
                     await container.deployments_service.update_deployment_status(
                         db,
                         deployment_id=deployment_id,
-                        status="deploying",
+                        status="failed",
+                        error_message=f"Vercel deployment failed: {exc}",
+                        error_phase="deploy",
+                        error_details={
+                            "code": "VERCEL_DEPLOY_FAILED",
+                            "message": str(exc),
+                        },
                     )
-
-            deploy_command = (
-                f"cd {self._shell_quote(workspace_project_path)} && "
-                f"vercel --prod --token {self._shell_quote(vercel_api_key)} -y"
+            await self._send_error_event(
+                session_id,
+                error_code=ErrorCode.DEPLOY_FAILED,
+                message=f"Vercel deployment failed.\nDetails: {exc}",
             )
-            deploy_command = self._append_success_marker(deploy_command)
+            return
 
-            try:
-                deploy_output = await self._run_shell_command(
-                    client,
-                    shell_session_name,
-                    deploy_command,
-                    description="Deploy project to Vercel",
-                    timeout=179,
-                )
-            except Exception as exc:  # noqa: BLE001
-                if deployment_id:
-                    async with get_db_session_local() as db:
-                        await container.deployments_service.update_deployment_status(
-                            db,
-                            deployment_id=deployment_id,
-                            status="failed",
-                            error_message=f"Vercel deployment failed: {exc}",
-                            error_phase="deploy",
-                            error_details={
-                                "code": "VERCEL_DEPLOY_FAILED",
-                                "message": str(exc),
-                            },
-                        )
-                await self._send_error_event(
-                    session_id,
-                    error_code=ErrorCode.DEPLOY_FAILED,
-                    message=f"Vercel deployment failed.\nDetails: {exc}",
-                )
-                return
+        if not self._command_succeeded(deploy_output):
+            if deployment_id:
+                async with get_db_session_local() as db:
+                    await container.deployments_service.update_deployment_status(
+                        db,
+                        deployment_id=deployment_id,
+                        status="failed",
+                        error_message="Vercel deployment failed",
+                        error_phase="deploy",
+                        error_details={
+                            "code": "VERCEL_DEPLOY_FAILED",
+                            "output": self._cleanup_output_for_display(deploy_output),
+                        },
+                    )
+            await self._send_error_event(
+                session_id,
+                error_code=ErrorCode.DEPLOY_FAILED,
+                message=(
+                    "Vercel deployment failed.\n"
+                    f"Output: {self._cleanup_output_for_display(deploy_output) or 'No output returned.'}"
+                ),
+            )
+            return
 
-            if not self._command_succeeded(deploy_output):
-                if deployment_id:
-                    async with get_db_session_local() as db:
-                        await container.deployments_service.update_deployment_status(
-                            db,
-                            deployment_id=deployment_id,
-                            status="failed",
-                            error_message="Vercel deployment failed",
-                            error_phase="deploy",
-                            error_details={
-                                "code": "VERCEL_DEPLOY_FAILED",
-                                "output": self._cleanup_output_for_display(deploy_output),
-                            },
-                        )
-                await self._send_error_event(
-                    session_id,
-                    error_code=ErrorCode.DEPLOY_FAILED,
-                    message=(
-                        "Vercel deployment failed.\n"
-                        f"Output: {self._cleanup_output_for_display(deploy_output) or 'No output returned.'}"
-                    ),
-                )
-                return
-
-            cleaned_output = self._cleanup_output(deploy_output)
-            deployment_url = self._extract_deployment_url(cleaned_output, vercel_project_id)
+        cleaned_output = self._cleanup_output(deploy_output)
+        deployment_url = self._extract_deployment_url(cleaned_output, vercel_project_id)
 
         deploy_duration_ms = int((time.time() - deploy_start) * 1000)
 
@@ -319,7 +329,9 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
             metadata = {
                 "vercel": {
                     "project_id": vercel_project_id,
-                    "deployment_output": self._cleanup_output_for_display(cleaned_output)[:1000],  # Truncate
+                    "deployment_output": self._cleanup_output_for_display(cleaned_output)[
+                        :1000
+                    ],  # Truncate
                 },
             }
 
@@ -360,24 +372,26 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
                 exc,
             )
 
-        await self.send_event(SystemNotificationEvent(
-            session_id=session_id,
-            message=f"Deployment live at {deployment_url}",
-            content={
-                "message": f"Deployment live at {deployment_url}",
-                "deployment_url": deployment_url,
-                "project_id": vercel_project_id,
-                "project_name": project_name,
-                "deployment": {
-                    "url": deployment_url,
+        await self.send_event(
+            SystemNotificationEvent(
+                session_id=session_id,
+                message=f"Deployment live at {deployment_url}",
+                content={
+                    "message": f"Deployment live at {deployment_url}",
+                    "deployment_url": deployment_url,
                     "project_id": vercel_project_id,
                     "project_name": project_name,
-                    "provider": "vercel",
-                    "deployment_id": str(deployment_id) if deployment_id else None,
-                    "version": 1,
+                    "deployment": {
+                        "url": deployment_url,
+                        "project_id": vercel_project_id,
+                        "project_name": project_name,
+                        "provider": "vercel",
+                        "deployment_id": str(deployment_id) if deployment_id else None,
+                        "version": 1,
+                    },
                 },
-            },
-        ))
+            )
+        )
 
     def _resolve_project_path(
         self, project_path: str | None, session_info: SessionInfo
@@ -414,7 +428,7 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
 
     async def _collect_env_from_files(
         self,
-        client: MCPClient,
+        sandbox_manager: Sandbox,
         session_name: str,
         project_path: str,
     ) -> dict[str, str]:
@@ -425,7 +439,7 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
             command = self._append_success_marker(command)
             try:
                 output = await self._run_shell_command(
-                    client,
+                    sandbox_manager,
                     session_name,
                     command,
                     description=f"Read {filename} environment file",
@@ -481,19 +495,18 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
 
     async def _ensure_shell_session(
         self,
-        client: MCPClient,
+        sandbox_manager: Sandbox,
         session_name: str,
         start_directory: str,
     ) -> None:
-        tool_name = "BashInit"
-        arguments = {
-            "session_name": session_name,
-        }
-        await client.call_tool(tool_name, arguments)
+        current_sessions = await sandbox_manager.get_all_shell_sessions()
+        if session_name in current_sessions:
+            return
+        await sandbox_manager.create_shell_session(session_name, start_directory)
 
     async def _run_shell_command(
         self,
-        client: MCPClient,
+        sandbox_manager: Sandbox,
         session_name: str,
         command: str,
         *,
@@ -501,40 +514,14 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
         timeout: int = 600,
         wait_for_output: bool = True,
     ) -> str:
-        tool_name = "Bash"
-        arguments = {
-            "session_name": session_name,
-            "command": command,
-            "description": description,
-            "timeout": timeout,
-            "wait_for_output": wait_for_output,
-        }
-
-        last_error: Exception | None = None
-        try:
-            result = await client.call_tool(tool_name, arguments)
-            return self._extract_tool_output(result)
-        except Exception as exc:  # noqa: BLE001
-            last_error = exc
-
-        if last_error:
-            raise last_error
-        return ""
-
-    def _extract_tool_output(self, result: CallToolResult) -> str:
-        structured = result.structured_content or {}
-        display = structured.get("user_display_content")
-        if isinstance(display, str):
-            return display
-        if isinstance(display, list):
-            return "\n".join(str(item) for item in display)
-
-        texts: list[str] = []
-        for block in result.content:
-            text = getattr(block, "text", None)
-            if isinstance(text, str):
-                texts.append(text)
-        return "\n".join(texts)
+        del description
+        result = await sandbox_manager.run_shell_command(
+            session_name,
+            command,
+            timeout=timeout,
+            wait_for_output=wait_for_output,
+        )
+        return result.clean_output
 
     def _append_success_marker(self, command: str) -> str:
         return f"{command} && echo {self._SUCCESS_MARKER}"

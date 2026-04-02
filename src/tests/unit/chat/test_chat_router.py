@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import uuid
 from types import SimpleNamespace
-from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -16,7 +14,7 @@ from ii_agent.auth.dependencies import get_current_user
 from ii_agent.chat.api.dependencies import get_chat_service
 from ii_agent.chat.api.router import router
 from ii_agent.core.dependencies import _db_session_dependency
-from ii_agent.core.exceptions import IIAgentError, PaymentRequiredError
+from ii_agent.core.exceptions import IIAgentError
 from ii_agent.core.middleware import ii_agent_error_handler
 
 pytestmark = pytest.mark.unit
@@ -80,8 +78,8 @@ def _make_chat_service(
     else:
 
         async def _empty(*args, **kwargs):
-            return
-            yield  # noqa: unreachable – makes it an async generator
+            if False:
+                yield
 
         svc.stream_chat_response = _empty
 
@@ -310,8 +308,6 @@ def test_send_chat_streams_all_event_types():
             "usage": {
                 "input_tokens": 10,
                 "output_tokens": 20,
-                "cache_creation_tokens": 0,
-                "cache_read_tokens": 0,
             },
         },
         {"type": "error", "message": "oops", "code": "test_err"},

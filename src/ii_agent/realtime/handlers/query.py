@@ -99,6 +99,7 @@ class UserQueryHandler(BaseCommandHandler[QueryCommandContent]):
                 session_store=session_store,
                 tool_args=query_command.tool_args,
                 metadata=query_command.metadata,
+                skill_creator=self._create_skill_creator(session_info.user_id),
             )
 
             # Prepare files via FileService
@@ -151,7 +152,9 @@ class UserQueryHandler(BaseCommandHandler[QueryCommandContent]):
             )
 
             final_status = await self.process_agent_event_stream(
-                event_stream, session_info, run_id=run_task.id,
+                event_stream,
+                session_info,
+                run_id=run_task.id,
                 is_user_key=llm_config.is_user_model(),
                 llm_config=llm_config,
             )

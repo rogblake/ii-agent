@@ -1,4 +1,5 @@
-from ii_agent.agents.factory.mcp.base import MCPTool
+from ii_agent.agents.tools.base import ToolResult
+from ii_agent.agents.tools.sandbox.base import BaseSandboxTool
 
 NAME = "BashStop"
 DISPLAY_NAME = "Stop bash command or kill session"
@@ -20,9 +21,43 @@ INPUT_SCHEMA = {
 }
 
 
-class ShellStopCommand(MCPTool):
+class ShellStopCommand(BaseSandboxTool):
     name = NAME
     display_name = DISPLAY_NAME
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = False
+
+    async def execute(self, tool_input: dict) -> ToolResult:
+        session_name = tool_input.get("session_name")
+        kill_session = tool_input.get("kill_session", False)
+
+        all_current_sessions = await self.sandbox.get_all_shell_sessions()
+        if session_name not in all_current_sessions:
+            return ToolResult(
+                llm_content=(
+                    f"Session '{session_name}' is not available. "
+                    f"Available sessions: {all_current_sessions}"
+                ),
+                is_error=True,
+            )
+
+        if kill_session:
+            await self.sandbox.delete_shell_session(session_name)
+            return ToolResult(
+                llm_content=f"Session '{session_name}' killed successfully.",
+                is_error=False,
+            )
+
+        result = await self.sandbox.kill_shell_command(session_name)
+        return ToolResult(
+            llm_content=(
+                f"Current running command in session '{session_name}' stopped successfully. "
+                f"Current output:\n\n{result.clean_output}"
+            ),
+            user_display_content=(
+                f"Current running command in session '{session_name}' stopped successfully. "
+                f"Current output:\n\n{result.ansi_output}"
+            ),
+            is_error=False,
+        )

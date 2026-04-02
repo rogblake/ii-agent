@@ -1,7 +1,10 @@
-from ii_agent.agents.factory.mcp.base import MCPTool
+from ii_agent.agents.tools.base import ToolConfirmationDetails, ToolResult
+from ii_agent.agents.tools.sandbox.base import BaseSandboxTool
+from ii_agent.agents.sandboxes.shell import ShellBusyError, ShellCommandTimeoutError
 
 DEFAULT_TIMEOUT = 60
 MAX_TIMEOUT = 180
+MAX_LLM_CONTENT_CHARS = 20000
 NAME = "Bash"
 DISPLAY_NAME = "Run bash command"
 DESCRIPTION = f"""Executes a bash command in a persistent shell session
@@ -39,9 +42,74 @@ INPUT_SCHEMA = {
 }
 
 
-class ShellRunCommand(MCPTool):
+class ShellRunCommand(BaseSandboxTool):
     name = NAME
     display_name = DISPLAY_NAME
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = False
+
+    def should_confirm_execute(
+        self, tool_input: dict[str, object]
+    ) -> ToolConfirmationDetails | bool:
+        return ToolConfirmationDetails(
+            type="bash",
+            message=f"{tool_input['description']} - command: {tool_input['command']}",
+        )
+
+    def _truncate_llm_content(self, text: str) -> str:
+        if len(text) <= MAX_LLM_CONTENT_CHARS:
+            return text
+        return f"[truncated]{text[-MAX_LLM_CONTENT_CHARS:]}"
+
+    async def execute(self, tool_input: dict) -> ToolResult:
+        session_name = tool_input.get("session_name")
+        command = tool_input.get("command")
+        timeout = tool_input.get("timeout", DEFAULT_TIMEOUT)
+        wait_for_output = tool_input.get("wait_for_output", True)
+
+        if not command:
+            return ToolResult(llm_content="Command is required", is_error=True)
+
+        if not isinstance(timeout, int) or timeout > MAX_TIMEOUT:
+            return ToolResult(
+                llm_content=f"Timeout must be less than {MAX_TIMEOUT} seconds",
+                is_error=True,
+            )
+
+        try:
+            result = await self.sandbox.run_shell_command(
+                session_name,
+                command,
+                timeout=timeout,
+                wait_for_output=wait_for_output,
+            )
+            return ToolResult(
+                llm_content=self._truncate_llm_content(result.clean_output),
+                user_display_content=result.ansi_output,
+                is_error=False,
+            )
+        except ShellCommandTimeoutError:
+            current_output = await self.sandbox.get_shell_session_output(session_name)
+            message = f"Command timed out. Current view:\n\n{current_output.clean_output}."
+            return ToolResult(
+                llm_content=self._truncate_llm_content(message),
+                user_display_content=(
+                    f"Command timed out. Current view:\n\n{current_output.ansi_output}."
+                ),
+                is_error=True,
+            )
+        except ShellBusyError:
+            current_output = await self.sandbox.get_shell_session_output(session_name)
+            message = (
+                "The last command is not finished. Current view:\n\n"
+                f"{current_output.clean_output}. Use another session or wait for the last command to finish."
+            )
+            return ToolResult(
+                llm_content=self._truncate_llm_content(message),
+                user_display_content=(
+                    "The last command is not finished. Current view:\n\n"
+                    f"{current_output.ansi_output}."
+                ),
+                is_error=True,
+            )

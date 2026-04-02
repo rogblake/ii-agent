@@ -2579,6 +2579,11 @@
                     "title": "Code Explorer",
                     "description": "Browse and view the source code of your project"
                 },
+                "terminal": {
+                    "label": "Terminal",
+                    "title": "Terminal",
+                    "description": "Open an interactive shell inside the project sandbox"
+                },
                 "database": {
                     "label": "Database",
                     "title": "Database",
@@ -2610,6 +2615,22 @@
                 "unableToLoadProject": "Unable to load project for this session",
                 "unableToLoadSchema": "Unable to load database schema for this project",
                 "unableToLoadRecords": "Unable to load table records"
+            }
+        },
+        "terminal": {
+            "actions": {
+                "restart": "Restart"
+            },
+            "status": {
+                "waiting": "Waiting for connection",
+                "connecting": "Starting terminal",
+                "ready": "Live terminal connected",
+                "closed": "Terminal closed",
+                "error": "Terminal error",
+                "exitCode": "exit code {{code}}"
+            },
+            "errors": {
+                "unableToStart": "Unable to start terminal"
             }
         },
         "database": {

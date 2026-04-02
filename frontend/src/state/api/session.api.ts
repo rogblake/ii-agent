@@ -7,6 +7,7 @@ import type {
 import type { ISession } from '@/typings/agent'
 import type { UpdateSessionRequest, ForkSessionRequest, ForkSessionResponse } from '@/typings/session'
 import { ACCESS_TOKEN } from '@/constants/auth'
+import { normalizeSession, normalizeSessions } from '@/services/session-normalizer'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -62,7 +63,7 @@ export const sessionApi = createApi({
                 params: { page, per_page: limit, public_only, session_type }
             }),
             transformResponse: (response: { sessions: ISession[] }) =>
-                response.sessions || [],
+                normalizeSessions(response.sessions || []),
             providesTags: (result) =>
                 result
                     ? [
@@ -104,6 +105,7 @@ export const sessionApi = createApi({
                 method: 'PATCH',
                 body: data
             }),
+            transformResponse: (response: ISession) => normalizeSession(response),
             invalidatesTags: (_result, _error, { sessionId }) => [
                 { type: 'Sessions', id: sessionId },
                 { type: 'Sessions', id: 'LIST' }

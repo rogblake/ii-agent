@@ -1,10 +1,11 @@
-from typing import Any, Literal, TYPE_CHECKING
-from ii_agent.agents.factory.mcp.base import MCPTool
+from typing import Any, TYPE_CHECKING
 from ii_agent.agents.tools.slide_system.hook_utils import (
     persist_slide_tool_result,
     process_slide_content,
 )
-from ii_agent.agents.tools.base import ToolResult
+from ii_agent.agents.tools.slide_system.base import SlideToolBase
+from ii_agent.agents.tools.base import ToolConfirmationDetails, ToolResult
+from ii_agent.core.container import get_app_container
 
 if TYPE_CHECKING:
     from ii_agent.agents.agent import IIAgent
@@ -190,7 +191,7 @@ Examples of slide structure:
         <div class="decoration decoration-2"></div>
         <div class="slide-content">
             <h1 class="title">Deep Learning All Around Us!</h1>
-            
+
             <div class="examples-container">
                 <!-- Voice Assistants -->
                 <div class="example-card">
@@ -199,7 +200,7 @@ Examples of slide structure:
                     <img src="https://sfile.chatglm.cn/images-ppt/8039cd4f1d97.jpg" alt="Voice Assistants" class="example-image">
                     <p class="example-desc">Siri, Alexa and Google understand your voice and answer questions!</p>
                 </div>
-                
+
                 <!-- Self-Driving Cars -->
                 <div class="example-card">
                     <i class="material-icons example-icon">directions_car</i>
@@ -207,7 +208,7 @@ Examples of slide structure:
                     <img src="https://sfile.chatglm.cn/images-ppt/d7630e18f659.jpg" alt="Self-Driving Cars" class="example-image">
                     <p class="example-desc">Cars that can see the road and drive all by themselves!</p>
                 </div>
-                
+
                 <!-- Image Recognition -->
                 <div class="example-card">
                     <i class="material-icons example-icon">photo_camera</i>
@@ -448,7 +449,7 @@ Examples of slide structure:
         </div>
         <div class="content">
             <h1 class="title">Nerdiest Moments</h1>
-            
+
             <div class="moments-container">
                 <div class="moment-card">
                     <div class="moment-icon">
@@ -477,7 +478,7 @@ Examples of slide structure:
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="moment-card">
                     <div class="moment-icon">
                         <i class="material-icons">lightbulb</i>
@@ -499,7 +500,7 @@ Examples of slide structure:
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="moment-card">
                     <div class="moment-icon">
                         <i class="material-icons">music_note</i>
@@ -734,7 +735,7 @@ Examples of slide structure:
         </div>
         <div class="content">
             <h1 class="title">Why You Should Watch</h1>
-            
+
             <div class="sales-container">
                 <div class="sales-pitch">
                     <ul class="sales-points">
@@ -746,7 +747,7 @@ Examples of slide structure:
                         <li><i class="material-icons">warning</i> <span>Warning: May cause <span class="highlight">spontaneous use</span> of the word "Bazinga" in everyday conversation</span></li>
                     </ul>
                 </div>
-                
+
                 <div class="sales-image">
                     <div class="sales-sticker">LIMITED TIME OFFER!</div>
                     <div class="sales-sticker">WATCH NOW!</div>
@@ -796,33 +797,30 @@ INPUT_SCHEMA = {
 }
 
 
-class SlideWriteTool(MCPTool):
+class SlideWriteTool(SlideToolBase):
     name = NAME
     display_name = DISPLAY_NAME
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = False
+    requires_confirmation = False
 
-    def __init__(
-        self,
-        name: str,
-        display_name: str,
-        description: str,
-        input_schema: dict[str, Any],
-        read_only: bool,
-        requires_confirmation: bool,
-        type: Literal["function", "openai_custom"] = "function",
-    ) -> None:
-        super().__init__(
-            name=name,
-            display_name=display_name,
-            description=description,
-            input_schema=input_schema,
-            read_only=read_only,
-            requires_confirmation=requires_confirmation,
-            type=type,
-        )
+    def __init__(self) -> None:
+        super().__init__()
         self.url_cache = None
+
+    def should_confirm_execute(self, tool_input: dict[str, Any]) -> ToolConfirmationDetails | bool:
+        presentation_name = tool_input.get("presentation_name", "")
+        slide_number = tool_input.get("slide_number", 1)
+        title = tool_input.get("title", "")
+
+        return ToolConfirmationDetails(
+            type="edit",
+            message=(
+                f"Write slide {slide_number} in presentation "
+                f"'{presentation_name}' with title '{title}'"
+            ),
+        )
 
     async def on_tool_end(self, agent: "IIAgent", fc: "FunctionCall") -> None:
         if fc.error:
@@ -851,7 +849,105 @@ class SlideWriteTool(MCPTool):
 
         await persist_slide_tool_result(
             agent=agent,
+            slide_service=get_app_container().slide_service,
             tool_name=self.name,
             tool_input=fc.arguments or {},
             user_display_content=processed_display,
         )
+        fc.result = tool_result
+
+    async def execute(
+        self,
+        tool_input: dict[str, Any],
+    ) -> ToolResult:
+        """Execute the slide write operation in the sandbox."""
+        presentation_name = tool_input.get("presentation_name")
+        slide_number = tool_input.get("slide_number")
+        content = tool_input.get("content")
+        title = tool_input.get("title")
+        description = tool_input.get("description")
+        slide_type = tool_input.get("type", "content")
+
+        if not isinstance(presentation_name, str) or not presentation_name.strip():
+            return ToolResult(
+                llm_content="Presentation name is required",
+                user_display_content="Presentation name is required",
+                is_error=True,
+            )
+        if not isinstance(slide_number, int) or slide_number < 1:
+            return ToolResult(
+                llm_content="Slide number must be a positive integer",
+                user_display_content="Slide number must be a positive integer",
+                is_error=True,
+            )
+        if not isinstance(content, str) or not content.strip():
+            return ToolResult(
+                llm_content="Slide content is required",
+                user_display_content="Slide content is required",
+                is_error=True,
+            )
+        if not isinstance(title, str) or not title.strip():
+            return ToolResult(
+                llm_content="Slide title is required",
+                user_display_content="Slide title is required",
+                is_error=True,
+            )
+        if description is None:
+            return ToolResult(
+                llm_content="Slide description is required",
+                user_display_content="Slide description is required",
+                is_error=True,
+            )
+
+        try:
+            presentation_path = self._get_presentation_path(presentation_name)
+            await self.sandbox.run_command(f"mkdir -p {presentation_path}")
+
+            metadata = await self._load_metadata(presentation_path)
+            if not metadata["presentation"]["name"]:
+                metadata["presentation"]["name"] = presentation_name
+                metadata["presentation"]["title"] = presentation_name
+
+            slide_filename = self._get_slide_filename(slide_number)
+            slide_path = f"{presentation_path}/{slide_filename}"
+
+            try:
+                await self.sandbox.read_file(slide_path)
+                is_new_slide = False
+            except Exception:
+                is_new_slide = True
+
+            await self.sandbox.write_file(slide_path, content)
+
+            metadata = self._update_slide_in_metadata(
+                metadata=metadata,
+                slide_number=slide_number,
+                title=title,
+                description=description,
+                slide_type=slide_type,
+            )
+            await self._save_metadata(presentation_path, metadata)
+
+            total_slides = len(metadata.get("slides", []))
+            workspace_filepath = f"/workspace/{slide_path}"
+            action = "created" if is_new_slide else "overwrote"
+
+            return ToolResult(
+                llm_content=(
+                    f"Successfully {action} slide {slide_number} in presentation "
+                    f"'{presentation_name}'\n"
+                    f"File: {slide_path}\n"
+                    f"Title: {title}\n"
+                    f"Total slides in presentation: {total_slides}"
+                ),
+                user_display_content={
+                    "content": content,
+                    "filepath": workspace_filepath,
+                },
+                is_error=False,
+            )
+        except Exception as exc:
+            return ToolResult(
+                llm_content=f"ERROR: Failed to write slide: {exc}",
+                is_error=True,
+            )

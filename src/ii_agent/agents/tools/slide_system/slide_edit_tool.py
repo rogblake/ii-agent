@@ -5,6 +5,7 @@ from ii_agent.agents.tools.slide_system.hook_utils import (
     process_slide_content,
 )
 from ii_agent.agents.tools.base import ToolResult
+from ii_agent.core.container import get_app_container
 
 if TYPE_CHECKING:
     from ii_agent.agents.agent import IIAgent
@@ -107,6 +108,7 @@ class SlideEditTool(MCPTool):
 
         await persist_slide_tool_result(
             agent=agent,
+            slide_service=get_app_container().slide_service,
             tool_name=self.name,
             tool_input=fc.arguments or {},
             user_display_content=processed_display,

@@ -1,5 +1,6 @@
 """Skill loader for reading and syncing skills."""
 
+import uuid
 from typing import Optional
 
 from sqlalchemy import or_, select
@@ -13,6 +14,24 @@ from ii_agent.core.logger import logger
 
 # Sandbox path template
 SANDBOX_SKILLS_PATH = "/workspace/.skills"
+
+
+def _coerce_user_id(user_id: str | uuid.UUID) -> str | uuid.UUID:
+    """Convert UUID-like strings to UUID objects for ORM comparisons."""
+    if isinstance(user_id, uuid.UUID):
+        return user_id
+
+    try:
+        return uuid.UUID(user_id)
+    except (TypeError, ValueError, AttributeError):
+        return user_id
+
+
+def _user_ids_match(skill_user_id: object, user_id: str | uuid.UUID) -> bool:
+    """Compare ORM-loaded UUIDs and string IDs consistently."""
+    if skill_user_id is None:
+        return False
+    return str(skill_user_id) == str(user_id)
 
 
 def load_builtin_skills() -> list[dict]:
@@ -113,7 +132,9 @@ async def sync_builtin_to_db(db: AsyncSession) -> int:
     return len(builtin_skills)
 
 
-async def get_user_skills(db: AsyncSession, user_id: str, enabled_only: bool = True) -> list[Skill]:
+async def get_user_skills(
+    db: AsyncSession, user_id: str | uuid.UUID, enabled_only: bool = True
+) -> list[Skill]:
     """Get skills available to a user, with user skills overriding builtins.
 
     IMPORTANT: Merge logic must happen BEFORE filtering by is_enabled.
@@ -128,11 +149,13 @@ async def get_user_skills(db: AsyncSession, user_id: str, enabled_only: bool = T
     Returns:
         List of Skill objects (builtin + user, with user overriding builtin by name)
     """
+    normalized_user_id = _coerce_user_id(user_id)
+
     # Query ALL builtin and user skills first (don't filter by is_enabled yet)
     query = select(Skill).where(
         or_(
             Skill.user_id.is_(None),  # Builtin skills
-            Skill.user_id == user_id,  # User's own skills
+            Skill.user_id == normalized_user_id,  # User's own skills
         )
     )
 
@@ -141,7 +164,7 @@ async def get_user_skills(db: AsyncSession, user_id: str, enabled_only: bool = T
 
     # Merge: user skills override builtin by name
     builtin_skills = {s.name: s for s in all_skills if s.user_id is None}
-    user_skills = {s.name: s for s in all_skills if s.user_id == user_id}
+    user_skills = {s.name: s for s in all_skills if _user_ids_match(s.user_id, user_id)}
 
     # User skills take precedence (this includes user overrides for builtin skills)
     merged = {**builtin_skills, **user_skills}
@@ -155,7 +178,9 @@ async def get_user_skills(db: AsyncSession, user_id: str, enabled_only: bool = T
     return list(merged.values())
 
 
-async def get_skill_by_name(db: AsyncSession, user_id: str, skill_name: str) -> Optional[Skill]:
+async def get_skill_by_name(
+    db: AsyncSession, user_id: str | uuid.UUID, skill_name: str
+) -> Optional[Skill]:
     """Get a specific skill by name, preferring user's version over builtin.
 
     IMPORTANT: If user has an override for a builtin skill (e.g., to disable it),
@@ -169,10 +194,12 @@ async def get_skill_by_name(db: AsyncSession, user_id: str, skill_name: str) -> 
     Returns:
         Skill object or None if not found or disabled
     """
+    normalized_user_id = _coerce_user_id(user_id)
+
     # First check if user has an override for this skill
     result = await db.execute(
         select(Skill).where(
-            Skill.user_id == user_id,
+            Skill.user_id == normalized_user_id,
             Skill.name == skill_name,
         )
     )

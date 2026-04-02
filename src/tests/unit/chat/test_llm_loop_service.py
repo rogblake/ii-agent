@@ -112,7 +112,6 @@ class FakeToolUseProvider:
         )
 
 
-
 class FakeNestedTransaction:
     def __init__(self, db):
         self._db = db
@@ -150,7 +149,6 @@ class FailingProvider:
         if False:
             yield None
         raise RuntimeError("provider failed")
-
 
 
 @pytest.mark.asyncio
@@ -385,6 +383,3 @@ async def test_llm_turn_loop_records_failed_invocation_on_provider_error(monkeyp
             tool_service=SimpleNamespace(),
         ):
             pass
-
-
-

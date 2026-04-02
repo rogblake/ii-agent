@@ -285,11 +285,11 @@
     }
 
     .terminal {
-        @apply h-full p-4;
+        @apply h-full;
     }
 
     .terminal .xterm-viewport {
-        @apply !h-[325px];
+        @apply !h-full;
     }
 
     .animate-spin {

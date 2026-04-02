@@ -10,7 +10,7 @@ from typing import Optional, AsyncGenerator, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.content.slides.models import SlideContent
 from ii_agent.content.slides.repository import SlideContentRepository
 from ii_agent.sessions.repository import SessionRepository
@@ -70,9 +70,7 @@ class SlideService:
     ) -> SlideWriteResponse:
         """Execute slide write by saving directly to database."""
         try:
-            if not await self._session_repo.get_by_id_and_user(
-                db, session_id, user_id
-            ):
+            if not await self._session_repo.get_by_id_and_user(db, session_id, user_id):
                 return SlideWriteResponse(
                     success=False,
                     presentation_name=write_request.presentation_name,
@@ -107,25 +105,52 @@ class SlideService:
                 error_code="INTERNAL_ERROR",
             )
 
+    async def persist_tool_slide_result(
+        self,
+        db: AsyncSession,
+        *,
+        session_id: str,
+        presentation_name: str,
+        slide_number: int,
+        slide_title: str | None,
+        slide_content: str,
+        tool_name: str,
+    ) -> str:
+        """Persist slide HTML emitted by agent tools."""
+        existing_slide = await self._slide_repo.get_by_session_and_presentation_and_number(
+            db,
+            session_id=session_id,
+            presentation_name=presentation_name,
+            slide_number=slide_number,
+        )
+
+        resolved_title = (
+            slide_title or getattr(existing_slide, "slide_title", None) or f"Slide {slide_number}"
+        )
+
+        return await self._slide_repo.upsert_slide(
+            db,
+            session_id=session_id,
+            presentation_name=presentation_name,
+            slide_number=slide_number,
+            slide_title=resolved_title,
+            slide_content=slide_content,
+            tool_name=tool_name,
+        )
+
     async def get_session_presentations(
         self, db: AsyncSession, *, session_id: str, user_id: str
     ) -> PresentationListResponse:
         """Get list of presentations with all slide content in session."""
         try:
-            if not await self._session_repo.get_by_id_and_user(
-                db, session_id, user_id
-            ):
-                return PresentationListResponse(
-                    session_id=session_id, presentations=[], total=0
-                )
+            if not await self._session_repo.get_by_id_and_user(db, session_id, user_id):
+                return PresentationListResponse(session_id=session_id, presentations=[], total=0)
 
             return await self._build_presentation_list(db, session_id)
 
         except Exception as e:
             logger.error(f"Failed to get session presentations: {e}")
-            return PresentationListResponse(
-                session_id=session_id, presentations=[], total=0
-            )
+            return PresentationListResponse(session_id=session_id, presentations=[], total=0)
 
     async def get_public_session_presentations(
         self, db: AsyncSession, *, session_id: str
@@ -133,17 +158,13 @@ class SlideService:
         """Get list of presentations from a public session (no auth required)."""
         try:
             if not await self._session_repo.get_public_by_id(db, session_id):
-                return PresentationListResponse(
-                    session_id=session_id, presentations=[], total=0
-                )
+                return PresentationListResponse(session_id=session_id, presentations=[], total=0)
 
             return await self._build_presentation_list(db, session_id)
 
         except Exception as e:
             logger.error(f"Failed to get public session presentations: {e}")
-            return PresentationListResponse(
-                session_id=session_id, presentations=[], total=0
-            )
+            return PresentationListResponse(session_id=session_id, presentations=[], total=0)
 
     async def download_session_slides_as_pdf(
         self,
@@ -155,12 +176,8 @@ class SlideService:
     ) -> Optional[bytes]:
         """Download slides from session as PDF for authenticated users."""
         try:
-            if not await self._session_repo.get_by_id_and_user(
-                db, session_id, user_id
-            ):
-                logger.error(
-                    f"Session {session_id} not found or access denied for user {user_id}"
-                )
+            if not await self._session_repo.get_by_id_and_user(db, session_id, user_id):
+                logger.error(f"Session {session_id} not found or access denied for user {user_id}")
                 return None
 
             return await self._slides_to_pdf(db, session_id, presentation_name)
@@ -198,18 +215,14 @@ class SlideService:
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Download slides from session as PDF with progress updates."""
         try:
-            if not await self._session_repo.get_by_id_and_user(
-                db, session_id, user_id
-            ):
+            if not await self._session_repo.get_by_id_and_user(db, session_id, user_id):
                 yield {
                     "type": "error",
                     "message": f"Session {session_id} not found or access denied for user {user_id}",
                 }
                 return
 
-            async for data in self._slides_to_pdf_with_progress(
-                db, session_id, presentation_name
-            ):
+            async for data in self._slides_to_pdf_with_progress(db, session_id, presentation_name):
                 yield data
 
         except Exception as e:
@@ -232,15 +245,11 @@ class SlideService:
                 }
                 return
 
-            async for data in self._slides_to_pdf_with_progress(
-                db, session_id, presentation_name
-            ):
+            async for data in self._slides_to_pdf_with_progress(db, session_id, presentation_name):
                 yield data
 
         except Exception as e:
-            logger.error(
-                f"Failed to download public slides as PDF with progress: {e}"
-            )
+            logger.error(f"Failed to download public slides as PDF with progress: {e}")
             yield {"type": "error", "message": str(e)}
 
     # ==================== Private Helpers ====================
@@ -255,9 +264,7 @@ class SlideService:
         all_slides = await self._slide_repo.get_slides_by_session(db, session_id)
         slides_by_presentation: dict[str, list[SlideContentInfo]] = defaultdict(list)
         for slide in all_slides:
-            slides_by_presentation[slide.presentation_name].append(
-                _to_slide_content_info(slide)
-            )
+            slides_by_presentation[slide.presentation_name].append(_to_slide_content_info(slide))
 
         presentations = []
         for row in summary_rows:
@@ -280,9 +287,7 @@ class SlideService:
         self, db: AsyncSession, session_id: str, presentation_name: Optional[str]
     ) -> Optional[bytes]:
         """Fetch slides and convert to PDF."""
-        slides = await self._slide_repo.get_slides_by_session(
-            db, session_id, presentation_name
-        )
+        slides = await self._slide_repo.get_slides_by_session(db, session_id, presentation_name)
         if not slides:
             logger.warning(f"No slides found for session {session_id}")
             return None
@@ -294,9 +299,7 @@ class SlideService:
         self, db: AsyncSession, session_id: str, presentation_name: Optional[str]
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Fetch slides and convert to PDF with progress updates."""
-        slides = await self._slide_repo.get_slides_by_session(
-            db, session_id, presentation_name
-        )
+        slides = await self._slide_repo.get_slides_by_session(db, session_id, presentation_name)
         if not slides:
             yield {
                 "type": "error",
@@ -313,9 +316,7 @@ class SlideService:
 
         async for progress_data in convert_slides_to_pdf_with_progress(slide_infos):
             if progress_data["type"] == "complete":
-                pdf_base64 = base64.b64encode(progress_data["pdf_bytes"]).decode(
-                    "utf-8"
-                )
+                pdf_base64 = base64.b64encode(progress_data["pdf_bytes"]).decode("utf-8")
                 yield {
                     "type": "complete",
                     "filename": filename,

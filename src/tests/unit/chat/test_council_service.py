@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from uuid import uuid4
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -55,7 +55,7 @@ def _make_llm_configs() -> dict[str, LLMConfig]:
 def _make_response(content: str) -> RunResponseOutput:
     return RunResponseOutput(
         content=[TextContent(text=content)],
-        usage=TokenUsage(prompt_tokens=10, completion_tokens=5),
+        usage=TokenUsage(input_tokens=10, output_tokens=5),
         finish_reason=FinishReason.END_TURN,
     )
 

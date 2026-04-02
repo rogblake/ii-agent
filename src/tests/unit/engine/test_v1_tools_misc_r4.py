@@ -120,9 +120,7 @@ class TestSkillToolExecute:
         agent_mock.sandbox = MagicMock()
         tool._agent = agent_mock
 
-        with patch(
-            "ii_agent.agents.tools.skill.skill_exists", AsyncMock(return_value=False)
-        ):
+        with patch("ii_agent.agents.tools.skill.skill_exists", AsyncMock(return_value=False)):
             result = await tool.execute({"skill": "pdf"})
 
         assert result.is_error is True

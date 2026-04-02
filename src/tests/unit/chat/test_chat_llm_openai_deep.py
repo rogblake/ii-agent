@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import uuid
 from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import SecretStr
@@ -15,9 +15,7 @@ from ii_agent.chat.types import (
     ArrayResultContent,
     BinaryContent,
     ErrorJsonContent,
-    ErrorTextContent,
     ExecutionDeniedContent,
-    EventType,
     FileDataContentPart,
     FinishReason,
     ImageDataContentPart,
@@ -26,11 +24,9 @@ from ii_agent.chat.types import (
     Message,
     MessageRole,
     ReasoningContent,
-    RunResponseEvent,
     StorybookProgressContent,
     StorybookResultContent,
     TextContent,
-    TextContentPart,
     TextResultContent,
     ToolCall,
     ToolResult,
@@ -487,7 +483,7 @@ class TestOpenAIProviderSendDeep:
         text_part = MagicMock()
         text_part.text = "Hello, I'm ChatGPT!"
 
-        from openai.types.responses import ResponseOutputText, ResponseOutputMessage
+        from openai.types.responses import ResponseOutputText
 
         text_part.__class__ = ResponseOutputText
 
@@ -569,8 +565,8 @@ class TestOpenAIProviderSendDeep:
                     session_id=_SESSION_ID,
                 )
 
-        assert result.usage.prompt_tokens == 100
-        assert result.usage.completion_tokens == 50
+        assert result.usage.input_tokens == 100
+        assert result.usage.output_tokens == 50
         assert result.usage.cache_read_tokens == 10
 
     @pytest.mark.asyncio
@@ -732,7 +728,6 @@ class TestOpenAIProviderStreamDeep:
     @pytest.mark.asyncio
     async def test_stream_text_delta_event(self):
         """Test that text delta events are properly emitted."""
-        from ii_agent.chat.llm.openai import OpenAIProvider
 
         provider = self._make_streaming_provider()
 

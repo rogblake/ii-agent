@@ -5,7 +5,6 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, Dict, Any, List, Literal
 
-from ii_agent.agents.types import AgentType
 from ii_agent.sessions.types import AppKind, SessionState
 from ii_agent.settings.llm.schemas import ModelConfig
 
@@ -44,7 +43,9 @@ class SessionInfo(BaseModel):
     created_at: str
     updated_at: Optional[str] = None
     last_message_at: Optional[str] = None
-    agent_type: Optional[AgentType] = None
+    # Session rows still store non-agent values such as "chat" plus legacy values
+    # from older data migrations, so this DTO must remain string-based.
+    agent_type: Optional[str] = None
     app_kind: AppKind = AppKind.AGENT
     title_pending: bool = False
     model_setting_id: Optional[UUID] = None

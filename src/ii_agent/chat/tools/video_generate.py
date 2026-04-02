@@ -447,10 +447,12 @@ class VideoGenerationTool(BaseTool):
             logger.info(f"Video generated successfully: {video_url}, cost: {video_cost}")
 
             # Persist generated video metadata (best-effort)
+            # Use the public URL as storage_path so resolve_signed_urls returns
+            # it directly instead of signing against the wrong (private) bucket.
             try:
                 await self._persist_generated_video(
                     video_url=video_url,
-                    storage_path=storage_path,
+                    storage_path=video_url,
                     file_size=video_size,
                     mime_type=video_mime_type,
                 )

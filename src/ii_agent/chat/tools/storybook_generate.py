@@ -883,11 +883,13 @@ class StorybookGenerationTool(BaseTool):
             )
 
         # Generate image using tool server
+        user_id = await self._resolve_user_id()
         response = await _generate_image(
             prompt=prompt,
             aspect_ratio=target_aspect_ratio,
             image_size=self.resolution,
             session_id=self.session_id,
+            user_id=user_id,
             user_api_key=user_api_key,
             image_urls=reference_image_urls,
             model_name=self.image_model_name,

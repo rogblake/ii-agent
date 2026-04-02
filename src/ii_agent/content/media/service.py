@@ -238,6 +238,7 @@ class MediaTemplateService:
                 reference_type=reference_type,
                 aspect_ratio=aspect_ratio,
                 session_id=session_id or uuid.uuid4(),
+                user_id=user_id,
                 user_api_key=user_api_key,
                 model_name=model_name,
                 provider=provider,
@@ -349,6 +350,7 @@ async def _generate_image(
     image_size: str = "2K",
     image_urls: Optional[list[str]] = None,
     session_id: uuid.UUID,
+    user_id: Optional[uuid.UUID] = None,
     user_api_key: str,
     model_name: Optional[str] = None,
     provider: Optional[str] = None,
@@ -364,6 +366,8 @@ async def _generate_image(
         "session_id": str(session_id),
         "user_api_key": user_api_key,
     }
+    if user_id:
+        kwargs["metadata"]["user_id"] = str(user_id)
 
     # Add optional parameters
     if background:
@@ -397,6 +401,7 @@ async def _generate_reference_image(
     reference_type: str,
     aspect_ratio: str = "1:1",
     session_id: uuid.UUID,
+    user_id: Optional[uuid.UUID] = None,
     user_api_key: str,
     model_name: Optional[str] = None,
     provider: Optional[str] = None,
@@ -416,6 +421,7 @@ async def _generate_reference_image(
         aspect_ratio=aspect_ratio,
         image_size="1K",  # Default size for reference images
         session_id=session_id,
+        user_id=user_id,
         user_api_key=user_api_key,
         model_name=model_name,
         provider=provider,

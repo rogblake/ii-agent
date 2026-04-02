@@ -209,6 +209,7 @@ class ImageGenerationTool(BaseTool):
                 aspect_ratio=aspect_ratio,
                 image_size=image_size,
                 session_id=self.session_id,
+                user_id=session.user_id,
                 user_api_key=user_api_key,
                 image_urls=resolved_file_urls or None,
                 model_name=model_name,
@@ -223,8 +224,10 @@ class ImageGenerationTool(BaseTool):
             logger.info(f"Image generated successfully: {image_url}")
 
             # Persist generated image into session library (best-effort)
+            # Use the public URL as storage_path so resolve_signed_urls returns
+            # it directly instead of signing against the wrong (private) bucket.
             try:
-                storage_path = response.get("storage_path")
+                storage_path = image_url
                 file_size = response.get("size", 0)
                 mime_type = response.get("mime_type", "image/png")
                 file_name = response.get("file_name")

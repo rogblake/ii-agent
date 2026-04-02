@@ -293,6 +293,7 @@ async def regenerate_page_image(
         output = await _generate_image(
             prompt=prompt,
             session_id=session_id,
+            user_id=current_user.id,
             user_api_key=user_api_key,
         )
         return output.get("url", "")

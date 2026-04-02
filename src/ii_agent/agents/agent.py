@@ -948,16 +948,32 @@ class IIAgent:
         if len(run_messages.messages) == 0:
             logger.error("No messages to be sent to the model.")
         try:
-            async for event in self._ahandle_model_response_stream(
+            cancelled_exc: RunCancelledException | None = None
+            model_stream = self._ahandle_model_response_stream(
                 session=agent_session,
                 run_response=run_response,
                 run_messages=run_messages,
                 tools=_tools,
                 stream_events=stream_events,
                 run_context=run_context,
-            ):
-                await raise_if_cancelled(run_response.run_id)  # type: ignore
-                yield event
+            )
+            try:
+                async for event in model_stream:
+                    await raise_if_cancelled(run_response.run_id)  # type: ignore
+                    yield event
+            except RunCancelledException as cancel_err:
+                # Catch cancellation here so we can close the inner generator
+                # cleanly before re-raising.  Letting the exception propagate
+                # directly causes Python to call aclose() on the inner
+                # generator while it is still running, which triggers
+                # "RuntimeError: aclose(): asynchronous generator is already
+                # running".
+                cancelled_exc = cancel_err
+            finally:
+                await model_stream.aclose()
+
+            if cancelled_exc is not None:
+                raise cancelled_exc
 
             # Check for cancellation after model processing
             await raise_if_cancelled(run_response.run_id)  # type: ignore

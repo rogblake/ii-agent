@@ -14,6 +14,8 @@ wheels/
 # Rust build output
 target/
 
+.claude/
+
 # Virtual environments
 .venv
 

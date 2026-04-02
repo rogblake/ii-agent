@@ -79,7 +79,7 @@ import {
     TAB,
     TOOL,
     ToolConfirmationData,
-    isTerminalRunStatus
+    isActiveRunStatus
 } from '@/typings/agent'
 import { normalizeAttachment } from '@/utils/attachments'
 
@@ -238,14 +238,14 @@ export function useAppEvents() {
                 (data.content?.run_status as string | undefined)
             if (runStatus && !ignoreClickAction) {
                 dispatch(setRunStatus(runStatus))
+                dispatch(setLoading(isActiveRunStatus(runStatus)))
+                if (runStatus !== RunStatus.ABORTING) {
+                   dispatch(setCancelling(false))
+                }
                 if (isTerminalRunStatus(runStatus)) {
                     dispatch(setLoading(false))
-                    dispatch(setCancelling(false))
                 } else if (runStatus === RunStatus.PAUSED) {
                     dispatch(setLoading(false))
-                    dispatch(setCancelling(false))
-                } else if (runStatus === RunStatus.RUNNING) {
-                    dispatch(setCancelling(false))
                 }
             }
 
@@ -257,6 +257,34 @@ export function useAppEvents() {
                     agentStackRef.current[agentStackRef.current.length - 1] ||
                     mainAgentId.current
                 return activeAgentsRef.current.get(id)
+            }
+
+            const resolveToolConfirmationsForRun = (runId?: string): void => {
+                if (!runId) return
+
+                let changed = false
+                const updatedMessages = messagesRef.current.map((msg) => {
+                    if (
+                        !msg.toolConfirmation ||
+                        msg.toolConfirmation.run_id !== runId ||
+                        msg.toolConfirmation.resolved
+                    ) {
+                        return msg
+                    }
+
+                    changed = true
+                    return {
+                        ...msg,
+                        toolConfirmation: {
+                            ...msg.toolConfirmation,
+                            resolved: true
+                        }
+                    }
+                })
+
+                if (changed) {
+                    safeDispatch(setMessages(updatedMessages))
+                }
             }
 
             /** Search for a non-completed subagent to finalize (complete/fail).
@@ -780,6 +808,13 @@ export function useAppEvents() {
                 }
 
                 case AgentEvent.PROCESSING: {
+                    resolveToolConfirmationsForRun(
+                        (
+                            data.run_id ??
+                            (data.content.run_id as string | undefined)
+                        )?.toString()
+                    )
+
                     // Transient event — setCancelling handled by run_status reconciliation above.
                     // Only share/replay mode needs explicit loading since it lacks the normal submit flow.
                     if (
@@ -1034,6 +1069,12 @@ export function useAppEvents() {
                 case AgentEvent.TOOL_RESULT: {
                     const agentContext = getActiveAgent()
                     const toolName = data.content.tool_name as string
+                    resolveToolConfirmationsForRun(
+                        (
+                            data.run_id ??
+                            (data.content.run_id as string | undefined)
+                        )?.toString()
+                    )
 
                     // ── Tool-specific side effects ──
 
@@ -1100,30 +1141,6 @@ export function useAppEvents() {
                         )?.preview_url
                         if (previewUrl) {
                             dispatch(setBrowserUrl(previewUrl))
-                        }
-                    }
-
-                    if (toolName === TOOL.ASK_USER_ENV) {
-                        // Clear toolConfirmation to hide SecretsInput
-                        for (
-                            let i = messagesRef.current.length - 1;
-                            i >= 0;
-                            i--
-                        ) {
-                            const msg = messagesRef.current[i]
-                            if (
-                                msg.toolConfirmation?.active_requirements?.[0]
-                                    ?.tool_execution?.tool_name ===
-                                TOOL.ASK_USER_ENV
-                            ) {
-                                safeDispatch(
-                                    updateMessage({
-                                        ...msg,
-                                        toolConfirmation: undefined
-                                    })
-                                )
-                                break
-                            }
                         }
                     }
 

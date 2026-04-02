@@ -33,6 +33,11 @@ interface SecretsInputProps {
      */
     readOnly?: boolean
     /**
+     * When true, keeps the form visible but disables interaction.
+     * Useful for stale or already-submitted ask_user prompts in history.
+     */
+    disabled?: boolean
+    /**
      * Session ID for saving secrets via projectService.
      * Required for interactive mode.
      */
@@ -52,6 +57,7 @@ export const SecretsInput = ({
     secrets,
     message,
     readOnly = false,
+    disabled = false,
     sessionId,
     onConfirm,
     onCancel
@@ -111,7 +117,8 @@ export const SecretsInput = ({
     }
 
     // Determine if we're in interactive mode
-    const isInteractive = !readOnly && sessionId && onConfirm
+    const isInteractive = !readOnly && !disabled && sessionId && onConfirm
+    const inputsDisabled = isSubmitting || disabled
 
     // Show project not initialized warning for interactive mode
     if (isInteractive && !projectId) {
@@ -142,6 +149,12 @@ export const SecretsInput = ({
                     {t('agent.secrets.environmentVariables')}
                 </span>
             </div>
+
+            {disabled && !readOnly && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('agent.toolConfirmation.inactive')}
+                </p>
+            )}
 
             {message && <p className="text-xs text-gray-400">{message}</p>}
 
@@ -198,12 +211,12 @@ export const SecretsInput = ({
                                     placeholder={t('agent.secrets.placeholder', {
                                         key: secret.key
                                     })}
-                                    disabled={isSubmitting}
+                                    disabled={inputsDisabled}
                                 />
                                 <button
                                     onClick={() => setShowValues(!showValues)}
                                     className="cursor-pointer absolute top-[10px] right-2 p-0.5 hover:bg-white/10 rounded transition-colors"
-                                    disabled={isSubmitting}
+                                    disabled={inputsDisabled}
                                 >
                                     {showValues ? (
                                         <EyeOff className="size-3" />

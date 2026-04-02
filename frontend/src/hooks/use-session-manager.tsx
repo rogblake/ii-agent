@@ -8,7 +8,11 @@ import {
     useAppSelector
 } from '@/state'
 import { setLoading } from '@/state/slice/ui'
-import { AgentEvent, IEvent, RunStatus, isTerminalRunStatus } from '@/typings/agent'
+import {
+    AgentEvent,
+    IEvent,
+    isActiveRunStatus
+} from '@/typings/agent'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useParams } from 'react-router'
 
@@ -143,13 +147,7 @@ export function useSessionManager({
                     const runStatus = data.run_status as string | undefined
                     if (runStatus) {
                         dispatch(setRunStatus(runStatus))
-                        if (isTerminalRunStatus(runStatus)) {
-                            dispatch(setLoading(false))
-                        } else if (runStatus === RunStatus.PAUSED) {
-                            dispatch(setLoading(false))
-                        } else if (runStatus === RunStatus.RUNNING) {
-                            dispatch(setLoading(true))
-                        }
+                        dispatch(setLoading(isActiveRunStatus(runStatus)))
                     } else {
                         // No run task yet — ensure clean state
                         dispatch(setRunStatus(null))

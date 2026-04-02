@@ -792,6 +792,7 @@
         },
         "toolConfirmation": {
             "processingResponse": "Processing your response...",
+            "inactive": "This request is no longer active.",
             "unknownTool": "Unknown tool",
             "tool": "Tool",
             "viewArguments": "View arguments",

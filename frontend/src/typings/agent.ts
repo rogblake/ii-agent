@@ -70,8 +70,18 @@ const TERMINAL_STATUSES: ReadonlySet<string> = new Set([
     RunStatus.SYSTEM_INTERRUPTED
 ])
 
+const ACTIVE_STATUSES: ReadonlySet<string> = new Set([
+    RunStatus.PENDING,
+    RunStatus.RUNNING,
+    RunStatus.ABORTING
+])
+
 export function isTerminalRunStatus(status: string): boolean {
     return TERMINAL_STATUSES.has(status)
+}
+
+export function isActiveRunStatus(status: string): boolean {
+    return ACTIVE_STATUSES.has(status)
 }
 
 export type Source = {
@@ -497,6 +507,7 @@ export interface ToolConfirmationData {
     session_id: string
     message: string
     active_requirements: ToolConfirmationRequirement[]
+    resolved?: boolean
 }
 
 export interface Message {

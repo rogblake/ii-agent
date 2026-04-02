@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '../ui/button'
 import { ToolConfirmationData, TOOL, CommandType } from '@/typings/agent'
 import { useSocketIOContext } from '@/contexts/websocket-context'
-import { useAppDispatch } from '@/state'
+import { selectIsWaitingForInput, useAppDispatch, useAppSelector } from '@/state'
 import { setRunStatus } from '@/state/slice/agent'
 import { setLoading } from '@/state/slice/ui'
 import { SecretsInput } from './secrets-input'
@@ -19,7 +19,9 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
     const { t } = useTranslation()
     const { sendMessage } = useSocketIOContext()
     const dispatch = useAppDispatch()
+    const isWaitingForInput = useAppSelector(selectIsWaitingForInput)
     const [isResponding, setIsResponding] = useState(false)
+    const isInteractive = isWaitingForInput && !confirmation.resolved
 
     // Get tool info from the first active requirement
     const requirement = confirmation.active_requirements[0]
@@ -32,7 +34,7 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
         confirmed: boolean,
         userInput?: Record<string, string>
     ) => {
-        if (isResponding) return
+        if (isResponding || !isInteractive) return
 
         setIsResponding(true)
         dispatch(setRunStatus('running'))
@@ -83,6 +85,7 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
                         description: item.description
                     }))}
                     message={message}
+                    disabled={!isInteractive}
                     sessionId={confirmation.session_id}
                     onConfirm={handleConfirm}
                     onCancel={() => handleConfirm(false)}
@@ -94,6 +97,7 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
             return (
                 <AskUserSelectUI
                     toolArgs={toolArgs}
+                    disabled={!isInteractive}
                     onSelect={(selected) =>
                         handleConfirm(true, { selected })
                     }
@@ -106,6 +110,11 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
             // Default confirmation UI for generic tools
             return (
                 <div className="mt-3 border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-[#1e1e1e]">
+                    {!isInteractive && (
+                        <div className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                            {t('agent.toolConfirmation.inactive')}
+                        </div>
+                    )}
                     <div className="mb-3">
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
                             {t('agent.toolConfirmation.tool')}: {toolName}
@@ -130,7 +139,7 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
                         <Button
                             onClick={() => handleConfirm(true)}
                             className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
-                            disabled={isResponding}
+                            disabled={isResponding || !isInteractive}
                         >
                             <Check className="size-4" />
                             {t('agent.toolConfirmation.yesContinue')}
@@ -139,7 +148,7 @@ export function ToolConfirmation({ confirmation }: ToolConfirmationProps) {
                             onClick={() => handleConfirm(false)}
                             variant="outline"
                             className="flex-1 border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
-                            disabled={isResponding}
+                            disabled={isResponding || !isInteractive}
                         >
                             <X className="size-4" />
                             {t('agent.toolConfirmation.noCancel')}
@@ -159,11 +168,17 @@ interface AskUserSelectOption {
 
 interface AskUserSelectUIProps {
     toolArgs: Record<string, unknown>
+    disabled?: boolean
     onSelect: (selected: string) => void
     onSkip: () => void
 }
 
-function AskUserSelectUI({ toolArgs, onSelect, onSkip }: AskUserSelectUIProps) {
+function AskUserSelectUI({
+    toolArgs,
+    disabled = false,
+    onSelect,
+    onSkip
+}: AskUserSelectUIProps) {
     const { t } = useTranslation()
     const [selectedValue, setSelectedValue] = useState<string | null>(null)
 
@@ -172,6 +187,11 @@ function AskUserSelectUI({ toolArgs, onSelect, onSkip }: AskUserSelectUIProps) {
 
     return (
         <div className="mt-3 w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1e1e1e] p-4 shadow-sm">
+            {disabled && (
+                <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                    {t('agent.toolConfirmation.inactive')}
+                </p>
+            )}
             <p className="mb-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                 {question}
             </p>
@@ -182,12 +202,17 @@ function AskUserSelectUI({ toolArgs, onSelect, onSkip }: AskUserSelectUIProps) {
                     return (
                         <button
                             key={idx}
-                            onClick={() => setSelectedValue(option.value)}
+                            onClick={() => {
+                                if (!disabled) {
+                                    setSelectedValue(option.value)
+                                }
+                            }}
+                            disabled={disabled}
                             className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-200 ${
                                 isSelected
                                     ? 'bg-sky-100 dark:bg-sky-900/30 border border-sky-400 dark:border-sky-600 text-sky-900 dark:text-sky-100'
                                     : 'bg-gray-50 dark:bg-[#2d2d2d] border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#333333]'
-                            }`}
+                            } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
                         >
                             <span className="flex-1">{option.label}</span>
                             {isSelected && (
@@ -203,13 +228,14 @@ function AskUserSelectUI({ toolArgs, onSelect, onSkip }: AskUserSelectUIProps) {
                     onClick={() => {
                         if (selectedValue) onSelect(selectedValue)
                     }}
-                    disabled={!selectedValue}
+                    disabled={disabled || !selectedValue}
                     className="bg-sky-600 hover:bg-sky-700 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {t('common.confirm')}
                 </Button>
                 <button
                     onClick={onSkip}
+                    disabled={disabled}
                     className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                 >
                     {t('common.skip')}

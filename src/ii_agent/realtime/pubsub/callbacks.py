@@ -41,6 +41,7 @@ class DatabaseCallbackHandler(EventCallbackHandler):
 
         try:
             async with get_db_session_local() as db:
+                serialized_event = event.model_dump(mode="json", exclude_none=True)
                 entity = ApplicationEvent(
                     id=event.id,
                     event_type=event.name,
@@ -48,7 +49,7 @@ class DatabaseCallbackHandler(EventCallbackHandler):
                     session_id=event.session_id,
                     run_id=event.run_id,
                     user_id=event.user_id,
-                    content=event.content,
+                    content=serialized_event.get("content", {}),
                 )
                 await self._repo.save(db, entity)
         except Exception:

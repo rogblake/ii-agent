@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any, Iterable, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +29,7 @@ class ProjectDesignRepository:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         user_id: str,
     ) -> Optional[Session]:
         return await self._session_repo.get_by_id_and_user(db, session_id, user_id)
@@ -37,7 +38,7 @@ class ProjectDesignRepository:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
     ) -> Optional[Session]:
         return await self._session_repo.get_by_id(db, session_id)
 

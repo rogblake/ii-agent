@@ -743,20 +743,22 @@ class TestBuildBillingContextR4:
 
 class TestBuildLlmMessagesR4:
     def test_returns_single_user_message(self):
+        session_id = uuid.uuid4()
         messages = ProjectDesignService._build_llm_messages(
-            session_id="sess-1", user_prompt="Do this"
+            session_id=session_id, user_prompt="Do this"
         )
         assert len(messages) == 1
 
     def test_passes_correct_prompt_to_new_message(self):
         from ii_agent.chat.types import TextContent, MessageRole
 
+        session_id = uuid.uuid4()
         messages = ProjectDesignService._build_llm_messages(
-            session_id="sess-1", user_prompt="Design this"
+            session_id=session_id, user_prompt="Design this"
         )
         msg = messages[0]
         assert msg.role == MessageRole.USER
-        assert msg.session_id == "sess-1"
+        assert msg.session_id == session_id
         assert any(isinstance(p, TextContent) and p.text == "Design this" for p in msg.parts)
 
 
@@ -886,7 +888,7 @@ class TestSyncPersistedDesignChangesR4:
     @pytest.mark.asyncio
     async def test_invalid_session_id_raises(self):
         svc = _make_service()
-        request = SyncStateRequest(session_id="not-a-uuid", changes=None, project_info=None)
+        request = SyncStateRequest.model_construct(session_id="not-a-uuid")
         with pytest.raises(DesignValidationError, match="Invalid session_id"):
             await svc.sync_persisted_design_changes(AsyncMock(), user_id="user-1", request=request)
 
@@ -897,9 +899,7 @@ class TestSyncPersistedDesignChangesR4:
         svc._repo.get_session = AsyncMock(return_value=session)
         svc._repo.get_design_state = MagicMock(return_value=([], [], None))
         request = SyncStateRequest(
-            session_id=str(uuid.uuid4()),
-            changes=None,
-            project_info=None,
+            session_id=uuid.uuid4(),
         )
         result = await svc.sync_persisted_design_changes(
             AsyncMock(), user_id="user-1", request=request

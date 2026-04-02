@@ -347,10 +347,9 @@ class SlideDesignService:
             user_id=user_id,
         )
 
-        try:
-            session_uuid = uuid.UUID(request.session_id)
-        except ValueError as exc:
-            raise DesignValidationError("Invalid session_id") from exc
+        session_uuid = request.session_id
+        if not isinstance(session_uuid, uuid.UUID):
+            raise DesignValidationError("Invalid session_id")
 
         raw_changes, raw_redo, _ = self._repo.get_design_state(session)
         changes = self._parse_persisted_design_changes(raw_changes)

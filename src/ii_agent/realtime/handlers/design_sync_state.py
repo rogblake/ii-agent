@@ -52,7 +52,11 @@ class DesignSyncStateHandler(BaseCommandHandler[DesignSyncStateContent]):
                     session_id=session_uuid,
                     content={"text": summary},
                 )
-                saved = await event_service.save_event(db, session_uuid, evt)
+                saved = await event_service.save_event(
+                    db,
+                    session_id=session_uuid,
+                    event=evt,
+                )
                 return str(saved.id)
 
         try:

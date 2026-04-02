@@ -12,7 +12,7 @@ from ii_agent.content.slides.design.service import SlideDesignService
 
 class _FakeRepo:
     def __init__(self):
-        self.session = SimpleNamespace(id=str(uuid4()), user_id="user-1")
+        self.session = SimpleNamespace(id=uuid4(), user_id="user-1")
         self.session_for_user = self.session
         self.raw_changes = []
         self.raw_redo = []

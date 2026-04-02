@@ -27,7 +27,10 @@ from ii_agent.projects.design.service import ProjectDesignService
 # ---------------------------------------------------------------------------
 
 
-def _make_session(user_id: str = "user-1", session_id: str | None = None) -> MagicMock:
+def _make_session(
+    user_id: str = "user-1",
+    session_id: str | uuid.UUID | None = None,
+) -> MagicMock:
     session = MagicMock()
     session.id = session_id or str(uuid.uuid4())
     session.user_id = user_id
@@ -212,6 +215,30 @@ class TestExtractE2bPortFromHostname:
     def test_returns_none_for_invalid_port_number(self):
         port = ProjectDesignService._extract_e2b_port_from_hostname("99999-sandboxid.e2b.app")
         assert port is None
+
+
+class TestGetProxyHtml:
+    @pytest.mark.asyncio
+    async def test_accepts_uuid_session_id(self):
+        svc = _make_service()
+        db = AsyncMock()
+        session_id = uuid.uuid4()
+        session = _make_session(user_id="user-1", session_id=session_id)
+        svc._repo.get_session = AsyncMock(return_value=session)
+        svc._sandbox_service.get_by_session_id = AsyncMock(return_value=None)
+        svc._build_proxy_hostname_allow_check = MagicMock(return_value=lambda hostname: True)
+        svc._fetch_proxy_html = AsyncMock(return_value=("<html/>", "https://abc123.e2b.app/"))
+        svc._inject_runtime_script_with_base = MagicMock(return_value="<html>ok</html>")
+
+        result = await svc.get_proxy_html(
+            db,
+            session_id=session_id,
+            user_id="user-1",
+            url="https://abc123.e2b.app/",
+        )
+
+        assert result == "<html>ok</html>"
+        svc._sandbox_service.get_by_session_id.assert_awaited_once_with(db, session_id=session_id)
 
 
 # ---------------------------------------------------------------------------
@@ -568,20 +595,22 @@ class TestToolResultValue:
 
 class TestBuildLlmMessages:
     def test_returns_single_user_message(self):
+        session_id = uuid.uuid4()
         messages = ProjectDesignService._build_llm_messages(
-            session_id="sess-1", user_prompt="Hello world"
+            session_id=session_id, user_prompt="Hello world"
         )
         assert len(messages) == 1
 
     def test_message_contains_prompt(self):
         from ii_agent.chat.types import TextContent, MessageRole
 
+        session_id = uuid.uuid4()
         messages = ProjectDesignService._build_llm_messages(
-            session_id="sess-1", user_prompt="Design this"
+            session_id=session_id, user_prompt="Design this"
         )
         msg = messages[0]
         assert msg.role == MessageRole.USER
-        assert msg.session_id == "sess-1"
+        assert msg.session_id == session_id
         assert any(isinstance(p, TextContent) and p.text == "Design this" for p in msg.parts)
 
 
@@ -708,7 +737,7 @@ class TestSyncPersistedDesignChanges:
     @pytest.mark.asyncio
     async def test_invalid_session_id_raises(self):
         svc = _make_service()
-        request = SyncStateRequest(session_id="not-a-uuid", changes=None, project_info=None)
+        request = SyncStateRequest.model_construct(session_id="not-a-uuid")
 
         with pytest.raises(DesignValidationError, match="Invalid session_id"):
             await svc.sync_persisted_design_changes(AsyncMock(), user_id="user-1", request=request)
@@ -720,7 +749,7 @@ class TestSyncPersistedDesignChanges:
         svc._repo.get_session = AsyncMock(return_value=session)
         svc._repo.get_design_state = MagicMock(return_value=([], [], None))
 
-        request = SyncStateRequest(session_id=str(uuid.uuid4()), changes=None, project_info=None)
+        request = SyncStateRequest(session_id=uuid.uuid4())
 
         result = await svc.sync_persisted_design_changes(
             AsyncMock(), user_id="user-1", request=request

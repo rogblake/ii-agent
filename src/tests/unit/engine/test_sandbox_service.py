@@ -191,6 +191,90 @@ async def test_get_sandbox_for_session_propagates_provider_connection_errors(
 
 
 @pytest.mark.asyncio
+async def test_get_sandbox_by_session_id_aliases_existing_lookup(settings_factory, monkeypatch):
+    session_id = uuid.uuid4()
+    expected_sandbox = SimpleNamespace(provider_sandbox_id="sbx-1")
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+
+    get_sandbox_for_session = AsyncMock(return_value=expected_sandbox)
+    monkeypatch.setattr(service, "get_sandbox_for_session", get_sandbox_for_session)
+
+    sandbox = await service.get_sandbox_by_session_id(None, str(session_id))
+
+    assert sandbox is expected_sandbox
+    get_sandbox_for_session.assert_awaited_once_with(None, session_id=session_id)
+
+
+@pytest.mark.asyncio
+async def test_get_sandbox_by_session_loads_user_from_session_when_db_is_implicit(
+    settings_factory, monkeypatch
+):
+    session_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    expected_sandbox = SimpleNamespace(provider_sandbox_id="sbx-1")
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo(
+            {
+                session_id: SimpleNamespace(id=session_id, user_id=user_id),
+            }
+        ),
+        config=settings_factory(),
+    )
+
+    init_sandbox = AsyncMock(return_value=expected_sandbox)
+    monkeypatch.setattr(service, "init_sandbox", init_sandbox)
+    monkeypatch.setattr(
+        "ii_agent.agents.sandboxes.service.get_db_session_local",
+        lambda: _noop_db_cm(),
+    )
+
+    sandbox = await service.get_sandbox_by_session(session_id)
+
+    assert sandbox is expected_sandbox
+    init_sandbox.assert_awaited_once_with(
+        None,
+        session_id=session_id,
+        user_id=user_id,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_sandbox_by_session_accepts_db_first_and_normalizes_user_id(
+    settings_factory, monkeypatch
+):
+    session_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    db = object()
+    expected_sandbox = SimpleNamespace(provider_sandbox_id="sbx-1")
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+
+    init_sandbox = AsyncMock(return_value=expected_sandbox)
+    monkeypatch.setattr(service, "init_sandbox", init_sandbox)
+
+    sandbox = await service.get_sandbox_by_session(
+        db,
+        session_id=session_id,
+        user_id=str(user_id),
+    )
+
+    assert sandbox is expected_sandbox
+    init_sandbox.assert_awaited_once_with(
+        db,
+        session_id=session_id,
+        user_id=user_id,
+    )
+
+
+@pytest.mark.asyncio
 async def test_list_shell_sessions_prunes_stale_records(settings_factory, monkeypatch):
     service = SandboxService(
         sandbox_repo=FakeSandboxRepo({}),

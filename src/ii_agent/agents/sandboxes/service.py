@@ -135,6 +135,73 @@ class SandboxService:
             return None
         return await self._connect_provider(record)
 
+    async def get_sandbox_by_session_id(
+        self,
+        db: AsyncSession,
+        session_id: uuid.UUID | str,
+    ) -> Optional[Sandbox]:
+        """Backward-compatible alias for fetching an existing sandbox."""
+        return await self.get_sandbox_for_session(
+            db,
+            session_id=self._normalize_session_id(session_id),
+        )
+
+    async def get_sandbox_by_session(
+        self,
+        *args: Any,
+        db: AsyncSession | None = None,
+        session_id: uuid.UUID | str | None = None,
+        user_id: uuid.UUID | str | None = None,
+    ) -> Sandbox:
+        """Backward-compatible get-or-create sandbox helper.
+
+        Supports the historical call styles used across the codebase:
+
+        - ``await service.get_sandbox_by_session(session_id)``
+        - ``await service.get_sandbox_by_session(db, session_id=..., user_id=...)``
+        """
+        remaining = list(args)
+        if remaining and db is None and not isinstance(remaining[0], (uuid.UUID, str)):
+            db = remaining.pop(0)
+
+        if session_id is None:
+            if not remaining:
+                raise TypeError("session_id is required")
+            session_id = remaining.pop(0)
+
+        if user_id is None and remaining:
+            user_id = remaining.pop(0)
+
+        if remaining:
+            raise TypeError("Too many positional arguments provided")
+
+        normalized_session_id = self._normalize_session_id(session_id)
+
+        async def _init(db_session: AsyncSession) -> Sandbox:
+            resolved_user_id = user_id
+            if resolved_user_id is None:
+                session = await self._session_repo.get_by_id(db_session, normalized_session_id)
+                if session is None or getattr(session, "user_id", None) is None:
+                    raise SandboxNotFoundException(str(normalized_session_id))
+                resolved_user_id = session.user_id
+
+            normalized_user_id = (
+                resolved_user_id
+                if isinstance(resolved_user_id, uuid.UUID)
+                else uuid.UUID(str(resolved_user_id))
+            )
+            return await self.init_sandbox(
+                db_session,
+                session_id=normalized_session_id,
+                user_id=normalized_user_id,
+            )
+
+        if db is not None:
+            return await _init(db)
+
+        async with get_db_session_local() as db_session:
+            return await _init(db_session)
+
     async def get_by_session_id(
         self,
         db: AsyncSession,

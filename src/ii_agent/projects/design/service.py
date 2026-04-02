@@ -105,7 +105,7 @@ class ProjectDesignService:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         user_id: str,
     ) -> Any:
         session = await self._repo.get_session(db, session_id=session_id)
@@ -119,7 +119,7 @@ class ProjectDesignService:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         user_id: str,
         url: str,
     ) -> str:
@@ -136,7 +136,7 @@ class ProjectDesignService:
         sandbox_record: AgentSandbox | None = None
         try:
             sandbox_record = await self._sandbox_service.get_by_session_id(
-                db, session_id=uuid.UUID(session_id)
+                db, session_id=session_id
             )
         except Exception:
             sandbox_record = None
@@ -373,10 +373,9 @@ class ProjectDesignService:
         on_progress: ProgressCallback | None = None,
         on_summary: SummaryCallback | None = None,
     ) -> SyncStateResponse:
-        try:
-            session_uuid = uuid.UUID(request.session_id)
-        except ValueError as exc:
-            raise DesignValidationError("Invalid session_id") from exc
+        session_uuid = request.session_id
+        if not isinstance(session_uuid, uuid.UUID):
+            raise DesignValidationError("Invalid session_id")
 
         session = await self._get_session_for_request(
             db,
@@ -469,7 +468,7 @@ class ProjectDesignService:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         user_id: str,
     ) -> DesignStateResponse:
         session = await self._get_session_for_request(
@@ -531,7 +530,7 @@ class ProjectDesignService:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         user_id: str,
         session: Any,
     ) -> LLMConfig:
@@ -568,7 +567,7 @@ class ProjectDesignService:
             return LLMConfig()
 
     @staticmethod
-    def _build_llm_messages(*, session_id: str, user_prompt: str) -> list[Message]:
+    def _build_llm_messages(*, session_id: uuid.UUID, user_prompt: str) -> list[Message]:
         return [
             make_message(
                 role=MessageRole.USER,
@@ -1034,10 +1033,9 @@ class ProjectDesignService:
         if total == 0:
             return SyncResponse(success=True, applied=0, errors=[]), set()
 
-        try:
-            session_uuid = uuid.UUID(request.session_id)
-        except Exception as exc:
-            raise DesignValidationError("Invalid session_id") from exc
+        session_uuid = request.session_id
+        if not isinstance(session_uuid, uuid.UUID):
+            raise DesignValidationError("Invalid session_id")
 
         sandbox = await self._sandbox_service.get_sandbox_by_session_id(db, session_id=session_uuid)
         if not sandbox:
@@ -1462,7 +1460,11 @@ class ProjectDesignService:
             session_id=session_id,
             content={"text": summary},
         )
-        saved = await self._event_service.save_event(db, session_id, sync_event)
+        saved = await self._event_service.save_event(
+            db,
+            session_id=session_id,
+            event=sync_event,
+        )
         return str(saved.id)
 
     async def _emit_sync_progress(
@@ -1496,7 +1498,11 @@ class ProjectDesignService:
             session_id=session_id,
             content=content,
         )
-        await self._event_service.save_event(db, session_id, progress_event)
+        await self._event_service.save_event(
+            db,
+            session_id=session_id,
+            event=progress_event,
+        )
         await self._event_service.emit_event(progress_event)
 
     @staticmethod

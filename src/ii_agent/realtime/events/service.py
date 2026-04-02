@@ -41,6 +41,7 @@ class EventService:
         On user messages, bumps ``session.updated_at`` so the session list
         stays sorted by recent activity.
         """
+        serialized_event = event.model_dump(mode="json", exclude_none=True)
         db_event = ApplicationEvent(
             id=event.id,
             event_type=event.name,
@@ -48,7 +49,7 @@ class EventService:
             session_id=session_id,
             run_id=getattr(event, "run_id", None),
             user_id=event.user_id,
-            content=event.content,
+            content=serialized_event.get("content", {}),
         )
         saved = await self._event_repo.save(db, db_event)
 

@@ -54,6 +54,8 @@ import {
     setWorkspaceInfo
 } from '@/state/slice/workspace'
 import {
+    type CachedContent,
+    type FileTreeNode,
     markFilesChanged,
     setFileTree,
     setTreeError,
@@ -237,6 +239,9 @@ export function useAppEvents() {
             if (runStatus && !ignoreClickAction) {
                 dispatch(setRunStatus(runStatus))
                 if (isTerminalRunStatus(runStatus)) {
+                    dispatch(setLoading(false))
+                    dispatch(setCancelling(false))
+                } else if (runStatus === RunStatus.PAUSED) {
                     dispatch(setLoading(false))
                     dispatch(setCancelling(false))
                 } else if (runStatus === RunStatus.RUNNING) {
@@ -1561,9 +1566,11 @@ export function useAppEvents() {
                 }
 
                 case AgentEvent.FILE_TREE: {
-                    const tree = data.content.tree as Record<string, unknown> | null
+                    const tree = data.content.tree as FileTreeNode | null
                     const rootPath = data.content.root_path as string | undefined
-                    const contents = data.content.contents as Record<string, { content: string; language: string }> | undefined
+                    const contents = data.content.contents as
+                        | Record<string, CachedContent>
+                        | undefined
                     const error = data.content.error as string | undefined
                     if (error && !tree) {
                         dispatch(setTreeError(error))
@@ -1571,7 +1578,7 @@ export function useAppEvents() {
                             toast.error(error)
                         }
                     } else {
-                        dispatch(setFileTree({ tree: tree as any, rootPath, contents }))
+                        dispatch(setFileTree({ tree, rootPath, contents }))
                     }
                     break
                 }
@@ -1608,17 +1615,21 @@ export function useAppEvents() {
                 }
 
                 case AgentEvent.FILE_TREE_UPDATE: {
-                    const tree = data.content.tree as Record<string, unknown> | null
+                    const tree = data.content.tree as FileTreeNode | null
                     const rootPath = data.content.root_path as string | undefined
-                    const contents = data.content.contents as Record<string, { content: string; language: string }> | undefined
-                    const updatedContents = data.content.updated_contents as Record<string, { content: string; language: string }> | undefined
+                    const contents = data.content.contents as
+                        | Record<string, CachedContent>
+                        | undefined
+                    const updatedContents = data.content.updated_contents as
+                        | Record<string, CachedContent>
+                        | undefined
                     const changes = data.content.changes as
                         | Array<{ path?: string; type?: string }>
                         | undefined
                     if (tree) {
                         dispatch(
                             setFileTree({
-                                tree: tree as any,
+                                tree,
                                 rootPath,
                                 contents
                             })

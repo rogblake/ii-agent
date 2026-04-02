@@ -145,6 +145,8 @@ export function useSessionManager({
                         dispatch(setRunStatus(runStatus))
                         if (isTerminalRunStatus(runStatus)) {
                             dispatch(setLoading(false))
+                        } else if (runStatus === RunStatus.PAUSED) {
+                            dispatch(setLoading(false))
                         } else if (runStatus === RunStatus.RUNNING) {
                             dispatch(setLoading(true))
                         }

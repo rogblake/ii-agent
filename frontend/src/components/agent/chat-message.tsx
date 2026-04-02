@@ -612,7 +612,10 @@ const ChatMessage = ({
                     </div>
                 )}
 
-                {isLoading && !isStopped && !isCompleted && <ThinkingMessage />}
+                {isLoading &&
+                    !isStopped &&
+                    !isCompleted &&
+                    !isWaitingForInput && <ThinkingMessage />}
 
                 {/* Plan modification options - part of chat flow (hidden in share/replay mode) */}
                 {!isShareMode && !isReplayMode && (

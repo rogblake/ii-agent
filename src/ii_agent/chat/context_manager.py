@@ -1,0 +1,535 @@
+"""Context window management for chat sessions."""
+
+import logging
+import uuid
+from datetime import datetime, timezone
+from typing import List, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from ii_agent.chat.schemas import Message, TextContent, MessageRole
+from ii_agent.chat.message_service import MessageService
+from ii_agent.chat.models import ConversationSummary
+from ii_agent.sessions.models import Session
+from ii_agent.realtime.events.models import Event
+from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.chat.llm import LLMProviderFactory
+from ii_agent.realtime.events.models import EventType as CoreEventType
+
+logger = logging.getLogger(__name__)
+
+
+# Model context window limits (in tokens)
+CONTEXT_WINDOWS = {
+    # OpenAI Models - https://platform.openai.com/docs/models/gpt-5
+    "gpt-5": 200000,
+    # Anthropic Models
+    "claude-opus-4-5@20251101": 200000,
+    "claude-sonnet-4-5@20250929": 200000,
+    "claude-sonnet-4@20250514": 200000,
+    # Google Models
+    "gemini/gemini-3-pro-preview": 200000,
+    # Default fallback
+    "__default__": 128000,
+}
+
+PREVIOUS_SUMMARY = """<PREVIOUS_SUMMARY>
+{parent_summary_text}
+</PREVIOUS_SUMMARY>
+
+The following conversation occurred AFTER the previous summary:
+"""
+
+SUMMARY_PROMPT = """You maintain a long-term running summary of a conversation. 
+Your job is to merge the existing summary with new messages and produce an improved, more compact summary.
+
+Rules:
+- Keep only meaningful, actionable, or context-critical information.
+- Remove outdated intent or information replaced by new messages.
+- Prefer abstraction over details unless they matter for future turns.
+- Ensure the summary is coherent and can stand alone without the full chat history.
+- Focus on user goals, decisions, technical instructions, and constraints.
+
+{previous_summary_section}
+
+<CONVERSATION>
+{conversation_text}
+</CONVERSATION>
+
+Provide a clear, structured summary."""
+
+
+class ContextWindowManager:
+    """Enhanced context manager with summarization."""
+
+    SUMMARIZATION_THRESHOLD = 0.90  # Summarize at 90%
+    EMERGENCY_THRESHOLD = 0.90  # Emergency compression at 90%
+
+    # ==== PHASE 1: LOAD CONTEXT ====
+
+    @classmethod
+    async def load_context_for_llm(
+        cls,
+        *,
+        db_session: AsyncSession,
+        session_id: str,
+    ) -> List[Message]:
+        """
+        Load existing context for LLM call.
+        """
+        # 1. Load active summary
+        summary = await cls._get_active_summary(db_session, session_id)
+
+        # 2. Load messages after summary
+        if summary:
+            messages = await MessageService().list_messages_after_id(
+                db_session,
+                session_id=session_id,
+                after_message_id=summary.end_message_id,
+                limit=1000,
+            )
+        else:
+            messages = await MessageService().list_by_session(
+                db_session,
+                session_id=session_id,
+                limit=1000,
+            )
+
+        # 3. Build context
+        context = []
+        if summary:
+            summary_msg = Message(
+                id=uuid.uuid4(),
+                session_id=session_id,
+                role=MessageRole.ASSISTANT,
+                parts=[
+                    TextContent(
+                        text=f"""[Conversation summary up to this point]
+                        {PREVIOUS_SUMMARY.format(parent_summary_text=summary.summary_text)}
+                        """
+                    )
+                ],
+                tokens=summary.summary_tokens,
+                created_at=int(summary.created_at.timestamp()),
+                updated_at=int(summary.created_at.timestamp()),
+            )
+            context.append(summary_msg)
+        context.extend(messages)
+
+        logger.info(
+            f"Loaded context: summary={'Yes' if summary else 'No'}"
+        )
+
+        return context
+
+    # ==== PHASE 2: EMERGENCY COMPRESSION (During Tool Loop) ====
+
+    @classmethod
+    async def compress_context_if_needed(
+        cls,
+        *,
+        db_session: AsyncSession,
+        messages: List[Message],
+        session_id: str,
+        llm_config: LLMConfig,
+        user_id: str,
+    ) -> List[Message]:
+        """
+        Emergency compression during tool execution loop.
+
+        Only called if context grows too large mid-execution.
+        """
+        max_context = CONTEXT_WINDOWS.get(
+            llm_config.model, CONTEXT_WINDOWS["__default__"]
+        )
+        threshold = int(max_context * cls.EMERGENCY_THRESHOLD)
+
+        # Calculate total tokens
+        total_tokens = sum(msg.tokens or 0 for msg in messages)
+
+        if total_tokens < threshold:
+            return messages
+
+        logger.warning(
+            f"Emergency compression: {total_tokens} tokens exceeds {threshold}"
+        )
+
+        # Get parent summary
+        parent_summary = await cls._get_active_summary(db_session, session_id)
+
+        ### Determine what to summarize
+        ## sum_0 + [(u1, a1), (u2, a2)] < threshold        ---> continue
+        ## sum_0 + [(u1, a1), (u2, a2), (u3)] > threshold  ---> summarize
+        ## => _____  sum_1  ________  + (u3) 
+
+        # Find last user message - keep from there onwards
+        last_user_idx = cls._find_last_user_message(messages)
+        if last_user_idx == -1:
+            last_user_idx = len(messages) // 2
+
+        if parent_summary:
+            messages_to_summarize = messages[1:last_user_idx] # Skip summary message at index 0
+        else:
+            messages_to_summarize = messages[:last_user_idx]
+        
+        messages_to_keep = messages[last_user_idx:]
+
+        if not messages_to_summarize:
+            return messages
+        
+        # Create new summary
+        new_summary = await cls.create_chained_summary(
+            db_session=db_session,
+            session_id=session_id,
+            messages=messages_to_summarize,
+            parent_summary=parent_summary,
+            llm_config=llm_config,
+            user_id=user_id,
+        )
+
+        # Build compressed context
+        compressed = []
+
+        new_summary_msg = Message(
+            id=uuid.uuid4(),
+            session_id=session_id,
+            role=MessageRole.ASSISTANT,
+            parts=[
+                TextContent(
+                    text=f"[Conversation summary up to this point]\n{new_summary.summary_text}"
+                )
+            ],
+            tokens=new_summary.summary_tokens,
+            created_at=int(new_summary.created_at.timestamp()),
+            updated_at=int(new_summary.created_at.timestamp()),
+        )
+        compressed.append(new_summary_msg)
+        compressed.extend(messages_to_keep)
+
+        new_total = sum(m.tokens or 0 for m in compressed)
+        logger.info(
+            f"Compressed: {len(messages)} → {len(compressed)} messages, "
+            f"{total_tokens} → {new_total} tokens"
+        )
+
+        return compressed
+
+    # ==== PHASE 3: MAIN SUMMARIZATION (After Response) ====
+
+    @classmethod
+    async def check_and_summarize_after_response(
+        cls,
+        *,
+        db_session: AsyncSession,
+        session_id: str,
+        llm_config: LLMConfig,
+        user_id: str,
+    ) -> None:
+        """
+        Check and summarize AFTER LLM response completes.
+
+        This is the MAIN summarization checkpoint.
+        Called after assistant response is saved.
+        """
+        max_context = CONTEXT_WINDOWS.get(
+            llm_config.model, CONTEXT_WINDOWS["__default__"]
+        )
+        threshold = int(max_context * cls.SUMMARIZATION_THRESHOLD)
+
+        # 1. Load active summary
+        active_summary = await cls._get_active_summary(db_session, session_id)
+
+        # 2. Load ALL messages (including newly created ones)
+        if active_summary:
+            all_messages = await MessageService().list_messages_after_id(
+                db_session,
+                session_id=session_id,
+                after_message_id=active_summary.end_message_id,
+                limit=1000,
+            )
+            summary_tokens = active_summary.summary_tokens
+        else:
+            all_messages = await MessageService().list_by_session(
+                db_session,
+                session_id=session_id,
+                limit=1000,
+            )
+            summary_tokens = 0
+
+        # 3. Calculate total tokens
+        message_tokens = sum(msg.tokens or 0 for msg in all_messages)
+        total_tokens = summary_tokens + message_tokens
+
+        logger.info(
+            f"Post-response check: summary={summary_tokens}, "
+            f"messages={message_tokens}, total={total_tokens}/{threshold}"
+        )
+
+        # 4. Check if summarization needed
+        if total_tokens < threshold:
+            logger.info("Under threshold, no summarization needed")
+            return
+
+        logger.info(
+            f"Threshold exceeded ({total_tokens}/{threshold}), creating summary"
+        )
+
+        ### 5. Determine what to summarize
+        ## sum_0 + [(u1, a1), (u2, a2)] < threshold             ---> continue
+        ## sum_0 + [(u1, a1), (u2, a2), (u3 + a3)] > threshold  ---> summarize
+        ## => _____  sum_1  ________  + (u3 + a3) 
+
+        # Find last user message - keep from there onwards
+        last_user_idx = cls._find_last_user_message(all_messages)
+        if last_user_idx == -1:
+            last_user_idx = len(all_messages) // 2
+
+        messages_to_summarize = all_messages[:last_user_idx]
+        messages_to_keep = all_messages[last_user_idx:]
+
+        if not messages_to_summarize:
+            logger.warning("No messages to summarize, skipping summarization")
+            return
+
+        # 6. Create new chained summary
+        new_summary = await cls.create_chained_summary(
+            db_session=db_session,
+            session_id=session_id,
+            messages=messages_to_summarize,
+            parent_summary=active_summary,
+            llm_config=llm_config,
+            user_id=user_id,
+        )
+
+        logger.info(
+            f"Created summary {new_summary.id}: "
+            f"compressed {len(messages_to_summarize)} messages, "
+            f"{message_tokens} → {new_summary.summary_tokens} tokens, "
+            f"kept {len(messages_to_keep)} recent messages"
+        )
+
+    # ==== HELPER METHODS ====
+
+    @classmethod
+    async def create_chained_summary(
+        cls,
+        *,
+        db_session: AsyncSession,
+        session_id: str,
+        messages: List[Message],
+        parent_summary: Optional[ConversationSummary],
+        llm_config: LLMConfig,
+        user_id: str,
+    ) -> ConversationSummary:
+        """Create new summary, optionally chaining from parent."""
+
+        # Generate summary text via LLM
+        summary_text, summary_tokens = await SummarizationService.generate_summary(
+            messages=messages,
+            llm_config=llm_config,
+            user_id=user_id,
+            db_session=db_session,
+            parent_summary_text=parent_summary.summary_text if parent_summary else None,
+        )
+
+        # Calculate tokens
+        original_tokens = sum(msg.tokens or 0 for msg in messages)
+
+        logger.info(f"Original tokens: {original_tokens}")
+        logger.info(f"Summary tokens: {summary_tokens}")
+        logger.info(f"Summary text: {summary_text}")
+
+        # Create DB record
+        summary = ConversationSummary(
+            id=str(uuid.uuid4()),
+            session_id=session_id,
+            summary_text=summary_text,
+            end_message_id=messages[-1].id,  # Last message summarized
+            original_tokens=original_tokens,
+            summary_tokens=summary_tokens,
+            compression_ratio=original_tokens / max(summary_tokens, 1),
+            model_id=llm_config.setting_id,
+            parent_summary_id=parent_summary.id if parent_summary else None,
+            created_at=datetime.now(timezone.utc),
+        )
+
+        db_session.add(summary)
+        await db_session.commit()
+        await db_session.refresh(summary)
+
+        logger.info(
+            f"Created summary: {original_tokens} → {summary_tokens} tokens "
+            f"(ratio: {summary.compression_ratio:.1f}x)"
+        )
+
+        return summary
+
+    @classmethod
+    async def _get_active_summary(
+        cls,
+        db_session: AsyncSession,
+        session_id: str,
+    ) -> Optional[ConversationSummary]:
+        """Get most recent summary (highest end_message_id)."""
+        result = await db_session.execute(
+            select(ConversationSummary)
+            .where(ConversationSummary.session_id == session_id)
+            .order_by(ConversationSummary.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    @classmethod
+    def _find_last_user_message(cls, messages: List[Message]) -> int:
+        """Find index of last USER message."""
+        for i in range(len(messages) - 1, -1, -1):
+            if messages[i].role == MessageRole.USER:
+                return i
+        return -1
+
+
+#######
+## SummarizationService
+#######
+"""Service for generating conversation summaries using LLM."""
+class SummarizationService:
+    """Generate LLM-based summaries for chat context."""
+
+    @classmethod
+    async def generate_summary(
+        cls,
+        *,
+        messages: List[Message],
+        llm_config: LLMConfig,
+        user_id: str,
+        db_session: AsyncSession,
+        parent_summary_text: Optional[str] = None,
+    ) -> str:
+        """
+        Generate LLM summary, optionally chaining from parent summary.
+
+        Args:
+            messages: Messages to summarize
+            model_id: Model to use for summarization
+            user_id: User ID
+            db_session: Database session
+            parent_summary_text: Text from parent summary (for chaining)
+
+        Returns:
+            Summary text
+        """
+
+        # Build conversation text
+        conversation_text = cls._build_conversation_text(messages)
+
+        # Build prompt with optional parent summary
+        previous_summary_section = ""
+        if parent_summary_text:
+            previous_summary_section = PREVIOUS_SUMMARY.format(
+                parent_summary_text=parent_summary_text
+            )
+
+        prompt = SUMMARY_PROMPT.format(
+            previous_summary_section=previous_summary_section,
+            conversation_text=conversation_text,
+        )
+
+        provider = LLMProviderFactory.create_provider(llm_config)
+
+        # Generate summary
+        summary_message = Message(
+            id=uuid.uuid4(),
+            role=MessageRole.USER,
+            parts=[TextContent(text=prompt)],
+            session_id="summarization",  # Not stored
+            created_at=int(datetime.now(timezone.utc).timestamp()),
+            updated_at=int(datetime.now(timezone.utc).timestamp()),
+        )
+
+        try:
+            run_response = await provider.send(
+                messages=[summary_message],
+                tools=[],
+            )
+
+            summary = (
+                run_response.content
+                if isinstance(run_response.content, str)
+                else "".join(getattr(p, "text", str(p)) for p in run_response.content)
+            )
+            logger.info(
+                f"Generated summary for {len(messages)} messages "
+                f"({'with' if parent_summary_text else 'without'} parent summary)"
+            )
+            return summary, run_response.usage.total_tokens
+
+        except Exception as e:
+            logger.error(f"Failed to generate summary: {e}", exc_info=True)
+            # Fallback: Simple concatenation
+            return cls._create_fallback_summary(messages, parent_summary_text)
+
+    @classmethod
+    def _build_conversation_text(cls, messages: List[Message]) -> str:
+        """
+        Build text representation for summarization.
+
+        Focus on USER input and ASSISTANT final responses only.
+        Skip: tool calls, tool results, reasoning/thinking, images, etc.
+        """
+        from ii_agent.chat.schemas import TextContent
+
+        lines = []
+        for msg in messages:
+            if msg.role == MessageRole.USER:
+                # Extract only text content from user (skip images, files)
+                text_parts = [p.text for p in msg.parts if isinstance(p, TextContent)]
+                if text_parts:
+                    user_text = " ".join(text_parts)
+                    line = f"USER: {user_text}"
+                    lines.append(line)
+
+            elif msg.role == MessageRole.ASSISTANT:
+                # Extract only TextContent (skip ToolCall, ToolResult, ReasoningContent)
+                text_parts = [p.text for p in msg.parts if isinstance(p, TextContent)]
+                if text_parts:
+                    assistant_text = " ".join(text_parts)
+                    line = f"ASSISTANT: {assistant_text}"
+                    lines.append(line)
+
+        return "\n\n".join(lines)
+
+    @classmethod
+    def _create_fallback_summary(
+        cls,
+        messages: List[Message],
+        parent_summary_text: Optional[str] = None,
+    ) -> tuple[str, int]:
+        """Create simple summary without LLM (fallback on error).
+
+        Returns:
+            Tuple of (summary_text, total_tokens)
+        """
+        # Get last 5 messages
+        last_messages = messages[-5:] if len(messages) > 5 else messages
+
+        # Calculate total tokens from last messages
+        total_tokens = sum(msg.tokens or 0 for msg in last_messages)
+
+        lines = []
+
+        if parent_summary_text:
+            lines.append("=== Previous Summary ===")
+            lines.append(parent_summary_text)
+            lines.append("")
+
+        lines.append("=== Recent Messages ===")
+
+        for msg in last_messages:
+            role = msg.role.value.upper()
+            text_part = msg.content()
+            if text_part:
+                # Take first 100 chars
+                content = text_part.text[:100].replace("\n", " ")
+                lines.append(f"{role}: {content}")
+
+        return "\n".join(lines), total_tokens

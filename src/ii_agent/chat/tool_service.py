@@ -1,0 +1,219 @@
+"""Chat tool service for building tool registries and executing tools."""
+
+from __future__ import annotations
+
+import logging
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ii_agent.core.config.settings import Settings
+from ii_agent.integrations.connectors.repository import ConnectorRepository
+from ii_agent.integrations.connectors.models import ConnectorTypeEnum
+from ii_agent.chat.tools import (
+    WebSearchTool,
+    ImageSearchTool,
+    WebVisitTool,
+    FileSearchTool,
+    GitHubTool,
+    ToolCallInput,
+    ImageGenerationTool,
+)
+from ii_agent.chat.schemas import (
+    ErrorTextContent,
+    ToolResult,
+)
+from ii_agent.chat.media import MediaOrchestrator
+
+if TYPE_CHECKING:
+    from ii_agent.chat.tools.base import BaseTool
+    from ii_agent.chat.schemas import ChatMessageRequest
+    from ii_agent.core.container import ServiceContainer
+
+logger = logging.getLogger(__name__)
+
+
+class ChatToolService:
+    """Service for building tool registries and executing tools in chat."""
+
+    def __init__(
+        self,
+        *,
+        user_service,
+        connector_repo: ConnectorRepository,
+        container: ServiceContainer,
+        config: Settings,
+    ) -> None:
+        self._user_service = user_service
+        self._connector_repo = connector_repo
+        self._container = container
+        self._config = config
+
+    async def build_tool_registry(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+        tools: Dict[str, bool],
+        chat_request: "ChatMessageRequest",
+        vector_store: Optional[Any],
+        media_context: Optional[Any],
+    ) -> tuple[Dict[str, "BaseTool"], List[Dict[str, Any]]]:
+        """Build the tool registry and OpenAI-format tool definitions.
+
+        Returns (tool_registry, tools_to_pass) tuple.
+        """
+        tool_registry: Dict[str, "BaseTool"] = {}
+        tools_to_pass: List[Dict[str, Any]] = []
+
+        if not (tools and any(tools.values())):
+            return tool_registry, tools_to_pass
+
+        user_api_key = await self._user_service.get_active_api_key(db, user_id)
+        if not user_api_key:
+            logger.error(f"No active API key found for user {user_id}")
+            raise ValueError(
+                "User API key not found. Please configure API key in settings."
+            )
+
+        all_search_tools: List[BaseTool] = [
+            WebSearchTool(self._config.tool_server_url, user_api_key, session_id),
+            ImageSearchTool(self._config.tool_server_url, user_api_key, session_id),
+            WebVisitTool(self._config.tool_server_url, user_api_key, session_id),
+        ]
+
+        if media_context:
+            all_search_tools.append(media_context.tool_instance)
+        elif tools.get("generate_image"):
+            default_image_tool = await MediaOrchestrator.prepare_default_media_tool(
+                session_id=session_id,
+                media_type="image",
+                container=self._container,
+            )
+            all_search_tools.append(default_image_tool)
+
+        if vector_store:
+            all_search_tools.append(
+                FileSearchTool(
+                    session_id=session_id,
+                    user_id=user_id,
+                    vector_store_id=vector_store.provider_store_id,
+                )
+            )
+
+        await self._load_connector_tools(
+            db=db,
+            user_id=user_id,
+            chat_request=chat_request,
+            tools=tools,
+            all_search_tools=all_search_tools,
+        )
+
+        enabled_tools: List[BaseTool] = [
+            tool for tool in all_search_tools if tools.get(tool.name, False)
+        ]
+
+        if not enabled_tools:
+            logger.warning(f"No tools enabled in request: {tools}")
+        else:
+            logger.info(f"Enabled tools: {[t.name for t in enabled_tools]}")
+
+        tool_registry = {tool.name: tool for tool in enabled_tools}
+
+        for tool in enabled_tools:
+            tool_info = tool.info()
+            tools_to_pass.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool_info.name,
+                        "description": tool_info.description,
+                        "parameters": tool_info.parameters,
+                    },
+                }
+            )
+
+        return tool_registry, tools_to_pass
+
+    async def _load_connector_tools(
+        self,
+        *,
+        db: AsyncSession,
+        user_id: str,
+        chat_request: "ChatMessageRequest",
+        tools: Dict[str, bool],
+        all_search_tools: List["BaseTool"],
+    ) -> None:
+        """Load connector-based tools dynamically based on user's connected accounts."""
+        connectors = await self._connector_repo.get_by_user(db, user_id)
+
+        for connector in connectors:
+            if connector.connector_type == ConnectorTypeEnum.GITHUB.value:
+                tools["github"] = True
+
+                github_token = connector.access_token
+                github_metadata = connector.connector_metadata or {}
+
+                default_repo = None
+                if chat_request.github_repository:
+                    default_repo = {
+                        "owner": chat_request.github_repository.owner,
+                        "name": chat_request.github_repository.name,
+                        "full_name": chat_request.github_repository.full_name,
+                        "default_branch": chat_request.github_repository.default_branch,
+                    }
+
+                all_search_tools.append(
+                    GitHubTool(
+                        github_token=github_token,
+                        github_metadata=github_metadata,
+                        default_repository=default_repo,
+                    )
+                )
+                logger.info(f"Loaded GitHub tool for user {user_id}")
+
+    @staticmethod
+    async def execute_tool(
+        *,
+        tool_call_id: str,
+        tool_name: str,
+        tool_input: str,
+        tool_registry: Dict[str, "BaseTool"],
+    ) -> "ToolResult":
+        """Execute a search tool using the simple tool interface."""
+        try:
+            tool = tool_registry.get(tool_name)
+            if not tool:
+                logger.error(f"Tool '{tool_name}' not found in registry")
+                return ToolResult(
+                    tool_call_id=tool_call_id,
+                    name=tool_name,
+                    output=ErrorTextContent(
+                        value=f"Unknown tool: {tool_name}",
+                    ),
+                )
+
+            tool_response = await tool.run(
+                ToolCallInput(
+                    id=tool_call_id,
+                    name=tool_name,
+                    input=tool_input,
+                )
+            )
+
+            return ToolResult(
+                tool_call_id=tool_call_id,
+                name=tool_name,
+                output=tool_response.output,
+            )
+
+        except Exception as e:
+            logger.error(f"Tool execution error for '{tool_name}': {e}", exc_info=True)
+            return ToolResult(
+                tool_call_id=tool_call_id,
+                name=tool_name,
+                output=ErrorTextContent(
+                    value=f"Unexpected error executing tool: {str(e)}",
+                ),
+            )

@@ -1,0 +1,1 @@
+"""Slide templates subdomain module."""

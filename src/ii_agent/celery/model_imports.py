@@ -1,0 +1,51 @@
+"""Celery ORM model bootstrap.
+
+Imports all SQLAlchemy model modules so string-based relationships resolve
+reliably in Celery worker processes.
+"""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from importlib import import_module
+
+from sqlalchemy.orm import configure_mappers
+
+
+MODEL_MODULES: tuple[str, ...] = (
+    "ii_agent.auth.models",
+    "ii_agent.auth.users.models",
+    "ii_agent.billing.models",
+    "ii_agent.billing.usage.models",
+    "ii_agent.chat.models",
+    "ii_agent.content.media.models",
+    "ii_agent.content.skills.models",
+    "ii_agent.content.slides.models",
+    "ii_agent.content.storybook.models",
+    "ii_agent.engine.agents.models",
+    "ii_agent.engine.sandboxes.models",
+    "ii_agent.engine.v1.db.agent",
+    "ii_agent.engine.v1.db.config",
+    "ii_agent.engine.v1.db.message",
+    "ii_agent.engine.v1.db.summary",
+    "ii_agent.files.models",
+    "ii_agent.integrations.connectors.models",
+    "ii_agent.projects.models",
+    "ii_agent.projects.databases.models",
+    "ii_agent.projects.deployments.models",
+    "ii_agent.projects.subdomains.models",
+    "ii_agent.realtime.events.models",
+    "ii_agent.sessions.models",
+    "ii_agent.sessions.wishlist.models",
+    "ii_agent.settings.llm.models",
+    "ii_agent.settings.mcp.models",
+)
+
+
+@lru_cache(maxsize=1)
+def import_model_modules() -> None:
+    """Import all ORM model modules and eagerly configure SQLAlchemy mappers."""
+    for module_path in MODEL_MODULES:
+        import_module(module_path)
+    configure_mappers()
+

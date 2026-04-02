@@ -1,0 +1,2347 @@
+{
+    "common": {
+        "appName": "II-Agent",
+        "beta": "ベータ",
+        "loading": "読み込み中...",
+        "loadingMore": "さらに読み込み中...",
+        "cancel": "キャンセル",
+        "delete": "削除",
+        "save": "保存",
+        "clear": "クリア",
+        "submit": "送信",
+        "skip": "スキップ",
+        "confirm": "確認",
+        "close": "閉じる",
+        "keepEditing": "編集を続ける",
+        "copy": "コピー",
+        "share": "共有",
+        "edit": "編集",
+        "rename": "名前を変更",
+        "search": "検索",
+        "goBack": "戻る",
+        "or": "または",
+        "comingSoon": "近日公開...",
+        "copiedToClipboard": "クリップボードにコピーしました",
+        "notAvailable": "利用不可",
+        "untitled": "無題",
+        "previous": "前へ",
+        "next": "次へ",
+        "manage": "管理",
+        "download": "ダウンロード",
+        "preview": "プレビュー",
+        "saving": "保存中...",
+        "continue": "続行",
+        "retry": "再試行"
+    },
+    "auth": {
+        "welcomeTitle": "{{appName}}へようこそ",
+        "welcomeSubtitle": "今日のタスクをお手伝いします",
+        "signIn": "サインイン",
+        "signUp": "サインアップ",
+        "signOut": "ログアウト",
+        "forgotPassword": "パスワードをお忘れですか？",
+        "rememberPassword": "パスワードを覚えていますか？",
+        "noAccount": "まだアカウントをお持ちでないですか？",
+        "hasAccount": "すでにアカウントをお持ちですか？",
+        "continueWithGoogle": "Googleアカウントで続行",
+        "continueWithII": "IIアカウントで続行",
+        "loginFailed": "ログインに失敗しました。もう一度お試しください。",
+        "emailPlaceholder": "メールアドレスを入力",
+        "passwordPlaceholder": "パスワードを入力",
+        "namePlaceholder": "名前を入力",
+        "newPasswordPlaceholder": "新しいパスワード",
+        "confirmPasswordPlaceholder": "新しいパスワードを確認",
+        "validation": {
+            "invalidEmail": "無効なメールアドレス",
+            "passwordRequired": "パスワードは必須です",
+            "passwordMinLength": "パスワードは6文字以上である必要があります",
+            "nameRequired": "名前は必須です",
+            "confirmPassword": "パスワードを確認してください",
+            "passwordMismatch": "パスワードが一致しません"
+        },
+        "forgotPasswordTitle": "パスワードをお忘れですか？",
+        "forgotPasswordSubtitle": "ご安心ください、パスワードの回復をお手伝いします",
+        "createNewPassword": "新しいパスワードを作成",
+        "resetPassword": "パスワードをリセット",
+        "continue": "続行",
+        "privacyNotice": "II Agentサービスを提供するために、お客様のプロンプトとアップロードを処理します。デフォルトでは、お客様のII Agentコンテンツをモデルのトレーニングに使用しません。",
+        "privacyNoticeLink": "詳細については、製品プライバシー通知をご覧ください。"
+    },
+    "home": {
+        "greeting": "こんにちは",
+        "whatCanIDo": "今日は何をお手伝いしましょうか？",
+        "askAnything": "何でも聞いてください...",
+        "thinkingWith": "次で思考中",
+        "readyToVisualize": "アイデアを可視化する準備はできていますか？",
+        "learnMoreAboutMediaGenerate": "メディア生成について詳しく見る",
+        "learnMoreModal": {
+            "title": "クリエイティブな画像を生成",
+            "featureTitle": "複数モデル",
+            "featureDescription": "Nano Banana Pro、GPT Image 1.5 などのAIモデルを切り替え可能。モデルごとに得意分野が違うので、アイデアに合うものを選んでください。",
+            "items": [
+                {
+                    "title": "複数モデル",
+                    "description": "Nano Banana Pro、GPT Image 1.5 などのAIモデルを切り替え可能。モデルごとに得意分野が違うので、アイデアに合うものを選んでください。"
+                },
+                {
+                    "title": "多彩なスタイル",
+                    "description": "Starry、Pixel、3D、Realistic、Clay など。ひとつのアイデアで無限の表現。全部試してみよう。"
+                },
+                {
+                    "title": "クリエイティブツール",
+                    "description": "集合写真、背景差し替え、髪型変更、写真復元などが簡単に。大きな編集も小さな手間で。"
+                },
+                {
+                    "title": "高度モード",
+                    "description": "被写体・シーン・スタイルをロックして、クリーンで一貫した結果に。キャラクターやシリーズ、ブランド表現に最適。"
+                }
+            ],
+            "videoTitle": "動画を生成",
+            "videoItems": [
+                {
+                    "title": "開始フレーム / 終了フレーム",
+                    "description": "Nano Banana Pro、GPT Image 1.5 などのAIモデルを切り替え可能。モデルごとに得意分野が違うので、アイデアに合うものを選んでください。"
+                },
+                {
+                    "title": "参照画像",
+                    "description": "Starry、Pixel、3D、Realistic、Clay など。ひとつのアイデアで無限の表現。全部試してみよう。"
+                }
+            ],
+            "storybookTitle": "魔法の絵本を作ろう",
+            "storybookItems": [
+                {
+                    "title": "複数の生成モデル",
+                    "description": "Nano Banana Pro、GPT Image 1.5 などの強力なAIモデルを切り替え可能。モデルごとに個性が違う—あなたのストーリーテラーを選ぼう。"
+                },
+                {
+                    "title": "多彩なスタイル",
+                    "description": "Clay / ストップモーションからFabric、ジブリ風、油絵、Magic Flowまで。すべての物語に独自のビジュアルソウルを。"
+                },
+                {
+                    "title": "多彩なジャンル",
+                    "description": "楽しくポップに、クラシックホラーに、スーパーヒーローアクションに、ノワール探偵に。あなたの物語、あなたの気分。"
+                },
+                {
+                    "title": "ボイスオーバー",
+                    "description": "表現力豊かなAIナレーションでページを音声に。子供向け、読み聞かせ、ハンズフリーリスニングに最適。"
+                },
+                {
+                    "title": "BGM",
+                    "description": "映画のようなBGMで雰囲気を演出。ソフト、ダーク、エピック、コージー—物語が生き生きと。"
+                },
+                {
+                    "title": "リッチダイアログ（ノベルモード）",
+                    "description": "深い会話、内なる思考、プロットツイスト。小説のように読め、物語のように感じる。"
+                },
+                {
+                    "title": "多言語対応",
+                    "description": "多くの言語で即座に物語を伝えよう。一つの世界、無限の読者。"
+                },
+                {
+                    "title": "テキスト付き",
+                    "description": "テキストはページ上または独立したストーリーパネルとして表示。クリーンなレイアウト、読みやすさ、完全なコントロール。"
+                },
+                {
+                    "title": "マンガレイアウト",
+                    "description": "ダイナミックなコマ割り、表現豊かな吹き出し、大胆な効果音。純粋なマンガエネルギー—ページをめくるたびに。"
+                }
+            ],
+            "tryNow": "今すぐ試す",
+            "imageAlt": "AIが生成したカラフルなオウム"
+        },
+        "disclaimer": "{{appName}} の出力には誤りや漏れが含まれる可能性があります。Intelligent Internet はワークスペースのデータでモデルを学習しません。"
+    },
+    "dashboard": {
+        "title": "ダッシュボード",
+        "tabs": {
+            "all": "すべて",
+            "recent": "最近",
+            "favorite": "お気に入り"
+        },
+        "loadingFavorites": "お気に入りのセッションを読み込み中...",
+        "noFavorites": "お気に入りのセッションはまだありません",
+        "deleteSession": "セッションを削除",
+        "deleteConfirmation": "このセッションを削除してもよろしいですか？この操作は取り消せません。",
+        "deleteConfirmationNamed": "「{{sessionName}}」を削除してもよろしいですか？この操作は取り消せません。",
+        "favorite": "お気に入り",
+        "unfavorite": "お気に入り解除"
+    },
+    "sidebar": {
+        "newChat": "新しいチャット",
+        "chats": "チャット",
+        "projects": "プロジェクト",
+        "seeMore": "もっと見る",
+        "selectChats": "チャットを選択",
+        "selectProjects": "プロジェクトを選択",
+        "selectAll": "すべて選択",
+        "deselectAll": "選択解除",
+        "deleteSelected": "削除 ({{count}})",
+        "bulkDeleteChatsTitle": "チャットを削除",
+        "bulkDeleteChatsConfirmation": "{{count}}件のチャットを削除しますか？この操作は取り消せません。",
+        "bulkDeleteProjectsTitle": "プロジェクトを削除",
+        "bulkDeleteProjectsConfirmation": "{{count}}件のプロジェクトを削除しますか？この操作は取り消せません。",
+        "bulkDeleteSuccess": "{{count}}件を削除しました。",
+        "bulkDeletePartialFailure": "{{count}}件を削除できませんでした。",
+        "bulkDeleteError": "削除に失敗しました。もう一度お試しください。"
+    },
+    "searchHistory": {
+        "trigger": "チャットを検索",
+        "title": "検索",
+        "placeholder": "チャットを検索...",
+        "groups": {
+            "today": "今日",
+            "yesterday": "昨日",
+            "last7Days": "直近7日",
+            "last30Days": "直近30日"
+        }
+    },
+    "settings": {
+        "title": "設定",
+        "tabs": {
+            "general": "一般",
+            "account": "アカウント",
+            "notifications": "通知",
+            "connectors": "コネクタ",
+            "dataControls": "データ管理",
+            "usage": "使用量",
+            "subscription": "サブスクリプション"
+        },
+        "general": {
+            "theme": "テーマ",
+            "themeDescription": "{{appName}}のお好みのテーマを選択してください。",
+            "selectTheme": "テーマを選択",
+            "system": "システム",
+            "dark": "ダーク",
+            "light": "ライト",
+            "language": "言語",
+            "languageDescription": "{{appName}}のお好みの言語を選択してください。",
+            "selectLanguage": "言語を選択"
+        },
+        "account": {
+            "linkedAccounts": "連携済みアカウント",
+            "paymentInvoices": "支払いと請求書",
+            "planTitle": "II-Agent {{plan}} プラン",
+            "planRenewal": "プランは{{date}}に自動更新されます。",
+            "security": "セキュリティ",
+            "deleteAccount": "アカウントを削除",
+            "deleteAccountTitle": "アカウントを削除",
+            "deleteAccountConfirmation": "アカウントを削除してもよろしいですか？この操作は取り消せず、ログインできなくなります。",
+            "deleting": "削除中...",
+            "accountDeleted": "アカウントが正常に削除されました",
+            "deleteAccountError": "アカウントを削除できませんでした。もう一度お試しください。",
+            "stripePortalError": "Stripeポータルを開けませんでした。もう一度お試しください。"
+        },
+        "dataControls": {
+            "title": "データ管理",
+            "sharedLinks": "共有リンク",
+            "sharedLinksDescription": "共有した会話を管理",
+            "publicLink": "公開リンク",
+            "viewLink": "表示",
+            "deleteLink": "削除",
+            "sharedChatsCount": "共有チャット ({{count}})",
+            "openChat": "チャットを開く",
+            "unpublishTitle": "セッションを非公開にする",
+            "unpublishDescription": "このセッションを非公開にしますか？公開リンクは無効になります。",
+            "deleteConfirmation": "この共有リンクを削除してもよろしいですか？この操作は取り消せません。",
+            "noSharedLinks": "まだ会話を共有していません",
+            "linkDeleted": "共有リンクが正常に削除されました",
+            "deleteError": "共有リンクの削除に失敗しました"
+        }
+    },
+    "userMenu": {
+        "getHelp": "ヘルプを受ける"
+    },
+    "chat": {
+        "loadingHistory": "会話履歴を読み込み中...",
+        "emptyState": "何でも聞いてください—アシスタントがお手伝いします。",
+        "askPlaceholder": "何でも聞いてください...",
+        "thinking": "考え中...",
+        "thinkingStatus": "{{appName}} 考え中",
+        "finishReasons": {
+            "maxTokens": "最大トークン制限に達したため、応答が停止しました。",
+            "canceled": "応答がキャンセルされました。",
+            "error": "エラーにより応答が停止しました。",
+            "permissionDenied": "権限拒否により応答が停止しました。",
+            "paused": "会話が一時停止されました。別のメッセージを送信して続行できます。"
+        },
+        "suggestions": {
+            "general": [
+                "AIコーディングアシスタントを比較するランディングページを作成",
+                "ブランドマーク入りのサイバーパンクなメカポスターをデザイン",
+                "ジェネレーティブアート向けのレスポンシブなポートフォリオを開発",
+                "気候指標のインタラクティブなダッシュボードサイトをデザイン"
+            ],
+            "media": [
+                "曇りガラス上のシネマティックな香水ビジュアルをレンダリング",
+                "ブランドマーク入りのサイバーパンクなメカポスターをデザイン",
+                "製品組み立てを強調したストップモーション動画を撮影",
+                "大胆なライティング変化のある15秒ヘアスタイルデモを撮影",
+                "新作ヘッドホンのためのシュールなポスターアートを作成"
+            ],
+            "slide": [
+                "B2Bソフトウェアの営業デックを作成",
+                "サイバーセキュリティ研修スライドを作成",
+                "スタートアップ資金調達のピッチデックを作成",
+                "将来の仕事に対するAIの影響を説明",
+                "製品ローンチのアップデートデックを作成"
+            ],
+            "slide_nano_banana": [
+                "魅力的なAIスタートアップのピッチデックを作成",
+                "視覚的に印象的な四半期レポートスライドをデザイン",
+                "美しいインフォグラフィックのプレゼン資料を作成",
+                "印象的なビジュアルの創造的な製品ローンチデックを作成",
+                "プロフェッショナルなカンファレンス基調講演スライドを作成"
+            ],
+            "website_build": [
+                "気候指標のインタラクティブなダッシュボードサイトをデザイン",
+                "AIコーディングアシスタントを比較するランディングページを作成",
+                "ジェネレーティブアート向けのレスポンシブなポートフォリオを開発",
+                "検索可能なサポートワークフローのナレッジベースを構築"
+            ],
+            "deep_research": [
+                "量子コンピューティングの現状と実用的なアプリケーションを調査する",
+                "主要経済圏におけるAI規制政策のグローバルな影響を分析する",
+                "再生可能エネルギー貯蔵技術の最新ブレークスルーを調査する",
+                "主要な大規模言語モデルの推論能力と事実精度を比較する"
+            ],
+            "fast_research": [
+                "最新のiPhoneリリースの主な機能をまとめる",
+                "2025年にトレンドのプログラミング言語は何ですか？",
+                "火星探査ミッションの最新情報を見つける",
+                "電気自動車普及の現状を簡潔にまとめてください"
+            ]
+        },
+        "sageSuggestions": {
+            "general": [
+                "人型ロボットが労働力に与える影響について政策助言を行う",
+                "持続可能な砂漠インフラのための経済的インセンティブを調査する",
+                "安全な電子政府サービス利用を示す画像コンセプトを作成する"
+            ],
+            "media": [
+                "安全な電子政府サービス利用を示す画像コンセプトを作成する",
+                "砂漠の気候レジリエンス指標を強調する画像シリーズを作成する",
+                "緊急時ドローン配備プロトコルの動画ストーリーボードを作成する",
+                "公開AI監督に関するパブリックコンサルテーション用の解説動画ドラフトを作成する"
+            ],
+            "slide": [
+                "気候レジリエンス資金優先度に関するブリーフィングスライドを作成",
+                "スマートシティのデータプライバシー保護策に関する評議会向け更新を作成",
+                "自律移動規制に関する公聴会デックのアウトラインを作成",
+                "公務員向けの責任あるAI導入に関する研修スライドを作成"
+            ],
+            "slide_nano_banana": [
+                "気候レジリエンス資金優先度に関するブリーフィングスライドを作成",
+                "スマートシティのデータプライバシー保護策に関する評議会向け更新を作成",
+                "自律移動規制に関する公聴会デックのアウトラインを作成",
+                "公務員向けの責任あるAI導入に関する研修スライドを作成"
+            ],
+            "website_build": [
+                "オープンデータ請求ワークフローを詳細に説明する公開ポータルを構築",
+                "インフラ近代化のマイルストーンを追跡するダッシュボードを設計",
+                "ゾーニング近代化のためのコミュニティフィードバックサイトを開発",
+                "公務員のリスキリング施策のためのリソースハブを作成"
+            ],
+            "deep_research": [
+                "国境を越えたデータガバナンスの枠組みとコンプライアンスのギャップを分析する",
+                "ユニバーサルベーシックインカムの試験プログラムの社会経済的影響を調査する",
+                "重要な公共インフラに対する新たなサイバーセキュリティ脅威を調査する",
+                "公的医療システムにおけるAI支援診断の効果を評価する"
+            ],
+            "fast_research": [
+                "連邦データプライバシー規制の最近の改正をまとめる",
+                "最新の公共部門AIの導入ベンチマークは何ですか？",
+                "主要都市圏のスマートシティパイロットプログラムの最新情報を見つける",
+                "現在の政府デジタルトランスフォーメーション施策の概要を教えてください"
+            ]
+        }
+    },
+    "codeEditor": {
+        "files": "ファイル"
+    },
+    "chain": {
+        "thinking": {
+            "streaming": "考え中...",
+            "complete": "考え中",
+            "completeWithDuration": "考え中 ({{seconds}}秒)"
+        },
+        "codeInterpreter": "コードインタープリタ"
+    },
+    "question": {
+        "mode": {
+            "chat": "チャットモード",
+            "agent": "エージェントモード"
+        },
+        "enhancePrompt": "プロンプトを強化",
+        "voiceInput": "音声入力",
+        "voiceInputListening": "聞き取り中...",
+        "voiceInputUnavailable": "音声入力は対応していません"
+    },
+    "plan": {
+        "modification": {
+            "title": "プランをどのように変更しますか？"
+        }
+    },
+    "milestones": {
+        "saveError": "マイルストーンの変更を保存できませんでした",
+        "emptyError": "マイルストーンは空にできません",
+        "newMilestone": "新しいマイルストーン",
+        "collapse": "マイルストーンを折りたたむ",
+        "viewAll": "すべてのマイルストーンを見る",
+        "modifyPlan": "プランを変更",
+        "addMilestone": "マイルストーンを追加",
+        "helpMode": "ヘルプモードです",
+        "designMode": "ライブ編集モードです",
+        "nextMilestone": "次のマイルストーン",
+        "status": "ステータス",
+        "allCompleted": "すべてのマイルストーンが完了しました！",
+        "build": "ビルド",
+        "buildAll": "すべてビルド",
+        "aria": {
+            "edit": "マイルストーンを編集",
+            "delete": "マイルストーンを削除"
+        }
+    },
+    "designMode": {
+	        "toolbar": {
+	            "responsive": "レスポンシブ",
+            "deviceGroups": {
+                "desktop": "デスクトップ / ラップトップ",
+                "tablet": "タブレット",
+                "mobile": "モバイル"
+            },
+            "rotateDevice": "デバイスを回転",
+            "rotationNotAvailable": "デスクトップでは回転できません",
+            "zoomOut": "縮小",
+            "zoomIn": "拡大",
+            "slideDeck": "スライドデッキ",
+            "changes": "変更",
+            "unsavedChangeZero": "未保存の変更 0 件",
+            "unsavedChanges_one": "未保存の変更 {{count}} 件",
+            "unsavedChanges_other": "未保存の変更 {{count}} 件",
+            "changesUnsaved_one": "{{count}} 件の変更が未保存",
+            "changesUnsaved_other": "{{count}} 件の変更が未保存",
+            "noUnsaved": "変更はありません",
+            "syncing": "同期中...",
+            "select": "選択",
+            "selecting": "選択中",
+            "selected_one": "{{count}} 件選択",
+            "selected_other": "{{count}} 件選択",
+            "delete": "削除",
+            "deleteSelected": "選択した要素を削除",
+            "multiSelectDelete": "複数選択して削除",
+            "selectAll": "すべて選択",
+            "deselectAll": "すべて選択解除",
+            "exitMultiSelect": "選択モードを終了",
+            "interactMode": "ページと操作",
+            "selectMode": "要素を選択",
+	            "undo": "元に戻す",
+	            "redo": "やり直す"
+	        },
+	        "ai": {
+	            "placeholder": "達成したいことを説明してください ...",
+	            "planMode": "Plan Mode"
+	        },
+	        "deleteDialog": {
+	            "title": "要素を削除",
+	            "warning": "選択した要素をページから削除します。必要に応じて以前のバージョンを復元して元に戻すことができます。"
+	        },
+        "syncDialog": {
+            "title": "すべての変更を同期",
+            "descriptionEmpty": "すべての変更を同期してもよろしいですか？最新の更新が現在のバージョンに適用されます。",
+            "description_one": "すべての変更を同期してもよろしいですか？最新の更新が現在のバージョンに適用されます。",
+            "description_other": "すべての変更を同期してもよろしいですか？最新の更新が現在のバージョンに適用されます。",
+            "confirm": "確認"
+        },
+        "preview": {
+            "syncingToSandbox": "編集した変更を sandbox に同期中...",
+            "changeOfTotal": "変更 {{current}} / {{total}}",
+            "starting": "開始中...",
+            "syncStats": "適用済み: {{applied}}, エラー: {{errors}}"
+        },
+        "error": {
+            "title": "ライブ編集モードを利用できません",
+            "hint": "ライブ編集モードを終了するには、ページを再読み込みするか「Chat」タブに切り替えてください。"
+        },
+        "errors": {
+            "failedToLoadPreview": "ライブ編集モードのプレビューを読み込めませんでした。更新してもう一度お試しください。",
+            "runtimeNotResponding": "ライブ編集モードのランタイムが応答していません。プレビューがライブ編集モードに対応していない可能性があります。"
+        },
+        "messages": {
+            "syncedDesignChanges_one": "サンドボックスにデザイン変更を {{count}} 件同期しました。",
+            "syncedDesignChanges_other": "サンドボックスにデザイン変更を {{count}} 件同期しました。",
+            "syncedDesignChangesDefault": "サンドボックスにデザイン変更を同期しました。",
+            "syncedSlideDesignChanges_one": "サンドボックスにスライドのデザイン変更を {{count}} 件同期しました。",
+            "syncedSlideDesignChanges_other": "サンドボックスにスライドのデザイン変更を {{count}} 件同期しました。",
+            "syncedSlideDesignChangesDefault": "サンドボックスにスライドのデザイン変更を同期しました。"
+        },
+        "toasts": {
+            "missingSessionId": "セッションIDがありません。",
+            "selectElementFirst": "プレビューで要素を先に選択してください。",
+            "snapshotFailed": "現在のページ構造を読み取れませんでした。プレビューを再読み込みしてもう一度お試しください。",
+            "aiNoApplicableChanges": "AI から適用可能な変更が返されませんでした。",
+            "aiApplyFailed": "AI の変更を適用できませんでした。",
+            "noSupportedChanges": "同期できる変更がありません。",
+            "changesNotMappedToSlide": "一部の変更をスライドに関連付けできませんでした。更新してもう一度お試しください。",
+            "syncSuccessApplied": "同期しました（{{applied}} 件適用）。",
+            "syncSuccess": "サンドボックスに同期しました。",
+            "partialSync": "一部同期しました（{{applied}}/{{total}} 件適用）。",
+            "syncFailed": "サンドボックスへの同期に失敗しました。",
+            "saveFailed": "変更の保存に失敗しました。"
+        },
+        "panel": {
+            "noSelection": {
+                "title": "プレビューで要素を選択してください",
+                "description": "編集を始めるにはプレビュー内の要素をクリックしてください。"
+            },
+            "elementPill": {
+                "none": "未選択",
+                "link": "リンク",
+                "button": "ボタン",
+                "image": "画像",
+                "input": "入力",
+                "textarea": "テキストエリア",
+                "select": "選択",
+                "text": "テキスト"
+            },
+            "inactive": {
+                "title": "ライブ編集モードが無効です",
+                "description": "編集を開始するには、プレビューのツールバーで「Live Editing Mode」をクリックしてください。"
+            },
+            "loading": "ライブ編集ツールを読み込み中...",
+            "sections": {
+                "content": "テキスト内容",
+                "colors": "カラー",
+                "spacing": "間隔",
+                "shadow": "シャドウ効果",
+                "typography": "タイポグラフィ",
+                "border": "ボーダー",
+                "size": "サイズと外観"
+            },
+            "labels": {
+                "content": "内容",
+                "textColor": "文字色",
+                "backgroundColor": "背景色",
+                "padding": "内側余白",
+                "margin": "外側余白",
+                "shadow": "シャドウ",
+                "fontFamily": "フォントファミリー",
+                "fontWeight": "フォントの太さ",
+                "fontSize": "フォントサイズ",
+                "lineHeight": "行の高さ",
+                "letterSpacing": "文字間隔 (em)",
+                "textAlignment": "テキストの配置",
+                "textDecoration": "テキスト装飾",
+                "borderColor": "ボーダー色",
+                "borderStyle": "ボーダーのスタイル",
+                "borderWidth": "ボーダー幅",
+                "width": "幅",
+                "height": "高さ",
+                "opacity": "不透明度",
+                "borderRadius": "角丸"
+            },
+            "placeholders": {
+                "select": "選択...",
+                "font": "フォントを選択",
+                "weight": "太さ",
+                "lineHeight": "例: 1.75",
+                "letterSpacing": "例: 0",
+                "width": "例: 320px",
+                "height": "例: 48px",
+                "aiPrompt": "AIにデザイン変更を依頼..."
+            },
+            "alignment": {
+                "left": "左揃え",
+                "center": "中央揃え",
+                "right": "右揃え",
+                "justify": "両端揃え"
+            },
+            "decoration": {
+                "italic": "イタリック",
+                "underline": "下線",
+                "lineThrough": "取り消し線",
+                "overline": "上線"
+            },
+            "borderStyles": {
+                "none": "なし",
+                "solid": "実線",
+                "dashed": "破線",
+                "dotted": "点線",
+                "double": "二重線"
+            },
+            "shadowPresets": {
+                "none": "なし",
+                "small": "小",
+                "medium": "中",
+                "large": "大"
+            },
+            "sides": {
+                "top": "上",
+                "right": "右",
+                "bottom": "下",
+                "left": "左"
+            },
+            "changes": {
+                "title": "変更 ({{count}})",
+                "clearAll": "すべてクリア",
+                "emptyTitle": "保留中の変更はありません",
+                "emptyDescription": "ここに表示するにはプレビューで要素を変更してください",
+                "revert": "元に戻す",
+                "move": "移動",
+                "icon": "アイコン",
+                "aiChange": "AIの変更",
+                "none": "(なし)",
+                "only": "(のみ)",
+                "before": "前 #{{id}}",
+                "after": "後 #{{id}}"
+            }
+        },
+        "aiChatModal": {
+            "title": "AIデザインアシスタント",
+            "selectedElementLabel": "選択中の要素:",
+            "emptyTitle": "変更したい内容を入力してください",
+            "emptyDescription": "例: \"これを赤にする\" または \"パディングを増やす\"",
+            "thinking": "考え中...",
+            "placeholder": "変更内容を入力...",
+            "error": "エラーが発生しました。もう一度お試しください。"
+        },
+        "inspectorSidebar": {
+            "title": "インスペクター",
+            "changesCount_one": "{{count}} 件の変更",
+            "changesCount_other": "{{count}} 件の変更",
+            "resetStyles": "スタイルをリセット",
+            "noSelectionInline": "要素を選択",
+            "noSelectionMessage": "編集を始めるにはプレビューで要素をクリックしてください",
+            "sections": {
+                "textContent": "テキスト内容",
+                "typography": "タイポグラフィ",
+                "colors": "カラー",
+                "border": "ボーダー",
+                "padding": "パディング"
+            },
+            "labels": {
+                "content": "内容",
+                "fontFamily": "フォントファミリー",
+                "fontSize": "フォントサイズ",
+                "fontWeight": "フォントの太さ",
+                "textColor": "文字色",
+                "backgroundColor": "背景色",
+                "quickColors": "クイックカラー",
+                "borderRadius": "角丸",
+                "top": "上",
+                "bottom": "下",
+                "left": "左",
+                "right": "右"
+            },
+            "placeholders": {
+                "textContent": "テキストを入力...",
+                "fontFamily": "フォントを選択",
+                "fontWeight": "太さを選択"
+            }
+        }
+    },
+    "agent": {
+        "settings": "エージェント設定",
+        "chatSettings": "チャット設定",
+        "model": "モデル",
+        "tools": "ツール",
+        "sessionNotFound": "404 - セッションが見つかりません",
+        "sessionNotFoundDescription": "お探しのセッションは存在しないか、削除されています。",
+        "failedToLoad": "セッションの読み込みに失敗しました",
+        "awake": {
+            "sleeping": "スリープ中",
+            "toSavePower": "省電力のため",
+            "wakeMeUp": "起こして"
+        },
+        "badge": {
+            "mainAgent": "メインエージェント",
+            "subAgent": "サブエージェント"
+        },
+        "steps": {
+            "plan": "プラン",
+            "build": "ビルド",
+            "result": "結果"
+        },
+        "attachments": {
+            "openAttachment": "添付ファイルを開く"
+        },
+        "editQuestion": {
+            "placeholder": "何でも聞いてください..."
+        },
+        "controller": {
+            "liveUpdate": "ライブ更新",
+            "jumpToLatest": "最新へ移動"
+        },
+        "files": {
+            "loading": "ファイルを読み込み中...",
+            "empty": "ファイルがありません",
+            "fileTypes": {
+                "tsx": "TSX",
+                "ts": "TS",
+                "js": "JS",
+                "jsx": "JSX",
+                "css": "CSS",
+                "json": "JSON",
+                "sql": "SQL",
+                "md": "Markdown",
+                "pdf": "PDF",
+                "txt": "テキスト",
+                "png": "PNG",
+                "jpg": "JPG",
+                "jpeg": "JPEG",
+                "gif": "GIF",
+                "svg": "SVG",
+                "file": "ファイル"
+            },
+            "size": {
+                "units": {
+                    "bytes": "バイト",
+                    "kb": "KB",
+                    "mb": "MB",
+                    "gb": "GB",
+                    "tb": "TB"
+                }
+            }
+        },
+        "tasks": {
+            "inProgress": "進行中",
+            "progress": "タスクの進捗"
+        },
+        "browser": {
+            "openInNewTab": "新しいタブで開く",
+            "alt": "ブラウザプレビュー"
+        },
+        "searchBrowser": {
+            "resultsCount": "{{count}}件の結果"
+        },
+        "chatBox": {
+            "loadingSession": "セッションを読み込み中",
+            "errors": {
+                "socketNotOpen": "ソケットが開いていません。もう一度お試しください。",
+                "socketNotOpenRetry": "ソケットが開いていません。もう一度お試しください。"
+            }
+        },
+        "resultBrowser": {
+            "placeholder": "結果ブラウザー"
+        },
+        "toolConfirmation": {
+            "processingResponse": "応答を処理中...",
+            "unknownTool": "不明なツール",
+            "tool": "ツール",
+            "viewArguments": "引数を表示",
+            "yesContinue": "はい、続行",
+            "noCancel": "いいえ、キャンセル"
+        },
+        "checkpoint": {
+            "ready": "チェックポイントの準備ができました",
+            "projectLabel": "プロジェクト",
+            "revisionLabel": "リビジョン"
+        },
+        "subagent": {
+            "defaultName": "サブエージェント",
+            "action": "アクション",
+            "actions": "アクション",
+            "status": {
+                "running": "実行中",
+                "completed": "完了",
+                "failed": "失敗"
+            },
+            "summaryTitle": "概要",
+            "totalActionsLabel": "総アクション数",
+            "durationLabel": "所要時間"
+        },
+        "publish": {
+            "publishing": "公開中...",
+            "viewDeployment": "デプロイを表示",
+            "publish": "公開",
+            "dialog": {
+                "title": "Vercelに公開",
+                "description": "チェックポイント済みのプロジェクトを公開するために Vercel API キーを入力してください。"
+            },
+            "form": {
+                "vercelApiKeyLabel": "Vercel API Key",
+                "vercelApiKeyPlaceholder": "Vercel API キーを入力"
+            },
+            "errors": {
+                "checkpointMetadataMissing": "チェックポイントのメタデータにプロジェクト情報がありません。",
+                "vercelApiKeyRequired": "Vercel API キーを入力してください。",
+                "failedToPublish": "プロジェクトの公開に失敗しました。もう一度お試しください。",
+                "noCheckpointAvailable": "公開できるチェックポイントがありません。チェックポイントが作成されるまでお待ちください。"
+            },
+            "toasts": {
+                "requestSent": "公開リクエストを送信しました。アクティビティフィードでステータス更新を確認してください。"
+            }
+        },
+        "chatMessage": {
+            "waitingForInput": "{{appName}} が入力を待っています。",
+            "completed": "{{appName}} がタスクを完了しました。",
+            "allowReview": "{{appName}} に結果をレビューさせる",
+            "review": "レビュー",
+            "stopped": "{{appName}} が停止しました",
+            "replaying": "{{appName}} がタスクを再生中...",
+            "skipToResults": "結果へスキップ"
+        },
+        "messageContent": {
+            "file": "ファイル",
+            "files": "ファイル",
+            "thought": "思考"
+        },
+        "secrets": {
+            "environmentVariables": "環境変数",
+            "placeholder": "{{key}}を入力",
+            "projectNotInited": "プロジェクトがまだ初期化されていません。環境変数はプロジェクト作成後に保存されます。",
+            "continueAnyway": "続行",
+            "toasts": {
+                "saved": "環境変数を保存しました。"
+            },
+            "errors": {
+                "atLeastOneValue": "少なくとも1つの secret 値を入力してください",
+                "missingContext": "secrets を保存するためのツールコンテキストがありません",
+                "saveFailed": "環境変数の保存に失敗しました"
+            }
+        },
+        "slides": {
+            "defaultName": "プレゼンテーション",
+            "slideTitle": "スライド {{number}}",
+            "slideAlt": "スライド {{number}}",
+            "errors": {
+                "enterFullscreen": "フルスクリーンに切り替えできませんでした",
+                "loadSlides": "スライドの読み込みに失敗しました",
+                "updateSlide": "スライドの更新に失敗しました",
+                "downloadSlides": "スライドのダウンロードに失敗しました"
+            },
+            "toasts": {
+                "slideUpdated": "スライドを更新しました",
+                "downloadSuccess": "スライドをダウンロードしました"
+            },
+            "actions": {
+                "downloadAsPdf": "PDFとしてダウンロード",
+                "presentFullscreen": "フルスクリーンで表示"
+            },
+            "downloadOverlay": {
+                "generatingPdf": "PDFを生成中...",
+                "starting": "開始中...",
+                "slideOfTotal": "スライド {{current}} / {{total}}"
+            }
+        },
+        "action": {
+            "more": "もっと見る",
+            "less": "折りたたむ",
+            "titles": {
+                "deepResearching": "深掘り調査",
+                "fastResearching": "高速調査",
+                "creatingDesignDocument": "デザインドキュメント作成",
+                "codex": "Codex",
+                "delegatingTo": "{{name}} に委任中",
+                "github": "GitHub",
+                "claudeCode": "Claude Code",
+                "codexExecuting": "Codex 実行中",
+                "codexReviewing": "Codex レビュー中",
+                "a2aAgent": "A2A エージェント",
+                "thinking": "思考中",
+                "searching": "検索中",
+                "imageSearch": "画像検索",
+                "getDatabaseConnection": "データベース接続取得中",
+                "getOpenAiKey": "OpenAI キー取得中",
+                "browsing": "ブラウジング中",
+                "bash": "Bash",
+                "bashInit": "Bash セッション開始中",
+                "bashView": "Bash セッション表示中",
+                "bashStop": "Bash セッション停止中",
+                "bashKill": "Bash セッション終了中",
+                "bashList": "Bash セッション一覧取得中",
+                "bashWrite": "Bash プロセスに書き込み中",
+                "shellExec": "コマンド実行中",
+                "shellWrite": "ターミナルに書き込み中",
+                "shellKill": "プロセス終了中",
+                "shellView": "Shell 表示中",
+                "shellWait": "Shell 待機中",
+                "readFile": "ファイル読み込み中",
+                "createFile": "ファイル作成中",
+                "editFile": "ファイル編集中",
+                "deploying": "デプロイ中",
+                "deployment": "デプロイ",
+                "extractText": "テキスト抽出中",
+                "transcribeAudio": "音声文字起こし中",
+                "generateAudio": "音声生成中",
+                "generateVideo": "動画生成中",
+                "generateLongVideoFromText": "テキストから長尺動画生成中",
+                "generateLongVideoFromImage": "画像から長尺動画生成中",
+                "generateImage": "画像生成中",
+                "readRemoteImage": "リモート画像読み込み中",
+                "presentationAgent": "プレゼンテーションエージェント使用中",
+                "startingProject": "プロジェクト起動中",
+                "restartingDevServers": "開発サーバー再起動中",
+                "checkingServerStatus": "サーバー状態確認中",
+                "reviewerAgent": "レビューエージェント",
+                "browserClick": "要素をクリック中",
+                "browserClose": "ブラウザを閉じる",
+                "browserConsoleMessages": "コンソールメッセージ取得中",
+                "browserDrag": "要素をドラッグ中",
+                "browserEvaluate": "JavaScript 評価中",
+                "browserHandleDialog": "ダイアログ処理中",
+                "browserHover": "要素にホバー中",
+                "browserNavigate": "URL に移動中",
+                "browserNetworkRequests": "ネットワークリクエスト取得中",
+                "browserPressKey": "キー入力中",
+                "browserSelectOption": "オプション選択中",
+                "browserSnapshot": "スナップショット取得中",
+                "browserScreenshot": "スクリーンショット取得中",
+                "browserType": "テキスト入力中",
+                "browserWaitFor": "要素待機中",
+                "browserTabClose": "タブを閉じる",
+                "browserTabList": "タブ一覧取得中",
+                "browserTabNew": "新しいタブを開く",
+                "browserTabSelect": "タブ選択中",
+                "browserMouseClick": "座標クリック中",
+                "browserMouseDrag": "座標ドラッグ中",
+                "browserMouseMove": "座標へマウス移動中",
+                "browserNavigation": "ブラウザナビゲーション",
+                "waiting": "待機中",
+                "browserViewElements": "操作可能な要素を表示中",
+                "browserScrollDown": "下へスクロール中",
+                "browserScrollUp": "上へスクロール中",
+                "browserSwitchTab": "タブ切替中",
+                "browserGetSelectOptions": "セレクトオプション取得中",
+                "browserSelectDropdownOption": "ドロップダウン選択中",
+                "browserRestart": "ブラウザ再起動中",
+                "browserEnterText": "テキスト入力中",
+                "browserEnterMultipleTexts": "複数テキスト入力中",
+                "ls": "ファイル一覧",
+                "glob": "ファイルパターン検索",
+                "grep": "テキスト検索",
+                "registerPort": "ポート登録中",
+                "mcpTool": "MCP ツール",
+                "agentTask": "エージェントタスク",
+                "slideWrite": "スライド作成中",
+                "slideEdit": "スライド編集中",
+                "slideGenerate": "スライド生成中",
+                "editing": "編集中",
+                "slideApplyPatch": "スライド編集中",
+                "viewFile": "ファイル表示中",
+                "undoEdit": "編集を元に戻す",
+                "fileEditor": "ファイルエディター",
+                "saveCheckpoint": "チェックポイント保存中",
+                "registerStripeWebhook": "Stripe Webhook 登録中"
+            },
+            "values": {
+                "codexOperation": "Codex 操作",
+                "waitSeconds": "{{seconds}} 秒",
+                "viewElements": "要素を表示",
+                "page": "ページ",
+                "restart": "再起動",
+                "fieldsCount": "{{count}} フィールド",
+                "slideNumber": "スライド {{number}}"
+            }
+        },
+        "build": {
+            "titles": {
+                "bootingFullstackProject": "フルスタックプロジェクトを起動中",
+                "fetchingServerStatus": "サーバー状態を取得中",
+                "searchingWithQuery": "検索中: \"{{query}}\"",
+                "crawling": "クロール中",
+                "generating": "生成中"
+            },
+            "header": {
+                "devtools": {
+                    "startingProject": "プロジェクト開始中",
+                    "restartingServers": "サーバー再起動中",
+                    "serverLogs": "サーバーログ",
+                    "default": "開発者ツール"
+                },
+                "executing": "実行中",
+                "generatingSlide": "スライド {{number}} を生成中"
+            },
+            "devtools": {
+                "titles": {
+                    "bootingEnvironment": "フルスタック環境を起動中",
+                    "rollingRestartInProgress": "ローリング再起動中"
+                }
+            },
+            "imageAlt": "画像 {{number}}",
+            "placeholder": "完了すると、アプリ画面がここに表示されます"
+        }
+    },
+    "agentTab": {
+        "tabs": {
+            "build": "ビルド",
+            "code": "コード",
+            "result": "結果",
+            "project": "プロジェクト"
+        },
+        "options": {
+            "chat": "チャット",
+            "design": "ライブ編集",
+            "files": "すべてのファイル"
+        },
+        "openInVSCode": "VS Codeで開く",
+        "vscodeAlt": "VS Code",
+        "errors": {
+            "vscodeUrlMissing": "VS Code のURLが利用できません。もう一度お試しください。"
+        }
+    },
+    "agentPopoverDone": {
+        "trigger": "やったことは？",
+        "title": "やったこと"
+    },
+    "share": {
+        "title": "会話を共有",
+        "publicLink": "チャットへの公開リンク",
+        "publicLinkDescription": "他のユーザーとチャットを共有すると、相手はすべてのチャット履歴を閲覧できるようになります。会話に機密情報が含まれていないことを確認してください。",
+        "presentationLink": "プレゼンテーションリンク",
+        "presentationLinkDescription": "スライドのフルスクリーン表示用にこのリンクを共有してください。",
+        "storybookLink": "ストーリーブック",
+        "privateNote": "お名前、アップロードファイル、カスタム指示、共有後に追加したメッセージはプライベートのままです。",
+        "createLink": "リンクを作成",
+        "unpublish": "非公開にする",
+        "sessionIdNotFound": "セッションIDが見つかりません",
+        "publishSuccess": "セッションが正常に公開されました",
+        "publishError": "セッションの公開に失敗しました",
+        "unpublishSuccess": "セッションが正常に非公開になりました",
+        "unpublishError": "セッションの非公開に失敗しました"
+    },
+    "billing": {
+        "success": {
+            "title": "支払い成功",
+            "message": "お支払い情報を受け取り、サブスクリプションを更新しています。",
+            "redirecting": "ホームページにリダイレクトしています。",
+            "redirectingStatus": "ホームページにリダイレクト中...",
+            "noStripeSession": "Stripeセッションが提供されていません。サブスクリプション概要を表示しています。",
+            "subscriptionUpdated": "サブスクリプションが正常に更新されました。"
+        },
+        "cancel": {
+            "title": "チェックアウトがキャンセルされました",
+            "message": "サブスクリプションページからいつでもチェックアウトを再開できます。",
+            "redirectingStatus": "サブスクリプション設定にリダイレクト中...",
+            "checkoutCancelled": "チェックアウトがキャンセルされました。サブスクリプションへの変更はありません。"
+        }
+    },
+    "notFound": {
+        "title": "ページが見つかりません",
+        "description": "申し訳ありませんが、お探しのページが見つかりませんでした。",
+        "contactSupport": "サポートに連絡"
+    },
+    "slides": {
+        "templates": {
+            "choose": "テンプレートを選択",
+            "searchPlaceholder": "テンプレートを検索...",
+            "noResults": "テンプレートが見つかりません。",
+            "noTemplates": "利用可能なテンプレートがありません。",
+            "loadError": "スライドテンプレートを読み込めませんでした",
+            "skip": "テンプレートをスキップ",
+            "generate": "スライドを生成",
+            "selectToPreview": "プレビューするテンプレートを選択",
+            "noPreviewAvailable": "プレビューはありません",
+            "mainPreviewTitle": "{{name}} - メインプレビュー",
+            "previewTitle": "{{name}} - プレビュー {{index}}"
+        }
+    },
+    "presentations": {
+        "sessionIdNotProvided": "セッションIDが提供されていません",
+        "sessionNotFound": "セッションが見つかりません",
+        "noPresentationInSession": "このセッションにはプレゼンテーションが含まれていません",
+        "presentationNotFound": "プレゼンテーションが見つかりません",
+        "failedToLoad": "プレゼンテーションの読み込みに失敗しました",
+        "notAccessible": "お探しのプレゼンテーションは存在しないか、アクセスできません。",
+        "createYourOwn": "自分で作成",
+        "noPreview": "プレビューなし",
+        "slideshow": "スライドショー",
+        "playFromBeginning": "最初から再生",
+        "playFromCurrent": "現在のスライドから再生",
+        "slideTitle": "スライド {{number}}"
+    },
+    "credit": {
+        "credits": "クレジット",
+        "planLabel": "{{plan}}プラン",
+        "freePlan": "無料プラン",
+        "balance": "残高",
+        "usage": "使用量",
+        "table": {
+            "chat": "チャット",
+            "date": "日付",
+            "creditsChange": "クレジット変動"
+        },
+        "noRecords": "レコードが見つかりません",
+        "tooltip": {
+            "credit": "クレジット",
+            "bonusCredit": "ボーナスクレジット",
+            "viewUsage": "使用状況を見る"
+        }
+    },
+    "upgrade": {
+        "title": "プランをアップグレード",
+        "description": "より多くの機能とクレジットを取得",
+        "currentPlan": "現在のプラン",
+        "features": "機能",
+        "upgrade": "アップグレード",
+        "badges": {
+            "current": "現在",
+            "mostBenefits": "最もお得"
+        },
+        "actions": {
+            "upgradeNow": "今すぐアップグレード"
+        },
+        "redirecting": "リダイレクト中...",
+        "priceSuffix": {
+            "month": "/月"
+        },
+        "errors": {
+            "checkoutStart": "チェックアウトを開始できませんでした。もう一度お試しください。"
+        },
+        "plans": {
+            "free": {
+                "name": "無料",
+                "description": "II-Agent を試す"
+            },
+            "plus": {
+                "name": "Plus",
+                "description": "利用枠を拡張"
+            },
+            "pro": {
+                "name": "Pro",
+                "description": "すべての機能にフルアクセス"
+            }
+        },
+        "planFeatures": {
+            "creditsPerMonth": "{{credits}} クレジット/月",
+            "fullStackWebDevelopment": "フルスタックWeb開発",
+            "bringYourOwnKey": "BYOK（自分のキーを使用）",
+            "generalTaskSolving": "一般的なタスク解決",
+            "customizeAnyMcp": "任意のMCPをカスタマイズ",
+            "slideCreation": "スライド作成",
+            "imageVideoGeneration": "画像/動画生成"
+        }
+    },
+    "connectors": {
+        "github": {
+            "title": "GitHub",
+            "connect": "GitHubに接続",
+            "connected": "接続済み",
+            "disconnect": "切断",
+            "authPopupTitle": "GitHub 認証",
+            "selectRepository": "リポジトリを選択",
+            "loadingRepos": "リポジトリを読み込み中...",
+            "noRepositories": "リポジトリが見つかりません",
+            "configureRepos": "リポジトリを設定",
+            "loadRepoError": "リポジトリを読み込めませんでした",
+            "toasts": {
+                "connected": "GitHub に接続しました。",
+                "disconnected": "GitHub を切断しました。"
+            },
+            "errors": {
+                "connectFailed": "GitHub に接続できませんでした。",
+                "disconnectFailed": "GitHub を切断できませんでした。"
+            }
+        },
+        "googleDrive": {
+            "title": "Google Drive",
+            "connect": "Google Driveに接続",
+            "connected": "接続済み",
+            "disconnect": "切断",
+            "toasts": {
+                "connected": "Google Drive に接続しました。",
+                "disconnected": "Google Drive を切断しました。"
+            },
+            "errors": {
+                "connectFailed": "Google Drive に接続できませんでした。",
+                "disconnectFailed": "Google Drive を切断できませんでした。"
+            }
+        },
+        "configure": "設定",
+        "status": {
+            "checking": "確認中...",
+            "connecting": "接続中...",
+            "disconnecting": "切断中..."
+        }
+    },
+    "errors": {
+        "generic": "エラーが発生しました。もう一度お試しください。",
+        "network": "ネットワークエラー。接続を確認してください。",
+        "unauthorized": "この操作を実行する権限がありません。",
+        "notFound": "リクエストされたリソースが見つかりません。",
+        "serverError": "サーバーエラー。後でもう一度お試しください。"
+    },
+    "tooltips": {
+        "agentSettings": "エージェント設定",
+        "toggleTheme": "テーマを切り替え",
+        "moreOptions": "その他のオプション",
+        "addAttachments": "ファイルを追加、またはアプリを接続",
+        "copy": "コピー",
+        "share": "共有",
+        "delete": "削除",
+        "favorite": "お気に入りに追加",
+        "unfavorite": "お気に入りから削除"
+    },
+    "tools": {
+        "labels": {
+            "webSearch": "{{query}} を検索中",
+            "webVisit": "{{url}} にアクセス中",
+            "imageSearch": "{{query}} の画像を検索中",
+            "generateImage": "画像を生成中",
+            "generateInfographic": "インフォグラフィックを生成中",
+            "generatePoster": "ポスターを生成中",
+            "generateStorybook": "ストーリーブックを生成中",
+            "generic": "{{toolName}} を使用中"
+        },
+        "result": "結果",
+        "generatingImage": "画像を生成中...",
+        "generatingInfographic": "インフォグラフィックを生成中...",
+        "generatingPoster": "ポスターを生成中...",
+        "generatingStorybook": "ストーリーブックを生成中...",
+        "storybookComplete": "{{total}}ページ生成済み",
+        "generatingStorybookBatch": "全{{total}}ページ中、{{pages}}ページを生成中...",
+        "generatingStorybookProgress": "全{{total}}ページ中、{{current}}ページを生成中...",
+        "storybookCancelled": "ストーリーブックの生成がキャンセルされました。",
+        "executionFailed": "ツールの実行に失敗しました",
+        "imageAlt": "画像 {{index}}",
+        "generatedImageAlt": "画像 {{index}}"
+    },
+    "imageEdit": {
+        "title": "画像を編集",
+        "description": "新しい画像をアップロード、クリップボードから貼り付け、または画像URLを入力します。",
+        "previewAlt": "画像プレビュー",
+        "uploadFile": "ファイルをアップロード",
+        "paste": "貼り付け",
+        "uploading": "アップロード中...",
+        "processing": "処理中...",
+        "orEnterUrl": "または画像URLを入力:",
+        "urlPlaceholder": "https://example.com/image.jpg",
+        "apply": "適用",
+        "errors": {
+            "selectImageFile": "画像ファイルを選択してください",
+            "fileTooLarge": "ファイルが大きすぎます ({{sizeMB}}MB)。最大サイズは {{maxMB}}MB です。",
+            "uploadFailed": "画像のアップロードに失敗しました",
+            "pasteUploadFailed": "貼り付けた画像のアップロードに失敗しました",
+            "clipboardFailed": "クリップボードにアクセスできませんでした"
+        }
+    },
+    "chainOfThought": {
+        "label": "思考",
+        "thinking": "{{appName}}が考えています...",
+        "status": {
+            "imageGenerating": "画像を生成中...",
+            "infographicGenerating": "インフォグラフィックを生成中...",
+            "posterGenerating": "ポスターを生成中...",
+            "videoGenerating": "動画を生成中...",
+            "modelGenerating": "モデルで生成中...",
+            "storybookGenerating": "ストーリーブックを生成中..."
+        }
+    },
+    "media": {
+        "miniTools": {
+            "back": "画像生成に戻る",
+            "loading": "ツールを読み込み中...",
+            "loadError": "現在ミニツールを読み込めません。",
+            "before": "前",
+            "after": "後",
+            "exploreMore": "さらにツールを見る",
+            "chooseTool": "ツールを選択",
+            "optionsCount": "{{count}}件のオプション",
+            "close": "ミニツールを閉じる",
+            "buttonLabel": "ミニツール",
+            "clear": "ミニツールをクリア",
+            "defaultPrompt": "ミニツールで画像を生成する",
+            "toolNames": {
+                "Restore Old Photo": "古い写真を復元",
+                "Replace Object": "オブジェクト置換",
+                "Remove Background": "背景を削除",
+                "Group Photo": "集合写真",
+                "AI Extended Image": "AIで画像拡張",
+                "Enhance Image": "画像を強化",
+                "Hairstyle Change": "ヘアスタイル変更",
+                "Clothing Change": "服装変更",
+                "Photo Style Change": "写真スタイル変更",
+                "Professional ID Photo": "プロフェッショナルな証明写真",
+                "Face Swap": "顔入れ替え",
+                "AI Filters & Edit": "AIフィルター＆編集"
+            }
+        },
+        "templateExplorer": {
+            "title": "さらにスタイルをご用意",
+            "infographicTitle": "アイデアに合うインフォグラフィックのスタイル",
+            "posterTitle": "Our perfect works",
+            "infographicFilters": {
+                "all": "すべて",
+                "educationLearning": "教育・学習",
+                "businessStrategy": "ビジネス・戦略",
+                "dataAnalytics": "データ・分析",
+                "governmentPublic": "政府・公共",
+                "scienceResearch": "科学・研究",
+                "creativeEditorial": "クリエイティブ・エディトリアル",
+                "premiumBrand": "プレミアム / ブランド",
+                "technologyAI": "テクノロジー・AI",
+                "globalUniversal": "グローバル / ユニバーサル"
+            },
+            "templateNames": {
+                "Storybook": "絵本",
+                "Starry": "星空",
+                "Pixel": "ピクセル",
+                "Low-poly": "ローポリ",
+                "Papercraft": "ペーパークラフト",
+                "Miniature": "ミニチュア",
+                "Clay": "クレイ",
+                "Sketch": "スケッチ",
+                "Wool": "ウール",
+                "Retro Cartoon": "レトロカートゥーン",
+                "Realistic": "リアル",
+                "Dramatic Heads": "ドラマチックヘッド",
+                "80s Glam": "80sグラム",
+                "Art Nouveau": "アール・ヌーヴォー",
+                "Anime": "アニメ",
+                "Cyber Punk": "サイバーパンク",
+                "Flat": "フラット",
+                "3D Figure": "3Dフィギュア",
+                "Blueprint": "設計図",
+                "Fish eyes": "魚眼"
+            }
+        },
+        "imageSettings": {
+            "ratio": "比率",
+            "resolution": "解像度",
+            "proPlan": "プロプラン",
+            "pages": "ページ数",
+            "pagesLabel": "ページ数",
+            "unlimited": "無制限",
+            "textIncluded": "テキストを含む",
+            "noText": "テキストなし",
+            "textPosition": {
+                "none": "なし",
+                "left": "左",
+                "right": "右",
+                "top": "上",
+                "bottom": "下",
+                "separate_page": "別ページ"
+            },
+            "separatePageDescription": "このテキスト表示オプションは生成ページ数を拡張します",
+            "language": "言語",
+            "languages": {
+                "english": "英語",
+                "vietnamese": "ベトナム語",
+                "japanese": "日本語",
+                "hindi": "ヒンディー語",
+                "korean": "韓国語"
+            },
+            "style": "スタイル",
+            "styles": {
+                "storybook": "ストーリーブック",
+                "manga": "マンガ"
+            },
+            "layoutMode": "レイアウトモード",
+            "genre": "ジャンル",
+            "genres": {
+                "funPlayful": "楽しい＆遊び心",
+                "classicHorror": "クラシックホラー",
+                "superheroAction": "スーパーヒーローアクション",
+                "darkScifi": "ダークSF",
+                "highFantasy": "ハイファンタジー",
+                "neonNoir": "ネオンノワール探偵",
+                "wastelandApocalypse": "荒廃した黙示録",
+                "lightheartedComedy": "軽快なコメディ",
+                "teenDrama": "青春ドラマ / 日常"
+            },
+            "more": "もっと見る",
+            "mangaLayout": "マンガレイアウト",
+            "mangaLayoutDescription": "単一のフルページイラストではなく、ダイナミックなフレーミングとビジュアルストーリーテリングを備えた本格的なマンガコマ割りレイアウトを使用します",
+            "richDialogue": "リッチダイアログ",
+            "richDialogueDescription": "より深い対話、内面の考え、音響効果、感情的に魅力的なストーリーテリングを有効にして、より没入感のある読書体験を実現します",
+            "voice": "ボイスオーバー",
+            "voiceDescription": "自然で表現力のあるトーンと明確なテンポのナラティブなボイスオーバー音声"
+        },
+        "miniToolBoard": {
+            "selectedImageName": "選択した画像",
+            "uploadError": "画像をアップロードできませんでした。もう一度お試しください。",
+            "selectAtLeastOne": "少なくとも1枚の画像を選択してください",
+            "selectAtLeastCount": "少なくとも{{count}}枚の画像を選択してください",
+            "uploading": "アップロード中...",
+            "uploadToStart": "開始するには画像をアップロード",
+            "pickFromLibrary": "または生成ライブラリから選択",
+            "loadingLibrary": "ライブラリを読み込み中...",
+            "browseMore": "さらに表示",
+            "closeLibrary": "ライブラリを閉じる",
+            "selectedLabel": "選択済み",
+            "selectionCountSingle": "{{count}}/{{max}}件",
+            "selectionCountPlural": "{{count}}/{{max}}件",
+            "selectRange": "{{min}}-{{max}}枚を選択",
+            "noItems": "まだ選択されていません",
+            "confirm": "実行",
+            "mediaAlt": "メディア",
+            "selectedAlt": "選択済み",
+            "myLibraryTitle": "マイライブラリ",
+            "loadingYourLibrary": "ライブラリを読み込み中..."
+        },
+        "types": {
+            "image": "画像",
+            "infographic": "Infographic",
+            "poster": "ポスター",
+            "storybook": "ストーリーブック",
+            "video": "動画"
+        },
+        "controls": {
+            "modelLabel": "{{type}}モデル",
+            "selectModel": "モデルを選択",
+            "selected": "選択済み"
+        },
+        "models": {
+            "nanoBananaPro": {
+                "label": "Nano Banana Pro",
+                "description": "最新のGemini画像モデル、最高品質"
+            },
+            "gptImage15": {
+                "label": "GPT Image 1.5",
+                "description": "OpenAI GPT Image 1.5"
+            },
+            "imagen40Generate001": {
+                "label": "Imagen 4.0 Generate 001",
+                "description": "Imagen 4.0 Generate 001"
+            },
+            "veo31Premium": {
+                "label": "VEO 3.1 Premium",
+                "description": "ネイティブ音声対応の最高品質動画 - Googleの最先端モデル"
+            },
+            "sora2Pro": {
+                "label": "SORA 2 PRO",
+                "description": "長時間とプレミアム品質、先進的なコントロール。"
+            },
+            "seedance10Pro": {
+                "label": "Seedance 1.0 Pro",
+                "description": "シームレスな遷移と物語性を備えたマルチシーンのストーリーテリング"
+            },
+            "kling21Master": {
+                "label": "Kling 2.1 Master",
+                "description": "精密な時間制御で最高クラスのモーションリアリズム"
+            },
+            "grok15Imagine": {
+                "label": "Grok 1.5 Imagine",
+                "description": "一貫した動きと同期音声を備えたxAIのマルチモーダル動画生成"
+            },
+            "wan26": {
+                "label": "Wan 2.6",
+                "description": "V2V強化、ネイティブな音声・映像同期、先進的なモーション制御を備えたAlibaba最新の動画モデル"
+            }
+        },
+        "suggestions": {
+            "image": [
+                "フロストガラス上のシネマティックな香水ビジュアルを制作",
+                "ブランドマーク入りのサイバーパンクメックポスターをデザイン",
+                "ドラマチックなリムライトのエディトリアルポートレートを作成"
+            ],
+            "infographic": [
+                "多様性とインクルージョン用語のインフォグラフィック",
+                "サプライチェーンのサステナビリティ工程インフォグラフィック",
+                "難民へのパンデミック影響の統計インフォグラフィック",
+                "幼稚園児向け「水の循環」のレッスン",
+                "ブランド戦略必須リストのインフォグラフィックテンプレート",
+                "カスタマータイムライン・ジャーニーのインフォグラフィックテンプレート"
+            ],
+            "poster": [
+                "インディー・ジャズナイトのコンサートポスターをデザイン",
+                "ミニマルな映画祭ポスターを作成",
+                "新作ヘッドホン発売のポスターをデザイン"
+            ],
+            "storybook": [
+                "ジブリ風のストーリーブックでハリー・ポッターの全編を要約して",
+                "友好的な動物が登場する魔法の森の子ども向け物語をイラスト化",
+                "持ち主を探す勇敢な小さなトースターの冒険ストーリーブックを作成"
+            ],
+            "video": [
+                "雨のネオン路地を8秒のスロードリーで撮影",
+                "光沢の反射があるプロダクトスピンを6秒で撮影",
+                "未来都市の上空を日の出でパンする映像を作成"
+            ]
+        },
+        "videoFrames": {
+            "startLabel": "開始フレーム",
+            "endLabel": "終了フレーム",
+            "uploadAria": "{{label}}をアップロード",
+            "previewAlt": "{{label}}のプレビュー",
+            "removeAria": "{{label}}を削除"
+        },
+        "videoPickers": {
+            "durationLabel": "長さ",
+            "resolutionLabel": "解像度",
+            "ratioLabel": "比率",
+            "aspectRatioLabel": "アスペクト比",
+            "audioLabel": "音声",
+            "multishotLabel": "マルチショット",
+            "stateOn": "オン",
+            "stateOff": "オフ",
+            "proBadge": "PRO"
+        },
+        "stylePicker": {
+            "title": "生成したいスタイルを選択",
+            "infographicTitle": "インフォグラフィックのスタイルを選択",
+            "posterTitle": "Our perfect works",
+            "empty": "利用可能なスタイルがありません"
+        },
+        "advancedMode": {
+            "title": "画像生成の高度モード",
+            "editTitle": "高度モードを編集",
+            "toggleLabel": "高度モード",
+            "success": {
+                "saved": "高度モードを保存しました"
+            },
+            "errors": {
+                "sessionRequired": "最初に会話を選択または作成してください。",
+                "enableFailed": "高度モードを有効にできません。",
+                "disableFailed": "高度モードを無効にできません。",
+                "saveFailed": "高度モードの保存に失敗しました。"
+            },
+            "categories": {
+                "subject": {
+                    "title": "被写体",
+                    "description": "「画像の中の誰/何？」（例: 特定のスニーカー、人、猫）。"
+                },
+                "scene": {
+                    "title": "シーン",
+                    "description": "「どこにいる？」（例: 海辺、未来都市、キッチンカウンター）。"
+                },
+                "style": {
+                    "title": "スタイル",
+                    "description": "「どんな見た目？」（例: 水彩画、3Dレンダー、サイバーパンク、ヴィンテージ写真）。"
+                }
+            },
+            "sampleAlt": "{{title}} サンプル {{index}}",
+            "imageAlt": "{{title}} {{index}}",
+            "status": {
+                "generating": "画像生成中 ...",
+                "uploading": "アップロード中 ..."
+            },
+            "actions": {
+                "uploadImage": "画像をアップロード",
+                "promptIt": "プロンプトを入力",
+                "clearAll": "すべてクリア",
+                "generateReferences": "参照画像を生成",
+                "makeIt": "作成する"
+            },
+            "promptPlaceholder": "参照画像を生成するためのプロンプトを入力"
+        }
+    },
+    "feedback": {
+        "like": "いいね",
+        "dislike": "よくない"
+    },
+    "uploads": {
+        "fileCount": "{{count}} ファイル",
+        "folder": "フォルダ"
+    },
+    "storybook": {
+        "viewer": {
+            "title": "ストーリーブックビューアー",
+            "defaultTitle": "ストーリーブック",
+            "viewSinglePage": "シングルページで表示",
+            "viewDoublePage": "見開きページで表示",
+            "autoPlay": "自動再生",
+            "stopAutoPlay": "自動再生を停止",
+            "refresh": "更新",
+            "pageAlt": "ページ {{page}}",
+            "pageCount": "ページ {{current}} / {{total}}",
+            "pageRange": "ページ {{start}} - {{end}} / {{total}}",
+            "add": "追加",
+            "describeToEdit": "編集内容を記述...",
+            "download": {
+                "pdf": "PDF",
+                "png": "PNG",
+                "preparing": "ダウンロードの準備中...",
+                "current": "現在のページをダウンロード",
+                "all": "すべてのページをダウンロード",
+                "noPages": "ダウンロードできるページがありません。",
+                "unableToPrepare": "1つ以上のページのダウンロードを準備できませんでした。",
+                "missingSources": "リクエストされたページのダウンロードソースが見つかりません",
+                "missingSourcePage": "ページ {{page}} のダウンロードソースが見つかりません",
+                "failedFetchPage": "ページ {{page}} の取得に失敗しました",
+                "failed": "ストーリーブックのダウンロードに失敗しました。もう一度お試しください。",
+                "success": "ストーリーブックのダウンロードに成功しました!"
+            }
+        },
+        "voiceOver": {
+            "title": "ボイスオーバー",
+            "description": "AIナレーションでストーリーブック全体を高品質なボイスオーバー音声に変換します。各ページが自然で表現豊かなトーンと明確なテンポで読み上げられます。",
+            "generate": "生成",
+            "toasts": {
+                "generated": "ボイスオーバーを生成しました",
+                "failed": "ボイスオーバーの生成に失敗しました",
+                "unavailable": "このストーリーブックではボイスオーバーを利用できません"
+            }
+        },
+        "thumbnail": {
+            "pageCountLabel_one": "{{count}} ページ",
+            "pageCountLabel_other": "{{count}} ページ",
+            "readStorybook": "ストーリーブックを読む"
+        },
+        "share": {
+            "storybookIdNotProvided": "Storybook ID not provided",
+            "storybookNotFound": "Storybook not found",
+            "failedToLoad": "Failed to load storybook",
+            "notAccessible": "This storybook is not accessible"
+        },
+        "edit": {
+            "editText": "テキストを編集",
+            "regenerateImage": "画像を再生成",
+            "editTextTitle": "ページテキストを編集",
+            "regenerateImageTitle": "ページ画像を再生成",
+            "textPlaceholder": "このページの新しいテキストを入力...",
+            "imagePromptLabel": "画像プロンプト",
+            "promptPlaceholder": "生成したい画像を説明してください...",
+            "regenerating": "再生成中...",
+            "regenerate": "再生成",
+            "textSaved": "テキストが正常に更新されました!",
+            "imageRegenerated": "画像が正常に再生成されました!"
+        },
+        "modal": {
+            "editMode": {
+                "label": "編集モード"
+            },
+            "status": {
+                "generating": "II が生成中..."
+            },
+            "versions": {
+                "title": "バージョン",
+                "loading": "バージョンを読み込み中...",
+                "empty": "バージョンはまだありません"
+            },
+            "actions": {
+                "back": "戻る",
+                "clear": "クリア",
+                "saveChanges": "変更を保存"
+            },
+            "reference": {
+                "defaultName": "参照画像",
+                "previewAlt": "参照",
+                "removeLabel": "参照画像を削除"
+            },
+            "time": {
+                "justNow": "たった今",
+                "minutesAgo_one": "{{count}}分前",
+                "minutesAgo_other": "{{count}}分前",
+                "hoursAgo_one": "{{count}}時間前",
+                "hoursAgo_other": "{{count}}時間前",
+                "daysAgo_one": "{{count}}日前",
+                "daysAgo_other": "{{count}}日前"
+            },
+            "changes": {
+                "unsavedCount_one": "{{count}}件の未保存の変更",
+                "unsavedCount_other": "{{count}}件の未保存の変更",
+                "none": "未保存の変更はありません",
+                "pendingEmpty": "保留中の変更はありません",
+                "pageLabel": "ページ {{page}}: {{label}}",
+                "labels": {
+                    "change": "変更",
+                    "editText": "テキストを編集",
+                    "moveElement": "要素を移動",
+                    "updateProperty": "{{property}} を更新",
+                    "styleProperty": "スタイル: {{property}}"
+                }
+            },
+            "editPage": {
+                "cover": "ページ {{current}}（表紙）/ {{total}}",
+                "range": "ページ {{start}}-{{end}} / {{total}}",
+                "single": "ページ {{current}} / {{total}}"
+            },
+            "confirm": {
+                "discardChanges": "未保存の変更があります。破棄してもよろしいですか？"
+            },
+            "toasts": {
+                "invalidImageFile": "有効な画像ファイルを選択してください。",
+                "referenceAttachFailed": "現在、参照画像を添付できません。",
+                "referenceUploadFailed": "参照画像のアップロードに失敗しました。",
+                "changesSaved": "変更が保存されました",
+                "imageRegenerated": "画像を再生成しました",
+                "imageRegenerateFailed": "画像の再生成に失敗しました",
+                "noSession": "このストーリーブックに関連付けられたセッションがありません"
+            },
+            "changeGroups": {
+                "regenerateImage": "画像を再生成"
+            },
+            "unsavedChanges": {
+                "title": "未保存の変更",
+                "warning": "終了する前にすべての変更を保存してください。<b>編集モード</b>を終了すると未保存の変更が失われる可能性があります。",
+                "keepEditing": "編集を続ける",
+                "saveChanges": "変更を保存",
+                "discardChanges": "変更を破棄"
+            }
+        },
+        "inspector": {
+            "sections": {
+                "content": "内容",
+                "typography": "タイポグラフィ",
+                "textColor": "テキストの色",
+                "background": "背景",
+                "border": "ボーダー",
+                "spacing": "スペーシング",
+                "shadow": "影"
+            },
+            "empty": {
+                "title": "要素が選択されていません",
+                "description": "プレビュー内の要素をクリックしてスタイルを編集してください"
+            },
+            "imageMode": {
+                "previewAlt": "プレビュー",
+                "promptLine1": "チャットボックスでプロンプトを入力してください",
+                "promptLine2": "このページを編集または再生成します",
+                "examples": {
+                    "face": "別の表情",
+                    "hat": "別の帽子"
+                    }
+            },
+            "content": {
+                "placeholder": "テキストを入力...",
+                "aiRewrite": "AIで書き直す",
+                "aiRewriting": "書き直し中..."
+            },
+            "status": {
+                "generating": "II が生成中..."
+            },
+            "typography": {
+                "fontFamily": "フォントファミリー",
+                "fontPlaceholder": "フォントを選択...",
+                "fontWeight": "フォントウェイト",
+                "fontSize": "フォントサイズ",
+                "lineHeight": "行間 (rem)",
+                "letterSpacing": "文字間隔 (em)",
+                "textAlignment": "テキスト配置",
+                "textDecoration": "テキスト装飾"
+            },
+            "textColor": {
+                "label": "テキストの色"
+            },
+            "background": {
+                "tabColor": "色",
+                "tabImage": "画像",
+                "colorLabel": "色",
+                "imageSources": "画像ソース",
+                "sourceUpload": "アップロード",
+                "sourceLink": "リンク",
+                "sourcePrompt": "プロンプト",
+                "uploading": "画像をアップロード中...",
+                "uploadCta": "クリックして画像をアップロード",
+                "linkPlaceholder": "https://example.com/image.png",
+                "promptPlaceholder": "生成したい背景を説明してください...",
+                "aiGenerate": "AIで背景を生成",
+                "aiGenerating": "生成中..."
+            },
+            "border": {
+                "colorLabel": "ボーダーの色",
+                "style": "ボーダーのスタイル",
+                "width": "ボーダーの幅",
+                "radius": "ボーダーの角丸"
+            },
+            "spacing": {
+                "padding": "パディング",
+                "margin": "マージン"
+            },
+            "shadow": {
+                "label": "影の効果",
+                "placeholder": "影",
+                "none": "なし",
+                "small": "小",
+                "medium": "中",
+                "large": "大"
+            },
+            "opacity": {
+                "label": "不透明度",
+                "placeholder": "不透明度を選択"
+            },
+            "colorMode": {
+                "solid": "単色",
+                "custom": "カスタム",
+                "gradient": "グラデーション"
+            },
+            "gradient": {
+                "from": "開始",
+                "to": "終了"
+            },
+            "borderStyle": {
+                "none": "なし",
+                "solid": "実線",
+                "dashed": "破線",
+                "dotted": "点線",
+                "double": "二重線"
+            },
+            "options": {
+                "none": "なし",
+                "full": "最大"
+            },
+            "placeholders": {
+                "weight": "ウェイト",
+                "size": "サイズ",
+                "style": "スタイル",
+                "width": "幅",
+                "radius": "半径"
+            },
+            "toasts": {
+                "rewriteSuccess": "内容を正常に書き直しました",
+                "rewriteFailed": "内容の書き直しに失敗しました",
+                "generateSuccess": "背景画像の生成に成功しました",
+                "generateFailed": "背景画像の生成に失敗しました",
+                "invalidImageFile": "有効な画像ファイルを選択してください。",
+                "uploadFailed": "背景画像のアップロードに失敗しました。"
+            },
+            "changeGroups": {
+                "textGradient": "テキストのグラデーション",
+                "textColor": "テキストの色",
+                "backgroundGradient": "背景のグラデーション",
+                "backgroundColor": "背景色",
+                "backgroundImage": "背景画像",
+                "borderGradient": "ボーダーのグラデーション",
+                "borderColor": "ボーダーの色"
+            }
+        },
+        "editWrapper": {
+            "loading": "編集用ページを読み込み中...",
+            "initializing": "エディタを初期化中...",
+            "errors": {
+                "loadFailed": "編集用ページの読み込みに失敗しました"
+            },
+            "iframeTitle": "ページ {{page}} を編集"
+        },
+        "versionSelector": {
+            "title": "バージョン履歴",
+            "noVersions": "バージョンが見つかりません",
+            "loadError": "バージョンの読み込みに失敗しました",
+            "versionLabel": "v{{version}}",
+            "originalLabel": "v{{version}}（オリジナル）",
+            "currentLabel": "v{{version}}（現在）"
+        },
+        "noImage": "画像がありません"
+    },
+    "sessions": {
+        "renameChat": "チャットの名前を変更",
+        "renameProject": "プロジェクトの名前を変更",
+        "renameDescriptionChat": "このチャットの新しい名前を入力してください。",
+        "renameDescriptionProject": "このプロジェクトの新しい名前を入力してください。",
+        "nameLabel": "名前",
+        "namePlaceholder": "名前を入力..."
+    },
+    "publicHome": {
+        "title": "II-Agentへようこそ",
+        "subtitle": "あらゆるタスクのためのインテリジェントアシスタント",
+        "getStarted": "始める",
+        "learnMore": "詳細を見る",
+        "logoAlt": "ロゴ",
+        "agentAlt": "II-Agent",
+        "heading": "II-Agentを紹介",
+        "tagline": "作成・調査・素早い出荷のためのインテリジェントエージェント。",
+        "cta": "最初のタスクを始める",
+        "termsOfUse": "利用規約",
+        "privacyPolicy": "プライバシーポリシー",
+        "features": {
+            "dataControl": {
+                "title": "Your Data, Your Control",
+                "description": "BYOK – connect your own API keys and services for private, high-performance runs."
+            },
+            "deck": {
+                "title": "From Idea to Deck in Minutes",
+                "description": "Generate slide outlines, refine every block, and export when ready - no context switching."
+            },
+            "code": {
+                "title": "Delegate the Code. Keep the Control.",
+                "description": "When implementation gets heavy, bring Codex Agent into the thread."
+            },
+            "research": {
+                "title": "Research That Cites Its Sources",
+                "description": "II-Agent plans, reads, and synthesizes across the web and your files - returning structured insights with citations.",
+                "highlights": [
+                    "Browsing",
+                    "Source graphs",
+                    "Evidence snippets",
+                    "One-tap briefs"
+                ]
+            },
+            "ship": {
+                "title": "Describe It. Ship It.",
+                "description": "Turn a prompt into a working site: scaffold pages, sections, and components; preview, edit, and export.",
+                "highlights": [
+                    "Live preview",
+                    "Clean markup",
+                    "Component library",
+                    "Export to repo/zip"
+                ]
+            }
+        }
+    },
+    "questionInput": {
+        "placeholder": "やりたいことを説明してください...",
+        "dragDrop": {
+            "dropToUpload": "ここにファイルをドロップしてアップロード"
+        }
+    },
+    "questionFileUpload": {
+        "addImagesAndFiles": "画像とファイルを追加",
+        "addFromGoogleDrive": "Google Drive から追加",
+        "connectGoogleDrive": "Google Drive と接続",
+        "connectApps": "アプリを接続"
+    },
+    "agentSetting": {
+        "title": {
+            "agent": "エージェント設定",
+            "chat": "チャット設定"
+        },
+        "tabs": {
+            "model": "モデル",
+            "tools": "ツール"
+        },
+        "addEditModel": {
+            "title": {
+                "add": "新しいモデルを追加",
+                "edit": "モデル設定を編集"
+            },
+            "description": "LLMプロバイダーとAPI設定を構成します。",
+            "sections": {
+                "provider": "LLMプロバイダー"
+            },
+            "fields": {
+                "modelName": "モデル名",
+                "selectModel": "モデルを選択",
+                "customModelPlaceholder": "カスタムモデル名を入力",
+                "apiKeyLabel": "APIキー",
+                "apiKeyPlaceholder": "APIキーを入力",
+                "baseUrlLabel": "Base URL",
+                "baseUrlOptionalLabel": "Base URL（任意）",
+                "baseUrlPlaceholder": "Base URLを入力",
+                "latestUpdate": "最新更新",
+                "vertexProjectIdLabel": "VertexプロジェクトID",
+                "vertexProjectIdPlaceholder": "VertexプロジェクトIDを入力",
+                "vertexRegionLabel": "Vertexリージョン",
+                "vertexRegionPlaceholder": "Vertexリージョンを入力",
+                "azureEndpointLabel": "Azureエンドポイント",
+                "azureEndpointPlaceholder": "Azureエンドポイントを入力",
+                "azureApiVersionLabel": "Azure APIバージョン",
+                "azureApiVersionPlaceholder": "Azure APIバージョンを入力"
+            }
+        },
+        "modelSetting": {
+            "title": "LLMモデル設定",
+            "actions": {
+                "newModel": "新しいモデル"
+            },
+            "toasts": {
+                "created": "モデルを作成しました",
+                "updated": "モデルを更新しました",
+                "deleted": "モデルを削除しました",
+                "deleteFailed": "モデルの削除に失敗しました。もう一度お試しください。"
+            }
+        },
+        "toolSetting": {
+            "magicTools": {
+                "title": "マジックツール",
+                "subtitle": "一般ユーザー向けのモダンで使いやすいツール"
+            },
+            "mcp": {
+                "title": "接続済みMCPツール",
+                "subtitle": "MCP経由で接続された外部ツール",
+                "connectedTool": "MCP接続ツール",
+                "serverNames": {
+                    "codexExecuting": "Codex 実行中",
+                    "playwright": "Playwright Browser",
+                    "browserTools": "ブラウザーツール",
+                    "default": "MCPツール"
+                }
+            },
+            "mcpConnect": {
+                "title": {
+                    "edit": "MCPツールを編集",
+                    "connect": "新しいツールを接続"
+                },
+                "form": {
+                    "label": "MCP Connect JSON",
+                    "placeholder": "MCP Connect JSONを入力"
+                },
+                "actions": {
+                    "update": "更新",
+                    "connect": "接続"
+                },
+                "toasts": {
+                    "updated": "MCP設定を更新しました",
+                    "connected": "MCPツールを接続しました"
+                },
+                "errors": {
+                    "missingConfig": "MCP設定を入力してください",
+                    "invalidJson": "JSON形式が正しくありません",
+                    "saveFailed": "MCP設定の保存に失敗しました"
+                }
+            },
+            "mcpTool": {
+                "aboutTitle": "概要",
+                "jsonConfigTitle": "JSON 構成",
+                "jsonConfigDescription": "この構成を MCP クライアントの設定に追加してください",
+                "connectTo": "{{name}} に接続",
+                "envDescription": "{{name}} に必要な環境変数を設定してください:",
+                "envPlaceholder": "{{key}} を入力",
+                "logoAlt": "ロゴ",
+                "actions": {
+                    "remote": "リモート",
+                    "connect": "接続"
+                }
+            },
+            "connectTools": "ツールを接続",
+            "toasts": {
+                "updateMcpFailed": "MCPツールの更新に失敗しました",
+                "mcpDisconnected": "MCPツールを切断しました",
+                "deleteMcpFailed": "MCPツールの削除に失敗しました",
+                "configSaved": "設定を保存しました",
+                "configSaveFailed": "設定の保存に失敗しました。もう一度お試しください。"
+            }
+        },
+        "skillSetting": {
+            "sections": {
+                "builtin": {
+                    "title": "組み込みスキル",
+                    "subtitle": "エージェントの能力を高めるプリインストール済みスキル"
+                },
+                "custom": {
+                    "title": "カスタムスキル",
+                    "subtitle": "GitHubリポジトリから追加されたスキル"
+                }
+            },
+            "badges": {
+                "builtin": "組み込み"
+            },
+            "links": {
+                "viewOnGithub": "GitHubで見る"
+            },
+            "empty": {
+                "title": "カスタムスキルはまだ追加されていません",
+                "description": "GitHubからスキルを追加するには「{{action}}」をクリックしてください"
+            },
+            "actions": {
+                "connect": "スキルを接続"
+            },
+            "connect": {
+                "title": "GitHubからスキルを接続",
+                "description": "GitHubリポジトリからカスタムスキルを追加します。スキルフォルダーには有効なfrontmatterを含むSKILL.mdファイルが必要です。",
+                "form": {
+                    "label": "GitHub URL",
+                    "placeholder": "https://github.com/owner/repo/tree/main/skills/skill-name"
+                },
+                "urlFormat": {
+                    "title": "URL形式",
+                    "format": "https://github.com/{owner}/{repo}/tree/{branch}/{path-to-skill}",
+                    "example": "例: https://github.com/anthropics/skills/tree/main/skills/brand-guidelines"
+                },
+                "actions": {
+                    "connect": "スキルを接続",
+                    "connecting": "接続中..."
+                },
+                "validation": {
+                    "urlRequired": "GitHub URLは必須です",
+                    "urlInvalid": "GitHub URLの形式が正しくありません。想定: https://github.com/{owner}/{repo}/tree/{branch}/{path}"
+                }
+            },
+            "toasts": {
+                "connected": "スキル「{{name}}」を接続しました",
+                "connectFailed": "GitHubからスキルを接続できませんでした",
+                "loadFailed": "スキルの読み込みに失敗しました",
+                "enabled": "スキルを有効にしました",
+                "disabled": "スキルを無効にしました",
+                "updateFailed": "スキルの更新に失敗しました",
+                "builtinDeleteBlocked": "組み込みスキルは削除できません",
+                "removed": "スキルを削除しました",
+                "deleteFailed": "スキルの削除に失敗しました"
+            }
+        }
+    },
+    "questionFeatureSelector": {
+        "usingTemplate": "テンプレートを使用中: {{templateName}}",
+        "template": "テンプレート"
+    },
+    "toolCatalog": {
+        "init": {
+            "taskAgent": {
+                "name": "タスクエージェント",
+                "description": "複雑な作業をサブエージェントに委任する"
+            },
+            "deepResearch": {
+                "name": "ディープリサーチ",
+                "description": "高度な調査機能を有効化"
+            },
+            "designDocument": {
+                "name": "デザインドキュメント",
+                "description": "フルスタックWeb開発の前に要件・設計ドキュメントの作成を有効化"
+            },
+            "mediaGeneration": {
+                "name": "メディア生成",
+                "description": "画像と動画を生成"
+            },
+            "browser": {
+                "name": "ブラウザー",
+                "description": "Web閲覧機能を有効化。注: ビジョンモデルでのみ利用可能。"
+            },
+            "codex": {
+                "name": "Codex",
+                "description": "自律的なコード生成とレビューのためにOpenAI Codexを有効化"
+            },
+            "claudeCode": {
+                "name": "Claude Code",
+                "description": "自律的なコード生成のためにClaude Codeを有効化"
+            }
+        },
+        "chatTools": {
+            "webSearch": {
+                "name": "Web検索",
+                "description": "Webで情報を検索"
+            },
+            "webVisit": {
+                "name": "Web閲覧",
+                "description": "Webページにアクセスして閲覧"
+            },
+            "imageSearch": {
+                "name": "画像検索",
+                "description": "Webで画像を検索"
+            },
+            "codeInterpreter": {
+                "name": "コードインタープリター",
+                "description": "計算、データ分析、可視化のためにコードを実行"
+            }
+        },
+        "features": {
+            "createWebsite": {
+                "name": "Webサイトを作成"
+            },
+            "createSlide": {
+                "name": "スライドを作成"
+            },
+            "aiSlideNanoBanana": {
+                "name": "AIスライド（Nano Banana）"
+            },
+            "deepResearch": {
+                "name": "ディープリサーチ"
+            },
+            "fastResearch": {
+                "name": "ファストリサーチ"
+            },
+            "codex": {
+                "name": "Codex"
+            },
+            "claudeCode": {
+                "name": "Claude Code"
+            }
+        },
+        "chatFeatures": {
+            "generateImage": {
+                "name": "画像を生成"
+            },
+            "generateInfographic": {
+                "name": "インフォグラフィックを生成"
+            },
+            "generatePoster": {
+                "name": "ポスターを生成"
+            },
+            "generateVideo": {
+                "name": "動画を生成"
+            },
+            "cookStorybook": {
+                "name": "ストーリーブック／コミックブックを作成"
+            }
+        }
+    },
+    "buildModeDropdown": {
+        "modes": {
+            "build": {
+                "label": "ビルドモード",
+                "description": "アプリを作成・編集するためのデフォルトモード"
+            },
+            "design": {
+                "label": "ライブ編集モード",
+                "description": "作成しながらWebサイトを操作"
+            },
+            "plan": {
+                "label": "プランモード",
+                "description": "複雑な機能を追加する前に詳細な計画を生成"
+            },
+            "help": {
+                "label": "ヘルプモード",
+                "description": "原因を特定して最適な解決策を見つける"
+            }
+        }
+    },
+    "composio": {
+        "appCard": {
+            "connecting": "接続中...",
+            "manage": "管理",
+            "connect": "接続",
+            "disable": "無効化",
+            "enable": "有効化",
+            "status": {
+                "connecting": "接続中...",
+                "connected": "接続済み",
+                "disabled": "無効",
+                "disconnected": "未接続"
+            },
+            "aria": {
+                "integrationCard": "{{appName}}インテグレーションカード",
+                "manageConnection": "{{appName}}接続を管理",
+                "connectApp": "{{appName}}に接続"
+            }
+        },
+        "disconnectDialog": {
+            "title": "{{appName}}を切断しますか?",
+            "description": "<profileName>\"{{profileName}}\"</profileName>の接続を削除します。エージェントは{{appName}}アカウントにアクセスできなくなります。",
+            "warning": "この操作は取り消せません。",
+            "cancel": "キャンセル",
+            "disconnect": "切断"
+        },
+        "integrationsModal": {
+            "title": "アプリ連携",
+            "description": "お気に入りのアプリを接続してエージェントの機能を強化 - <strong>Composioを利用。</strong>",
+            "searchPlaceholder": "アプリを検索...",
+            "searchLabel": "アプリを検索",
+            "clearSearch": "検索をクリア",
+            "noAppsFound": "アプリが見つかりません",
+            "noAppsMatchSearch": "\"{{search}}\"に一致するアプリはありません",
+            "noAppsAvailable": "利用可能なアプリはありません",
+            "searchResults": "検索結果 ({{count}})",
+            "availableApps": "利用可能なアプリ ({{count}})",
+            "availableIntegrations": "利用可能な連携",
+            "connectDefaultDescription": "{{appName}}に接続してツールと機能にアクセスします。",
+            "toasts": {
+                "connectedSuccess": "{{appName}}に接続しました!",
+                "connectedDescription": "この連携を使用できます",
+                "connectionNotCompleted": "{{appName}}への接続が完了しませんでした",
+                "connectionNotCompletedDescription": "もう一度お試しください",
+                "connectionTimedOut": "{{appName}}への接続がタイムアウトまたはキャンセルされました",
+                "connectionTimedOutDescription": "認証ウィンドウの応答に時間がかかりすぎました",
+                "couldNotOpenAuthWindow": "{{appName}}の認証ウィンドウを開けませんでした",
+                "allowPopupsDescription": "ポップアップを許可してもう一度お試しください",
+                "failedToConnect": "{{appName}}への接続に失敗しました",
+                "disconnectedSuccess": "{{appName}}を切断しました",
+                "disconnectedDescription": "連携が削除されました",
+                "failedToDisconnect": "{{appName}}の切断に失敗しました"
+            }
+        },
+        "toolSelector": {
+            "defaultToolsSelected": "デフォルトツール{{count}}個、{{selected}} / {{max}} ツール",
+            "default": "デフォルト",
+            "clear": "クリア",
+            "searchPlaceholder": "ツールを検索...",
+            "noToolsFound": "ツールが見つかりません",
+            "noToolsFoundDescription": "検索クエリを調整してみてください",
+            "badges": {
+                "default": "デフォルト",
+                "readOnly": "読み取り専用"
+            }
+        },
+        "manageModal": {
+            "toolsAndPermissions": "ツールと権限",
+            "toolsDescription": "{{appName}}アカウントからエージェントがアクセスできるツールを選択",
+            "saveChanges": "変更を保存",
+            "saving": "保存中...",
+            "disconnect": "切断",
+            "status": {
+                "connected": "接続済み",
+                "disabled": "無効",
+                "disconnected": "未接続"
+            },
+            "toasts": {
+                "toolsEnabled": "{{appName}}で{{count}}個のツールが有効になりました",
+                "failedToUpdateTools": "ツールの更新に失敗しました"
+            }
+        }
+    },
+    "project": {
+        "newProject": "新しいプロジェクト",
+        "header": {
+            "tabs": {
+                "database": {
+                    "label": "データベース",
+                    "title": "データベース",
+                    "description": "データベースのテーブルとデータを管理します"
+                },
+                "domain": {
+                    "label": "ドメイン",
+                    "title": "ドメイン設定",
+                    "description": "ドメインを設定してアプリをWebで利用可能にします"
+                },
+                "secrets": {
+                    "label": "シークレット",
+                    "title": "シークレット",
+                    "description": "シークレットはAPIキーやパスワードのような非公開値で、公開せずに安全に利用できます"
+                }
+            }
+        },
+        "panel": {
+            "sessionRequired": "プロジェクトの詳細を表示するにはセッション情報が必要です。",
+            "noProjectYet": "このセッションではまだプロジェクトが作成されていません。",
+            "loadingSchema": "データベーススキーマを読み込み中...",
+            "errors": {
+                "missingSession": "セッション情報がありません",
+                "unableToLoadProject": "このセッションのプロジェクトを読み込めませんでした",
+                "unableToLoadSchema": "このプロジェクトのデータベーススキーマを読み込めませんでした",
+                "unableToLoadRecords": "テーブルのレコードを読み込めませんでした"
+            }
+        },
+        "database": {
+            "noProjectInfo": "このセッションのプロジェクト情報はまだありません。",
+            "noDatabaseConfig": "このプロジェクトにはまだデータベース設定がありません。",
+            "noTablesFound": "設定されたデータベース接続でテーブルが見つかりません。",
+            "selectTableToInspect": "確認するテーブルを選択してください",
+            "tableHeaders": {
+                "no": "No."
+            },
+            "empty": {
+                "noRows": "このテーブルに行がありません。",
+                "selectTable": "行を読み込むにはテーブルを選択してください。"
+            },
+            "actions": {
+                "refreshSchema": "スキーマを更新",
+                "refresh": "更新"
+            },
+            "pagination": {
+                "showingUpTo": "最大 <count>{{count}}</count> 件のレコードを表示",
+                "range": "全<total>{{total}}</total>件中<range>{{start}}-{{end}}</range>",
+                "page": "ページ",
+                "of": "/"
+            }
+        },
+        "deployment": {
+            "iiDomainTitle": "II ドメイン",
+            "iiDomainDescription": "最新の本番ビルドがどこに公開されているかを管理します。",
+            "ownDomainTitle": "あなたのドメイン",
+            "ownDomainDescriptionConnected": "所有している既存のドメインをアプリに接続します",
+            "ownDomainDescriptionMissing": "まだドメインが公開されていません。デプロイするには「Publish」をクリックしてください。",
+            "noDeploymentPlaceholder": "まだデプロイが公開されていません",
+            "openUrl": "URLを開く"
+        },
+        "secrets": {
+            "form": {
+                "editTitle": "シークレットを編集",
+                "addTitle": "新しいシークレットを追加",
+                "editDescription": "シークレットの名前と値を更新します",
+                "addDescription": "新しい値を追加するために、シークレット名とキー/トークンを入力してください",
+                "namePlaceholder": "シークレット名を入力（例: EXAMPLE_NAME）",
+                "valuePlaceholder": "シークレット値を入力"
+            },
+            "actions": {
+                "addSecret": "シークレットを追加"
+            },
+            "missing": {
+                "title": "不足しているシークレット",
+                "description": "次のシークレットはコードで使用されていますが、まだ存在しません:"
+            },
+            "list": {
+                "title": "シークレット一覧",
+                "searchPlaceholder": "シークレットを検索",
+                "emptySearch": "検索条件に一致するシークレットがありません。",
+                "empty": "まだシークレットが保存されていません。",
+                "protected": "保護済み",
+                "menu": {
+                    "edit": "シークレットを編集",
+                    "delete": "シークレットを削除"
+                },
+                "lastUpdated": "最終更新: {{date}}"
+            },
+            "time": {
+                "justNow": "たった今"
+            },
+            "toasts": {
+                "added_one": "シークレットを追加しました",
+                "added_other": "{{count}} 件のシークレットを追加しました",
+                "deleted": "シークレットを削除しました",
+                "updated": "シークレットを更新しました"
+            },
+            "errors": {
+                "unableToAdd": "シークレットを追加できませんでした",
+                "unableToDelete": "シークレットを削除できませんでした",
+                "unableToUpdate": "シークレットを更新できませんでした"
+            }
+        }
+    }
+}

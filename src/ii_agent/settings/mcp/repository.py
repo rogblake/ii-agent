@@ -1,0 +1,74 @@
+"""Repository layer for mcp_settings domain - data access only."""
+
+from typing import List, Optional
+
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ii_agent.core.db.repository import BaseRepository
+from ii_agent.settings.mcp.models import MCPSetting
+
+
+class MCPSettingRepository(BaseRepository[MCPSetting]):
+    """Data access layer for MCPSetting model."""
+
+    model = MCPSetting
+
+    async def get_by_id_and_user(
+        self, db: AsyncSession, setting_id: str, user_id: str
+    ) -> Optional[MCPSetting]:
+        """Get an MCP setting by ID for a specific user."""
+        result = await db.execute(
+            select(MCPSetting).where(
+                MCPSetting.id == setting_id,
+                MCPSetting.user_id == user_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_user_and_tool_type(
+        self, db: AsyncSession, user_id: str, tool_type: str
+    ) -> Optional[MCPSetting]:
+        """Get an MCP setting by user ID and tool_type from JSONB metadata."""
+        result = await db.execute(
+            select(MCPSetting).where(
+                MCPSetting.user_id == user_id,
+                MCPSetting.mcp_metadata["tool_type"].astext == tool_type,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def list_by_user(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        *,
+        only_active: bool = False,
+        no_metadata: bool = False,
+    ) -> List[MCPSetting]:
+        """List all MCP settings for a user."""
+        query = select(MCPSetting).where(MCPSetting.user_id == user_id)
+
+        if only_active:
+            query = query.where(MCPSetting.is_active)
+
+        if no_metadata:
+            query = query.where(
+                or_(
+                    MCPSetting.mcp_metadata.is_(None),
+                    MCPSetting.mcp_metadata == {},
+                )
+            )
+
+        query = query.order_by(MCPSetting.created_at.desc())
+        result = await db.execute(query)
+        return list(result.scalars().all())
+
+    async def list_active_by_user(self, db: AsyncSession, user_id: str) -> List[MCPSetting]:
+        """List all active MCP settings for a user."""
+        return await self.list_by_user(db, user_id, only_active=True)
+
+    async def delete(self, db: AsyncSession, setting: MCPSetting) -> None:
+        """Delete an MCP setting."""
+        await db.delete(setting)
+        await db.flush()

@@ -1,0 +1,38 @@
+# Video Generation Models Configuration
+# This file defines all supported video generation models and their capabilities
+# NOTE: Temporarily only Veo 3.1 is enabled for chat mode video generation
+
+models:
+  - id: veo-3.1-premium
+    label: VEO 3.1 Premium
+    model_name: veo-3.1-premium
+    provider: vertex
+    type: video
+    description: "Ultimate video quality with native audio - Google's most advanced model"
+    supported_durations:
+      - "4s"
+      - "6s"
+      - "8s"
+      - "10s"
+      - "12s"
+      - "18s"
+      - "24s"
+      - "30s"
+    supported_video_resolutions:
+      - "720p"
+      - "1080p"
+      - "4k"
+    supported_video_aspect_ratios:
+      - "16:9"
+      - "9:16"
+    supports_audio: true
+    supports_multishot: true
+    supports_start_frame: true
+    supports_end_frame: true
+    icon: google
+
+# Suggestions for video generation prompts
+suggestions:
+  - "Film 8s slow dolly of neon alley in rain"
+  - "Shoot product spin with glossy reflections, 6s"
+  - "Create aerial sunrise pan over futuristic city"

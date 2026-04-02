@@ -1,0 +1,194 @@
+"""Service for introspecting project-linked databases."""
+
+from __future__ import annotations
+
+import asyncio
+from typing import List, Optional
+from urllib.parse import urlparse
+
+from sqlalchemy import MetaData, Table, create_engine, func, inspect, select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.projects.databases import utils
+from ii_agent.projects.databases.exceptions import ProjectDatabaseError
+from ii_agent.projects.databases.schemas import TableRecordsResult
+from ii_agent.projects.databases.models import DatabaseSourceEnum, ProjectDatabase
+from ii_agent.projects.databases.repository import ProjectDatabaseRepository
+from ii_agent.projects.repository import ProjectRepository
+
+
+async def fetch_table_names(connection_url: str) -> List[str]:
+    """Return the list of table names available in the target database."""
+    return await asyncio.to_thread(_fetch_table_names_sync, connection_url)
+
+
+async def fetch_table_records(
+    connection_url: str,
+    *,
+    table_name: str,
+    limit: int,
+    offset: int,
+) -> TableRecordsResult:
+    """Fetch rows from a specific table along with total count."""
+    return await asyncio.to_thread(
+        _fetch_table_records_sync, connection_url, table_name, limit, offset
+    )
+
+
+def _fetch_table_names_sync(connection_url: str) -> List[str]:
+    engine = create_engine(connection_url, future=True)
+    try:
+        inspector = inspect(engine)
+        return inspector.get_table_names()
+    except SQLAlchemyError as exc:  # pragma: no cover - best effort
+        raise ProjectDatabaseError(str(exc)) from exc
+    finally:
+        engine.dispose()
+
+
+def _fetch_table_records_sync(
+    connection_url: str, table_name: str, limit: int, offset: int
+) -> TableRecordsResult:
+    engine = create_engine(connection_url, future=True)
+    try:
+        metadata = MetaData()
+        try:
+            table = Table(table_name, metadata, autoload_with=engine)
+        except SQLAlchemyError as exc:  # pragma: no cover - best effort
+            raise ProjectDatabaseError(str(exc)) from exc
+
+        stmt = select(table).limit(limit).offset(offset)
+        count_stmt = select(func.count()).select_from(table)
+        with engine.connect() as conn:
+            try:
+                result = conn.execute(stmt)
+                rows = result.mappings().all()
+                total = conn.execute(count_stmt).scalar() or 0
+            except SQLAlchemyError as exc:  # pragma: no cover - best effort
+                raise ProjectDatabaseError(str(exc)) from exc
+
+        return TableRecordsResult(rows=[dict(row) for row in rows], total=total)
+    finally:
+        engine.dispose()
+
+
+class DatabaseService:
+    """Service for database introspection operations."""
+
+    def __init__(
+        self,
+        *,
+        project_repo: ProjectRepository,
+        db_repo: ProjectDatabaseRepository | None = None,
+        config: Settings,
+    ) -> None:
+        self._config = config
+        self._project_repo = project_repo
+        self._db_repo = db_repo or ProjectDatabaseRepository()
+
+    async def get_project_db_connection(
+        self,
+        db: AsyncSession,
+        project_id: str,
+        user_id: str,
+    ) -> Optional[str]:
+        """Fetch the database connection URL for a project."""
+        project = await self._project_repo.get_by_id_and_user(
+            db, project_id=project_id, user_id=user_id
+        )
+        if not project:
+            return None
+
+        return utils.extract_db_url(project.database_json)
+
+    async def get_project_db_tables(
+        self,
+        db: AsyncSession,
+        project_id: str,
+        user_id: str,
+    ) -> Optional[list[str]]:
+        """Return the table names for the project's database."""
+        connection_url = await self.get_project_db_connection(
+            db, project_id=project_id, user_id=user_id
+        )
+        if not connection_url:
+            return None
+        return await fetch_table_names(connection_url)
+
+    async def get_project_db_records(
+        self,
+        db: AsyncSession,
+        project_id: str,
+        user_id: str,
+        *,
+        table_name: str,
+        limit: int,
+        offset: int,
+    ) -> Optional[TableRecordsResult]:
+        """Return table records for the project's database."""
+        connection_url = await self.get_project_db_connection(
+            db, project_id=project_id, user_id=user_id
+        )
+        if not connection_url:
+            return None
+        return await fetch_table_records(
+            connection_url,
+            table_name=table_name,
+            limit=limit,
+            offset=offset,
+        )
+
+    # ------------------------------------------------------------------
+    # ProjectDatabase CRUD orchestration
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _parse_connection_string(
+        connection_string: str,
+    ) -> tuple[str | None, str | None, str | None]:
+        """Parse a database connection string to extract host, database_name, and role_name."""
+        try:
+            parsed = urlparse(connection_string)
+            host = parsed.hostname
+            database_name = parsed.path.lstrip("/") if parsed.path else None
+            role_name = parsed.username
+            return host, database_name, role_name
+        except Exception:
+            return None, None, None
+
+    async def upsert_database_from_url(
+        self,
+        db: AsyncSession,
+        *,
+        session_id: str,
+        connection_string: str,
+        source: str = DatabaseSourceEnum.USER.value,
+    ) -> ProjectDatabase:
+        """Upsert a database record from a connection URL.
+
+        If an active database exists for the session, update it.
+        Otherwise, create a new one.
+        """
+        host, database_name, role_name = self._parse_connection_string(connection_string)
+
+        existing = await self._db_repo.get_active_by_session_id(db, session_id)
+        if existing:
+            existing.source = source
+            existing.connection_string = connection_string
+            existing.host = host
+            existing.database_name = database_name
+            existing.role_name = role_name
+            return await self._db_repo.update(db, existing)
+
+        return await self._db_repo.create(
+            db,
+            session_id=session_id,
+            source=source,
+            connection_string=connection_string,
+            host=host,
+            database_name=database_name,
+            role_name=role_name,
+        )

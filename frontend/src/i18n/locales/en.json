@@ -1,0 +1,2477 @@
+{
+    "common": {
+        "appName": "II-Agent",
+        "beta": "BETA",
+        "loading": "Loading...",
+        "loadingMore": "Loading more...",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "save": "Save",
+        "clear": "Clear",
+        "submit": "Submit",
+        "skip": "Skip",
+        "confirm": "Confirm",
+        "close": "Close",
+        "keepEditing": "Keep editing",
+        "copy": "Copy",
+        "share": "Share",
+        "retry": "Retry",
+        "edit": "Edit",
+        "rename": "Rename",
+        "search": "Search",
+        "goBack": "Go Back",
+        "or": "OR",
+        "comingSoon": "Coming soon...",
+        "copiedToClipboard": "Copied to clipboard",
+        "notAvailable": "Not available",
+        "untitled": "Untitled",
+        "previous": "Previous",
+        "next": "Next",
+        "manage": "Manage",
+        "download": "Download",
+        "preview": "Preview",
+        "saving": "Saving...",
+        "continue": "Continue"
+    },
+    "auth": {
+        "welcomeTitle": "Welcome to {{appName}}",
+        "welcomeSubtitle": "Helping you with your task today",
+        "signIn": "Sign in",
+        "signUp": "Sign up",
+        "signOut": "Log out",
+        "forgotPassword": "Forgot your password?",
+        "rememberPassword": "You remember your password?",
+        "noAccount": "You don't have account yet?",
+        "hasAccount": "Already have an account?",
+        "continueWithGoogle": "Continue with Google Account",
+        "continueWithII": "Continue with II Account",
+        "loginFailed": "Login failed. Please try again.",
+        "emailPlaceholder": "Enter your email address",
+        "passwordPlaceholder": "Enter your password",
+        "namePlaceholder": "Enter your name",
+        "newPasswordPlaceholder": "New password",
+        "confirmPasswordPlaceholder": "Confirm your new password",
+        "validation": {
+            "invalidEmail": "Invalid email address",
+            "passwordRequired": "Password is required",
+            "passwordMinLength": "Password must be at least 6 characters",
+            "nameRequired": "Name is required",
+            "confirmPassword": "Please confirm your password",
+            "passwordMismatch": "Passwords don't match"
+        },
+        "forgotPasswordTitle": "Forgot your password?",
+        "forgotPasswordSubtitle": "Don't worry, we help you get it back",
+        "createNewPassword": "Create New Password",
+        "resetPassword": "Reset Password",
+        "continue": "Continue",
+        "privacyNotice": "We process your prompts and uploads to provide the II Agent service. By default, we do not use your II Agent content to train our models.",
+        "privacyNoticeLink": "See our Product Privacy Notice for more details."
+    },
+    "home": {
+        "greeting": "Hello",
+        "whatCanIDo": "What can I do for you today?",
+        "askAnything": "Ask me anything...",
+        "thinkingWith": "Thinking with",
+        "readyToVisualize": "Ready to visualize your ideas?",
+        "learnMoreAboutMediaGenerate": "Learn more about media generation",
+        "learnMoreModal": {
+            "title": "Generate Creative Images",
+            "featureTitle": "Multiple Models",
+            "featureDescription": "Swap between AI brains like Nano Banana Pro, GPT Image 1.5, and more. Each model hits different—pick the vibe that fits your idea best.",
+            "items": [
+                {
+                    "title": "Multiple Models",
+                    "description": "Swap between AI brains like Nano Banana Pro, GPT Image 1.5, and more. Each model hits different—pick the vibe that fits your idea best."
+                },
+                {
+                    "title": "Various Styles",
+                    "description": "From Starry to Pixel, 3D, Realistic, Clay, and beyond. One idea, infinite aesthetics. Try them all."
+                },
+                {
+                    "title": "Creative Tools",
+                    "description": "Glow up your images: group photos, background swaps, hairstyle changes, photo restore, easy. Big edits, tiny effort."
+                },
+                {
+                    "title": "Advanced Mode",
+                    "description": "Lock subject, scene, or style for clean, consistent results. Perfect for characters, series, and brand-level drip."
+                }
+            ],
+            "videoTitle": "Generate Videos",
+            "videoItems": [
+                {
+                    "title": "Start Frame / End Frame",
+                    "description": "Swap between AI brains like Nano Banana Pro, GPT Image 1.5, and more. Each model hits different—pick the vibe that fits your idea best."
+                },
+                {
+                    "title": "Reference Images",
+                    "description": "From Starry to Pixel, 3D, Realistic, Clay, and beyond. One idea, infinite aesthetics. Try them all."
+                }
+            ],
+            "storybookTitle": "Cook a Magic Storybook",
+            "storybookItems": [
+                {
+                    "title": "Multiple Generate Models",
+                    "description": "Switch between powerful AI models like Nano Banana Pro, GPT Image 1.5, and more. Each model hits different—pick your storyteller."
+                },
+                {
+                    "title": "Various Styles",
+                    "description": "From Clay / Stop Motion to Fabric, Ghibli-inspired, Oil Painting, and Magic Flow. Every story gets its own visual soul."
+                },
+                {
+                    "title": "Various Genres",
+                    "description": "Go fun & playful, dive into classic horror, punch through superhero action, or unravel noir detective vibes. Your story, your mood."
+                },
+                {
+                    "title": "Voice Over",
+                    "description": "Turn pages into sound with expressive AI narration. Perfect for kids, storytelling, or hands-free listening."
+                },
+                {
+                    "title": "Background Music",
+                    "description": "Set the mood with cinematic background music. Soft, dark, epic, or cozy—your story feels alive."
+                },
+                {
+                    "title": "Rich Dialogue (Novel Mode)",
+                    "description": "Deep conversations, inner thoughts, plot twists. Reads like a novel. Feels like a story."
+                },
+                {
+                    "title": "Multiple Languages",
+                    "description": "Tell your story in many languages, instantly. One world, unlimited readers."
+                },
+                {
+                    "title": "Text Included",
+                    "description": "Text appears on the page or as separate story panels. Clean layouts, easy reading, full control."
+                },
+                {
+                    "title": "Manga Layout",
+                    "description": "Dynamic panels, expressive speech bubbles, and bold sound effects. Pure manga energy—page after page."
+                }
+            ],
+            "tryNow": "Try it now",
+            "imageAlt": "Colorful AI-generated parrot"
+        },
+        "disclaimer": "{{appName}} outputs may contain errors or omissions. Intelligent Internet does not train its models on your workspace data."
+    },
+    "dashboard": {
+        "title": "Dashboard",
+        "tabs": {
+            "all": "All",
+            "recent": "Recent",
+            "favorite": "Favorite"
+        },
+        "loadingFavorites": "Loading favorite sessions...",
+        "noFavorites": "No favorite sessions yet",
+        "deleteSession": "Delete Session",
+        "deleteConfirmation": "Are you sure you want to delete this session? This action cannot be undone.",
+        "deleteConfirmationNamed": "Are you sure you want to delete \"{{sessionName}}\"? This action cannot be undone.",
+        "favorite": "Favorite",
+        "unfavorite": "Unfavorite"
+    },
+    "sidebar": {
+        "newChat": "New chat",
+        "chats": "Chats",
+        "projects": "Projects",
+        "seeMore": "See more",
+        "selectChats": "Select chats",
+        "selectProjects": "Select projects",
+        "selectAll": "Select all",
+        "deselectAll": "Deselect all",
+        "deleteSelected": "Delete ({{count}})",
+        "bulkDeleteChatsTitle": "Delete chats",
+        "bulkDeleteChatsConfirmation": "Are you sure you want to delete {{count}} chat(s)? This action cannot be undone.",
+        "bulkDeleteProjectsTitle": "Delete projects",
+        "bulkDeleteProjectsConfirmation": "Are you sure you want to delete {{count}} project(s)? This action cannot be undone.",
+        "bulkDeleteSuccess": "{{count}} item(s) deleted successfully.",
+        "bulkDeletePartialFailure": "{{count}} item(s) could not be deleted.",
+        "bulkDeleteError": "Failed to delete. Please try again."
+    },
+    "searchHistory": {
+        "trigger": "Search Chat",
+        "title": "Search",
+        "placeholder": "Search chats ...",
+        "groups": {
+            "today": "Today",
+            "yesterday": "Yesterday",
+            "last7Days": "Last 7 days",
+            "last30Days": "Last 30 days"
+        }
+    },
+    "connectors": {
+        "configure": "Configure",
+        "status": {
+            "checking": "Checking...",
+            "connecting": "Connecting...",
+            "disconnecting": "Disconnecting..."
+        },
+        "github": {
+            "title": "GitHub",
+            "connect": "Connect with GitHub",
+            "connected": "Connected",
+            "disconnect": "Disconnect",
+            "authPopupTitle": "GitHub Authorization",
+            "selectRepository": "Select a repository",
+            "loadingRepos": "Loading repositories...",
+            "noRepositories": "No repositories found",
+            "configureRepos": "Configure Repositories",
+            "loadRepoError": "Failed to load repositories",
+            "toasts": {
+                "connected": "GitHub connected successfully.",
+                "disconnected": "GitHub disconnected."
+            },
+            "errors": {
+                "connectFailed": "Failed to connect GitHub.",
+                "disconnectFailed": "Failed to disconnect GitHub."
+            }
+        },
+        "googleDrive": {
+            "title": "Google Drive",
+            "connect": "Connect Google Drive",
+            "connected": "Connected",
+            "disconnect": "Disconnect",
+            "toasts": {
+                "connected": "Google Drive connected successfully.",
+                "disconnected": "Google Drive disconnected."
+            },
+            "errors": {
+                "connectFailed": "Failed to connect Google Drive.",
+                "disconnectFailed": "Failed to disconnect Google Drive."
+            }
+        }
+    },
+    "settings": {
+        "title": "Settings",
+        "tabs": {
+            "general": "General",
+            "account": "Account",
+            "notifications": "Notifications",
+            "connectors": "Connectors",
+            "dataControls": "Data Controls",
+            "usage": "Usage",
+            "subscription": "Subscription"
+        },
+        "general": {
+            "theme": "Theme",
+            "themeDescription": "Choose your preferred theme for {{appName}}.",
+            "selectTheme": "Select Theme",
+            "system": "System",
+            "dark": "Dark",
+            "light": "Light",
+            "language": "Language",
+            "languageDescription": "Choose your preferred language for {{appName}}.",
+            "selectLanguage": "Select Language"
+        },
+        "account": {
+            "linkedAccounts": "Linked Accounts",
+            "paymentInvoices": "Payment & Invoices",
+            "planTitle": "II-Agent {{plan}} Plan",
+            "planRenewal": "Your plan auto-renews on {{date}}.",
+            "security": "Security",
+            "deleteAccount": "Delete account",
+            "deleteAccountTitle": "Delete Account",
+            "deleteAccountConfirmation": "Are you sure you want to delete your account? This action cannot be undone and you will no longer be able to log in.",
+            "deleting": "Deleting...",
+            "accountDeleted": "Account deleted successfully",
+            "deleteAccountError": "Unable to delete account. Please try again.",
+            "stripePortalError": "Unable to open Stripe portal. Please try again."
+        },
+        "dataControls": {
+            "title": "Data Controls",
+            "sharedLinks": "Shared Links",
+            "sharedLinksDescription": "Manage your shared conversations",
+            "publicLink": "Public link",
+            "viewLink": "View",
+            "deleteLink": "Delete",
+            "sharedChatsCount": "Shared Chats ({{count}})",
+            "openChat": "Open chat",
+            "unpublishTitle": "Unpublish Session",
+            "unpublishDescription": "Are you sure you want to unpublish this session? The public link will stop working.",
+            "deleteConfirmation": "Are you sure you want to delete this shared link? This action cannot be undone.",
+            "noSharedLinks": "You haven't shared any conversations yet",
+            "linkDeleted": "Shared link deleted successfully",
+            "deleteError": "Failed to delete shared link"
+        }
+    },
+    "userMenu": {
+        "getHelp": "Get Help"
+    },
+    "chat": {
+        "loadingHistory": "Loading conversation history...",
+        "emptyState": "Ask anything—your assistant is ready to help.",
+        "askPlaceholder": "Ask me anything...",
+        "thinking": "I'm thinking...",
+        "thinkingStatus": "{{appName}} Thinking",
+        "finishReasons": {
+            "maxTokens": "The response was stopped because it reached the maximum token limit.",
+            "canceled": "The response was canceled.",
+            "error": "The response was stopped due to an error.",
+            "permissionDenied": "The response was stopped due to permission denial.",
+            "paused": "The conversation was paused. You can continue by sending another message."
+        },
+        "suggestions": {
+            "general": [
+                "Build a landing page comparing AI coding assistants",
+                "Design cyberpunk mech poster with brand markings",
+                "Develop a responsive portfolio for generative art",
+                "Design an interactive climate metrics dashboard site"
+            ],
+            "media": [
+                "Render cinematic perfume visuals on frosted glass",
+                "Design cyberpunk mech poster with brand markings",
+                "Shoot stop-motion clip highlighting product assembly",
+                "Film 15s hairstyle demo with bold lighting shifts",
+                "Draft surreal poster art for new headphones drop"
+            ],
+            "slide": [
+                "Build a B2B software sales deck",
+                "Create cybersecurity training slides",
+                "Draft a startup funding pitch deck",
+                "Explain AI impact on future work",
+                "Outline a product launch update deck"
+            ],
+            "slide_nano_banana": [
+                "Create a stunning AI startup pitch deck",
+                "Design visually impressive quarterly report slides",
+                "Generate beautiful infographic presentation",
+                "Build a creative product launch deck with stunning visuals",
+                "Create professional conference keynote slides"
+            ],
+            "website_build": [
+                "Design an interactive climate metrics dashboard site",
+                "Build a landing page comparing AI coding assistants",
+                "Develop a responsive portfolio for generative art",
+                "Build a searchable support workflow knowledge base"
+            ],
+            "deep_research": [
+                "Research the current state of quantum computing and its real-world applications",
+                "Analyze the global impact of AI regulation policies across major economies",
+                "Investigate the latest breakthroughs in renewable energy storage technologies",
+                "Compare leading large language models on reasoning and factual accuracy"
+            ],
+            "fast_research": [
+                "Summarize the key features of the latest iPhone release",
+                "What are the top trending programming languages in 2025?",
+                "Find the latest updates on the Mars exploration missions",
+                "Give me a quick overview of the current state of electric vehicle adoption"
+            ]
+        },
+        "sageSuggestions": {
+            "general": [
+                "Provide policy advice on humanoid robots impacting labor forces",
+                "Research economic incentives for sustainable desert infrastructure",
+                "Generate image concepts showing secure e-government service usage"
+            ],
+            "media": [
+                "Generate image concepts showing secure e-government service usage",
+                "Generate image series highlighting desert climate resilience metrics",
+                "Generate video storyboard for emergency drone deployment protocols",
+                "Generate video explainer draft for a public AI oversight consultation"
+            ],
+            "slide": [
+                "Create briefing slides on climate resilience funding priorities",
+                "Prepare a council update on smart city data privacy safeguards",
+                "Outline a hearing deck on autonomous mobility regulations",
+                "Develop training slides on responsible AI adoption for civil servants"
+            ],
+            "slide_nano_banana": [
+                "Create briefing slides on climate resilience funding priorities",
+                "Prepare a council update on smart city data privacy safeguards",
+                "Outline a hearing deck on autonomous mobility regulations",
+                "Develop training slides on responsible AI adoption for civil servants"
+            ],
+            "website_build": [
+                "Build a public portal detailing open data request workflows",
+                "Design a dashboard tracking infrastructure modernization milestones",
+                "Develop a community feedback site for zoning modernization",
+                "Create a resource hub for civil service reskilling initiatives"
+            ],
+            "deep_research": [
+                "Analyze cross-border data governance frameworks and compliance gaps",
+                "Research the socioeconomic effects of universal basic income pilot programs",
+                "Investigate emerging cybersecurity threats to critical public infrastructure",
+                "Evaluate the effectiveness of AI-assisted diagnostics in public healthcare systems"
+            ],
+            "fast_research": [
+                "Summarize recent amendments to federal data privacy regulations",
+                "What are the latest public sector AI adoption benchmarks?",
+                "Find updates on smart city pilot programs in major metro areas",
+                "Give a quick overview of current government digital transformation initiatives"
+            ]
+        }
+    },
+    "codeEditor": {
+        "files": "Files"
+    },
+    "chain": {
+        "thinking": {
+            "streaming": "Thinking...",
+            "complete": "Thinking",
+            "completeWithDuration": "Thinking ({{seconds}}s)"
+        },
+        "codeInterpreter": "Code Interpreter"
+    },
+    "question": {
+        "mode": {
+            "chat": "Chat Mode",
+            "agent": "Agent Mode"
+        },
+        "enhancePrompt": "Enhance Prompt",
+        "voiceInput": "Voice input",
+        "voiceInputListening": "Listening...",
+        "voiceInputUnavailable": "Voice input not supported"
+    },
+    "plan": {
+        "modification": {
+            "title": "How would you like to modify your plan?"
+        }
+    },
+    "milestones": {
+        "saveError": "Failed to save milestone changes",
+        "emptyError": "Milestone cannot be empty",
+        "newMilestone": "New milestone",
+        "collapse": "Collapse milestones",
+        "viewAll": "View all milestones",
+        "modifyPlan": "Modify Plan",
+        "addMilestone": "Add milestone",
+        "helpMode": "You are in Help Mode",
+        "designMode": "You are in Live Editing Mode",
+        "nextMilestone": "Next milestone",
+        "status": "Status",
+        "allCompleted": "All milestones completed!",
+        "build": "Build",
+        "buildAll": "Build All",
+        "aria": {
+            "edit": "Edit milestone",
+            "delete": "Delete milestone"
+        }
+    },
+    "designMode": {
+	        "toolbar": {
+	            "responsive": "Responsive",
+            "deviceGroups": {
+                "desktop": "Desktop / Laptop",
+                "tablet": "Tablet",
+                "mobile": "Mobile"
+            },
+            "rotateDevice": "Rotate device",
+            "rotationNotAvailable": "Rotation not available for desktop",
+            "zoomOut": "Zoom out",
+            "zoomIn": "Zoom in",
+            "slideDeck": "Slide Deck",
+            "changes": "Changes",
+            "unsavedChangeZero": "0 unsaved change",
+            "unsavedChanges_one": "{{count}} unsaved change",
+            "unsavedChanges_other": "{{count}} unsaved changes",
+            "changesUnsaved_one": "{{count}} change unsaved",
+            "changesUnsaved_other": "{{count}} changes unsaved",
+            "noUnsaved": "No changes yet",
+            "syncing": "Syncing...",
+            "select": "Select",
+            "selecting": "Selecting",
+            "selected_one": "{{count}} selected",
+            "selected_other": "{{count}} selected",
+            "delete": "Delete",
+            "deleteSelected": "Delete selected elements",
+            "multiSelectDelete": "Multi-select to delete",
+            "selectAll": "Select all",
+            "deselectAll": "Deselect all",
+            "exitMultiSelect": "Exit selection mode",
+            "interactMode": "Interact with page",
+            "selectMode": "Select elements",
+	            "undo": "Undo",
+	            "redo": "Redo"
+	        },
+	        "ai": {
+	            "placeholder": "Describe what you want to accomplish ...",
+	            "planMode": "Plan Mode"
+	        },
+	        "deleteDialog": {
+	            "title": "Delete elements",
+	            "warning": "This will remove the selected element from the page. You can undo this by restoring an earlier version if needed."
+	        },
+        "syncDialog": {
+            "title": "Sync all changes",
+            "descriptionEmpty": "Are you sure you want to sync all changes? This will apply your latest updates to the current version.",
+            "description_one": "Are you sure you want to sync all changes? This will apply your latest updates to the current version.",
+            "description_other": "Are you sure you want to sync all changes? This will apply your latest updates to the current version.",
+            "confirm": "Confirm"
+        },
+        "preview": {
+            "syncingToSandbox": "Syncing edited changes to sandbox...",
+            "changeOfTotal": "Change {{current}} of {{total}}",
+            "starting": "Starting...",
+            "syncStats": "Applied: {{applied}}, Errors: {{errors}}"
+        },
+        "error": {
+            "title": "Live Editing Unavailable",
+            "hint": "Reload the page or switch to the \"Chat\" tab to exit live editing."
+        },
+        "errors": {
+            "failedToLoadPreview": "Failed to load live editing preview. Please refresh and try again.",
+            "runtimeNotResponding": "Live editing runtime not responding. The preview may not support live editing."
+        },
+        "messages": {
+            "syncedDesignChanges_one": "Synced {{count}} design change to the sandbox.",
+            "syncedDesignChanges_other": "Synced {{count}} design changes to the sandbox.",
+            "syncedDesignChangesDefault": "Synced design changes to the sandbox.",
+            "syncedSlideDesignChanges_one": "Synced {{count}} slide design change to the sandbox.",
+            "syncedSlideDesignChanges_other": "Synced {{count}} slide design changes to the sandbox.",
+            "syncedSlideDesignChangesDefault": "Synced slide design changes to the sandbox."
+        },
+        "toasts": {
+            "missingSessionId": "Missing session ID.",
+            "selectElementFirst": "Select an element in the preview first.",
+            "snapshotFailed": "Could not read the current page structure. Please reload the preview and try again.",
+            "aiNoApplicableChanges": "AI did not return any applicable changes.",
+            "aiApplyFailed": "Failed to apply AI changes.",
+            "noSupportedChanges": "No supported changes to sync.",
+            "changesNotMappedToSlide": "Some changes could not be mapped to a slide. Please refresh and try again.",
+            "syncSuccessApplied": "Synced ({{applied}} applied).",
+            "syncSuccess": "Synced to sandbox.",
+            "partialSync": "Partially synced ({{applied}}/{{total}} applied).",
+            "syncFailed": "Failed to sync changes to the sandbox.",
+            "saveFailed": "Failed to save changes."
+        },
+        "panel": {
+            "noSelection": {
+                "title": "Select an element in the preview",
+                "description": "Click on something in the preview to start editing."
+            },
+            "elementPill": {
+                "none": "No selection",
+                "link": "Link",
+                "button": "Button",
+                "image": "Image",
+                "input": "Input",
+                "textarea": "Textarea",
+                "select": "Select",
+                "text": "Text"
+            },
+            "inactive": {
+                "title": "Live Editing Mode is inactive",
+                "description": "Click \"Live Editing Mode\" in the preview toolbar to start editing."
+            },
+            "loading": "Loading live editing tools...",
+            "sections": {
+                "content": "Text Content",
+                "colors": "Colors",
+                "spacing": "Spacing",
+                "shadow": "Shadow Effect",
+                "typography": "Typography",
+                "border": "Border",
+                "size": "Size & Appearance"
+            },
+            "labels": {
+                "content": "Content",
+                "textColor": "Text Color",
+                "backgroundColor": "Background Color",
+                "padding": "Padding",
+                "margin": "Margin",
+                "shadow": "Shadow",
+                "fontFamily": "Font Family",
+                "fontWeight": "Font Weight",
+                "fontSize": "Font Size",
+                "lineHeight": "Line Height",
+                "letterSpacing": "Letter Spacing (em)",
+                "textAlignment": "Text Alignment",
+                "textDecoration": "Text Decoration",
+                "borderColor": "Border Color",
+                "borderStyle": "Border Style",
+                "borderWidth": "Border Width",
+                "width": "Width",
+                "height": "Height",
+                "opacity": "Opacity",
+                "borderRadius": "Border Radius"
+            },
+            "placeholders": {
+                "select": "Select...",
+                "font": "Select font",
+                "weight": "Weight",
+                "lineHeight": "e.g. 1.75",
+                "letterSpacing": "e.g. 0",
+                "width": "e.g. 320px",
+                "height": "e.g. 48px",
+                "aiPrompt": "Ask AI to modify design..."
+            },
+            "alignment": {
+                "left": "Align left",
+                "center": "Align center",
+                "right": "Align right",
+                "justify": "Justify"
+            },
+            "decoration": {
+                "italic": "Italic",
+                "underline": "Underline",
+                "lineThrough": "Strikethrough",
+                "overline": "Overline"
+            },
+            "borderStyles": {
+                "none": "None",
+                "solid": "Solid",
+                "dashed": "Dashed",
+                "dotted": "Dotted",
+                "double": "Double"
+            },
+            "shadowPresets": {
+                "none": "None",
+                "small": "Small",
+                "medium": "Medium",
+                "large": "Large"
+            },
+            "sides": {
+                "top": "Top",
+                "right": "Right",
+                "bottom": "Bottom",
+                "left": "Left"
+            },
+            "changes": {
+                "title": "Changes ({{count}})",
+                "clearAll": "Clear All",
+                "emptyTitle": "No pending changes",
+                "emptyDescription": "Make changes to elements in the preview to see them here",
+                "revert": "Revert",
+                "move": "Move",
+                "icon": "Icon",
+                "aiChange": "AI change",
+                "none": "(none)",
+                "only": "(only)",
+                "before": "before #{{id}}",
+                "after": "after #{{id}}"
+            }
+        },
+        "aiChatModal": {
+            "title": "AI Design Assistant",
+            "selectedElementLabel": "Selected element:",
+            "emptyTitle": "Describe what you want to change",
+            "emptyDescription": "e.g., \"Make this red\" or \"Increase padding\"",
+            "thinking": "Thinking...",
+            "placeholder": "Describe the change you want...",
+            "error": "Sorry, I encountered an error. Please try again."
+        },
+        "inspectorSidebar": {
+            "title": "Inspector",
+            "changesCount_one": "{{count}} change",
+            "changesCount_other": "{{count}} changes",
+            "resetStyles": "Reset styles",
+            "noSelectionInline": "Select an element",
+            "noSelectionMessage": "Click on an element in the preview to start editing",
+            "sections": {
+                "textContent": "Text Content",
+                "typography": "Typography",
+                "colors": "Colors",
+                "border": "Border",
+                "padding": "Padding"
+            },
+            "labels": {
+                "content": "Content",
+                "fontFamily": "Font Family",
+                "fontSize": "Font Size",
+                "fontWeight": "Font Weight",
+                "textColor": "Text Color",
+                "backgroundColor": "Background Color",
+                "quickColors": "Quick Colors",
+                "borderRadius": "Border Radius",
+                "top": "Top",
+                "bottom": "Bottom",
+                "left": "Left",
+                "right": "Right"
+            },
+            "placeholders": {
+                "textContent": "Enter text content...",
+                "fontFamily": "Select font",
+                "fontWeight": "Select weight"
+            }
+        }
+    },
+    "agent": {
+        "settings": "Agent Settings",
+        "chatSettings": "Chat Settings",
+        "model": "Model",
+        "tools": "Tools",
+        "sessionNotFound": "404 - Session not found",
+        "sessionNotFoundDescription": "The session you're looking for doesn't exist or has been deleted.",
+        "failedToLoad": "Failed to load session",
+        "awake": {
+            "sleeping": "I'm sleeping",
+            "toSavePower": "to save power",
+            "wakeMeUp": "Wake me up"
+        },
+        "badge": {
+            "mainAgent": "Main Agent",
+            "subAgent": "Sub Agent"
+        },
+        "steps": {
+            "plan": "Plan",
+            "build": "Build",
+            "result": "Result"
+        },
+        "attachments": {
+            "openAttachment": "Open attachment"
+        },
+        "editQuestion": {
+            "placeholder": "Ask me anything..."
+        },
+        "controller": {
+            "liveUpdate": "Live Update",
+            "jumpToLatest": "Jump to latest"
+        },
+        "files": {
+            "loading": "Loading files...",
+            "empty": "No files",
+            "fileTypes": {
+                "tsx": "TSX",
+                "ts": "TS",
+                "js": "JS",
+                "jsx": "JSX",
+                "css": "CSS",
+                "json": "JSON",
+                "sql": "SQL",
+                "md": "Markdown",
+                "pdf": "PDF",
+                "txt": "Text",
+                "png": "PNG",
+                "jpg": "JPG",
+                "jpeg": "JPEG",
+                "gif": "GIF",
+                "svg": "SVG",
+                "file": "File"
+            },
+            "size": {
+                "units": {
+                    "bytes": "bytes",
+                    "kb": "KB",
+                    "mb": "MB",
+                    "gb": "GB",
+                    "tb": "TB"
+                }
+            }
+        },
+        "tasks": {
+            "inProgress": "In progress",
+            "progress": "Task Progress"
+        },
+        "browser": {
+            "openInNewTab": "Open in New Tab",
+            "alt": "Browser preview"
+        },
+        "searchBrowser": {
+            "resultsCount": "{{count}} results"
+        },
+        "chatBox": {
+            "loadingSession": "Loading session",
+            "errors": {
+                "socketNotOpen": "Socket not open. Please try again.",
+                "socketNotOpenRetry": "Socket not open. Please try again."
+            }
+        },
+        "resultBrowser": {
+            "placeholder": "Result Browser"
+        },
+        "toolConfirmation": {
+            "processingResponse": "Processing your response...",
+            "unknownTool": "Unknown tool",
+            "tool": "Tool",
+            "viewArguments": "View arguments",
+            "yesContinue": "Yes, Continue",
+            "noCancel": "No, Cancel"
+        },
+        "checkpoint": {
+            "ready": "Checkpoint ready",
+            "projectLabel": "Project",
+            "revisionLabel": "Revision"
+        },
+        "subagent": {
+            "defaultName": "Sub Agent",
+            "action": "action",
+            "actions": "actions",
+            "status": {
+                "running": "Running",
+                "completed": "Completed",
+                "failed": "Failed"
+            },
+            "summaryTitle": "Summary",
+            "totalActionsLabel": "Total Actions",
+            "durationLabel": "Duration"
+        },
+        "publish": {
+            "publishing": "Publishing...",
+            "viewDeployment": "View Deployment",
+            "publish": "Publish",
+            "dialog": {
+                "title": "Publish to Vercel",
+                "description": "Provide a Vercel API key to publish the checkpointed project."
+            },
+            "form": {
+                "vercelApiKeyLabel": "Vercel API Key",
+                "vercelApiKeyPlaceholder": "Enter your Vercel API key"
+            },
+            "errors": {
+                "checkpointMetadataMissing": "Checkpoint metadata missing project details.",
+                "vercelApiKeyRequired": "Please enter a Vercel API key.",
+                "failedToPublish": "Failed to publish project. Please try again.",
+                "noCheckpointAvailable": "No checkpoint available to publish. Please wait for a checkpoint to be created."
+            },
+            "toasts": {
+                "requestSent": "Publish request sent. Watch the status updates in the activity feed."
+            }
+        },
+        "chatMessage": {
+            "waitingForInput": "{{appName}} is waiting for your input.",
+            "completed": "{{appName}} has completed the task.",
+            "allowReview": "Allow {{appName}} to review the results",
+            "review": "Review",
+            "stopped": "{{appName}} has stopped",
+            "replaying": "{{appName}} is replaying the task...",
+            "skipToResults": "Skip to results"
+        },
+        "messageContent": {
+            "file": "file",
+            "files": "files",
+            "thought": "Thought"
+        },
+        "secrets": {
+            "environmentVariables": "Environment variables",
+            "placeholder": "Enter {{key}}",
+            "projectNotInited": "Project not initialized yet. Environment variables will be saved once the project is created.",
+            "continueAnyway": "Continue Anyway",
+            "toasts": {
+                "saved": "Environment variables saved successfully."
+            },
+            "errors": {
+                "atLeastOneValue": "Please provide at least one secret value",
+                "missingContext": "Missing tool context for saving secrets",
+                "saveFailed": "Failed to save environment variables"
+            }
+        },
+        "slides": {
+            "defaultName": "Presentation",
+            "slideTitle": "Slide {{number}}",
+            "slideAlt": "Slide {{number}}",
+            "errors": {
+                "enterFullscreen": "Failed to enter fullscreen",
+                "loadSlides": "Failed to load slides",
+                "updateSlide": "Failed to update slide",
+                "downloadSlides": "Failed to download slides"
+            },
+            "toasts": {
+                "slideUpdated": "Slide updated successfully",
+                "downloadSuccess": "Slides downloaded successfully"
+            },
+            "actions": {
+                "downloadAsPdf": "Download as PDF",
+                "presentFullscreen": "Present fullscreen"
+            },
+            "downloadOverlay": {
+                "generatingPdf": "Generating PDF...",
+                "starting": "Starting...",
+                "slideOfTotal": "Slide {{current}} of {{total}}"
+            }
+        },
+        "action": {
+            "more": "More",
+            "less": "Less",
+            "titles": {
+                "deepResearching": "Deep Researching",
+                "fastResearching": "Fast Researching",
+                "creatingDesignDocument": "Creating Design Document",
+                "codex": "Codex",
+                "delegatingTo": "Delegating to {{name}}",
+                "github": "GitHub",
+                "claudeCode": "Claude Code",
+                "codexExecuting": "Codex Executing",
+                "codexReviewing": "Codex Reviewing",
+                "a2aAgent": "A2A Agent",
+                "thinking": "Thinking",
+                "searching": "Searching",
+                "imageSearch": "Image Search",
+                "getDatabaseConnection": "Getting Database Connection",
+                "getOpenAiKey": "Getting OpenAI Key",
+                "browsing": "Browsing",
+                "bash": "Bash",
+                "bashInit": "Initializing Bash Session",
+                "bashView": "Viewing Bash Session",
+                "bashStop": "Stopping Bash Session",
+                "bashKill": "Killing Bash Session",
+                "bashList": "Listing Bash Sessions",
+                "bashWrite": "Writing to Bash Process",
+                "shellExec": "Executing Command",
+                "shellWrite": "Writing to terminal",
+                "shellKill": "Killing Process",
+                "shellView": "Viewing Shell",
+                "shellWait": "Waiting for Shell",
+                "readFile": "Reading File",
+                "createFile": "Creating File",
+                "editFile": "Editing File",
+                "deploying": "Deploying",
+                "deployment": "Deployment",
+                "extractText": "Extracting Text",
+                "transcribeAudio": "Transcribing Audio",
+                "generateAudio": "Generating Audio",
+                "generateVideo": "Generating Video",
+                "generateLongVideoFromText": "Generating Long Video from Text",
+                "generateLongVideoFromImage": "Generating Long Video from Image",
+                "generateImage": "Generating Image",
+                "readRemoteImage": "Reading Remote Image",
+                "presentationAgent": "Using presentation agent",
+                "startingProject": "Starting up project",
+                "restartingDevServers": "Restarting dev servers",
+                "checkingServerStatus": "Checking server status",
+                "reviewerAgent": "Reviewer agent",
+                "browserClick": "Clicking Element",
+                "browserClose": "Closing Browser",
+                "browserConsoleMessages": "Getting Console Messages",
+                "browserDrag": "Dragging Element",
+                "browserEvaluate": "Evaluating JavaScript",
+                "browserHandleDialog": "Handling Dialog",
+                "browserHover": "Hovering Element",
+                "browserNavigate": "Navigating to URL",
+                "browserNetworkRequests": "Getting Network Requests",
+                "browserPressKey": "Pressing Key",
+                "browserSelectOption": "Selecting Option",
+                "browserSnapshot": "Taking Snapshot",
+                "browserScreenshot": "Taking Screenshot",
+                "browserType": "Typing Text",
+                "browserWaitFor": "Waiting for Element",
+                "browserTabClose": "Closing Tab",
+                "browserTabList": "Listing Tabs",
+                "browserTabNew": "Opening New Tab",
+                "browserTabSelect": "Selecting Tab",
+                "browserMouseClick": "Clicking at Coordinates",
+                "browserMouseDrag": "Dragging at Coordinates",
+                "browserMouseMove": "Moving Mouse to Coordinates",
+                "browserNavigation": "Browser Navigation",
+                "waiting": "Waiting",
+                "browserViewElements": "Viewing Interactive Elements",
+                "browserScrollDown": "Scrolling Down",
+                "browserScrollUp": "Scrolling Up",
+                "browserSwitchTab": "Switching Tab",
+                "browserGetSelectOptions": "Getting Select Options",
+                "browserSelectDropdownOption": "Selecting Dropdown Option",
+                "browserRestart": "Restarting Browser",
+                "browserEnterText": "Entering Text",
+                "browserEnterMultipleTexts": "Entering Multiple Texts",
+                "ls": "Listing Files",
+                "glob": "File Pattern Search",
+                "grep": "Text Search",
+                "registerPort": "Registering Port",
+                "mcpTool": "MCP Tool",
+                "agentTask": "Agent Task",
+                "slideWrite": "Creating Slide",
+                "slideEdit": "Editing Slide",
+                "slideGenerate": "Generating Slide",
+                "editing": "Editing",
+                "slideApplyPatch": "Editing Slides",
+                "viewFile": "Viewing File",
+                "undoEdit": "Undoing Edit",
+                "fileEditor": "File Editor",
+                "saveCheckpoint": "Saving checkpoint",
+                "registerStripeWebhook": "Registering Stripe Webhook",
+                "sendUserFiles": "Sending Files"
+            },
+            "values": {
+                "codexOperation": "Codex Operation",
+                "waitSeconds": "{{seconds}} seconds",
+                "viewElements": "View elements",
+                "page": "Page",
+                "restart": "Restart",
+                "fieldsCount": "{{count}} fields",
+                "slideNumber": "Slide {{number}}",
+                "attachmentsCount": "{{count}} file(s)"
+            }
+        },
+        "build": {
+            "titles": {
+                "bootingFullstackProject": "Booting full-stack project",
+                "fetchingServerStatus": "Fetching server status",
+                "searchingWithQuery": "Searching: \"{{query}}\"",
+                "crawling": "Crawling",
+                "generating": "Generating"
+            },
+            "header": {
+                "devtools": {
+                    "startingProject": "Starting project",
+                    "restartingServers": "Restarting servers",
+                    "serverLogs": "Server logs",
+                    "default": "Developer tools"
+                },
+                "executing": "Executing",
+                "generatingSlide": "Generating Slide {{number}}"
+            },
+            "devtools": {
+                "titles": {
+                    "bootingEnvironment": "Booting your full-stack environment",
+                    "rollingRestartInProgress": "Rolling restart in progress"
+                }
+            },
+            "imageAlt": "Image {{number}}",
+            "placeholder": "Once finished, your app screen will be placed here"
+        }
+    },
+    "agentTab": {
+        "tabs": {
+            "build": "Build",
+            "code": "Code",
+            "result": "Result",
+            "project": "Project"
+        },
+        "options": {
+            "chat": "Chat",
+            "design": "Live Editing",
+            "files": "All files"
+        },
+        "openInVSCode": "Open in VS Code",
+        "vscodeAlt": "VS Code",
+        "errors": {
+            "vscodeUrlMissing": "VS Code URL not available. Please try again."
+        }
+    },
+    "agentPopoverDone": {
+        "trigger": "What I have done?",
+        "title": "What I have done"
+    },
+    "share": {
+        "title": "Share conversation",
+        "publicLink": "Public link to chat",
+        "publicLinkDescription": "When you share your chat with another user, they will be able to see all that chat histories. Ensure that there is no sensitive information in this conversation.",
+        "presentationLink": "Presentation link",
+        "presentationLinkDescription": "Share this link for a fullscreen presentation view of your slides.",
+        "storybookLink": "Storybook",
+        "privateNote": "Your name, upload files, custom instructions, and any messages you add after sharing stay private.",
+        "createLink": "Create Link",
+        "unpublish": "Unpublic",
+        "sessionIdNotFound": "Session ID not found",
+        "publishSuccess": "Session published successfully",
+        "publishError": "Failed to publish session",
+        "unpublishSuccess": "Session unpublished successfully",
+        "unpublishError": "Failed to unpublish session"
+    },
+    "billing": {
+        "success": {
+            "title": "Payment Successful",
+            "message": "We received your payment details and are updating your subscription now.",
+            "redirecting": "Redirecting you back to your home page.",
+            "redirectingStatus": "Redirecting to home page...",
+            "noStripeSession": "No Stripe session provided. Showing subscription overview.",
+            "subscriptionUpdated": "Subscription updated successfully."
+        },
+        "cancel": {
+            "title": "Checkout Cancelled",
+            "message": "You can resume your checkout anytime from the subscription page.",
+            "redirectingStatus": "Redirecting to subscription settings...",
+            "checkoutCancelled": "Checkout cancelled. No changes were made to your subscription."
+        }
+    },
+    "notFound": {
+        "title": "Page not found",
+        "description": "Sorry, we couldn't find the page you're looking for.",
+        "contactSupport": "Contact support"
+    },
+    "slides": {
+        "templates": {
+            "choose": "Choose Template",
+            "searchPlaceholder": "Search templates...",
+            "noResults": "No templates found.",
+            "noTemplates": "No templates available.",
+            "loadError": "Failed to load slide templates",
+            "skip": "Skip Template",
+            "generate": "Generate Slides",
+            "selectToPreview": "Select a template to preview",
+            "noPreviewAvailable": "No Preview Available",
+            "mainPreviewTitle": "{{name}} - Main Preview",
+            "previewTitle": "{{name}} - Preview {{index}}"
+        }
+    },
+    "presentations": {
+        "sessionIdNotProvided": "Session ID not provided",
+        "sessionNotFound": "Session not found",
+        "noPresentationInSession": "This session does not contain a presentation",
+        "presentationNotFound": "Presentation not found",
+        "failedToLoad": "Failed to load presentation",
+        "notAccessible": "The presentation you're looking for doesn't exist or is not accessible.",
+        "createYourOwn": "Create your own",
+        "noPreview": "No preview",
+        "slideshow": "Slideshow",
+        "playFromBeginning": "Play from beginning",
+        "playFromCurrent": "Play from current slide",
+        "slideTitle": "Slide {{number}}"
+    },
+    "credit": {
+        "credits": "Credits",
+        "planLabel": "{{plan}} Plan",
+        "freePlan": "Free Plan",
+        "balance": "Balance",
+        "usage": "Usage",
+        "table": {
+            "chat": "Chat",
+            "date": "Date",
+            "creditsChange": "Credits change"
+        },
+        "noRecords": "No records found",
+        "tooltip": {
+            "credit": "Credit",
+            "bonusCredit": "Bonus Credit",
+            "viewUsage": "View Usage"
+        }
+    },
+    "upgrade": {
+        "title": "Upgrade Plan",
+        "description": "Get more features and credits",
+        "currentPlan": "Current Plan",
+        "features": "Features",
+        "upgrade": "Upgrade",
+        "badges": {
+            "current": "current",
+            "mostBenefits": "most benefits"
+        },
+        "actions": {
+            "upgradeNow": "Upgrade Now"
+        },
+        "redirecting": "Redirecting...",
+        "priceSuffix": {
+            "month": "/month"
+        },
+        "errors": {
+            "checkoutStart": "Unable to start checkout. Please try again."
+        },
+        "plans": {
+            "free": {
+                "name": "Free",
+                "description": "Try II-Agent"
+            },
+            "plus": {
+                "name": "Plus",
+                "description": "Extended usage"
+            },
+            "pro": {
+                "name": "Pro",
+                "description": "Full access to all features"
+            }
+        },
+        "planFeatures": {
+            "creditsPerMonth": "{{credits}} credits/month",
+            "fullStackWebDevelopment": "Full Stack Web Development",
+            "bringYourOwnKey": "Bring Your Own Key (BYOK)",
+            "generalTaskSolving": "General Task Solving",
+            "customizeAnyMcp": "Customize any MCP",
+            "slideCreation": "Slide Creation",
+            "imageVideoGeneration": "Image/Video Generation"
+        }
+    },
+    "errors": {
+        "generic": "Something went wrong. Please try again.",
+        "network": "Network error. Please check your connection.",
+        "unauthorized": "You are not authorized to perform this action.",
+        "notFound": "The requested resource was not found.",
+        "serverError": "Server error. Please try again later.",
+        "vscodeUrlMissing": "VS Code URL not available. Please try again."
+    },
+    "tooltips": {
+        "agentSettings": "Agent Settings",
+        "toggleTheme": "Toggle theme",
+        "moreOptions": "More options",
+        "addAttachments": "Add files or connect apps",
+        "copy": "Copy",
+        "share": "Share",
+        "delete": "Delete",
+        "favorite": "Add to favorites",
+        "unfavorite": "Remove from favorites"
+    },
+    "tools": {
+        "labels": {
+            "webSearch": "Searching for {{query}}",
+            "webVisit": "Visiting {{url}}",
+            "imageSearch": "Searching images for {{query}}",
+            "generateImage": "Generating image",
+            "generateInfographic": "Generating infographic",
+            "generatePoster": "Generating poster",
+            "generateVideo": "Generating video",
+            "generateStorybook": "Generating storybook",
+            "sendUserFiles": "Sending files",
+            "generic": "Using {{toolName}}"
+        },
+        "result": "Result",
+        "generatingImage": "Generating image...",
+        "generatingInfographic": "Generating infographic...",
+        "generatingPoster": "Generating poster...",
+        "generatingVideo": "Generating video...",
+        "videoNotSupported": "Your browser does not support the video tag.",
+        "generatingStorybook": "Generating storybook...",
+        "storybookComplete": "{{total}} pages generated",
+        "generatingStorybookBatch": "Generating pages {{pages}} of {{total}}...",
+        "generatingStorybookProgress": "Generating page {{current}} of {{total}}...",
+        "storybookCancelled": "Storybook generation cancelled.",
+        "executionFailed": "Tool execution failed",
+        "imageAlt": "Image {{index}}",
+        "generatedImageAlt": "Infographic {{index}}"
+    },
+    "imageEdit": {
+        "title": "Edit Image",
+        "description": "Upload a new image, paste from clipboard, or enter an image URL.",
+        "previewAlt": "Image preview",
+        "uploadFile": "Upload File",
+        "paste": "Paste",
+        "uploading": "Uploading...",
+        "processing": "Processing...",
+        "orEnterUrl": "Or enter image URL:",
+        "urlPlaceholder": "https://example.com/image.jpg",
+        "apply": "Apply",
+        "errors": {
+            "selectImageFile": "Please select an image file",
+            "fileTooLarge": "File is too large ({{sizeMB}}MB). Maximum size is {{maxMB}}MB.",
+            "uploadFailed": "Failed to upload image",
+            "pasteUploadFailed": "Failed to upload pasted image",
+            "clipboardFailed": "Failed to access clipboard"
+        }
+    },
+    "chainOfThought": {
+        "label": "Thought",
+        "thinking": "{{appName}} is thinking...",
+        "status": {
+            "imageGenerating": "Image Generating...",
+            "infographicGenerating": "Infographic Generating...",
+            "posterGenerating": "Poster Generating...",
+            "videoGenerating": "Video Generating...",
+            "modelGenerating": "Model Generating...",
+            "storybookGenerating": "Storybook Generating..."
+        }
+    },
+    "media": {
+        "miniTools": {
+            "back": "Back to Image Generation",
+            "loading": "Loading tools...",
+            "loadError": "Unable to load mini tools right now.",
+            "before": "Before",
+            "after": "After",
+            "exploreMore": "Explore More Of Our Tools",
+            "chooseTool": "Choose a tool",
+            "optionsCount": "{{count}} options",
+            "close": "Close mini tools",
+            "buttonLabel": "Mini Tools",
+            "clear": "Clear mini tool",
+            "defaultPrompt": "Generate an image using minitools",
+            "toolNames": {
+                "Restore Old Photo": "Restore Old Photo",
+                "Replace Object": "Replace Object",
+                "Remove Background": "Remove Background",
+                "Group Photo": "Group Photo",
+                "AI Extended Image": "AI Extended Image",
+                "Enhance Image": "Enhance Image",
+                "Hairstyle Change": "Hairstyle Change",
+                "Clothing Change": "Clothing Change",
+                "Photo Style Change": "Photo Style Change",
+                "Professional ID Photo": "Professional ID Photo",
+                "Face Swap": "Face Swap",
+                "AI Filters & Edit": "AI Filters & Edit"
+            }
+        },
+        "templateExplorer": {
+            "title": "More Styles for you",
+            "infographicTitle": "Infographic styles that fit for your ideas",
+            "posterTitle": "Our perfect works",
+            "infographicFilters": {
+                "all": "All",
+                "educationLearning": "Education & Learning",
+                "businessStrategy": "Business & Strategy",
+                "dataAnalytics": "Data & Analytics",
+                "governmentPublic": "Government & Public",
+                "scienceResearch": "Science & Research",
+                "creativeEditorial": "Creative & Editorial",
+                "premiumBrand": "Premium / Brand",
+                "technologyAI": "Technology & AI",
+                "globalUniversal": "Global / Universal"
+            },
+            "templateNames": {
+                "Storybook": "Storybook",
+                "Starry": "Starry",
+                "Pixel": "Pixel",
+                "Low-poly": "Low-poly",
+                "Papercraft": "Papercraft",
+                "Miniature": "Miniature",
+                "Clay": "Clay",
+                "Sketch": "Sketch",
+                "Wool": "Wool",
+                "Retro Cartoon": "Retro Cartoon",
+                "Realistic": "Realistic",
+                "Dramatic Heads": "Dramatic Heads",
+                "80s Glam": "80s Glam",
+                "Art Nouveau": "Art Nouveau",
+                "Anime": "Anime",
+                "Cyber Punk": "Cyber Punk",
+                "Flat": "Flat",
+                "3D Figure": "3D Figure",
+                "Blueprint": "Blueprint",
+                "Fish eyes": "Fish eyes"
+            }
+        },
+        "imageSettings": {
+            "ratio": "Ratio",
+            "resolution": "Resolution",
+            "proPlan": "Pro Plan",
+            "pages": "Pages",
+            "pagesLabel": "pages",
+            "unlimited": "Unlimited",
+            "textIncluded": "Text Included",
+            "noText": "No Text",
+            "textPosition": {
+                "none": "None",
+                "left": "Left",
+                "right": "Right",
+                "top": "Top",
+                "bottom": "Bottom",
+                "separate_page": "Separate Page"
+            },
+            "separatePageDescription": "This text display option will extend your generation pages",
+            "language": "Language",
+            "languages": {
+                "english": "English",
+                "vietnamese": "Vietnamese",
+                "japanese": "Japanese",
+                "hindi": "Hindi",
+                "korean": "Korean"
+            },
+            "style": "Style",
+            "styles": {
+                "storybook": "Storybook",
+                "manga": "Manga"
+            },
+            "layoutMode": "Layout Mode",
+            "genre": "Genre",
+            "genres": {
+                "funPlayful": "Fun & Playful",
+                "classicHorror": "Classic Horror",
+                "superheroAction": "Superhero Action",
+                "darkScifi": "Dark Sci-Fi",
+                "highFantasy": "High Fantasy",
+                "neonNoir": "Neon Noir Detective",
+                "wastelandApocalypse": "Wasteland Apocalypse",
+                "lightheartedComedy": "Lighthearted Comedy",
+                "teenDrama": "Teen Drama / Slice of Life"
+            },
+            "more": "More",
+            "mangaLayout": "Manga Layout",
+            "mangaLayoutDescription": "Uses authentic manga comic panel layouts with dynamic framing and visual storytelling instead of single full-page illustrations",
+            "richDialogue": "Rich Dialogue",
+            "richDialogueDescription": "Enables deeper dialogue, inner thoughts, sound effects, and emotionally engaging storytelling for a more immersive reading experience",
+            "voice": "Voice Over",
+            "voiceDescription": "Narrative voice-over audio with naturally, expressive tone and clear pacing"
+        },
+        "miniToolBoard": {
+            "selectedImageName": "Selected image",
+            "uploadError": "Unable to upload image. Please try again.",
+            "selectAtLeastOne": "Please select at least 1 image",
+            "selectAtLeastCount": "Please select at least {{count}} images",
+            "uploading": "Uploading...",
+            "uploadToStart": "Upload an image to start",
+            "pickFromLibrary": "or pick from the generated library",
+            "loadingLibrary": "Loading library...",
+            "browseMore": "Browse more",
+            "closeLibrary": "Close Library",
+            "selectedLabel": "Selected",
+            "selectionCountSingle": "{{count}}/{{max}} item",
+            "selectionCountPlural": "{{count}}/{{max}} items",
+            "selectRange": "Select {{min}}-{{max}} images",
+            "noItems": "No items yet",
+            "confirm": "Let's Rock",
+            "mediaAlt": "Media",
+            "selectedAlt": "Selected",
+            "myLibraryTitle": "My Library",
+            "loadingYourLibrary": "Loading your library..."
+        },
+        "types": {
+            "image": "Image",
+            "infographic": "Infographic",
+            "poster": "Poster",
+            "storybook": "Storybook",
+            "video": "Video"
+        },
+        "controls": {
+            "modelLabel": "{{type}} model",
+            "selectModel": "Select model",
+            "selected": "Selected"
+        },
+        "models": {
+            "nanoBananaPro": {
+                "label": "Nano Banana Pro",
+                "description": "Latest Gemini image model, top quality"
+            },
+            "gptImage15": {
+                "label": "GPT Image 1.5",
+                "description": "OpenAI GPT Image 1.5"
+            },
+            "imagen40Generate001": {
+                "label": "Imagen 4.0 Generate 001",
+                "description": "Imagen 4.0 Generate 001"
+            },
+            "veo31Premium": {
+                "label": "VEO 3.1 Premium",
+                "description": "Ultimate video quality with native audio - Google's most advance model"
+            },
+            "sora2Pro": {
+                "label": "SORA 2 PRO",
+                "description": "Extended duration & premium quality with advanced controls."
+            },
+            "seedance10Pro": {
+                "label": "Seedance 1.0 Pro",
+                "description": "Multi-scences storytelling with seamless transition & narrative flow"
+            },
+            "kling21Master": {
+                "label": "Kling 2.1 Master",
+                "description": "Best-in-class motion realism with precise temporal control"
+            },
+            "grok15Imagine": {
+                "label": "Grok 1.5 Imagine",
+                "description": "xAI's multimodal video generation with coherent motion and synchronise audio"
+            },
+            "wan26": {
+                "label": "Wan 2.6",
+                "description": "Alibaba's latest video mode with enhanced V2V capability, native audio-visual sync, and advanced motion control"
+            }
+        },
+        "suggestions": {
+            "image": [
+                "Render cinematic perfume visuals on frosted glass",
+                "Design cyberpunk mech poster with brand markings",
+                "Create editorial portrait with dramatic rim light"
+            ],
+            "infographic": [
+                "Diversity and Inclusion Terminology Infographic",
+                "Supply Chain Sustainability Process Infographic",
+                "Pandemic Impact on Refugee Statistical Infographic",
+                "Lesson learn about \"The water cycle\" for kindergarten kids",
+                "Brand Strategy Must-Have List Infographic Template",
+                "Customer Timeline Journey Infographic Template"
+            ],
+            "poster": [
+                "Design a bold concert poster for indie jazz night",
+                "Create a minimalist film festival poster",
+                "Design a product launch poster for new headphones"
+            ],
+            "storybook": [
+                "Summarize the entire Harry Potter story for me in a Ghibli-style storybook",
+                "Illustrate a children’s story about a magical forest with friendly animals",
+                "Create a storybook about a brave little toaster who goes on an adventure to find his owner"
+            ],
+            "video": [
+                "Film 8s slow dolly of neon alley in rain",
+                "Shoot product spin with glossy reflections, 6s",
+                "Create aerial sunrise pan over futuristic city"
+            ]
+        },
+        "videoFrames": {
+            "startLabel": "Start frame",
+            "endLabel": "End frame",
+            "uploadAria": "{{label}} upload",
+            "previewAlt": "{{label}} preview",
+            "removeAria": "Remove {{label}}"
+        },
+        "videoPickers": {
+            "durationLabel": "Duration",
+            "resolutionLabel": "Resolution",
+            "ratioLabel": "Ratio",
+            "aspectRatioLabel": "Aspect Ratio",
+            "audioLabel": "Audio",
+            "multishotLabel": "Multishot",
+            "stateOn": "ON",
+            "stateOff": "OFF",
+            "proBadge": "PRO"
+        },
+        "stylePicker": {
+            "title": "Pick a style you want to generate",
+            "infographicTitle": "Pick your infographic style",
+            "posterTitle": "Our perfect works",
+            "empty": "No styles available"
+        },
+        "advancedMode": {
+            "title": "Image Generation Advanced Mode",
+            "editTitle": "Edit Advanced Mode",
+            "toggleLabel": "Advanced Mode",
+            "success": {
+                "saved": "Advanced mode saved"
+            },
+            "errors": {
+                "sessionRequired": "Please select or create a conversation first.",
+                "enableFailed": "Unable to enable advanced mode.",
+                "disableFailed": "Unable to disable advanced mode.",
+                "saveFailed": "Failed to save advanced mode."
+            },
+            "categories": {
+                "subject": {
+                    "title": "The Subject",
+                    "description": "\"Who/What is in the image?\" (e.g., a specific sneaker, a person, a cat)."
+                },
+                "scene": {
+                    "title": "The Scene",
+                    "description": "\"Where are they?\" (e.g., a beach, a futuristic city, a kitchen counter)."
+                },
+                "style": {
+                    "title": "The Style",
+                    "description": "\"What does it look like?\" (e.g., watercolor painting, 3D render, cyberpunk, vintage photo)."
+                }
+            },
+            "sampleAlt": "{{title}} sample {{index}}",
+            "imageAlt": "{{title}} {{index}}",
+            "status": {
+                "generating": "Image Generating ...",
+                "uploading": "Uploading ..."
+            },
+            "actions": {
+                "uploadImage": "Upload Image",
+                "promptIt": "Prompt It",
+                "clearAll": "Clear all",
+                "generateReferences": "Generate References",
+                "makeIt": "Make it"
+            },
+            "promptPlaceholder": "Enter your prompt to generate references image"
+        }
+    },
+    "fork": {
+        "title": "Continue Session",
+        "description": "Create a new session based on the research output",
+        "createWebsite": {
+            "title": "Create Website",
+            "description": "Build a website based on the research output files",
+            "button": "Create Website"
+        },
+        "createSlide": {
+            "title": "Create Presentation",
+            "description": "Create a presentation based on the research output files",
+            "button": "Create Presentation"
+        },
+        "model": {
+            "label": "LLM Model",
+            "placeholder": "Use default model",
+            "hint": "Leave empty to inherit from parent session"
+        },
+        "instructions": {
+            "label": "Additional Instructions (optional)",
+            "placeholder": "e.g., Use dark mode, modern design, include animations..."
+        },
+        "attachments": {
+            "label": "Files to use"
+        },
+        "create": "Create",
+        "creating": "Creating...",
+        "success": "Session created successfully! Opening in new tab...",
+        "error": "Failed to create session. Please try again."
+    },
+    "forkInfo": {
+        "type": {
+            "researchToWebsite": "Create Website from Research",
+            "researchToSlide": "Create Presentation from Research"
+        },
+        "description": "This session was created from a previous research session",
+        "parentSession": "Parent Session",
+        "viewParent": "View",
+        "additionalInstructions": "Additional Instructions",
+        "files": "Files",
+        "moreFiles": "more files",
+        "start": "Start Building",
+        "starting": "Starting..."
+    },
+    "feedback": {
+        "like": "Like",
+        "dislike": "Dislike"
+    },
+    "uploads": {
+        "fileCount": "{{count}} file(s)",
+        "folder": "Folder"
+    },
+    "storybook": {
+        "viewer": {
+            "title": "Storybook Viewer",
+            "defaultTitle": "My Storybook",
+            "viewSinglePage": "View as single page",
+            "viewDoublePage": "View as double page",
+            "autoPlay": "Auto Play",
+            "stopAutoPlay": "Stop Auto Play",
+            "refresh": "Refresh",
+            "pageAlt": "Page {{page}}",
+            "pageCount": "Page {{current}} / {{total}}",
+            "pageRange": "Page {{start}} - {{end}} / {{total}}",
+            "add": "Add",
+            "describeToEdit": "Describe to edit...",
+            "download": {
+                "pdf": "PDF",
+                "png": "PNG",
+                "preparing": "Preparing download...",
+                "current": "Download current page",
+                "all": "Download all pages",
+                "noPages": "No pages available to download.",
+                "unableToPrepare": "Unable to prepare download for one or more pages.",
+                "missingSources": "Missing download sources for requested pages",
+                "missingSourcePage": "Missing download source for page {{page}}",
+                "failedFetchPage": "Failed to fetch page {{page}}",
+                "failed": "Failed to download storybook. Please try again.",
+                "success": "Storybook downloaded successfully!"
+            }
+        },
+        "voiceOver": {
+            "title": "Voice Over",
+            "description": "Converts your entire storybook into high-quality voice-over audio using AI narration. Each page will be read naturally, with expressive tone and clear pacing.",
+            "generate": "Generate",
+            "toasts": {
+                "generated": "Voice-over generated",
+                "failed": "Failed to generate voice-over",
+                "unavailable": "Voice-over is not available for this storybook"
+            }
+        },
+        "thumbnail": {
+            "pageCountLabel_one": "{{count}} page",
+            "pageCountLabel_other": "{{count}} page",
+            "readStorybook": "Read Storybook"
+        },
+        "share": {
+            "storybookIdNotProvided": "Storybook ID not provided",
+            "storybookNotFound": "Storybook not found",
+            "failedToLoad": "Failed to load storybook",
+            "notAccessible": "This storybook is not accessible"
+        },
+        "edit": {
+            "editText": "Edit Text",
+            "regenerateImage": "Regenerate Image",
+            "editTextTitle": "Edit Page Text",
+            "regenerateImageTitle": "Regenerate Page Image",
+            "textPlaceholder": "Enter the new text for this page...",
+            "imagePromptLabel": "Image Prompt",
+            "promptPlaceholder": "Describe the image you want to generate...",
+            "regenerating": "Regenerating...",
+            "regenerate": "Regenerate",
+            "textSaved": "Text updated successfully!",
+            "imageRegenerated": "Image regenerated successfully!"
+        },
+        "modal": {
+            "editMode": {
+                "label": "Edit Mode"
+            },
+            "status": {
+                "generating": "II is generating..."
+            },
+            "versions": {
+                "title": "Versions",
+                "loading": "Loading versions...",
+                "empty": "No versions yet"
+            },
+            "actions": {
+                "back": "Back",
+                "clear": "Clear",
+                "saveChanges": "Save Changes"
+            },
+            "reference": {
+                "defaultName": "Reference image",
+                "previewAlt": "Reference",
+                "removeLabel": "Remove reference image"
+            },
+            "time": {
+                "justNow": "Just now",
+                "minutesAgo_one": "{{count}} minute ago",
+                "minutesAgo_other": "{{count}} minutes ago",
+                "hoursAgo_one": "{{count}} hour ago",
+                "hoursAgo_other": "{{count}} hours ago",
+                "daysAgo_one": "{{count}} day ago",
+                "daysAgo_other": "{{count}} days ago"
+            },
+            "changes": {
+                "unsavedCount_one": "{{count}} unsaved change",
+                "unsavedCount_other": "{{count}} unsaved changes",
+                "none": "No unsaved changes",
+                "pendingEmpty": "No pending changes",
+                "pageLabel": "Page {{page}}: {{label}}",
+                "labels": {
+                    "change": "change",
+                    "editText": "Edit text",
+                    "moveElement": "Move element",
+                    "updateProperty": "Update {{property}}",
+                    "styleProperty": "Style: {{property}}"
+                }
+            },
+            "editPage": {
+                "cover": "Page {{current}} (Cover) of {{total}}",
+                "range": "Pages {{start}}-{{end}} of {{total}}",
+                "single": "Page {{current}} of {{total}}"
+            },
+            "confirm": {
+                "discardChanges": "You have unsaved changes. Are you sure you want to discard them?"
+            },
+            "toasts": {
+                "invalidImageFile": "Please select a valid image file.",
+                "referenceAttachFailed": "Unable to attach reference image right now.",
+                "referenceUploadFailed": "Failed to upload reference image.",
+                "changesSaved": "Changes saved successfully",
+                "imageRegenerated": "Image regenerated",
+                "imageRegenerateFailed": "Failed to regenerate image",
+                "noSession": "No session associated with this storybook"
+            },
+            "changeGroups": {
+                "regenerateImage": "Regenerate image"
+            },
+            "unsavedChanges": {
+                "title": "Unsaved changes",
+                "warning": "Make sure to save all your changes before exiting <b>Edit mode</b>, or you risk losing everything you haven't changed.",
+                "keepEditing": "Keep editing",
+                "saveChanges": "Save changes",
+                "discardChanges": "Discard changes"
+            }
+        },
+        "inspector": {
+            "sections": {
+                "content": "Content",
+                "typography": "Typography",
+                "textColor": "Text Color",
+                "background": "Background",
+                "border": "Border",
+                "spacing": "Spacing",
+                "shadow": "Shadow"
+            },
+            "empty": {
+                "title": "No element selected",
+                "description": "Click on any element in the preview to edit its styles"
+            },
+            "imageMode": {
+                "previewAlt": "Preview",
+                "promptLine1": "Please prompt in the chatbox",
+                "promptLine2": "edit or regenerate this page",
+                "examples": {
+                    "face": "Different facial expression",
+                    "hat": "Different hat"
+                }
+            },
+            "content": {
+                "placeholder": "Enter text content...",
+                "aiRewrite": "Rewrite with AI",
+                "aiRewriting": "Rewriting..."
+            },
+            "status": {
+                "generating": "II is generating..."
+            },
+            "typography": {
+                "fontFamily": "Font Family",
+                "fontPlaceholder": "Select font...",
+                "fontWeight": "Font Weight",
+                "fontSize": "Font Size",
+                "lineHeight": "Line Height (rem)",
+                "letterSpacing": "Letter Spacing (em)",
+                "textAlignment": "Text Alignment",
+                "textDecoration": "Text Decoration"
+            },
+            "textColor": {
+                "label": "Text Color"
+            },
+            "background": {
+                "tabColor": "Color",
+                "tabImage": "Image",
+                "colorLabel": "Color",
+                "imageSources": "Image Sources",
+                "sourceUpload": "Upload",
+                "sourceLink": "Link",
+                "sourcePrompt": "Prompt",
+                "uploading": "Uploading image...",
+                "uploadCta": "Click to upload image",
+                "linkPlaceholder": "https://example.com/image.png",
+                "promptPlaceholder": "Describe the background you want to generate...",
+                "aiGenerate": "Generate background with AI",
+                "aiGenerating": "Generating..."
+            },
+            "border": {
+                "colorLabel": "Border Color",
+                "style": "Border Style",
+                "width": "Border Width",
+                "radius": "Border Radius"
+            },
+            "spacing": {
+                "padding": "Padding",
+                "margin": "Margin"
+            },
+            "shadow": {
+                "label": "Shadow Effect",
+                "placeholder": "Shadow",
+                "none": "None",
+                "small": "Small",
+                "medium": "Medium",
+                "large": "Large"
+            },
+            "opacity": {
+                "label": "Opacity",
+                "placeholder": "Select opacity"
+            },
+            "colorMode": {
+                "solid": "Solid",
+                "custom": "Custom",
+                "gradient": "Gradient"
+            },
+            "gradient": {
+                "from": "From",
+                "to": "To"
+            },
+            "borderStyle": {
+                "none": "None",
+                "solid": "Solid",
+                "dashed": "Dashed",
+                "dotted": "Dotted",
+                "double": "Double"
+            },
+            "options": {
+                "none": "None",
+                "full": "Full"
+            },
+            "placeholders": {
+                "weight": "Weight",
+                "size": "Size",
+                "style": "Style",
+                "width": "Width",
+                "radius": "Radius"
+            },
+            "toasts": {
+                "rewriteSuccess": "Content rewritten successfully",
+                "rewriteFailed": "Failed to rewrite content",
+                "generateSuccess": "Background image generated successfully",
+                "generateFailed": "Failed to generate background image",
+                "invalidImageFile": "Please select a valid image file.",
+                "uploadFailed": "Failed to upload background image."
+            },
+            "changeGroups": {
+                "textGradient": "Text gradient",
+                "textColor": "Text color",
+                "backgroundGradient": "Background gradient",
+                "backgroundColor": "Background color",
+                "backgroundImage": "Background image",
+                "borderGradient": "Border gradient",
+                "borderColor": "Border color"
+            }
+        },
+        "editWrapper": {
+            "loading": "Loading page for editing...",
+            "initializing": "Initializing editor...",
+            "errors": {
+                "loadFailed": "Failed to load page for editing"
+            },
+            "iframeTitle": "Edit page {{page}}"
+        },
+        "versionSelector": {
+            "title": "Version History",
+            "noVersions": "No versions found",
+            "loadError": "Failed to load versions",
+            "versionLabel": "v{{version}}",
+            "originalLabel": "v{{version}} (original)",
+            "currentLabel": "v{{version}} (current)"
+        },
+        "noImage": "No image available"
+    },
+    "sessions": {
+        "renameChat": "Rename Chat",
+        "renameProject": "Rename Project",
+        "renameDescriptionChat": "Enter a new name for this chat.",
+        "renameDescriptionProject": "Enter a new name for this project.",
+        "nameLabel": "Name",
+        "namePlaceholder": "Enter name..."
+    },
+    "publicHome": {
+        "title": "Welcome to II-Agent",
+        "subtitle": "Your intelligent assistant for any task",
+        "getStarted": "Get Started",
+        "learnMore": "Learn More",
+        "logoAlt": "Logo",
+        "agentAlt": "II-Agent",
+        "heading": "Meet {{appName}}",
+        "tagline": "Your intelligent agent for creating, researching, and shipping fast.",
+        "cta": "Start Your First Task",
+        "termsOfUse": "Terms of Use",
+        "privacyPolicy": "Privacy Policy",
+        "features": {
+            "dataControl": {
+                "title": "Your Data, Your Control",
+                "description": "BYOK – connect your own API keys and services for private, high-performance runs."
+            },
+            "deck": {
+                "title": "From Idea to Deck in Minutes",
+                "description": "Generate slide outlines, refine every block, and export when ready - no context switching."
+            },
+            "code": {
+                "title": "Delegate the Code. Keep the Control.",
+                "description": "When implementation gets heavy, bring Codex Agent into the thread."
+            },
+            "research": {
+                "title": "Research That Cites Its Sources",
+                "description": "II-Agent plans, reads, and synthesizes across the web and your files - returning structured insights with citations.",
+                "highlights": [
+                    "Browsing",
+                    "Source graphs",
+                    "Evidence snippets",
+                    "One-tap briefs"
+                ]
+            },
+            "ship": {
+                "title": "Describe It. Ship It.",
+                "description": "Turn a prompt into a working site: scaffold pages, sections, and components; preview, edit, and export.",
+                "highlights": [
+                    "Live preview",
+                    "Clean markup",
+                    "Component library",
+                    "Export to repo/zip"
+                ]
+            }
+        }
+    },
+    "questionInput": {
+        "placeholder": "Describe what you want to accomplish...",
+        "dragDrop": {
+            "dropToUpload": "Drop files here to upload"
+        }
+    },
+    "questionFileUpload": {
+        "addImagesAndFiles": "Add images and files",
+        "addFromGoogleDrive": "Add from Google Drive",
+        "connectGoogleDrive": "Connect with Google Drive",
+        "connectApps": "Connect apps"
+    },
+    "agentSetting": {
+        "title": {
+            "agent": "Agent Settings",
+            "chat": "Chat Settings"
+        },
+        "tabs": {
+            "model": "Model",
+            "tools": "Tools",
+            "skills": "Skills"
+        },
+        "addEditModel": {
+            "title": {
+                "add": "Add New Model",
+                "edit": "Edit Model Configuration"
+            },
+            "description": "Configure your LLM provider and API settings.",
+            "sections": {
+                "provider": "LLM Provider"
+            },
+            "fields": {
+                "modelName": "Model Name",
+                "selectModel": "Select Model",
+                "customModelPlaceholder": "Enter custom model name",
+                "apiKeyLabel": "API Key",
+                "apiKeyPlaceholder": "Enter your API Key",
+                "baseUrlLabel": "Base URL",
+                "baseUrlOptionalLabel": "Base URL (Optional)",
+                "baseUrlPlaceholder": "Enter your Base URL",
+                "latestUpdate": "Latest update",
+                "vertexProjectIdLabel": "Vertex Project ID",
+                "vertexProjectIdPlaceholder": "Enter your Vertex Project ID",
+                "vertexRegionLabel": "Vertex Region",
+                "vertexRegionPlaceholder": "Enter your Vertex Region",
+                "azureEndpointLabel": "Azure Endpoint",
+                "azureEndpointPlaceholder": "Enter your Azure Endpoint",
+                "azureApiVersionLabel": "Azure API Version",
+                "azureApiVersionPlaceholder": "Enter your Azure API Version"
+            }
+        },
+        "modelSetting": {
+            "title": "LLM Model Configuration",
+            "actions": {
+                "newModel": "New Model"
+            },
+            "toasts": {
+                "created": "Model created successfully",
+                "updated": "Model updated successfully",
+                "deleted": "Model deleted successfully",
+                "deleteFailed": "Failed to delete model. Please try again."
+            }
+        },
+        "toolSetting": {
+            "magicTools": {
+                "title": "Magic Tools",
+                "subtitle": "Modern & accessible for general users"
+            },
+            "mcp": {
+                "title": "Connected MCP Tools",
+                "subtitle": "External tools connected via MCP",
+                "connectedTool": "MCP Connected Tool",
+                "serverNames": {
+                    "codexExecuting": "Codex Executing",
+                    "playwright": "Playwright Browser",
+                    "browserTools": "Browser Tools",
+                    "default": "MCP Tool"
+                }
+            },
+            "mcpConnect": {
+                "title": {
+                    "edit": "Edit MCP Tool",
+                    "connect": "Connect new tool"
+                },
+                "form": {
+                    "label": "MCP Connect JSON",
+                    "placeholder": "Enter MCP Connect JSON"
+                },
+                "actions": {
+                    "update": "Update",
+                    "connect": "Connect"
+                },
+                "toasts": {
+                    "updated": "MCP settings updated successfully",
+                    "connected": "MCP tool connected successfully"
+                },
+                "errors": {
+                    "missingConfig": "Please enter MCP configuration",
+                    "invalidJson": "Invalid JSON format",
+                    "saveFailed": "Failed to save MCP settings"
+                }
+            },
+            "mcpTool": {
+                "aboutTitle": "About",
+                "jsonConfigTitle": "JSON Configuration",
+                "jsonConfigDescription": "Add this configuration to your MCP client settings",
+                "connectTo": "Connect to {{name}}",
+                "envDescription": "Configure the environment variables required for {{name}}:",
+                "envPlaceholder": "Enter {{key}}",
+                "logoAlt": "Logo",
+                "actions": {
+                    "remote": "Remote",
+                    "connect": "Connect"
+                }
+            },
+            "connectTools": "Connect tools",
+            "toasts": {
+                "updateMcpFailed": "Failed to update MCP tool",
+                "mcpDisconnected": "MCP tool disconnected",
+                "deleteMcpFailed": "Failed to delete MCP tool",
+                "configSaved": "Configuration saved successfully",
+                "configSaveFailed": "Failed to save configuration. Please try again."
+            }
+        },
+        "skillSetting": {
+            "sections": {
+                "builtin": {
+                    "title": "Built-in Skills",
+                    "subtitle": "Pre-installed skills that enhance agent capabilities"
+                },
+                "custom": {
+                    "title": "Custom Skills",
+                    "subtitle": "Skills added from GitHub repositories"
+                }
+            },
+            "badges": {
+                "builtin": "Built-in"
+            },
+            "links": {
+                "viewOnGithub": "View on GitHub"
+            },
+            "empty": {
+                "title": "No custom skills added yet",
+                "description": "Click \"{{action}}\" to add skills from GitHub"
+            },
+            "actions": {
+                "connect": "Connect Skills"
+            },
+            "connect": {
+                "title": "Connect Skill from GitHub",
+                "description": "Add a custom skill from a GitHub repository. The skill folder must contain a SKILL.md file with valid frontmatter.",
+                "form": {
+                    "label": "GitHub URL",
+                    "placeholder": "https://github.com/owner/repo/tree/main/skills/skill-name"
+                },
+                "urlFormat": {
+                    "title": "URL Format",
+                    "format": "https://github.com/{owner}/{repo}/tree/{branch}/{path-to-skill}",
+                    "example": "Example: https://github.com/anthropics/skills/tree/main/skills/brand-guidelines"
+                },
+                "actions": {
+                    "connect": "Connect Skill",
+                    "connecting": "Connecting..."
+                },
+                "validation": {
+                    "urlRequired": "GitHub URL is required",
+                    "urlInvalid": "Invalid GitHub URL format. Expected: https://github.com/{owner}/{repo}/tree/{branch}/{path}"
+                },
+                "guide": {
+                    "toggle": "Best Practices Guide",
+                    "whatAreSkills": {
+                        "title": "What are Skills?",
+                        "content": "Skills are folders containing a SKILL.md file that instruct the Agent how to complete specific tasks. They provide specialized knowledge, workflows, and tool integrations for tasks like document processing, design work, or coding patterns."
+                    },
+                    "whereToFind": {
+                        "title": "Where to Find Skills",
+                        "content": "The official Anthropic skills repository contains ready-to-use skills. You can also find community skills on GitHub or create your own.",
+                        "link": "Browse Official Skills",
+                        "url": "https://github.com/anthropics/skills/tree/main/skills"
+                    },
+                    "howToGetUrl": {
+                        "title": "How to Get the Tree URL",
+                        "step1": "1. Go to the GitHub repository containing the skill",
+                        "step2": "2. Navigate to the folder containing the SKILL.md file",
+                        "step3": "3. Copy the URL from your browser's address bar",
+                        "step4": "4. Make sure the URL contains '/tree/' (e.g., /tree/main/skills/pdf)",
+                        "tip": "Tip: The URL should point to the folder, not the SKILL.md file itself."
+                    },
+                    "exampleUrls": {
+                        "title": "Example Skill URLs",
+                        "items": [
+                            { "name": "pdf", "url": "https://github.com/anthropics/skills/tree/main/skills/pdf" },
+                            { "name": "xlsx", "url": "https://github.com/anthropics/skills/tree/main/skills/xlsx" },
+                            { "name": "docx", "url": "https://github.com/anthropics/skills/tree/main/skills/docx" },
+                            { "name": "frontend-design", "url": "https://github.com/anthropics/skills/tree/main/skills/frontend-design" },
+                            { "name": "webapp-testing", "url": "https://github.com/anthropics/skills/tree/main/skills/webapp-testing" }
+                        ]
+                    }
+                }
+            },
+            "toasts": {
+                "connected": "Skill \"{{name}}\" connected successfully!",
+                "connectFailed": "Failed to connect skill from GitHub",
+                "loadFailed": "Failed to load skills",
+                "enabled": "Skill enabled",
+                "disabled": "Skill disabled",
+                "updateFailed": "Failed to update skill",
+                "builtinDeleteBlocked": "Built-in skills cannot be deleted",
+                "removed": "Skill removed successfully",
+                "deleteFailed": "Failed to delete skill"
+            },
+            "help": {
+                "title": "What are Skills?",
+                "description": "Skills are folders of instructions, scripts, and resources that the Agent loads dynamically to improve performance on specialized tasks.",
+                "sections": {
+                    "whatAreSkills": {
+                        "title": "What are Skills?",
+                        "content": "Skills instruct Agent how to complete specific tasks in a repeatable way, such as creating documents with brand guidelines, analyzing data using specific workflows, or automating tasks. Each skill contains a SKILL.md file with instructions and guidance."
+                    },
+                    "whereToFind": {
+                        "title": "Where to Find Skills",
+                        "content": "Browse official skills at github.com/anthropics/skills. You can also find community skills or create your own. Any GitHub repository with a valid SKILL.md file can be connected."
+                    }
+                },
+                "examples": {
+                    "title": "Example Skills",
+                    "items": [
+                        { "name": "pdf", "url": "https://github.com/anthropics/skills/tree/main/skills/pdf" },
+                        { "name": "xlsx", "url": "https://github.com/anthropics/skills/tree/main/skills/xlsx" },
+                        { "name": "docx", "url": "https://github.com/anthropics/skills/tree/main/skills/docx" },
+                        { "name": "pptx", "url": "https://github.com/anthropics/skills/tree/main/skills/pptx" },
+                        { "name": "frontend-design", "url": "https://github.com/anthropics/skills/tree/main/skills/frontend-design" },
+                        { "name": "webapp-testing", "url": "https://github.com/anthropics/skills/tree/main/skills/webapp-testing" }
+                    ]
+                },
+                "link": {
+                    "text": "Browse All Skills on GitHub",
+                    "url": "https://github.com/anthropics/skills/tree/main/skills"
+                }
+            }
+        }
+    },
+    "questionFeatureSelector": {
+        "usingTemplate": "Using template: {{templateName}}",
+        "template": "Template"
+    },
+    "toolCatalog": {
+        "init": {
+            "taskAgent": {
+                "name": "Task Agent",
+                "description": "Enable task delegation to sub-agent for complex operations"
+            },
+            "deepResearch": {
+                "name": "Deep Research",
+                "description": "Enable in-depth research capabilities"
+            },
+            "designDocument": {
+                "name": "Design Document",
+                "description": "Design documents before developing for full-stack web development"
+            },
+            "mediaGeneration": {
+                "name": "Media Generation",
+                "description": "Generate images and videos"
+            },
+            "browser": {
+                "name": "Browser",
+                "description": "Enable web browsing capabilities. Note: Available only for vision models."
+            },
+            "codex": {
+                "name": "Codex",
+                "description": "Enable OpenAI Codex for autonomous code generation and review"
+            },
+            "claudeCode": {
+                "name": "Claude Code",
+                "description": "Enable Claude Code for autonomous code generation"
+            }
+        },
+        "chatTools": {
+            "webSearch": {
+                "name": "Web Search",
+                "description": "Search the web for information"
+            },
+            "webVisit": {
+                "name": "Web Visit",
+                "description": "Visit and browse web pages"
+            },
+            "imageSearch": {
+                "name": "Image Search",
+                "description": "Search for images on the web"
+            },
+            "codeInterpreter": {
+                "name": "Code Interpreter",
+                "description": "Execute code for calculations, data analysis, and visualizations"
+            }
+        },
+        "features": {
+            "createWebsite": {
+                "name": "Create a Website"
+            },
+            "createSlide": {
+                "name": "Create Slide"
+            },
+            "aiSlideNanoBanana": {
+                "name": "AI Slide (Nano Banana)"
+            },
+            "deepResearch": {
+                "name": "Deep Research"
+            },
+            "fastResearch": {
+                "name": "Fast Research"
+            },
+            "codex": {
+                "name": "Codex"
+            },
+            "claudeCode": {
+                "name": "Claude Code"
+            }
+        },
+        "chatFeatures": {
+            "generateImage": {
+                "name": "Generate Image"
+            },
+            "generateInfographic": {
+                "name": "Generate Infographic"
+            },
+            "generatePoster": {
+                "name": "Generate Poster"
+            },
+            "generateVideo": {
+                "name": "Generate Video"
+            },
+            "cookStorybook": {
+                "name": "Cook a Storybook / Comic"
+            }
+        }
+    },
+    "buildModeDropdown": {
+        "modes": {
+            "build": {
+                "label": "Build Mode",
+                "description": "Default mode for building and editing your app"
+            },
+            "design": {
+                "label": "Live Editing Mode",
+                "description": "Interact with your website as you build"
+            },
+            "plan": {
+                "label": "Plan Mode",
+                "description": "Generate detailed plan before adding complex features"
+            },
+            "help": {
+                "label": "Help Mode",
+                "description": "Root-cause issues and find the best solution"
+            }
+        }
+    },
+    "composio": {
+        "appCard": {
+            "connecting": "Connecting...",
+            "manage": "Manage",
+            "connect": "Connect",
+            "disable": "Disable",
+            "enable": "Enable",
+            "status": {
+                "connecting": "Connecting...",
+                "connected": "Connected",
+                "disabled": "Disabled",
+                "disconnected": "Disconnected"
+            },
+            "aria": {
+                "integrationCard": "{{appName}} integration card",
+                "manageConnection": "Manage {{appName}} connection",
+                "connectApp": "Connect {{appName}}"
+            }
+        },
+        "disconnectDialog": {
+            "title": "Disconnect {{appName}}?",
+            "description": "This will remove the <profileName>\"{{profileName}}\"</profileName> connection. The agent will no longer be able to access your {{appName}} account.",
+            "warning": "This action cannot be undone.",
+            "cancel": "Cancel",
+            "disconnect": "Disconnect"
+        },
+        "integrationsModal": {
+            "title": "App Integrations",
+            "description": "Connect your favorite apps to enhance your agent's capabilities - <strong>Powered by Composio.</strong>",
+            "searchPlaceholder": "Search apps...",
+            "searchLabel": "Search for apps",
+            "clearSearch": "Clear search",
+            "noAppsFound": "No apps found",
+            "noAppsMatchSearch": "No apps match \"{{search}}\"",
+            "noAppsAvailable": "No apps available",
+            "searchResults": "Search Results ({{count}})",
+            "availableApps": "Available Apps ({{count}})",
+            "availableIntegrations": "Available integrations",
+            "connectDefaultDescription": "Connect to {{appName}} and access its tools and capabilities.",
+            "toasts": {
+                "connectedSuccess": "{{appName}} connected successfully!",
+                "connectedDescription": "You can now use this integration",
+                "connectionNotCompleted": "Connection to {{appName}} was not completed",
+                "connectionNotCompletedDescription": "Please try again",
+                "connectionTimedOut": "Connection to {{appName}} timed out or was cancelled",
+                "connectionTimedOutDescription": "The authentication window took too long to respond",
+                "couldNotOpenAuthWindow": "Could not open auth window for {{appName}}",
+                "allowPopupsDescription": "Please allow popups and try again",
+                "failedToConnect": "Failed to connect {{appName}}",
+                "disconnectedSuccess": "{{appName}} disconnected successfully",
+                "disconnectedDescription": "The integration has been removed",
+                "failedToDisconnect": "Failed to disconnect {{appName}}"
+            }
+        },
+        "toolSelector": {
+            "defaultToolsSelected": "{{count}} default tools, {{selected}} / {{max}} tools",
+            "default": "Default",
+            "clear": "Clear",
+            "searchPlaceholder": "Search tools...",
+            "noToolsFound": "No tools found",
+            "noToolsFoundDescription": "Try adjusting your search query",
+            "badges": {
+                "default": "Default",
+                "readOnly": "Read-only"
+            }
+        },
+        "manageModal": {
+            "toolsAndPermissions": "Tools & Permissions",
+            "toolsDescription": "Select which tools the agent can access from your {{appName}} account",
+            "saveChanges": "Save Changes",
+            "saving": "Saving...",
+            "disconnect": "Disconnect",
+            "status": {
+                "connected": "Connected",
+                "disabled": "Disabled",
+                "disconnected": "Disconnected"
+            },
+            "toasts": {
+                "toolsEnabled": "{{count}} tools enabled for {{appName}}",
+                "failedToUpdateTools": "Failed to update tools"
+            }
+        }
+    },
+    "project": {
+        "newProject": "New Project",
+        "header": {
+            "tabs": {
+                "database": {
+                    "label": "Database",
+                    "title": "Database",
+                    "description": "Manage your database tables and data"
+                },
+                "domain": {
+                    "label": "Domain",
+                    "title": "Domain Settings",
+                    "description": "Configure domains to make your app accessible to the global web"
+                },
+                "secrets": {
+                    "label": "Secrets",
+                    "title": "Secrets",
+                    "description": "Secrets are hidden values (like API keys or passwords) that your code can use securely without exposing them to the public"
+                }
+            }
+        },
+        "panel": {
+            "sessionRequired": "Session information is required to view project details.",
+            "noProjectYet": "No project has been created in this session yet.",
+            "loadingSchema": "Loading database schema...",
+            "errors": {
+                "missingSession": "Missing session information",
+                "unableToLoadProject": "Unable to load project for this session",
+                "unableToLoadSchema": "Unable to load database schema for this project",
+                "unableToLoadRecords": "Unable to load table records"
+            }
+        },
+        "database": {
+            "noProjectInfo": "No project information available for this session yet.",
+            "noDatabaseConfig": "This project has no database configuration yet.",
+            "noTablesFound": "No tables found for the configured database connection.",
+            "selectTableToInspect": "Select a table to inspect",
+            "tableHeaders": {
+                "no": "No."
+            },
+            "empty": {
+                "noRows": "No rows found for this table.",
+                "selectTable": "Select a table to load rows."
+            },
+            "actions": {
+                "refreshSchema": "Refresh schema",
+                "refresh": "Refresh"
+            },
+            "pagination": {
+                "showingUpTo": "Showing up to <count>{{count}}</count> records",
+                "range": "<range>{{start}}-{{end}}</range> of <total>{{total}}</total>",
+                "page": "Page",
+                "of": "of"
+            }
+        },
+        "deployment": {
+            "iiDomainTitle": "II Domain",
+            "iiDomainDescription": "Manage where your latest production build is published.",
+            "ownDomainTitle": "Your Own Domain",
+            "ownDomainDescriptionConnected": "Connect an existing domain you own to your app",
+            "ownDomainDescriptionMissing": "No domain published yet. Click \"Publish\" to deploy.",
+            "noDeploymentPlaceholder": "No deployment published yet",
+            "openUrl": "Open URL",
+            "subdomain": {
+                "description": "Choose a subdomain for your app. Your app will be available at your-subdomain.ii.inc",
+                "placeholder": "your-app-name",
+                "checking": "Checking availability...",
+                "available": "{{domain}} is available!",
+                "taken": "This subdomain is already taken",
+                "suggestions": "Try one of these instead:",
+                "claimDomain": "Claim Domain",
+                "reserved": "{{domain}} has been reserved for your next publish!",
+                "reserveError": "Failed to reserve subdomain. Please try again.",
+                "checkError": "Failed to check availability. Please try again.",
+                "claimed": "{{domain}} has been claimed successfully!",
+                "claimError": "Failed to claim subdomain. Please try again.",
+                "noProjectError": "No project found. Please deploy your app first.",
+                "loadingDeployment": "Checking deployment status...",
+                "noDeployment": "Deploy your project to Cloud Run first to claim a custom subdomain.",
+                "cloudRunOnly": "Custom subdomains are only available for Cloud Run deployments."
+            }
+        },
+        "secrets": {
+            "form": {
+                "editTitle": "Edit Secret",
+                "addTitle": "Add New Secret",
+                "editDescription": "Update your secret name and value",
+                "addDescription": "Please name your secret and input secret keys or tokens to add a new value",
+                "namePlaceholder": "Enter your secret name, EXAMPLE_NAME",
+                "valuePlaceholder": "Enter your secret value"
+            },
+            "actions": {
+                "addSecret": "Add Secret"
+            },
+            "missing": {
+                "title": "Missing Secret",
+                "description": "The following secrets are used in the code but don't exist yet:"
+            },
+            "list": {
+                "title": "Secret List",
+                "searchPlaceholder": "Find a secret",
+                "emptySearch": "No secrets found matching your search.",
+                "empty": "No secrets stored yet.",
+                "protected": "Protected",
+                "menu": {
+                    "edit": "Edit Secret",
+                    "delete": "Delete Secret"
+                },
+                "lastUpdated": "Last updated: {{date}}"
+            },
+            "time": {
+                "justNow": "Just now"
+            },
+            "toasts": {
+                "added_one": "Secret added",
+                "added_other": "{{count}} secrets added",
+                "deleted": "Secret deleted",
+                "updated": "Secrets updated"
+            },
+            "errors": {
+                "unableToAdd": "Unable to add secret",
+                "unableToDelete": "Unable to delete secret",
+                "unableToUpdate": "Unable to update secrets"
+            }
+        }
+    }
+}

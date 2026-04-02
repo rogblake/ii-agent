@@ -1,0 +1,157 @@
+"""API routes for mcp_settings domain."""
+
+from typing import Optional
+
+from fastapi import APIRouter
+
+from ii_agent.auth.dependencies import CurrentUser, DBSession
+from ii_agent.settings.mcp.exceptions import MCPSettingNotFoundError
+from ii_agent.settings.mcp.dependencies import MCPSettingServiceDep
+from ii_agent.settings.mcp.schemas import (
+    CodexConfigConfigure,
+    ClaudeCodeConfigConfigure,
+    MCPSettingCreate,
+    MCPSettingUpdate,
+    MCPSettingInfo,
+    MCPSettingList,
+)
+
+
+router = APIRouter(prefix="/user-settings/mcp", tags=["User MCP Settings Management"])
+
+
+@router.get("/codex", response_model=Optional[MCPSettingInfo])
+async def get_codex_settings(
+    current_user: CurrentUser,
+    service: MCPSettingServiceDep,
+    db: DBSession,
+):
+    """Get current Codex MCP settings for the user."""
+    return await service.get_codex_setting(db, user_id=str(current_user.id))
+
+
+@router.post("/codex", response_model=MCPSettingInfo)
+async def configure_codex_mcp(
+    request: CodexConfigConfigure,
+    current_user: CurrentUser,
+    service: MCPSettingServiceDep,
+    db: DBSession,
+):
+    """Configure Codex MCP with authentication."""
+    return await service.configure_codex(
+        db,
+        user_id=str(current_user.id),
+        auth_json=request.auth_json,
+        apikey=request.apikey,
+        model=request.model,
+        reasoning_effort=request.model_reasoning_effort,
+        search=request.search,
+    )
+
+
+@router.get("/claude-code", response_model=Optional[MCPSettingInfo])
+async def get_claude_code_settings(
+    current_user: CurrentUser,
+    service: MCPSettingServiceDep,
+    db: DBSession,
+):
+    """Get current Claude Code MCP settings for the user."""
+    return await service.get_claude_code_setting(db, user_id=str(current_user.id))
+
+
+@router.post("/claude-code", response_model=MCPSettingInfo)
+async def configure_claude_code_mcp(
+    request: ClaudeCodeConfigConfigure,
+    current_user: CurrentUser,
+    service: MCPSettingServiceDep,
+    db: DBSession,
+):
+    """Configure Claude Code MCP with OAuth authentication."""
+    return await service.configure_claude_code(
+        db,
+        user_id=str(current_user.id),
+        authorization_code=request.authorization_code,
+    )
+
+
+@router.post("", response_model=MCPSettingInfo)
+async def create_mcp_setting(
+    setting: MCPSettingCreate,
+    current_user: CurrentUser,
+    service: MCPSettingServiceDep,
+    db: DBSession,
+):
+    """Create new MCP settings for the current user."""
+    return await service.create_mcp_settings(
+        db,
+        mcp_setting_in=setting,
+        user_id=str(current_user.id),
+    )
+
+
+@router.get("", response_model=MCPSettingList)
+async def list_user_mcp_settings(
+    current_user: CurrentUser,
+    service: MCPSettingServiceDep,
+    db: DBSession,
+    only_active: bool = False,
+):
+    """List all MCP settings for the current user."""
+    return await service.list_mcp_settings(
+        db,
+        user_id=str(current_user.id),
+        only_active=only_active,
+        no_metadata=True,
+    )
+
+
+@router.get("/{setting_id}", response_model=MCPSettingInfo)
+async def get_mcp_setting(
+    setting_id: str,
+    current_user: CurrentUser,
+    service: MCPSettingServiceDep,
+    db: DBSession,
+):
+    """Get specific MCP settings by ID."""
+    return await service.get_mcp_settings(
+        db,
+        setting_id=setting_id,
+        user_id=str(current_user.id),
+    )
+
+
+@router.put("/{setting_id}", response_model=MCPSettingInfo)
+async def update_mcp_setting(
+    setting_id: str,
+    setting_update: MCPSettingUpdate,
+    current_user: CurrentUser,
+    service: MCPSettingServiceDep,
+    db: DBSession,
+):
+    """Update existing MCP settings."""
+    return await service.update_mcp_settings(
+        db,
+        setting_id=setting_id,
+        setting_update=setting_update,
+        user_id=str(current_user.id),
+    )
+
+
+@router.delete("/{setting_id}")
+async def delete_mcp_setting(
+    setting_id: str,
+    current_user: CurrentUser,
+    service: MCPSettingServiceDep,
+    db: DBSession,
+):
+    """Delete MCP settings by ID."""
+    deleted = await service.delete_mcp_settings(
+        db,
+        setting_id=setting_id,
+        user_id=str(current_user.id),
+    )
+
+    if not deleted:
+        raise MCPSettingNotFoundError("MCP settings not found")
+
+    return {"message": "MCP settings deleted successfully"}

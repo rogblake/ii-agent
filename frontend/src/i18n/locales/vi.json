@@ -1,0 +1,2365 @@
+{
+    "common": {
+        "appName": "II-Agent",
+        "beta": "BETA",
+        "loading": "Đang tải...",
+        "loadingMore": "Đang tải thêm...",
+        "cancel": "Hủy",
+        "delete": "Xóa",
+        "save": "Lưu",
+        "clear": "Xóa",
+        "submit": "Gửi",
+        "skip": "Bỏ qua",
+        "confirm": "Xác nhận",
+        "close": "Đóng",
+        "keepEditing": "Tiếp tục chỉnh sửa",
+        "copy": "Sao chép",
+        "share": "Chia sẻ",
+        "edit": "Chỉnh sửa",
+        "rename": "Đổi tên",
+        "search": "Tìm kiếm",
+        "goBack": "Quay lại",
+        "or": "HOẶC",
+        "comingSoon": "Sắp ra mắt...",
+        "copiedToClipboard": "Đã sao chép vào clipboard",
+        "notAvailable": "Không khả dụng",
+        "untitled": "Chưa đặt tên",
+        "previous": "Trước",
+        "next": "Tiếp",
+        "manage": "Quản lý",
+        "download": "Tải xuống",
+        "preview": "Xem trước",
+        "saving": "Đang lưu...",
+        "continue": "Tiếp tục",
+        "retry": "Thử lại"
+    },
+    "auth": {
+        "welcomeTitle": "Chào mừng đến với {{appName}}",
+        "welcomeSubtitle": "Hỗ trợ bạn hoàn thành công việc hôm nay",
+        "signIn": "Đăng nhập",
+        "signUp": "Đăng ký",
+        "signOut": "Đăng xuất",
+        "forgotPassword": "Quên mật khẩu?",
+        "rememberPassword": "Bạn nhớ mật khẩu của mình?",
+        "noAccount": "Bạn chưa có tài khoản?",
+        "hasAccount": "Đã có tài khoản?",
+        "continueWithGoogle": "Tiếp tục với tài khoản Google",
+        "continueWithII": "Tiếp tục với tài khoản II",
+        "loginFailed": "Đăng nhập thất bại. Vui lòng thử lại.",
+        "emailPlaceholder": "Nhập địa chỉ email của bạn",
+        "passwordPlaceholder": "Nhập mật khẩu của bạn",
+        "namePlaceholder": "Nhập tên của bạn",
+        "newPasswordPlaceholder": "Mật khẩu mới",
+        "confirmPasswordPlaceholder": "Xác nhận mật khẩu mới",
+        "validation": {
+            "invalidEmail": "Địa chỉ email không hợp lệ",
+            "passwordRequired": "Mật khẩu là bắt buộc",
+            "passwordMinLength": "Mật khẩu phải có ít nhất 6 ký tự",
+            "nameRequired": "Tên là bắt buộc",
+            "confirmPassword": "Vui lòng xác nhận mật khẩu",
+            "passwordMismatch": "Mật khẩu không khớp"
+        },
+        "forgotPasswordTitle": "Quên mật khẩu?",
+        "forgotPasswordSubtitle": "Đừng lo, chúng tôi sẽ giúp bạn lấy lại",
+        "createNewPassword": "Tạo mật khẩu mới",
+        "resetPassword": "Đặt lại mật khẩu",
+        "continue": "Tiếp tục",
+        "privacyNotice": "Chúng tôi xử lý các câu lệnh và tệp tải lên của bạn để cung cấp dịch vụ II Agent. Theo mặc định, chúng tôi không sử dụng nội dung II Agent của bạn để huấn luyện mô hình.",
+        "privacyNoticeLink": "Xem Thông báo Quyền riêng tư Sản phẩm của chúng tôi để biết thêm chi tiết."
+    },
+    "home": {
+        "greeting": "Xin chào",
+        "whatCanIDo": "Tôi có thể giúp gì cho bạn hôm nay?",
+        "askAnything": "Hỏi tôi bất cứ điều gì...",
+        "thinkingWith": "Đang suy nghĩ với",
+        "readyToVisualize": "Sẵn sàng hiện thực hóa ý tưởng của bạn chưa?",
+        "learnMoreAboutMediaGenerate": "Tìm hiểu thêm về tạo media",
+        "learnMoreModal": {
+            "title": "Tạo hình ảnh sáng tạo",
+            "featureTitle": "Nhiều mô hình",
+            "featureDescription": "Chuyển đổi giữa các bộ não AI như Nano Banana Pro, GPT Image 1.5 và hơn nữa. Mỗi mô hình có chất riêng—hãy chọn vibe phù hợp nhất với ý tưởng của bạn.",
+            "items": [
+                {
+                    "title": "Nhiều mô hình",
+                    "description": "Chuyển đổi giữa các bộ não AI như Nano Banana Pro, GPT Image 1.5 và hơn nữa. Mỗi mô hình có chất riêng—hãy chọn vibe phù hợp nhất với ý tưởng của bạn."
+                },
+                {
+                    "title": "Đa dạng phong cách",
+                    "description": "Từ Starry đến Pixel, 3D, Realistic, Clay và hơn thế nữa. Một ý tưởng, vô hạn thẩm mỹ. Hãy thử tất cả."
+                },
+                {
+                    "title": "Công cụ sáng tạo",
+                    "description": "Nâng cấp ảnh của bạn: ảnh nhóm, thay nền, đổi kiểu tóc, phục hồi ảnh… dễ dàng. Sửa lớn, công nhỏ."
+                },
+                {
+                    "title": "Chế độ nâng cao",
+                    "description": "Khóa chủ thể, bối cảnh hoặc phong cách để có kết quả sạch, nhất quán. Lý tưởng cho nhân vật, series và nhận diện thương hiệu."
+                }
+            ],
+            "videoTitle": "Tạo Video",
+            "videoItems": [
+                {
+                    "title": "Khung hình đầu / Khung hình cuối",
+                    "description": "Chuyển đổi giữa các bộ não AI như Nano Banana Pro, GPT Image 1.5 và hơn nữa. Mỗi mô hình có chất riêng—hãy chọn vibe phù hợp nhất với ý tưởng của bạn."
+                },
+                {
+                    "title": "Hình ảnh tham chiếu",
+                    "description": "Từ Starry đến Pixel, 3D, Realistic, Clay và hơn thế nữa. Một ý tưởng, vô hạn thẩm mỹ. Hãy thử tất cả."
+                }
+            ],
+            "storybookTitle": "Nấu một cuốn truyện kỳ diệu",
+            "storybookItems": [
+                {
+                    "title": "Nhiều mô hình tạo ảnh",
+                    "description": "Chuyển đổi giữa các mô hình AI mạnh mẽ như Nano Banana Pro, GPT Image 1.5 và hơn nữa. Mỗi mô hình có chất riêng—hãy chọn người kể chuyện của bạn."
+                },
+                {
+                    "title": "Đa dạng phong cách",
+                    "description": "Từ Clay / Stop Motion đến Fabric, phong cách Ghibli, Sơn dầu và Magic Flow. Mỗi câu chuyện có linh hồn hình ảnh riêng."
+                },
+                {
+                    "title": "Đa dạng thể loại",
+                    "description": "Vui nhộn, kinh dị cổ điển, hành động siêu anh hùng, hay trinh thám noir. Câu chuyện của bạn, tâm trạng của bạn."
+                },
+                {
+                    "title": "Lồng tiếng",
+                    "description": "Biến trang sách thành âm thanh với giọng đọc AI biểu cảm. Hoàn hảo cho trẻ em, kể chuyện, hoặc nghe rảnh tay."
+                },
+                {
+                    "title": "Nhạc nền",
+                    "description": "Tạo không khí với nhạc nền điện ảnh. Nhẹ nhàng, u tối, hoành tráng hay ấm cúng—câu chuyện sống động hơn."
+                },
+                {
+                    "title": "Đối thoại phong phú (Chế độ tiểu thuyết)",
+                    "description": "Đối thoại sâu sắc, suy nghĩ nội tâm, tình tiết bất ngờ. Đọc như tiểu thuyết. Cảm giác như một câu chuyện."
+                },
+                {
+                    "title": "Đa ngôn ngữ",
+                    "description": "Kể câu chuyện bằng nhiều ngôn ngữ, ngay lập tức. Một thế giới, vô hạn độc giả."
+                },
+                {
+                    "title": "Có văn bản",
+                    "description": "Văn bản xuất hiện trên trang hoặc thành các panel riêng. Bố cục gọn gàng, dễ đọc, kiểm soát hoàn toàn."
+                },
+                {
+                    "title": "Bố cục Manga",
+                    "description": "Panel động, bong bóng thoại biểu cảm và hiệu ứng âm thanh đậm nét. Năng lượng manga thuần túy—từng trang một."
+                }
+            ],
+            "tryNow": "Thử ngay",
+            "imageAlt": "Chú vẹt đầy màu sắc do AI tạo"
+        },
+        "disclaimer": "Kết quả của {{appName}} có thể chứa lỗi hoặc thiếu sót. Intelligent Internet không huấn luyện mô hình trên dữ liệu trong workspace của bạn."
+    },
+    "dashboard": {
+        "title": "Bảng điều khiển",
+        "tabs": {
+            "all": "Tất cả",
+            "recent": "Gần đây",
+            "favorite": "Yêu thích"
+        },
+        "loadingFavorites": "Đang tải phiên yêu thích...",
+        "noFavorites": "Chưa có phiên yêu thích nào",
+        "deleteSession": "Xóa phiên",
+        "deleteConfirmation": "Bạn có chắc chắn muốn xóa phiên này? Hành động này không thể hoàn tác.",
+        "deleteConfirmationNamed": "Bạn có chắc chắn muốn xóa \"{{sessionName}}\"? Hành động này không thể hoàn tác.",
+        "favorite": "Yêu thích",
+        "unfavorite": "Bỏ yêu thích"
+    },
+    "sidebar": {
+        "newChat": "Cuộc trò chuyện mới",
+        "chats": "Trò chuyện",
+        "projects": "Dự án",
+        "seeMore": "Xem thêm",
+        "selectChats": "Chọn cuộc trò chuyện",
+        "selectProjects": "Chọn dự án",
+        "selectAll": "Chọn tất cả",
+        "deselectAll": "Bỏ chọn tất cả",
+        "deleteSelected": "Xóa ({{count}})",
+        "bulkDeleteChatsTitle": "Xóa cuộc trò chuyện",
+        "bulkDeleteChatsConfirmation": "Bạn có chắc chắn muốn xóa {{count}} cuộc trò chuyện? Hành động này không thể hoàn tác.",
+        "bulkDeleteProjectsTitle": "Xóa dự án",
+        "bulkDeleteProjectsConfirmation": "Bạn có chắc chắn muốn xóa {{count}} dự án? Hành động này không thể hoàn tác.",
+        "bulkDeleteSuccess": "Đã xóa {{count}} mục thành công.",
+        "bulkDeletePartialFailure": "Không thể xóa {{count}} mục.",
+        "bulkDeleteError": "Xóa thất bại. Vui lòng thử lại."
+    },
+    "searchHistory": {
+        "trigger": "Tìm kiếm Chat",
+        "title": "Tìm kiếm",
+        "placeholder": "Tìm kiếm cuộc trò chuyện...",
+        "groups": {
+            "today": "Hôm nay",
+            "yesterday": "Hôm qua",
+            "last7Days": "7 ngày gần đây",
+            "last30Days": "30 ngày gần đây"
+        }
+    },
+    "settings": {
+        "title": "Cài đặt",
+        "tabs": {
+            "general": "Chung",
+            "account": "Tài khoản",
+            "notifications": "Thông báo",
+            "connectors": "Kết nối",
+            "dataControls": "Kiểm soát dữ liệu",
+            "usage": "Sử dụng",
+            "subscription": "Gói dịch vụ"
+        },
+        "general": {
+            "theme": "Giao diện",
+            "themeDescription": "Chọn giao diện ưa thích cho {{appName}}.",
+            "selectTheme": "Chọn giao diện",
+            "system": "Hệ thống",
+            "dark": "Tối",
+            "light": "Sáng",
+            "language": "Ngôn ngữ",
+            "languageDescription": "Chọn ngôn ngữ ưa thích cho {{appName}}.",
+            "selectLanguage": "Chọn ngôn ngữ"
+        },
+        "account": {
+            "linkedAccounts": "Tài khoản liên kết",
+            "paymentInvoices": "Hóa đơn",
+            "planTitle": "Gói II-Agent {{plan}}",
+            "planRenewal": "Gói của bạn tự động gia hạn vào {{date}}.",
+            "security": "Bảo mật",
+            "deleteAccount": "Xóa tài khoản",
+            "deleteAccountTitle": "Xóa tài khoản",
+            "deleteAccountConfirmation": "Bạn có chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác và bạn sẽ không thể đăng nhập lại.",
+            "deleting": "Đang xóa...",
+            "accountDeleted": "Tài khoản đã được xóa thành công",
+            "deleteAccountError": "Không thể xóa tài khoản. Vui lòng thử lại.",
+            "stripePortalError": "Không thể mở cổng Stripe. Vui lòng thử lại."
+        },
+        "dataControls": {
+            "title": "Kiểm soát dữ liệu",
+            "sharedLinks": "Liên kết đã chia sẻ",
+            "sharedLinksDescription": "Quản lý các cuộc trò chuyện đã chia sẻ",
+            "publicLink": "Liên kết công khai",
+            "viewLink": "Xem",
+            "deleteLink": "Xóa",
+            "sharedChatsCount": "Chat đã chia sẻ ({{count}})",
+            "openChat": "Mở chat",
+            "unpublishTitle": "Bỏ công khai phiên",
+            "unpublishDescription": "Bạn có chắc muốn bỏ công khai phiên này? Liên kết công khai sẽ ngừng hoạt động.",
+            "deleteConfirmation": "Bạn có chắc chắn muốn xóa liên kết chia sẻ này? Hành động này không thể hoàn tác.",
+            "noSharedLinks": "Bạn chưa chia sẻ cuộc trò chuyện nào",
+            "linkDeleted": "Liên kết chia sẻ đã được xóa thành công",
+            "deleteError": "Không thể xóa liên kết chia sẻ"
+        }
+    },
+    "userMenu": {
+        "getHelp": "Nhận hỗ trợ"
+    },
+    "chat": {
+        "loadingHistory": "Đang tải lịch sử trò chuyện...",
+        "emptyState": "Hỏi bất cứ điều gì—trợ lý của bạn sẵn sàng giúp đỡ.",
+        "askPlaceholder": "Hỏi tôi bất cứ điều gì...",
+        "thinking": "Tôi đang suy nghĩ...",
+        "thinkingStatus": "{{appName}} đang suy nghĩ",
+        "finishReasons": {
+            "maxTokens": "Phản hồi đã dừng vì đạt giới hạn token tối đa.",
+            "canceled": "Phản hồi đã bị hủy.",
+            "error": "Phản hồi đã dừng do lỗi.",
+            "permissionDenied": "Phản hồi đã dừng do từ chối quyền truy cập.",
+            "paused": "Cuộc trò chuyện đã tạm dừng. Bạn có thể tiếp tục bằng cách gửi tin nhắn khác."
+        },
+        "suggestions": {
+            "general": [
+                "Tạo trang web so sánh các trợ lý lập trình AI",
+                "Thiết kế poster mech cyberpunk với dấu ấn thương hiệu",
+                "Phát triển portfolio responsive cho nghệ thuật tạo sinh",
+                "Thiết kế trang dashboard tương tác về các chỉ số khí hậu"
+            ],
+            "media": [
+                "Render hình ảnh điện ảnh của nước hoa trên kính mờ",
+                "Thiết kế poster mech cyberpunk với dấu ấn thương hiệu",
+                "Quay clip stop-motion làm nổi bật quy trình lắp ráp sản phẩm",
+                "Quay demo kiểu tóc 15s với chuyển đổi ánh sáng táo bạo",
+                "Phác thảo poster siêu thực cho đợt ra mắt tai nghe mới"
+            ],
+            "slide": [
+                "Xây dựng deck bán hàng phần mềm B2B",
+                "Tạo slide đào tạo an ninh mạng",
+                "Soạn deck gọi vốn cho startup",
+                "Giải thích tác động của AI đối với công việc tương lai",
+                "Phác thảo deck cập nhật ra mắt sản phẩm"
+            ],
+            "slide_nano_banana": [
+                "Tạo deck gọi vốn startup AI ấn tượng",
+                "Thiết kế slide báo cáo quý ấn tượng về thị giác",
+                "Tạo bài thuyết trình infographic đẹp mắt",
+                "Xây dựng deck ra mắt sản phẩm sáng tạo với hình ảnh ấn tượng",
+                "Tạo slide keynote hội nghị chuyên nghiệp"
+            ],
+            "website_build": [
+                "Thiết kế trang dashboard tương tác về các chỉ số khí hậu",
+                "Tạo trang web so sánh các trợ lý lập trình AI",
+                "Phát triển portfolio responsive cho nghệ thuật tạo sinh",
+                "Xây dựng cơ sở tri thức quy trình hỗ trợ có thể tìm kiếm"
+            ],
+            "deep_research": [
+                "Nghiên cứu hiện trạng điện toán lượng tử và các ứng dụng thực tế",
+                "Phân tích tác động toàn cầu của các chính sách quản lý AI ở các nền kinh tế lớn",
+                "Khảo sát các đột phá mới nhất trong công nghệ lưu trữ năng lượng tái tạo",
+                "So sánh các mô hình ngôn ngữ lớn hàng đầu về khả năng suy luận và độ chính xác"
+            ],
+            "fast_research": [
+                "Tóm tắt các tính năng chính của phiên bản iPhone mới nhất",
+                "Các ngôn ngữ lập trình thịnh hành nhất năm 2025 là gì?",
+                "Tìm các cập nhật mới nhất về sứ mệnh khám phá Sao Hỏa",
+                "Cho tôi tổng quan nhanh về tình hình áp dụng xe điện hiện tại"
+            ]
+        },
+        "sageSuggestions": {
+            "general": [
+                "Cung cấp tư vấn chính sách về tác động của robot hình người lên lực lượng lao động",
+                "Nghiên cứu các ưu đãi kinh tế cho hạ tầng sa mạc bền vững",
+                "Tạo ý tưởng hình ảnh thể hiện việc sử dụng dịch vụ chính phủ điện tử an toàn"
+            ],
+            "media": [
+                "Tạo ý tưởng hình ảnh thể hiện việc sử dụng dịch vụ chính phủ điện tử an toàn",
+                "Tạo chuỗi hình ảnh làm nổi bật các chỉ số chống chịu khí hậu sa mạc",
+                "Tạo storyboard video cho quy trình triển khai drone khẩn cấp",
+                "Soạn bản nháp video giải thích cho phiên tham vấn giám sát AI công khai"
+            ],
+            "slide": [
+                "Tạo slide tóm tắt về ưu tiên tài trợ cho khả năng chống chịu khí hậu",
+                "Chuẩn bị cập nhật cho hội đồng về bảo vệ quyền riêng tư dữ liệu trong đô thị thông minh",
+                "Phác thảo deck điều trần về quy định phương tiện tự hành",
+                "Phát triển slide đào tạo về áp dụng AI có trách nhiệm cho công chức"
+            ],
+            "slide_nano_banana": [
+                "Tạo slide tóm tắt về ưu tiên tài trợ cho khả năng chống chịu khí hậu",
+                "Chuẩn bị cập nhật cho hội đồng về bảo vệ quyền riêng tư dữ liệu trong đô thị thông minh",
+                "Phác thảo deck điều trần về quy định phương tiện tự hành",
+                "Phát triển slide đào tạo về áp dụng AI có trách nhiệm cho công chức"
+            ],
+            "website_build": [
+                "Xây dựng cổng thông tin công khai mô tả quy trình yêu cầu dữ liệu mở",
+                "Thiết kế dashboard theo dõi các cột mốc hiện đại hóa hạ tầng",
+                "Phát triển trang phản hồi cộng đồng về hiện đại hóa quy hoạch",
+                "Tạo trung tâm tài nguyên cho các sáng kiến tái đào tạo công chức"
+            ],
+            "deep_research": [
+                "Phân tích các khung quản trị dữ liệu xuyên biên giới và các lỗ hổng tuân thủ",
+                "Nghiên cứu các tác động kinh tế-xã hội của chương trình thu nhập cơ bản thí điểm",
+                "Khảo sát các mối đe dọa an ninh mạng mới nổi đối với hạ tầng công cộng trọng yếu",
+                "Đánh giá hiệu quả của chẩn đoán hỗ trợ AI trong hệ thống y tế công"
+            ],
+            "fast_research": [
+                "Tóm tắt các sửa đổi gần đây đối với quy định về quyền riêng tư dữ liệu liên bang",
+                "Các tiêu chuẩn áp dụng AI trong khu vực công mới nhất là gì?",
+                "Tìm cập nhật về các chương trình thí điểm thành phố thông minh tại các đô thị lớn",
+                "Cho tôi tổng quan nhanh về các sáng kiến chuyển đổi số chính phủ hiện tại"
+            ]
+        }
+    },
+    "codeEditor": {
+        "files": "Tệp"
+    },
+    "chain": {
+        "thinking": {
+            "streaming": "Đang suy nghĩ...",
+            "complete": "Đang suy nghĩ",
+            "completeWithDuration": "Đang suy nghĩ ({{seconds}} giây)"
+        },
+        "codeInterpreter": "Trình thông dịch mã"
+    },
+    "question": {
+        "mode": {
+            "chat": "Chế độ Chat",
+            "agent": "Chế độ Agent"
+        },
+        "enhancePrompt": "Cải thiện câu lệnh",
+        "voiceInput": "Nhập giọng nói",
+        "voiceInputListening": "Đang nghe...",
+        "voiceInputUnavailable": "Không hỗ trợ nhập giọng nói"
+    },
+    "plan": {
+        "modification": {
+            "title": "Bạn muốn chỉnh sửa kế hoạch như thế nào?"
+        }
+    },
+    "milestones": {
+        "saveError": "Không thể lưu thay đổi cột mốc",
+        "emptyError": "Cột mốc không được để trống",
+        "newMilestone": "Cột mốc mới",
+        "collapse": "Thu gọn các cột mốc",
+        "viewAll": "Xem tất cả các cột mốc",
+        "modifyPlan": "Chỉnh sửa kế hoạch",
+        "addMilestone": "Thêm cột mốc",
+        "helpMode": "Bạn đang ở chế độ Trợ giúp",
+        "designMode": "Bạn đang ở chế độ Chỉnh sửa Trực tiếp",
+        "nextMilestone": "Cột mốc tiếp theo",
+        "status": "Trạng thái",
+        "allCompleted": "Đã hoàn thành tất cả các mốc!",
+        "build": "Xây dựng",
+        "buildAll": "Xây dựng tất cả",
+        "aria": {
+            "edit": "Chỉnh sửa cột mốc",
+            "delete": "Xóa cột mốc"
+        }
+    },
+    "designMode": {
+	        "toolbar": {
+	            "responsive": "Responsive",
+            "deviceGroups": {
+                "desktop": "Máy tính / Laptop",
+                "tablet": "Máy tính bảng",
+                "mobile": "Điện thoại"
+            },
+            "rotateDevice": "Xoay thiết bị",
+            "rotationNotAvailable": "Không hỗ trợ xoay cho máy tính",
+            "zoomOut": "Thu nhỏ",
+            "zoomIn": "Phóng to",
+            "slideDeck": "Bộ slide",
+            "changes": "Thay đổi",
+            "unsavedChangeZero": "0 thay đổi chưa lưu",
+            "unsavedChanges_one": "{{count}} thay đổi chưa lưu",
+            "unsavedChanges_other": "{{count}} thay đổi chưa lưu",
+            "changesUnsaved_one": "{{count}} thay đổi chưa lưu",
+            "changesUnsaved_other": "{{count}} thay đổi chưa lưu",
+            "noUnsaved": "Chưa có thay đổi",
+            "syncing": "Đang đồng bộ...",
+            "select": "Chọn",
+            "selecting": "Đang chọn",
+            "selected_one": "{{count}} đã chọn",
+            "selected_other": "{{count}} đã chọn",
+            "delete": "Xóa",
+            "deleteSelected": "Xóa các phần tử đã chọn",
+            "multiSelectDelete": "Chọn nhiều để xóa",
+            "selectAll": "Chọn tất cả",
+            "deselectAll": "Bỏ chọn tất cả",
+            "exitMultiSelect": "Thoát chế độ chọn",
+            "interactMode": "Tương tác với trang",
+            "selectMode": "Chọn phần tử",
+	            "undo": "Hoàn tác",
+	            "redo": "Làm lại"
+	        },
+	        "ai": {
+	            "placeholder": "Mô tả điều bạn muốn thực hiện ...",
+	            "planMode": "Plan Mode"
+	        },
+	        "deleteDialog": {
+	            "title": "Xóa các phần tử",
+	            "warning": "Thao tác này sẽ xóa phần tử đã chọn khỏi trang. Bạn có thể hoàn tác bằng cách khôi phục một phiên bản trước nếu cần."
+	        },
+        "syncDialog": {
+            "title": "Đồng bộ tất cả thay đổi",
+            "descriptionEmpty": "Bạn có chắc muốn đồng bộ tất cả thay đổi? Thao tác này sẽ áp dụng các cập nhật mới nhất vào phiên bản hiện tại.",
+            "description_one": "Bạn có chắc muốn đồng bộ tất cả thay đổi? Thao tác này sẽ áp dụng các cập nhật mới nhất vào phiên bản hiện tại.",
+            "description_other": "Bạn có chắc muốn đồng bộ tất cả thay đổi? Thao tác này sẽ áp dụng các cập nhật mới nhất vào phiên bản hiện tại.",
+            "confirm": "Xác nhận"
+        },
+        "preview": {
+            "syncingToSandbox": "Đang đồng bộ các thay đổi đã chỉnh sửa tới sandbox...",
+            "changeOfTotal": "Thay đổi {{current}} / {{total}}",
+            "starting": "Đang bắt đầu...",
+            "syncStats": "Đã áp dụng: {{applied}}, Lỗi: {{errors}}"
+        },
+        "error": {
+            "title": "Chế độ Chỉnh sửa Trực tiếp không khả dụng",
+            "hint": "Để thoát Chế độ Chỉnh sửa Trực tiếp, hãy tải lại trang hoặc chuyển sang tab \"Chat\"."
+        },
+        "errors": {
+            "failedToLoadPreview": "Không thể tải bản xem trước chế độ Chỉnh sửa Trực tiếp. Hãy làm mới và thử lại.",
+            "runtimeNotResponding": "Runtime Chế độ Chỉnh sửa Trực tiếp không phản hồi. Bản xem trước có thể không hỗ trợ Chế độ Chỉnh sửa Trực tiếp."
+        },
+        "messages": {
+            "syncedDesignChanges_one": "Đã đồng bộ {{count}} thay đổi thiết kế tới sandbox.",
+            "syncedDesignChanges_other": "Đã đồng bộ {{count}} thay đổi thiết kế tới sandbox.",
+            "syncedDesignChangesDefault": "Đã đồng bộ các thay đổi thiết kế tới sandbox.",
+            "syncedSlideDesignChanges_one": "Đã đồng bộ {{count}} thay đổi thiết kế slide tới sandbox.",
+            "syncedSlideDesignChanges_other": "Đã đồng bộ {{count}} thay đổi thiết kế slide tới sandbox.",
+            "syncedSlideDesignChangesDefault": "Đã đồng bộ các thay đổi thiết kế slide tới sandbox."
+        },
+        "toasts": {
+            "missingSessionId": "Thiếu ID phiên.",
+            "selectElementFirst": "Hãy chọn một phần tử trong bản xem trước trước.",
+            "snapshotFailed": "Không thể đọc cấu trúc trang hiện tại. Vui lòng tải lại bản xem trước và thử lại.",
+            "aiNoApplicableChanges": "AI không trả về thay đổi nào có thể áp dụng.",
+            "aiApplyFailed": "Không thể áp dụng các thay đổi từ AI.",
+            "noSupportedChanges": "Không có thay đổi nào được hỗ trợ để đồng bộ.",
+            "changesNotMappedToSlide": "Một số thay đổi không thể ánh xạ tới slide. Vui lòng làm mới và thử lại.",
+            "syncSuccessApplied": "Đã đồng bộ (đã áp dụng {{applied}}).",
+            "syncSuccess": "Đã đồng bộ tới sandbox.",
+            "partialSync": "Đã đồng bộ một phần (đã áp dụng {{applied}}/{{total}}).",
+            "syncFailed": "Không thể đồng bộ các thay đổi tới sandbox.",
+            "saveFailed": "Không thể lưu thay đổi."
+        },
+        "panel": {
+            "noSelection": {
+                "title": "Chọn một phần tử trong bản xem trước",
+                "description": "Nhấp vào một mục trong bản xem trước để bắt đầu chỉnh sửa."
+            },
+            "elementPill": {
+                "none": "Chưa chọn",
+                "link": "Liên kết",
+                "button": "Nút",
+                "image": "Ảnh",
+                "input": "Ô nhập",
+                "textarea": "Ô văn bản",
+                "select": "Chọn",
+                "text": "Văn bản"
+            },
+            "inactive": {
+                "title": "Chế độ Chỉnh sửa Trực tiếp đang tắt",
+                "description": "Nhấp \"Live Editing Mode\" trên thanh công cụ xem trước để bắt đầu chỉnh sửa."
+            },
+            "loading": "Đang tải công cụ chỉnh sửa trực tiếp...",
+            "sections": {
+                "content": "Nội dung văn bản",
+                "colors": "Màu sắc",
+                "spacing": "Khoảng cách",
+                "shadow": "Hiệu ứng bóng",
+                "typography": "Kiểu chữ",
+                "border": "Viền",
+                "size": "Kích thước & Hiển thị"
+            },
+            "labels": {
+                "content": "Nội dung",
+                "textColor": "Màu chữ",
+                "backgroundColor": "Màu nền",
+                "padding": "Đệm",
+                "margin": "Lề",
+                "shadow": "Bóng",
+                "fontFamily": "Phông chữ",
+                "fontWeight": "Độ đậm",
+                "fontSize": "Cỡ chữ",
+                "lineHeight": "Chiều cao dòng",
+                "letterSpacing": "Khoảng cách chữ (em)",
+                "textAlignment": "Căn chỉnh văn bản",
+                "textDecoration": "Trang trí văn bản",
+                "borderColor": "Màu viền",
+                "borderStyle": "Kiểu viền",
+                "borderWidth": "Độ dày viền",
+                "width": "Chiều rộng",
+                "height": "Chiều cao",
+                "opacity": "Độ trong suốt",
+                "borderRadius": "Bo góc"
+            },
+            "placeholders": {
+                "select": "Chọn...",
+                "font": "Chọn phông chữ",
+                "weight": "Độ đậm",
+                "lineHeight": "vd. 1.75",
+                "letterSpacing": "vd. 0",
+                "width": "vd. 320px",
+                "height": "vd. 48px",
+                "aiPrompt": "Hỏi AI để chỉnh sửa thiết kế..."
+            },
+            "alignment": {
+                "left": "Căn trái",
+                "center": "Căn giữa",
+                "right": "Căn phải",
+                "justify": "Căn đều"
+            },
+            "decoration": {
+                "italic": "In nghiêng",
+                "underline": "Gạch chân",
+                "lineThrough": "Gạch ngang",
+                "overline": "Gạch trên"
+            },
+            "borderStyles": {
+                "none": "Không",
+                "solid": "Liền",
+                "dashed": "Nét đứt",
+                "dotted": "Chấm",
+                "double": "Kép"
+            },
+            "shadowPresets": {
+                "none": "Không",
+                "small": "Nhỏ",
+                "medium": "Trung bình",
+                "large": "Lớn"
+            },
+            "sides": {
+                "top": "Trên",
+                "right": "Phải",
+                "bottom": "Dưới",
+                "left": "Trái"
+            },
+            "changes": {
+                "title": "Thay đổi ({{count}})",
+                "clearAll": "Xóa tất cả",
+                "emptyTitle": "Không có thay đổi đang chờ",
+                "emptyDescription": "Hãy chỉnh sửa các phần tử trong bản xem trước để xem ở đây",
+                "revert": "Hoàn tác",
+                "move": "Di chuyển",
+                "icon": "Biểu tượng",
+                "aiChange": "Thay đổi từ AI",
+                "none": "(không)",
+                "only": "(chỉ)",
+                "before": "trước #{{id}}",
+                "after": "sau #{{id}}"
+            }
+        },
+        "aiChatModal": {
+            "title": "Trợ lý thiết kế AI",
+            "selectedElementLabel": "Phần tử đã chọn:",
+            "emptyTitle": "Hãy mô tả điều bạn muốn thay đổi",
+            "emptyDescription": "vd., \"Làm mục này màu đỏ\" hoặc \"Tăng padding\"",
+            "thinking": "Đang suy nghĩ...",
+            "placeholder": "Mô tả thay đổi bạn muốn...",
+            "error": "Xin lỗi, đã xảy ra lỗi. Vui lòng thử lại."
+        },
+        "inspectorSidebar": {
+            "title": "Bộ kiểm tra",
+            "changesCount_one": "{{count}} thay đổi",
+            "changesCount_other": "{{count}} thay đổi",
+            "resetStyles": "Đặt lại kiểu",
+            "noSelectionInline": "Chọn một phần tử",
+            "noSelectionMessage": "Nhấp vào một phần tử trong bản xem trước để bắt đầu chỉnh sửa",
+            "sections": {
+                "textContent": "Nội dung văn bản",
+                "typography": "Kiểu chữ",
+                "colors": "Màu sắc",
+                "border": "Viền",
+                "padding": "Đệm"
+            },
+            "labels": {
+                "content": "Nội dung",
+                "fontFamily": "Phông chữ",
+                "fontSize": "Cỡ chữ",
+                "fontWeight": "Độ đậm",
+                "textColor": "Màu chữ",
+                "backgroundColor": "Màu nền",
+                "quickColors": "Màu nhanh",
+                "borderRadius": "Bo góc",
+                "top": "Trên",
+                "bottom": "Dưới",
+                "left": "Trái",
+                "right": "Phải"
+            },
+            "placeholders": {
+                "textContent": "Nhập nội dung...",
+                "fontFamily": "Chọn phông chữ",
+                "fontWeight": "Chọn độ đậm"
+            }
+        }
+    },
+    "agent": {
+        "settings": "Cài đặt Agent",
+        "chatSettings": "Cài đặt trò chuyện",
+        "model": "Mô hình",
+        "tools": "Công cụ",
+        "sessionNotFound": "404 - Không tìm thấy phiên",
+        "sessionNotFoundDescription": "Phiên bạn đang tìm không tồn tại hoặc đã bị xóa.",
+        "failedToLoad": "Không thể tải phiên",
+        "awake": {
+            "sleeping": "Tôi đang ngủ",
+            "toSavePower": "để tiết kiệm năng lượng",
+            "wakeMeUp": "Đánh thức tôi"
+        },
+        "badge": {
+            "mainAgent": "Agent chính",
+            "subAgent": "Sub-agent"
+        },
+        "steps": {
+            "plan": "Kế hoạch",
+            "build": "Xây dựng",
+            "result": "Kết quả"
+        },
+        "attachments": {
+            "openAttachment": "Mở tệp đính kèm"
+        },
+        "editQuestion": {
+            "placeholder": "Hỏi tôi bất cứ điều gì..."
+        },
+        "controller": {
+            "liveUpdate": "Cập nhật trực tiếp",
+            "jumpToLatest": "Tới mới nhất"
+        },
+        "files": {
+            "loading": "Đang tải tệp...",
+            "empty": "Không có tệp",
+            "fileTypes": {
+                "tsx": "TSX",
+                "ts": "TS",
+                "js": "JS",
+                "jsx": "JSX",
+                "css": "CSS",
+                "json": "JSON",
+                "sql": "SQL",
+                "md": "Markdown",
+                "pdf": "PDF",
+                "txt": "Văn bản",
+                "png": "PNG",
+                "jpg": "JPG",
+                "jpeg": "JPEG",
+                "gif": "GIF",
+                "svg": "SVG",
+                "file": "Tệp"
+            },
+            "size": {
+                "units": {
+                    "bytes": "byte",
+                    "kb": "KB",
+                    "mb": "MB",
+                    "gb": "GB",
+                    "tb": "TB"
+                }
+            }
+        },
+        "tasks": {
+            "inProgress": "Đang thực hiện",
+            "progress": "Tiến độ công việc"
+        },
+        "browser": {
+            "openInNewTab": "Mở trong tab mới",
+            "alt": "Xem trước trình duyệt"
+        },
+        "searchBrowser": {
+            "resultsCount": "{{count}} kết quả"
+        },
+        "chatBox": {
+            "loadingSession": "Đang tải phiên",
+            "errors": {
+                "socketNotOpen": "Socket chưa kết nối. Vui lòng thử lại.",
+                "socketNotOpenRetry": "Socket chưa kết nối. Vui lòng thử lại."
+            }
+        },
+        "resultBrowser": {
+            "placeholder": "Trình xem kết quả"
+        },
+        "toolConfirmation": {
+            "processingResponse": "Đang xử lý phản hồi...",
+            "unknownTool": "Công cụ không xác định",
+            "tool": "Công cụ",
+            "viewArguments": "Xem tham số",
+            "yesContinue": "Có, tiếp tục",
+            "noCancel": "Không, hủy"
+        },
+        "checkpoint": {
+            "ready": "Checkpoint sẵn sàng",
+            "projectLabel": "Dự án",
+            "revisionLabel": "Phiên bản"
+        },
+        "subagent": {
+            "defaultName": "Sub-agent",
+            "action": "hành động",
+            "actions": "hành động",
+            "status": {
+                "running": "Đang chạy",
+                "completed": "Hoàn tất",
+                "failed": "Thất bại"
+            },
+            "summaryTitle": "Tóm tắt",
+            "totalActionsLabel": "Tổng hành động",
+            "durationLabel": "Thời lượng"
+        },
+        "publish": {
+            "publishing": "Đang triển khai...",
+            "viewDeployment": "Xem triển khai",
+            "publish": "Publish",
+            "dialog": {
+                "title": "Triển khai lên Vercel",
+                "description": "Cung cấp Vercel API key để triển khai dự án từ checkpoint."
+            },
+            "form": {
+                "vercelApiKeyLabel": "Vercel API Key",
+                "vercelApiKeyPlaceholder": "Nhập Vercel API key của bạn"
+            },
+            "errors": {
+                "checkpointMetadataMissing": "Thiếu metadata checkpoint về dự án.",
+                "vercelApiKeyRequired": "Vui lòng nhập Vercel API key.",
+                "failedToPublish": "Không thể triển khai dự án. Vui lòng thử lại.",
+                "noCheckpointAvailable": "Chưa có checkpoint để triển khai. Vui lòng đợi checkpoint được tạo."
+            },
+            "toasts": {
+                "requestSent": "Đã gửi yêu cầu triển khai. Theo dõi trạng thái trong activity feed."
+            }
+        },
+        "chatMessage": {
+            "waitingForInput": "{{appName}} đang chờ bạn nhập.",
+            "completed": "{{appName}} đã hoàn thành tác vụ.",
+            "allowReview": "Cho phép {{appName}} review kết quả",
+            "review": "Review",
+            "stopped": "{{appName}} đã dừng",
+            "replaying": "{{appName}} đang phát lại tác vụ...",
+            "skipToResults": "Bỏ qua tới kết quả"
+        },
+        "messageContent": {
+            "file": "tệp",
+            "files": "tệp",
+            "thought": "Suy nghĩ"
+        },
+        "secrets": {
+            "environmentVariables": "Biến môi trường",
+            "placeholder": "Nhập {{key}}",
+            "projectNotInited": "Dự án chưa được khởi tạo. Biến môi trường sẽ được lưu sau khi dự án được tạo.",
+            "continueAnyway": "Tiếp tục",
+            "toasts": {
+                "saved": "Đã lưu biến môi trường thành công."
+            },
+            "errors": {
+                "atLeastOneValue": "Vui lòng cung cấp ít nhất một giá trị secret",
+                "missingContext": "Thiếu ngữ cảnh công cụ để lưu secrets",
+                "saveFailed": "Không thể lưu biến môi trường"
+            }
+        },
+        "slides": {
+            "defaultName": "Bài thuyết trình",
+            "slideTitle": "Slide {{number}}",
+            "slideAlt": "Slide {{number}}",
+            "errors": {
+                "enterFullscreen": "Không thể vào chế độ toàn màn hình",
+                "loadSlides": "Không thể tải slides",
+                "updateSlide": "Không thể cập nhật slide",
+                "downloadSlides": "Không thể tải slides"
+            },
+            "toasts": {
+                "slideUpdated": "Đã cập nhật slide thành công",
+                "downloadSuccess": "Đã tải slides thành công"
+            },
+            "actions": {
+                "downloadAsPdf": "Tải PDF",
+                "presentFullscreen": "Trình chiếu toàn màn hình"
+            },
+            "downloadOverlay": {
+                "generatingPdf": "Đang tạo PDF...",
+                "starting": "Đang bắt đầu...",
+                "slideOfTotal": "Slide {{current}} / {{total}}"
+            }
+        },
+        "action": {
+            "more": "Xem thêm",
+            "less": "Thu gọn",
+            "titles": {
+                "deepResearching": "Nghiên cứu sâu",
+                "fastResearching": "Nghiên cứu nhanh",
+                "creatingDesignDocument": "Tạo tài liệu thiết kế",
+                "codex": "Codex",
+                "delegatingTo": "Giao cho {{name}}",
+                "github": "GitHub",
+                "claudeCode": "Claude Code",
+                "codexExecuting": "Codex đang thực thi",
+                "codexReviewing": "Codex đang review",
+                "a2aAgent": "A2A Agent",
+                "thinking": "Suy nghĩ",
+                "searching": "Đang tìm kiếm",
+                "imageSearch": "Tìm kiếm hình ảnh",
+                "getDatabaseConnection": "Lấy kết nối cơ sở dữ liệu",
+                "getOpenAiKey": "Lấy OpenAI Key",
+                "browsing": "Đang duyệt",
+                "bash": "Bash",
+                "bashInit": "Khởi tạo phiên Bash",
+                "bashView": "Xem phiên Bash",
+                "bashStop": "Dừng phiên Bash",
+                "bashKill": "Kết thúc phiên Bash",
+                "bashList": "Danh sách phiên Bash",
+                "bashWrite": "Ghi vào tiến trình Bash",
+                "shellExec": "Thực thi lệnh",
+                "shellWrite": "Ghi vào terminal",
+                "shellKill": "Kết thúc tiến trình",
+                "shellView": "Xem Shell",
+                "shellWait": "Chờ Shell",
+                "readFile": "Đọc tệp",
+                "createFile": "Tạo tệp",
+                "editFile": "Chỉnh sửa tệp",
+                "deploying": "Đang triển khai",
+                "deployment": "Triển khai",
+                "extractText": "Trích xuất văn bản",
+                "transcribeAudio": "Chuyển âm thanh thành văn bản",
+                "generateAudio": "Tạo âm thanh",
+                "generateVideo": "Tạo video",
+                "generateLongVideoFromText": "Tạo video dài từ văn bản",
+                "generateLongVideoFromImage": "Tạo video dài từ hình ảnh",
+                "generateImage": "Tạo hình ảnh",
+                "readRemoteImage": "Đọc hình ảnh từ xa",
+                "presentationAgent": "Dùng agent thuyết trình",
+                "startingProject": "Khởi động dự án",
+                "restartingDevServers": "Khởi động lại dev servers",
+                "checkingServerStatus": "Kiểm tra trạng thái server",
+                "reviewerAgent": "Agent reviewer",
+                "browserClick": "Nhấp phần tử",
+                "browserClose": "Đóng trình duyệt",
+                "browserConsoleMessages": "Lấy console messages",
+                "browserDrag": "Kéo phần tử",
+                "browserEvaluate": "Đánh giá JavaScript",
+                "browserHandleDialog": "Xử lý dialog",
+                "browserHover": "Di chuột",
+                "browserNavigate": "Đi tới URL",
+                "browserNetworkRequests": "Lấy network requests",
+                "browserPressKey": "Nhấn phím",
+                "browserSelectOption": "Chọn tùy chọn",
+                "browserSnapshot": "Chụp snapshot",
+                "browserScreenshot": "Chụp ảnh màn hình",
+                "browserType": "Nhập văn bản",
+                "browserWaitFor": "Chờ phần tử",
+                "browserTabClose": "Đóng tab",
+                "browserTabList": "Danh sách tab",
+                "browserTabNew": "Mở tab mới",
+                "browserTabSelect": "Chọn tab",
+                "browserMouseClick": "Nhấp tại tọa độ",
+                "browserMouseDrag": "Kéo tại tọa độ",
+                "browserMouseMove": "Di chuyển chuột tới tọa độ",
+                "browserNavigation": "Điều hướng trình duyệt",
+                "waiting": "Đang chờ",
+                "browserViewElements": "Xem các phần tử tương tác",
+                "browserScrollDown": "Cuộn xuống",
+                "browserScrollUp": "Cuộn lên",
+                "browserSwitchTab": "Chuyển tab",
+                "browserGetSelectOptions": "Lấy các tùy chọn select",
+                "browserSelectDropdownOption": "Chọn tùy chọn dropdown",
+                "browserRestart": "Khởi động lại trình duyệt",
+                "browserEnterText": "Nhập văn bản",
+                "browserEnterMultipleTexts": "Nhập nhiều văn bản",
+                "ls": "Liệt kê tệp",
+                "glob": "Tìm tệp theo mẫu",
+                "grep": "Tìm văn bản",
+                "registerPort": "Đăng ký cổng",
+                "mcpTool": "Công cụ MCP",
+                "agentTask": "Nhiệm vụ agent",
+                "slideWrite": "Tạo slide",
+                "slideEdit": "Chỉnh sửa slide",
+                "slideGenerate": "Tạo slide",
+                "editing": "Chỉnh sửa",
+                "slideApplyPatch": "Chỉnh sửa slides",
+                "viewFile": "Xem tệp",
+                "undoEdit": "Hoàn tác chỉnh sửa",
+                "fileEditor": "Trình chỉnh sửa tệp",
+                "saveCheckpoint": "Lưu checkpoint",
+                "registerStripeWebhook": "Đăng ký Stripe Webhook"
+            },
+            "values": {
+                "codexOperation": "Tác vụ Codex",
+                "waitSeconds": "{{seconds}} giây",
+                "viewElements": "Xem các phần tử",
+                "page": "Trang",
+                "restart": "Khởi động lại",
+                "fieldsCount": "{{count}} trường",
+                "slideNumber": "Slide {{number}}"
+            }
+        },
+        "build": {
+            "titles": {
+                "bootingFullstackProject": "Khởi động dự án full-stack",
+                "fetchingServerStatus": "Đang lấy trạng thái server",
+                "searchingWithQuery": "Tìm kiếm: \"{{query}}\"",
+                "crawling": "Thu thập",
+                "generating": "Đang tạo"
+            },
+            "header": {
+                "devtools": {
+                    "startingProject": "Bắt đầu dự án",
+                    "restartingServers": "Khởi động lại servers",
+                    "serverLogs": "Log server",
+                    "default": "Công cụ developer"
+                },
+                "executing": "Đang thực thi",
+                "generatingSlide": "Đang tạo Slide {{number}}"
+            },
+            "devtools": {
+                "titles": {
+                    "bootingEnvironment": "Đang khởi động môi trường full-stack",
+                    "rollingRestartInProgress": "Đang khởi động lại tuần tự"
+                }
+            },
+            "imageAlt": "Hình {{number}}",
+            "placeholder": "Khi hoàn tất, màn hình ứng dụng sẽ hiển thị ở đây"
+        }
+    },
+    "agentTab": {
+        "tabs": {
+            "build": "Xây dựng",
+            "code": "Code",
+            "result": "Kết quả",
+            "project": "Dự án"
+        },
+        "options": {
+            "chat": "Chat",
+            "design": "Chỉnh sửa Trực tiếp",
+            "files": "Tất cả tệp"
+        },
+        "openInVSCode": "Mở bằng VS Code",
+        "vscodeAlt": "VS Code",
+        "errors": {
+            "vscodeUrlMissing": "Không có URL VS Code. Vui lòng thử lại."
+        }
+    },
+    "agentPopoverDone": {
+        "trigger": "Tôi đã làm gì?",
+        "title": "Những gì tôi đã làm"
+    },
+    "share": {
+        "title": "Chia sẻ cuộc trò chuyện",
+        "publicLink": "Liên kết công khai đến trò chuyện",
+        "publicLinkDescription": "Khi bạn chia sẻ đoạn chat của mình với người dùng khác, họ sẽ có thể xem toàn bộ lịch sử chat đó. Hãy đảm bảo rằng không có thông tin nhạy cảm nào trong cuộc trò chuyện này.",
+        "presentationLink": "Liên kết bài thuyết trình",
+        "presentationLinkDescription": "Chia sẻ liên kết này để xem bài thuyết trình toàn màn hình.",
+        "storybookLink": "Sách truyện",
+        "privateNote": "Tên của bạn, tệp tải lên, hướng dẫn tùy chỉnh và bất kỳ tin nhắn nào bạn thêm sau khi chia sẻ vẫn được giữ riêng tư.",
+        "createLink": "Tạo liên kết",
+        "unpublish": "Hủy công khai",
+        "sessionIdNotFound": "Không tìm thấy ID phiên",
+        "publishSuccess": "Phiên đã được công khai thành công",
+        "publishError": "Không thể công khai phiên",
+        "unpublishSuccess": "Phiên đã được hủy công khai thành công",
+        "unpublishError": "Không thể hủy công khai phiên"
+    },
+    "billing": {
+        "success": {
+            "title": "Thanh toán thành công",
+            "message": "Chúng tôi đã nhận được thông tin thanh toán và đang cập nhật gói dịch vụ của bạn.",
+            "redirecting": "Đang chuyển hướng bạn về trang chủ.",
+            "redirectingStatus": "Đang chuyển hướng đến trang chủ...",
+            "noStripeSession": "Không có phiên Stripe được cung cấp. Đang hiển thị tổng quan gói dịch vụ.",
+            "subscriptionUpdated": "Gói dịch vụ đã được cập nhật thành công."
+        },
+        "cancel": {
+            "title": "Thanh toán đã hủy",
+            "message": "Bạn có thể tiếp tục thanh toán bất cứ lúc nào từ trang gói dịch vụ.",
+            "redirectingStatus": "Đang chuyển hướng đến cài đặt gói dịch vụ...",
+            "checkoutCancelled": "Thanh toán đã hủy. Không có thay đổi nào được thực hiện cho gói dịch vụ của bạn."
+        }
+    },
+    "notFound": {
+        "title": "Không tìm thấy trang",
+        "description": "Xin lỗi, chúng tôi không thể tìm thấy trang bạn đang tìm kiếm.",
+        "contactSupport": "Liên hệ hỗ trợ"
+    },
+    "slides": {
+        "templates": {
+            "choose": "Chọn mẫu",
+            "searchPlaceholder": "Tìm mẫu...",
+            "noResults": "Không tìm thấy mẫu.",
+            "noTemplates": "Không có mẫu nào.",
+            "loadError": "Không thể tải mẫu slide",
+            "skip": "Bỏ qua mẫu",
+            "generate": "Tạo slide",
+            "selectToPreview": "Chọn một mẫu để xem trước",
+            "noPreviewAvailable": "Không có xem trước",
+            "mainPreviewTitle": "{{name}} - Xem trước chính",
+            "previewTitle": "{{name}} - Xem trước {{index}}"
+        }
+    },
+    "presentations": {
+        "sessionIdNotProvided": "Chưa cung cấp ID phiên",
+        "sessionNotFound": "Không tìm thấy phiên",
+        "noPresentationInSession": "Phiên này không chứa bài thuyết trình",
+        "presentationNotFound": "Không tìm thấy bài thuyết trình",
+        "failedToLoad": "Không thể tải bài thuyết trình",
+        "notAccessible": "Bài thuyết trình bạn đang tìm không tồn tại hoặc không thể truy cập.",
+        "createYourOwn": "Tạo của riêng bạn",
+        "noPreview": "Không có xem trước",
+        "slideshow": "Trình chiếu",
+        "playFromBeginning": "Phát từ đầu",
+        "playFromCurrent": "Phát từ slide hiện tại",
+        "slideTitle": "Slide {{number}}"
+    },
+    "credit": {
+        "credits": "Tín dụng",
+        "planLabel": "Gói {{plan}}",
+        "freePlan": "Gói miễn phí",
+        "balance": "Số dư",
+        "usage": "Sử dụng",
+        "table": {
+            "chat": "Trò chuyện",
+            "date": "Ngày",
+            "creditsChange": "Thay đổi tín dụng"
+        },
+        "noRecords": "Không tìm thấy bản ghi",
+        "tooltip": {
+            "credit": "Tín dụng",
+            "bonusCredit": "Tín dụng thưởng",
+            "viewUsage": "Xem sử dụng"
+        }
+    },
+    "upgrade": {
+        "title": "Nâng cấp gói",
+        "description": "Nhận thêm tính năng và tín dụng",
+        "currentPlan": "Gói hiện tại",
+        "features": "Tính năng",
+        "upgrade": "Nâng cấp",
+        "badges": {
+            "current": "hiện tại",
+            "mostBenefits": "nhiều lợi ích nhất"
+        },
+        "actions": {
+            "upgradeNow": "Nâng cấp ngay"
+        },
+        "redirecting": "Đang chuyển hướng...",
+        "priceSuffix": {
+            "month": "/tháng"
+        },
+        "errors": {
+            "checkoutStart": "Không thể bắt đầu thanh toán. Vui lòng thử lại."
+        },
+        "plans": {
+            "free": {
+                "name": "Miễn phí",
+                "description": "Dùng thử II-Agent"
+            },
+            "plus": {
+                "name": "Plus",
+                "description": "Mở rộng mức sử dụng"
+            },
+            "pro": {
+                "name": "Pro",
+                "description": "Toàn quyền truy cập mọi tính năng"
+            }
+        },
+        "planFeatures": {
+            "creditsPerMonth": "{{credits}} tín dụng/tháng",
+            "fullStackWebDevelopment": "Phát triển web full-stack",
+            "bringYourOwnKey": "Dùng khóa riêng (BYOK)",
+            "generalTaskSolving": "Giải quyết tác vụ chung",
+            "customizeAnyMcp": "Tùy chỉnh mọi MCP",
+            "slideCreation": "Tạo slide",
+            "imageVideoGeneration": "Tạo ảnh/video"
+        }
+    },
+    "connectors": {
+        "github": {
+            "title": "GitHub",
+            "connect": "Kết nối GitHub",
+            "connected": "Đã kết nối",
+            "disconnect": "Ngắt kết nối",
+            "authPopupTitle": "Xác thực GitHub",
+            "selectRepository": "Chọn kho lưu trữ",
+            "loadingRepos": "Đang tải kho...",
+            "noRepositories": "Không tìm thấy kho nào",
+            "configureRepos": "Cấu hình",
+            "loadRepoError": "Không thể tải kho",
+            "toasts": {
+                "connected": "Đã kết nối GitHub thành công.",
+                "disconnected": "Đã ngắt kết nối GitHub."
+            },
+            "errors": {
+                "connectFailed": "Không thể kết nối GitHub.",
+                "disconnectFailed": "Không thể ngắt kết nối GitHub."
+            }
+        },
+        "googleDrive": {
+            "title": "Google Drive",
+            "connect": "Kết nối Google Drive",
+            "connected": "Đã kết nối",
+            "disconnect": "Ngắt kết nối",
+            "toasts": {
+                "connected": "Đã kết nối Google Drive thành công.",
+                "disconnected": "Đã ngắt kết nối Google Drive."
+            },
+            "errors": {
+                "connectFailed": "Không thể kết nối Google Drive.",
+                "disconnectFailed": "Không thể ngắt kết nối Google Drive."
+            }
+        },
+        "configure": "Cấu hình",
+        "status": {
+            "checking": "Đang kiểm tra...",
+            "connecting": "Đang kết nối...",
+            "disconnecting": "Đang ngắt kết nối..."
+        }
+    },
+    "errors": {
+        "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
+        "network": "Lỗi mạng. Vui lòng kiểm tra kết nối của bạn.",
+        "unauthorized": "Bạn không được phép thực hiện hành động này.",
+        "notFound": "Không tìm thấy tài nguyên yêu cầu.",
+        "serverError": "Lỗi máy chủ. Vui lòng thử lại sau."
+    },
+    "tooltips": {
+        "agentSettings": "Cài đặt Agent",
+        "toggleTheme": "Chuyển đổi giao diện",
+        "moreOptions": "Tùy chọn khác",
+        "addAttachments": "Thêm tệp hoặc kết nối ứng dụng",
+        "copy": "Sao chép",
+        "share": "Chia sẻ",
+        "delete": "Xóa",
+        "favorite": "Thêm vào yêu thích",
+        "unfavorite": "Xóa khỏi yêu thích"
+    },
+    "tools": {
+        "labels": {
+            "webSearch": "Đang tìm kiếm {{query}}",
+            "webVisit": "Đang truy cập {{url}}",
+            "imageSearch": "Đang tìm ảnh cho {{query}}",
+            "generateImage": "Đang tạo ảnh",
+            "generateInfographic": "Đang tạo infographic",
+            "generatePoster": "Đang tạo poster",
+            "generateStorybook": "Đang tạo sách truyện",
+            "generic": "Đang dùng {{toolName}}"
+        },
+        "result": "Kết quả",
+        "generatingImage": "Đang tạo ảnh...",
+        "generatingInfographic": "Đang tạo infographic...",
+        "generatingPoster": "Đang tạo poster...",
+        "generatingStorybook": "Đang tạo sách truyện...",
+        "storybookComplete": "Đã tạo {{total}} trang",
+        "generatingStorybookBatch": "Đang tạo các trang {{pages}} trên tổng {{total}}...",
+        "generatingStorybookProgress": "Đang tạo trang {{current}} trên tổng {{total}}...",
+        "storybookCancelled": "Đã hủy tạo sách truyện.",
+        "executionFailed": "Thực thi công cụ thất bại",
+        "imageAlt": "Ảnh {{index}}",
+        "generatedImageAlt": "Ảnh {{index}}"
+    },
+    "imageEdit": {
+        "title": "Chỉnh sửa ảnh",
+        "description": "Tải ảnh mới lên, dán từ clipboard, hoặc nhập URL ảnh.",
+        "previewAlt": "Xem trước ảnh",
+        "uploadFile": "Tải tệp",
+        "paste": "Dán",
+        "uploading": "Đang tải lên...",
+        "processing": "Đang xử lý...",
+        "orEnterUrl": "Hoặc nhập URL ảnh:",
+        "urlPlaceholder": "https://example.com/image.jpg",
+        "apply": "Áp dụng",
+        "errors": {
+            "selectImageFile": "Vui lòng chọn tệp ảnh",
+            "fileTooLarge": "Tệp quá lớn ({{sizeMB}}MB). Kích thước tối đa {{maxMB}}MB.",
+            "uploadFailed": "Tải ảnh lên thất bại",
+            "pasteUploadFailed": "Tải ảnh dán lên thất bại",
+            "clipboardFailed": "Không thể truy cập clipboard"
+        }
+    },
+    "chainOfThought": {
+        "label": "Suy nghĩ",
+        "thinking": "{{appName}} đang suy nghĩ...",
+        "status": {
+            "imageGenerating": "Đang tạo ảnh...",
+            "infographicGenerating": "Đang tạo infographic...",
+            "posterGenerating": "Đang tạo poster...",
+            "videoGenerating": "Đang tạo video...",
+            "modelGenerating": "Đang tạo bằng mô hình...",
+            "storybookGenerating": "Đang tạo storybook..."
+        }
+    },
+    "media": {
+        "miniTools": {
+            "back": "Quay lại tạo ảnh",
+            "loading": "Đang tải công cụ...",
+            "loadError": "Không thể tải mini tool ngay bây giờ.",
+            "before": "Trước",
+            "after": "Sau",
+            "exploreMore": "Khám phá thêm công cụ",
+            "chooseTool": "Chọn công cụ",
+            "optionsCount": "{{count}} tùy chọn",
+            "close": "Đóng mini tool",
+            "buttonLabel": "Mini Tools",
+            "clear": "Xóa mini tool",
+            "defaultPrompt": "Tạo ảnh bằng mini tools",
+            "toolNames": {
+                "Restore Old Photo": "Phục hồi ảnh cũ",
+                "Replace Object": "Thay thế đối tượng",
+                "Remove Background": "Xóa nền",
+                "Group Photo": "Ảnh nhóm",
+                "AI Extended Image": "Mở rộng ảnh AI",
+                "Enhance Image": "Tăng cường ảnh",
+                "Hairstyle Change": "Thay đổi kiểu tóc",
+                "Clothing Change": "Thay đổi trang phục",
+                "Photo Style Change": "Thay đổi phong cách ảnh",
+                "Professional ID Photo": "Ảnh thẻ chuyên nghiệp",
+                "Face Swap": "Hoán đổi khuôn mặt",
+                "AI Filters & Edit": "Bộ lọc & chỉnh sửa AI"
+            }
+        },
+        "templateExplorer": {
+            "title": "Thêm phong cách dành cho bạn",
+            "infographicTitle": "Các phong cách infographic phù hợp với ý tưởng của bạn",
+            "posterTitle": "Our perfect works",
+            "infographicFilters": {
+                "all": "Tất cả",
+                "educationLearning": "Giáo dục & Học tập",
+                "businessStrategy": "Kinh doanh & Chiến lược",
+                "dataAnalytics": "Dữ liệu & Phân tích",
+                "governmentPublic": "Chính phủ & Công chúng",
+                "scienceResearch": "Khoa học & Nghiên cứu",
+                "creativeEditorial": "Sáng tạo & Biên tập",
+                "premiumBrand": "Cao cấp / Thương hiệu",
+                "technologyAI": "Công nghệ & AI",
+                "globalUniversal": "Toàn cầu / Phổ quát"
+            },
+            "templateNames": {
+                "Storybook": "Sách truyện",
+                "Starry": "Starry",
+                "Pixel": "Pixel",
+                "Low-poly": "Low-poly",
+                "Papercraft": "Thủ công giấy",
+                "Miniature": "Thu nhỏ",
+                "Clay": "Đất sét",
+                "Sketch": "Phác thảo",
+                "Wool": "Len",
+                "Retro Cartoon": "Hoạt hình retro",
+                "Realistic": "Chân thực",
+                "Dramatic Heads": "Chân dung kịch tính",
+                "80s Glam": "Glam thập niên 80",
+                "Art Nouveau": "Art Nouveau",
+                "Anime": "Anime",
+                "Cyber Punk": "Cyber Punk",
+                "Flat": "Flat",
+                "3D Figure": "Nhân vật 3D",
+                "Blueprint": "Bản vẽ",
+                "Fish eyes": "Mắt cá"
+            }
+        },
+        "imageSettings": {
+            "ratio": "Tỉ lệ",
+            "resolution": "Độ phân giải",
+            "proPlan": "Gói Pro",
+            "pages": "Trang",
+            "pagesLabel": "trang",
+            "unlimited": "Không giới hạn",
+            "textIncluded": "Bao gồm văn bản",
+            "noText": "Không có văn bản",
+            "textPosition": {
+                "none": "Không",
+                "left": "Trái",
+                "right": "Phải",
+                "top": "Trên",
+                "bottom": "Dưới",
+                "separate_page": "Trang riêng"
+            },
+            "separatePageDescription": "Tùy chọn hiển thị văn bản này sẽ mở rộng số trang tạo của bạn",
+            "language": "Ngôn ngữ",
+            "languages": {
+                "english": "Tiếng Anh",
+                "vietnamese": "Tiếng Việt",
+                "japanese": "Tiếng Nhật",
+                "hindi": "Tiếng Hindi",
+                "korean": "Tiếng Hàn"
+            },
+            "style": "Phong cách",
+            "styles": {
+                "storybook": "Sách truyện",
+                "manga": "Manga"
+            },
+            "layoutMode": "Chế độ bố cục",
+            "genre": "Thể loại",
+            "genres": {
+                "funPlayful": "Vui nhộn & Hài hước",
+                "classicHorror": "Kinh dị cổ điển",
+                "superheroAction": "Siêu anh hùng",
+                "darkScifi": "Khoa học viễn tưởng u ám",
+                "highFantasy": "Giả tưởng sử thi",
+                "neonNoir": "Thám tử Noir",
+                "wastelandApocalypse": "Hậu tận thế",
+                "lightheartedComedy": "Hài nhẹ nhàng",
+                "teenDrama": "Drama tuổi teen / Đời thường"
+            },
+            "more": "Thêm",
+            "mangaLayout": "Bố cục Manga",
+            "mangaLayoutDescription": "Sử dụng bố cục khung truyện manga chính thống với khung hình động và kể chuyện trực quan thay vì các trang minh họa đơn lẻ",
+            "richDialogue": "Hội thoại phong phú",
+            "richDialogueDescription": "Kích hoạt hội thoại sâu hơn, suy nghĩ nội tâm, hiệu ứng âm thanh và kể chuyện hấp dẫn về mặt cảm xúc để có trải nghiệm đọc sống động hơn",
+            "voice": "Lồng tiếng",
+            "voiceDescription": "Âm thanh lồng tiếng kể chuyện với giọng tự nhiên, giàu biểu cảm và nhịp độ rõ ràng"
+        },
+        "miniToolBoard": {
+            "selectedImageName": "Ảnh đã chọn",
+            "uploadError": "Không thể tải ảnh lên. Vui lòng thử lại.",
+            "selectAtLeastOne": "Vui lòng chọn ít nhất 1 ảnh",
+            "selectAtLeastCount": "Vui lòng chọn ít nhất {{count}} ảnh",
+            "uploading": "Đang tải lên...",
+            "uploadToStart": "Tải ảnh lên để bắt đầu",
+            "pickFromLibrary": "hoặc chọn từ thư viện đã tạo",
+            "loadingLibrary": "Đang tải thư viện...",
+            "browseMore": "Xem thêm",
+            "closeLibrary": "Đóng thư viện",
+            "selectedLabel": "Đã chọn",
+            "selectionCountSingle": "{{count}}/{{max}} mục",
+            "selectionCountPlural": "{{count}}/{{max}} mục",
+            "selectRange": "Chọn {{min}}-{{max}} ảnh",
+            "noItems": "Chưa có mục nào",
+            "confirm": "Bắt đầu",
+            "mediaAlt": "Media",
+            "selectedAlt": "Đã chọn",
+            "myLibraryTitle": "Thư viện của tôi",
+            "loadingYourLibrary": "Đang tải thư viện của bạn..."
+        },
+        "types": {
+            "image": "Ảnh",
+            "infographic": "Infographic",
+            "poster": "Poster",
+            "storybook": "Sách truyện",
+            "video": "Video"
+        },
+        "controls": {
+            "modelLabel": "Mô hình {{type}}",
+            "selectModel": "Chọn mô hình",
+            "selected": "Đã chọn"
+        },
+        "models": {
+            "nanoBananaPro": {
+                "label": "Nano Banana Pro",
+                "description": "Mô hình ảnh Gemini mới nhất, chất lượng hàng đầu"
+            },
+            "gptImage15": {
+                "label": "GPT Image 1.5",
+                "description": "OpenAI GPT Image 1.5"
+            },
+            "imagen40Generate001": {
+                "label": "Imagen 4.0 Generate 001",
+                "description": "Imagen 4.0 Generate 001"
+            },
+            "veo31Premium": {
+                "label": "VEO 3.1 Premium",
+                "description": "Chất lượng video tối thượng với âm thanh gốc - mô hình tiên tiến nhất của Google"
+            },
+            "sora2Pro": {
+                "label": "SORA 2 PRO",
+                "description": "Thời lượng dài hơn và chất lượng cao cấp với các điều khiển nâng cao."
+            },
+            "seedance10Pro": {
+                "label": "Seedance 1.0 Pro",
+                "description": "Kể chuyện đa cảnh với chuyển cảnh mượt mà và mạch truyện liền mạch"
+            },
+            "kling21Master": {
+                "label": "Kling 2.1 Master",
+                "description": "Chuyển động chân thực hàng đầu với điều khiển thời gian chính xác"
+            },
+            "grok15Imagine": {
+                "label": "Grok 1.5 Imagine",
+                "description": "Tạo video đa phương thức của xAI với chuyển động mạch lạc và âm thanh đồng bộ"
+            },
+            "wan26": {
+                "label": "Wan 2.6",
+                "description": "Chế độ video mới nhất của Alibaba với khả năng V2V nâng cao, đồng bộ âm thanh-hình ảnh gốc và điều khiển chuyển động tiên tiến"
+            }
+        },
+        "suggestions": {
+            "image": [
+                "Tạo hình ảnh nước hoa phong cách điện ảnh trên nền kính mờ",
+                "Thiết kế poster mech cyberpunk với dấu hiệu thương hiệu",
+                "Tạo chân dung kiểu editorial với ánh sáng viền mạnh"
+            ],
+            "infographic": [
+                "Infographic thuật ngữ về Đa dạng và Hòa nhập",
+                "Infographic quy trình bền vững chuỗi cung ứng",
+                "Infographic thống kê tác động đại dịch đến người tị nạn",
+                "Bài học về \"Vòng tuần hoàn nước\" cho trẻ mẫu giáo",
+                "Mẫu infographic danh sách bắt buộc của chiến lược thương hiệu",
+                "Mẫu infographic hành trình dòng thời gian khách hàng"
+            ],
+            "poster": [
+                "Thiết kế poster đêm nhạc jazz indie",
+                "Tạo poster tối giản cho liên hoan phim",
+                "Thiết kế poster ra mắt tai nghe mới"
+            ],
+            "storybook": [
+                "Tóm tắt toàn bộ câu chuyện Harry Potter dưới dạng sách truyện phong cách Ghibli",
+                "Minh họa truyện thiếu nhi về khu rừng phép thuật với các con vật thân thiện",
+                "Tạo sách truyện về chiếc lò nướng nhỏ dũng cảm lên đường phiêu lưu tìm chủ nhân"
+            ],
+            "video": [
+                "Quay cú dolly chậm 8s ở con hẻm neon dưới mưa",
+                "Quay sản phẩm xoay với phản chiếu bóng, 6s",
+                "Tạo cảnh lia trên không lúc bình minh qua thành phố tương lai"
+            ]
+        },
+        "videoFrames": {
+            "startLabel": "Bắt đầu",
+            "endLabel": "Kết thúc",
+            "uploadAria": "Tải lên {{label}}",
+            "previewAlt": "Xem trước {{label}}",
+            "removeAria": "Xóa {{label}}"
+        },
+        "videoPickers": {
+            "durationLabel": "Thời lượng",
+            "resolutionLabel": "Độ phân giải",
+            "ratioLabel": "Tỉ lệ",
+            "aspectRatioLabel": "Tỉ lệ khung hình",
+            "audioLabel": "Âm thanh",
+            "multishotLabel": "Nhiều cảnh",
+            "stateOn": "BẬT",
+            "stateOff": "TẮT",
+            "proBadge": "PRO"
+        },
+        "stylePicker": {
+            "title": "Chọn phong cách bạn muốn tạo",
+            "infographicTitle": "Chọn phong cách infographic của bạn",
+            "posterTitle": "Our perfect works",
+            "empty": "Không có phong cách nào"
+        },
+        "advancedMode": {
+            "title": "Chế độ nâng cao tạo ảnh",
+            "editTitle": "Chỉnh sửa chế độ nâng cao",
+            "toggleLabel": "Chế độ nâng cao",
+            "success": {
+                "saved": "Đã lưu chế độ nâng cao"
+            },
+            "errors": {
+                "sessionRequired": "Vui lòng chọn hoặc tạo cuộc trò chuyện trước.",
+                "enableFailed": "Không thể bật chế độ nâng cao.",
+                "disableFailed": "Không thể tắt chế độ nâng cao.",
+                "saveFailed": "Lưu chế độ nâng cao thất bại."
+            },
+            "categories": {
+                "subject": {
+                    "title": "Chủ thể",
+                    "description": "\"Ai/Cái gì trong ảnh?\" (ví dụ: một đôi giày cụ thể, một người, một con mèo)."
+                },
+                "scene": {
+                    "title": "Bối cảnh",
+                    "description": "\"Họ đang ở đâu?\" (ví dụ: bãi biển, thành phố tương lai, mặt bếp)."
+                },
+                "style": {
+                    "title": "Phong cách",
+                    "description": "\"Trông nó như thế nào?\" (ví dụ: tranh màu nước, render 3D, cyberpunk, ảnh cổ điển)."
+                }
+            },
+            "sampleAlt": "{{title}} mẫu {{index}}",
+            "imageAlt": "{{title}} {{index}}",
+            "status": {
+                "generating": "Đang tạo hình ảnh ...",
+                "uploading": "Đang tải lên ..."
+            },
+            "actions": {
+                "uploadImage": "Tải ảnh lên",
+                "promptIt": "Nhập prompt",
+                "clearAll": "Xóa tất cả",
+                "generateReferences": "Tạo ảnh tham chiếu",
+                "makeIt": "Tạo ngay"
+            },
+            "promptPlaceholder": "Nhập prompt để tạo ảnh tham chiếu"
+        }
+    },
+    "feedback": {
+        "like": "Thích",
+        "dislike": "Không thích"
+    },
+    "uploads": {
+        "fileCount": "{{count}} tệp",
+        "folder": "Thư mục"
+    },
+    "storybook": {
+        "viewer": {
+            "title": "Xem sách truyện",
+            "defaultTitle": "Sách truyện",
+            "viewSinglePage": "Xem trang đơn",
+            "viewDoublePage": "Xem trang kép",
+            "autoPlay": "Tự động phát",
+            "stopAutoPlay": "Dừng tự động",
+            "refresh": "Làm mới",
+            "pageAlt": "Trang {{page}}",
+            "pageCount": "Trang {{current}} / {{total}}",
+            "pageRange": "Trang {{start}} - {{end}} / {{total}}",
+            "add": "Thêm",
+            "describeToEdit": "Mô tả để chỉnh sửa ...",
+            "download": {
+                "pdf": "PDF",
+                "png": "PNG",
+                "preparing": "Đang chuẩn bị tải xuống...",
+                "current": "Tải trang hiện tại",
+                "all": "Tải tất cả các trang",
+                "noPages": "Không có trang nào để tải.",
+                "unableToPrepare": "Không thể chuẩn bị tải xuống cho một hoặc nhiều trang.",
+                "missingSources": "Thiếu nguồn tải xuống cho các trang đã yêu cầu",
+                "missingSourcePage": "Thiếu nguồn tải xuống cho trang {{page}}",
+                "failedFetchPage": "Không thể tải trang {{page}}",
+                "failed": "Tải xuống sách truyện thất bại. Vui lòng thử lại.",
+                "success": "Tải xuống sách truyện thành công!"
+            }
+        },
+        "voiceOver": {
+            "title": "Lồng tiếng",
+            "description": "Chuyển toàn bộ sách truyện của bạn thành âm thanh lồng tiếng chất lượng cao bằng AI. Mỗi trang sẽ được đọc tự nhiên, giàu biểu cảm và nhịp độ rõ ràng.",
+            "generate": "Tạo",
+            "toasts": {
+                "generated": "Đã tạo lồng tiếng",
+                "failed": "Tạo lồng tiếng thất bại",
+                "unavailable": "Lồng tiếng không khả dụng cho storybook này"
+            }
+        },
+        "thumbnail": {
+            "pageCountLabel_one": "{{count}} trang",
+            "pageCountLabel_other": "{{count}} trang",
+            "readStorybook": "Đọc sách truyện"
+        },
+        "share": {
+            "storybookIdNotProvided": "Storybook ID not provided",
+            "storybookNotFound": "Storybook not found",
+            "failedToLoad": "Failed to load storybook",
+            "notAccessible": "This storybook is not accessible"
+        },
+        "edit": {
+            "editText": "Chỉnh sửa văn bản",
+            "regenerateImage": "Tạo lại hình ảnh",
+            "editTextTitle": "Chỉnh sửa văn bản trang",
+            "regenerateImageTitle": "Tạo lại hình ảnh trang",
+            "textPlaceholder": "Nhập văn bản mới cho trang này...",
+            "imagePromptLabel": "Mô tả hình ảnh",
+            "promptPlaceholder": "Mô tả hình ảnh bạn muốn tạo...",
+            "regenerating": "Đang tạo lại...",
+            "regenerate": "Tạo lại",
+            "textSaved": "Văn bản đã được cập nhật thành công!",
+            "imageRegenerated": "Hình ảnh đã được tạo lại thành công!"
+        },
+        "modal": {
+            "editMode": {
+                "label": "Chế độ chỉnh sửa"
+            },
+            "status": {
+                "generating": "II đang tạo..."
+            },
+            "versions": {
+                "title": "Phiên bản",
+                "loading": "Đang tải phiên bản...",
+                "empty": "Chưa có phiên bản"
+            },
+            "actions": {
+                "back": "Quay lại",
+                "clear": "Xóa",
+                "saveChanges": "Lưu thay đổi"
+            },
+            "reference": {
+                "defaultName": "Ảnh tham chiếu",
+                "previewAlt": "Tham chiếu",
+                "removeLabel": "Xóa ảnh tham chiếu"
+            },
+            "time": {
+                "justNow": "Vừa xong",
+                "minutesAgo_one": "{{count}} phút trước",
+                "minutesAgo_other": "{{count}} phút trước",
+                "hoursAgo_one": "{{count}} giờ trước",
+                "hoursAgo_other": "{{count}} giờ trước",
+                "daysAgo_one": "{{count}} ngày trước",
+                "daysAgo_other": "{{count}} ngày trước"
+            },
+            "changes": {
+                "unsavedCount_one": "{{count}} thay đổi chưa lưu",
+                "unsavedCount_other": "{{count}} thay đổi chưa lưu",
+                "none": "Không có thay đổi chưa lưu",
+                "pendingEmpty": "Không có thay đổi đang chờ",
+                "pageLabel": "Trang {{page}}: {{label}}",
+                "labels": {
+                    "change": "thay đổi",
+                    "editText": "Chỉnh sửa văn bản",
+                    "moveElement": "Di chuyển phần tử",
+                    "updateProperty": "Cập nhật {{property}}",
+                    "styleProperty": "Kiểu: {{property}}"
+                }
+            },
+            "editPage": {
+                "cover": "Trang {{current}} (Bìa) / {{total}}",
+                "range": "Trang {{start}}-{{end}} / {{total}}",
+                "single": "Trang {{current}} / {{total}}"
+            },
+            "confirm": {
+                "discardChanges": "Bạn có các thay đổi chưa lưu. Bạn có chắc muốn bỏ chúng không?"
+            },
+            "toasts": {
+                "invalidImageFile": "Vui lòng chọn tệp ảnh hợp lệ.",
+                "referenceAttachFailed": "Hiện không thể đính kèm ảnh tham chiếu.",
+                "referenceUploadFailed": "Tải ảnh tham chiếu thất bại.",
+                "changesSaved": "Đã lưu thay đổi",
+                "imageRegenerated": "Đã tạo lại hình ảnh",
+                "imageRegenerateFailed": "Không thể tạo lại hình ảnh",
+                "noSession": "Không có phiên nào liên kết với storybook này"
+            },
+            "changeGroups": {
+                "regenerateImage": "Tạo lại hình ảnh"
+            },
+            "unsavedChanges": {
+                "title": "Thay đổi chưa lưu",
+                "warning": "Hãy lưu tất cả thay đổi trước khi thoát <b>Chế độ chỉnh sửa</b>, nếu không bạn có thể mất những thay đổi chưa lưu.",
+                "keepEditing": "Tiếp tục chỉnh sửa",
+                "saveChanges": "Lưu thay đổi",
+                "discardChanges": "Bỏ thay đổi"
+            }
+        },
+        "inspector": {
+            "sections": {
+                "content": "Nội dung",
+                "typography": "Kiểu chữ",
+                "textColor": "Màu chữ",
+                "background": "Nền",
+                "border": "Viền",
+                "spacing": "Khoảng cách",
+                "shadow": "Bóng"
+            },
+            "empty": {
+                "title": "Chưa chọn phần tử",
+                "description": "Bấm vào bất kỳ phần tử nào trong bản xem trước để chỉnh kiểu"
+            },
+            "imageMode": {
+                "previewAlt": "Xem trước",
+                "promptLine1": "Vui lòng nhập prompt trong hộp chat",
+                "promptLine2": "để chỉnh sửa hoặc tạo lại trang này",
+                "examples": {
+                    "face": "Biểu cảm khác",
+                    "hat": "Mũ khác"
+                }
+            },
+            "content": {
+                "placeholder": "Nhập nội dung...",
+                "aiRewrite": "Viết lại bằng AI",
+                "aiRewriting": "Đang viết lại..."
+            },
+            "status": {
+                "generating": "II đang tạo..."
+            },
+            "typography": {
+                "fontFamily": "Phông chữ",
+                "fontPlaceholder": "Chọn phông...",
+                "fontWeight": "Độ đậm",
+                "fontSize": "Cỡ chữ",
+                "lineHeight": "Chiều cao dòng (rem)",
+                "letterSpacing": "Khoảng cách chữ (em)",
+                "textAlignment": "Căn chữ",
+                "textDecoration": "Trang trí chữ"
+            },
+            "textColor": {
+                "label": "Màu chữ"
+            },
+            "background": {
+                "tabColor": "Màu",
+                "tabImage": "Ảnh",
+                "colorLabel": "Màu",
+                "imageSources": "Nguồn ảnh",
+                "sourceUpload": "Tải lên",
+                "sourceLink": "Liên kết",
+                "sourcePrompt": "Prompt",
+                "uploading": "Đang tải ảnh...",
+                "uploadCta": "Bấm để tải ảnh lên",
+                "linkPlaceholder": "https://example.com/image.png",
+                "promptPlaceholder": "Mô tả nền bạn muốn tạo...",
+                "aiGenerate": "Tạo nền bằng AI",
+                "aiGenerating": "Đang tạo..."
+            },
+            "border": {
+                "colorLabel": "Màu viền",
+                "style": "Kiểu viền",
+                "width": "Độ rộng viền",
+                "radius": "Bo góc"
+            },
+            "spacing": {
+                "padding": "Đệm",
+                "margin": "Lề"
+            },
+            "shadow": {
+                "label": "Hiệu ứng bóng",
+                "placeholder": "Bóng",
+                "none": "Không",
+                "small": "Nhỏ",
+                "medium": "Vừa",
+                "large": "Lớn"
+            },
+            "opacity": {
+                "label": "Độ mờ",
+                "placeholder": "Chọn độ mờ"
+            },
+            "colorMode": {
+                "solid": "Đặc",
+                "custom": "Tùy chỉnh",
+                "gradient": "Chuyển sắc"
+            },
+            "gradient": {
+                "from": "Từ",
+                "to": "Đến"
+            },
+            "borderStyle": {
+                "none": "Không",
+                "solid": "Đặc",
+                "dashed": "Nét đứt",
+                "dotted": "Chấm",
+                "double": "Kép"
+            },
+            "options": {
+                "none": "Không",
+                "full": "Tối đa"
+            },
+            "placeholders": {
+                "weight": "Độ đậm",
+                "size": "Cỡ",
+                "style": "Kiểu",
+                "width": "Độ rộng",
+                "radius": "Bo góc"
+            },
+            "toasts": {
+                "rewriteSuccess": "Đã viết lại nội dung thành công",
+                "rewriteFailed": "Không thể viết lại nội dung",
+                "generateSuccess": "Đã tạo nền thành công",
+                "generateFailed": "Không thể tạo nền",
+                "invalidImageFile": "Vui lòng chọn tệp ảnh hợp lệ.",
+                "uploadFailed": "Không thể tải ảnh nền."
+            },
+            "changeGroups": {
+                "textGradient": "Chuyển sắc chữ",
+                "textColor": "Màu chữ",
+                "backgroundGradient": "Chuyển sắc nền",
+                "backgroundColor": "Màu nền",
+                "backgroundImage": "Ảnh nền",
+                "borderGradient": "Chuyển sắc viền",
+                "borderColor": "Màu viền"
+            }
+        },
+        "editWrapper": {
+            "loading": "Đang tải trang để chỉnh sửa...",
+            "initializing": "Đang khởi tạo trình chỉnh sửa...",
+            "errors": {
+                "loadFailed": "Không thể tải trang để chỉnh sửa"
+            },
+            "iframeTitle": "Chỉnh sửa trang {{page}}"
+        },
+        "versionSelector": {
+            "title": "Lịch sử phiên bản",
+            "noVersions": "Không tìm thấy phiên bản",
+            "loadError": "Không thể tải phiên bản",
+            "versionLabel": "v{{version}}",
+            "originalLabel": "v{{version}} (gốc)",
+            "currentLabel": "v{{version}} (hiện tại)"
+        },
+        "noImage": "Không có hình ảnh"
+    },
+    "sessions": {
+        "renameChat": "Đổi tên Chat",
+        "renameProject": "Đổi tên Dự án",
+        "renameDescriptionChat": "Nhập tên mới cho cuộc trò chuyện này.",
+        "renameDescriptionProject": "Nhập tên mới cho dự án này.",
+        "nameLabel": "Tên",
+        "namePlaceholder": "Nhập tên..."
+    },
+    "publicHome": {
+        "title": "Chào mừng đến với II-Agent",
+        "subtitle": "Trợ lý thông minh cho mọi công việc",
+        "getStarted": "Bắt đầu",
+        "learnMore": "Tìm hiểu thêm",
+        "logoAlt": "Logo",
+        "agentAlt": "II-Agent",
+        "heading": "Gặp gỡ II-Agent",
+        "tagline": "Trợ lý thông minh giúp bạn tạo, nghiên cứu và triển khai nhanh chóng.",
+        "cta": "Bắt đầu nhiệm vụ đầu tiên",
+        "termsOfUse": "Điều khoản sử dụng",
+        "privacyPolicy": "Chính sách bảo mật",
+        "features": {
+            "dataControl": {
+                "title": "Dữ liệu của bạn, quyền kiểm soát của bạn",
+                "description": "BYOK – kết nối khóa API và dịch vụ riêng để chạy riêng tư, hiệu suất cao."
+            },
+            "deck": {
+                "title": "Từ ý tưởng tới bản trình bày trong vài phút",
+                "description": "Tạo dàn ý slide, tinh chỉnh từng khối và xuất khi sẵn sàng - không cần chuyển ngữ cảnh."
+            },
+            "code": {
+                "title": "Ủy thác code nhưng vẫn kiểm soát",
+                "description": "Khi việc triển khai trở nên nặng, mời Codex Agent tham gia luồng."
+            },
+            "research": {
+                "title": "Nghiên cứu có trích nguồn",
+                "description": "II-Agent lập kế hoạch, đọc và tổng hợp từ web và tệp của bạn - trả về insight có trích dẫn.",
+                "highlights": [
+                    "Browsing",
+                    "Source graphs",
+                    "Evidence snippets",
+                    "One-tap briefs"
+                ]
+            },
+            "ship": {
+                "title": "Mô tả và triển khai",
+                "description": "Biến prompt thành trang web: dựng trang, phần, component; xem trước, chỉnh sửa và xuất.",
+                "highlights": [
+                    "Live preview",
+                    "Clean markup",
+                    "Component library",
+                    "Export to repo/zip"
+                ]
+            }
+        }
+    },
+    "questionInput": {
+        "placeholder": "Mô tả điều bạn muốn thực hiện...",
+        "dragDrop": {
+            "dropToUpload": "Thả tệp vào đây để tải lên"
+        }
+    },
+    "questionFileUpload": {
+        "addImagesAndFiles": "Thêm ảnh và tệp",
+        "addFromGoogleDrive": "Thêm từ Google Drive",
+        "connectGoogleDrive": "Kết nối Google Drive",
+        "connectApps": "Kết nối ứng dụng"
+    },
+    "agentSetting": {
+        "title": {
+            "agent": "Cài đặt Agent",
+            "chat": "Cài đặt Chat"
+        },
+        "tabs": {
+            "model": "Mô hình",
+            "tools": "Công cụ"
+        },
+        "addEditModel": {
+            "title": {
+                "add": "Thêm mô hình mới",
+                "edit": "Chỉnh sửa cấu hình mô hình"
+            },
+            "description": "Cấu hình nhà cung cấp LLM và cài đặt API của bạn.",
+            "sections": {
+                "provider": "Nhà cung cấp LLM"
+            },
+            "fields": {
+                "modelName": "Tên mô hình",
+                "selectModel": "Chọn mô hình",
+                "customModelPlaceholder": "Nhập tên mô hình tùy chỉnh",
+                "apiKeyLabel": "Khóa API",
+                "apiKeyPlaceholder": "Nhập khóa API của bạn",
+                "baseUrlLabel": "Base URL",
+                "baseUrlOptionalLabel": "Base URL (Tùy chọn)",
+                "baseUrlPlaceholder": "Nhập Base URL của bạn",
+                "latestUpdate": "Cập nhật gần nhất",
+                "vertexProjectIdLabel": "ID dự án Vertex",
+                "vertexProjectIdPlaceholder": "Nhập ID dự án Vertex của bạn",
+                "vertexRegionLabel": "Khu vực Vertex",
+                "vertexRegionPlaceholder": "Nhập khu vực Vertex của bạn",
+                "azureEndpointLabel": "Azure Endpoint",
+                "azureEndpointPlaceholder": "Nhập Azure Endpoint của bạn",
+                "azureApiVersionLabel": "Phiên bản API Azure",
+                "azureApiVersionPlaceholder": "Nhập phiên bản API Azure của bạn"
+            }
+        },
+        "modelSetting": {
+            "title": "Cấu hình mô hình LLM",
+            "actions": {
+                "newModel": "Thêm mô hình"
+            },
+            "toasts": {
+                "created": "Tạo mô hình thành công",
+                "updated": "Cập nhật mô hình thành công",
+                "deleted": "Xóa mô hình thành công",
+                "deleteFailed": "Không thể xóa mô hình. Vui lòng thử lại."
+            }
+        },
+        "toolSetting": {
+            "magicTools": {
+                "title": "Công cụ",
+                "subtitle": "Hiện đại & dễ dùng cho mọi người"
+            },
+            "mcp": {
+                "title": "Công cụ MCP đã kết nối",
+                "subtitle": "Công cụ bên ngoài được kết nối qua MCP",
+                "connectedTool": "Công cụ MCP đã kết nối",
+                "serverNames": {
+                    "codexExecuting": "Codex đang chạy",
+                    "playwright": "Playwright Browser",
+                    "browserTools": "Công cụ trình duyệt",
+                    "default": "Công cụ MCP"
+                }
+            },
+            "mcpConnect": {
+                "title": {
+                    "edit": "Chỉnh sửa công cụ MCP",
+                    "connect": "Kết nối công cụ mới"
+                },
+                "form": {
+                    "label": "MCP Connect JSON",
+                    "placeholder": "Nhập MCP Connect JSON"
+                },
+                "actions": {
+                    "update": "Cập nhật",
+                    "connect": "Kết nối"
+                },
+                "toasts": {
+                    "updated": "Đã cập nhật cài đặt MCP thành công",
+                    "connected": "Đã kết nối công cụ MCP thành công"
+                },
+                "errors": {
+                    "missingConfig": "Vui lòng nhập cấu hình MCP",
+                    "invalidJson": "Định dạng JSON không hợp lệ",
+                    "saveFailed": "Không thể lưu cài đặt MCP"
+                }
+            },
+            "mcpTool": {
+                "aboutTitle": "Giới thiệu",
+                "jsonConfigTitle": "Cấu hình JSON",
+                "jsonConfigDescription": "Thêm cấu hình này vào cài đặt MCP client của bạn",
+                "connectTo": "Kết nối với {{name}}",
+                "envDescription": "Cấu hình các biến môi trường cần thiết cho {{name}}:",
+                "envPlaceholder": "Nhập {{key}}",
+                "logoAlt": "Logo",
+                "actions": {
+                    "remote": "Remote",
+                    "connect": "Kết nối"
+                }
+            },
+            "connectTools": "Kết nối công cụ",
+            "toasts": {
+                "updateMcpFailed": "Không thể cập nhật công cụ MCP",
+                "mcpDisconnected": "Đã ngắt kết nối công cụ MCP",
+                "deleteMcpFailed": "Không thể xóa công cụ MCP",
+                "configSaved": "Đã lưu cấu hình",
+                "configSaveFailed": "Không thể lưu cấu hình. Vui lòng thử lại."
+            }
+        },
+        "skillSetting": {
+            "sections": {
+                "builtin": {
+                    "title": "Kỹ năng có sẵn",
+                    "subtitle": "Các kỹ năng được cài sẵn giúp tăng cường năng lực của agent"
+                },
+                "custom": {
+                    "title": "Kỹ năng tùy chỉnh",
+                    "subtitle": "Kỹ năng được thêm từ kho GitHub"
+                }
+            },
+            "badges": {
+                "builtin": "Có sẵn"
+            },
+            "links": {
+                "viewOnGithub": "Xem trên GitHub"
+            },
+            "empty": {
+                "title": "Chưa có kỹ năng tùy chỉnh nào",
+                "description": "Nhấn \"{{action}}\" để thêm kỹ năng từ GitHub"
+            },
+            "actions": {
+                "connect": "Kết nối kỹ năng"
+            },
+            "connect": {
+                "title": "Kết nối kỹ năng từ GitHub",
+                "description": "Thêm một kỹ năng tùy chỉnh từ kho GitHub. Thư mục kỹ năng phải chứa tệp SKILL.md với frontmatter hợp lệ.",
+                "form": {
+                    "label": "URL GitHub",
+                    "placeholder": "https://github.com/owner/repo/tree/main/skills/skill-name"
+                },
+                "urlFormat": {
+                    "title": "Định dạng URL",
+                    "format": "https://github.com/{owner}/{repo}/tree/{branch}/{path-to-skill}",
+                    "example": "Ví dụ: https://github.com/anthropics/skills/tree/main/skills/brand-guidelines"
+                },
+                "actions": {
+                    "connect": "Kết nối kỹ năng",
+                    "connecting": "Đang kết nối..."
+                },
+                "validation": {
+                    "urlRequired": "URL GitHub là bắt buộc",
+                    "urlInvalid": "Định dạng URL GitHub không hợp lệ. Mẫu: https://github.com/{owner}/{repo}/tree/{branch}/{path}"
+                }
+            },
+            "toasts": {
+                "connected": "Đã kết nối kỹ năng \"{{name}}\" thành công!",
+                "connectFailed": "Không thể kết nối kỹ năng từ GitHub",
+                "loadFailed": "Không thể tải danh sách kỹ năng",
+                "enabled": "Đã bật kỹ năng",
+                "disabled": "Đã tắt kỹ năng",
+                "updateFailed": "Không thể cập nhật kỹ năng",
+                "builtinDeleteBlocked": "Không thể xóa kỹ năng có sẵn",
+                "removed": "Đã xóa kỹ năng thành công",
+                "deleteFailed": "Không thể xóa kỹ năng"
+            }
+        }
+    },
+    "questionFeatureSelector": {
+        "usingTemplate": "Đang dùng mẫu: {{templateName}}",
+        "template": "Mẫu"
+    },
+    "toolCatalog": {
+        "init": {
+            "taskAgent": {
+                "name": "Agent nhiệm vụ",
+                "description": "Cho phép giao việc cho sub-agent cho các tác vụ phức tạp"
+            },
+            "deepResearch": {
+                "name": "Nghiên cứu sâu",
+                "description": "Bật khả năng nghiên cứu chuyên sâu"
+            },
+            "designDocument": {
+                "name": "Tài liệu thiết kế",
+                "description": "Tạo tài liệu yêu cầu và thiết kế trước khi phát triển web full-stack"
+            },
+            "mediaGeneration": {
+                "name": "Tạo media",
+                "description": "Tạo ảnh và video"
+            },
+            "browser": {
+                "name": "Trình duyệt",
+                "description": "Bật khả năng duyệt web. Lưu ý: chỉ khả dụng cho model vision."
+            },
+            "codex": {
+                "name": "Codex",
+                "description": "Bật OpenAI Codex để tạo và review code tự động"
+            },
+            "claudeCode": {
+                "name": "Claude Code",
+                "description": "Bật Claude Code để tạo code tự động"
+            }
+        },
+        "chatTools": {
+            "webSearch": {
+                "name": "Tìm kiếm web",
+                "description": "Tìm kiếm thông tin trên web"
+            },
+            "webVisit": {
+                "name": "Truy cập web",
+                "description": "Truy cập và duyệt trang web"
+            },
+            "imageSearch": {
+                "name": "Tìm ảnh",
+                "description": "Tìm kiếm hình ảnh trên web"
+            },
+            "codeInterpreter": {
+                "name": "Code Interpreter",
+                "description": "Chạy code để tính toán, phân tích dữ liệu và trực quan hóa"
+            }
+        },
+        "features": {
+            "createWebsite": {
+                "name": "Tạo website"
+            },
+            "createSlide": {
+                "name": "Tạo slide"
+            },
+            "aiSlideNanoBanana": {
+                "name": "AI Slide (Nano Banana)"
+            },
+            "deepResearch": {
+                "name": "Nghiên cứu sâu"
+            },
+            "fastResearch": {
+                "name": "Nghiên cứu nhanh"
+            },
+            "codex": {
+                "name": "Codex"
+            },
+            "claudeCode": {
+                "name": "Claude Code"
+            }
+        },
+        "chatFeatures": {
+            "generateImage": {
+                "name": "Tạo ảnh"
+            },
+            "generateInfographic": {
+                "name": "Tạo infographic"
+            },
+            "generatePoster": {
+                "name": "Tạo poster"
+            },
+            "generateVideo": {
+                "name": "Tạo video"
+            },
+            "cookStorybook": {
+                "name": "Tạo sách truyện / truyện tranh"
+            }
+        }
+    },
+    "buildModeDropdown": {
+        "modes": {
+            "build": {
+                "label": "Chế độ Build",
+                "description": "Chế độ mặc định để xây dựng và chỉnh sửa ứng dụng của bạn"
+            },
+            "design": {
+                "label": "Chế độ Chỉnh sửa Trực tiếp",
+                "description": "Tương tác với website trong quá trình xây dựng"
+            },
+            "plan": {
+                "label": "Chế độ Plan",
+                "description": "Tạo kế hoạch chi tiết trước khi thêm các tính năng phức tạp"
+            },
+            "help": {
+                "label": "Chế độ Help",
+                "description": "Phân tích nguyên nhân gốc và tìm giải pháp tốt nhất"
+            }
+        }
+    },
+    "composio": {
+        "appCard": {
+            "connecting": "Đang kết nối...",
+            "manage": "Quản lý",
+            "connect": "Kết nối",
+            "disable": "Vô hiệu hóa",
+            "enable": "Kích hoạt",
+            "status": {
+                "connecting": "Đang kết nối...",
+                "connected": "Đã kết nối",
+                "disabled": "Đã vô hiệu hóa",
+                "disconnected": "Đã ngắt kết nối"
+            },
+            "aria": {
+                "integrationCard": "Thẻ tích hợp {{appName}}",
+                "manageConnection": "Quản lý kết nối {{appName}}",
+                "connectApp": "Kết nối {{appName}}"
+            }
+        },
+        "disconnectDialog": {
+            "title": "Ngắt kết nối {{appName}}?",
+            "description": "Điều này sẽ xóa kết nối <profileName>\"{{profileName}}\"</profileName>. Agent sẽ không còn truy cập được tài khoản {{appName}} của bạn.",
+            "warning": "Hành động này không thể hoàn tác.",
+            "cancel": "Hủy",
+            "disconnect": "Ngắt kết nối"
+        },
+        "integrationsModal": {
+            "title": "Tích hợp ứng dụng",
+            "description": "Kết nối các ứng dụng yêu thích để nâng cao khả năng của agent - <strong>Được hỗ trợ bởi Composio.</strong>",
+            "searchPlaceholder": "Tìm kiếm ứng dụng...",
+            "searchLabel": "Tìm kiếm ứng dụng",
+            "clearSearch": "Xóa tìm kiếm",
+            "noAppsFound": "Không tìm thấy ứng dụng",
+            "noAppsMatchSearch": "Không có ứng dụng nào khớp với \"{{search}}\"",
+            "noAppsAvailable": "Không có ứng dụng nào khả dụng",
+            "searchResults": "Kết quả tìm kiếm ({{count}})",
+            "availableApps": "Ứng dụng khả dụng ({{count}})",
+            "availableIntegrations": "Tích hợp khả dụng",
+            "connectDefaultDescription": "Kết nối với {{appName}} và truy cập các công cụ và khả năng của nó.",
+            "toasts": {
+                "connectedSuccess": "{{appName}} đã kết nối thành công!",
+                "connectedDescription": "Bạn có thể sử dụng tích hợp này ngay bây giờ",
+                "connectionNotCompleted": "Kết nối với {{appName}} chưa hoàn thành",
+                "connectionNotCompletedDescription": "Vui lòng thử lại",
+                "connectionTimedOut": "Kết nối với {{appName}} đã hết thời gian hoặc bị hủy",
+                "connectionTimedOutDescription": "Cửa sổ xác thực mất quá nhiều thời gian để phản hồi",
+                "couldNotOpenAuthWindow": "Không thể mở cửa sổ xác thực cho {{appName}}",
+                "allowPopupsDescription": "Vui lòng cho phép popup và thử lại",
+                "failedToConnect": "Không thể kết nối {{appName}}",
+                "disconnectedSuccess": "{{appName}} đã ngắt kết nối thành công",
+                "disconnectedDescription": "Tích hợp đã được xóa",
+                "failedToDisconnect": "Không thể ngắt kết nối {{appName}}"
+            }
+        },
+        "toolSelector": {
+            "defaultToolsSelected": "{{count}} công cụ mặc định, {{selected}} / {{max}} công cụ",
+            "default": "Mặc định",
+            "clear": "Xóa",
+            "searchPlaceholder": "Tìm kiếm công cụ...",
+            "noToolsFound": "Không tìm thấy công cụ",
+            "noToolsFoundDescription": "Thử điều chỉnh truy vấn tìm kiếm của bạn",
+            "badges": {
+                "default": "Mặc định",
+                "readOnly": "Chỉ đọc"
+            }
+        },
+        "manageModal": {
+            "toolsAndPermissions": "Công cụ & Quyền",
+            "toolsDescription": "Chọn công cụ agent có thể truy cập từ tài khoản {{appName}} của bạn",
+            "saveChanges": "Lưu thay đổi",
+            "saving": "Đang lưu...",
+            "disconnect": "Ngắt kết nối",
+            "status": {
+                "connected": "Đã kết nối",
+                "disabled": "Đã vô hiệu hóa",
+                "disconnected": "Đã ngắt kết nối"
+            },
+            "toasts": {
+                "toolsEnabled": "{{count}} công cụ đã được kích hoạt cho {{appName}}",
+                "failedToUpdateTools": "Không thể cập nhật công cụ"
+            }
+        }
+    },
+    "project": {
+        "newProject": "Dự án mới",
+        "header": {
+            "tabs": {
+                "database": {
+                    "label": "Cơ sở dữ liệu",
+                    "title": "Cơ sở dữ liệu",
+                    "description": "Quản lý bảng và dữ liệu trong cơ sở dữ liệu"
+                },
+                "domain": {
+                    "label": "Tên miền",
+                    "title": "Cài đặt tên miền",
+                    "description": "Cấu hình tên miền để ứng dụng có thể truy cập trên web"
+                },
+                "secrets": {
+                    "label": "Secrets",
+                    "title": "Secrets",
+                    "description": "Secrets là các giá trị ẩn (như API key hoặc mật khẩu) mà code có thể sử dụng an toàn mà không công khai ra bên ngoài"
+                }
+            }
+        },
+        "panel": {
+            "sessionRequired": "Cần có thông tin phiên để xem chi tiết dự án.",
+            "noProjectYet": "Chưa có dự án nào được tạo trong phiên này.",
+            "loadingSchema": "Đang tải schema cơ sở dữ liệu...",
+            "errors": {
+                "missingSession": "Thiếu thông tin phiên",
+                "unableToLoadProject": "Không thể tải dự án cho phiên này",
+                "unableToLoadSchema": "Không thể tải schema cơ sở dữ liệu cho dự án này",
+                "unableToLoadRecords": "Không thể tải dữ liệu bảng"
+            }
+        },
+        "database": {
+            "noProjectInfo": "Chưa có thông tin dự án cho phiên này.",
+            "noDatabaseConfig": "Dự án này chưa có cấu hình cơ sở dữ liệu.",
+            "noTablesFound": "Không tìm thấy bảng nào cho kết nối cơ sở dữ liệu đã cấu hình.",
+            "selectTableToInspect": "Chọn một bảng để xem",
+            "tableHeaders": {
+                "no": "STT"
+            },
+            "empty": {
+                "noRows": "Không tìm thấy dòng nào trong bảng này.",
+                "selectTable": "Chọn một bảng để tải dữ liệu."
+            },
+            "actions": {
+                "refreshSchema": "Làm mới schema",
+                "refresh": "Làm mới"
+            },
+            "pagination": {
+                "showingUpTo": "Hiển thị tối đa <count>{{count}}</count> bản ghi",
+                "range": "<range>{{start}}-{{end}}</range> trên <total>{{total}}</total>",
+                "page": "Trang",
+                "of": "trên"
+            }
+        },
+        "deployment": {
+            "iiDomainTitle": "Tên miền II",
+            "iiDomainDescription": "Quản lý nơi bản build production mới nhất được publish.",
+            "ownDomainTitle": "Tên miền của bạn",
+            "ownDomainDescriptionConnected": "Kết nối một tên miền bạn sở hữu với ứng dụng",
+            "ownDomainDescriptionMissing": "Chưa có tên miền nào được publish. Nhấn \"Publish\" để triển khai.",
+            "noDeploymentPlaceholder": "Chưa có triển khai nào được publish",
+            "openUrl": "Mở URL",
+            "subdomain": {
+                "description": "Chọn subdomain cho ứng dụng của bạn. Ứng dụng sẽ có tại your-subdomain.ii.inc",
+                "placeholder": "ten-ung-dung",
+                "checking": "Đang kiểm tra...",
+                "available": "{{domain}} có sẵn!",
+                "taken": "Subdomain này đã được sử dụng",
+                "suggestions": "Thử một trong những gợi ý sau:",
+                "claimDomain": "Đăng ký tên miền",
+                "reserved": "{{domain}} đã được đặt trước cho lần publish tiếp theo!",
+                "reserveError": "Không thể đặt trước subdomain. Vui lòng thử lại.",
+                "checkError": "Không thể kiểm tra. Vui lòng thử lại.",
+                "claimed": "{{domain}} đã được đăng ký thành công!",
+                "claimError": "Không thể đăng ký subdomain. Vui lòng thử lại.",
+                "noProjectError": "Không tìm thấy dự án. Vui lòng triển khai ứng dụng trước.",
+                "loadingDeployment": "Đang kiểm tra trạng thái triển khai...",
+                "noDeployment": "Triển khai dự án lên Cloud Run trước để đăng ký subdomain tùy chỉnh.",
+                "cloudRunOnly": "Subdomain tùy chỉnh chỉ khả dụng cho các triển khai Cloud Run."
+            }
+        },
+        "secrets": {
+            "form": {
+                "editTitle": "Sửa Secret",
+                "addTitle": "Thêm Secret mới",
+                "editDescription": "Cập nhật tên và giá trị secret",
+                "addDescription": "Đặt tên secret và nhập secret keys hoặc tokens để thêm giá trị mới",
+                "namePlaceholder": "Nhập tên secret, VD: EXAMPLE_NAME",
+                "valuePlaceholder": "Nhập giá trị secret"
+            },
+            "actions": {
+                "addSecret": "Thêm Secret"
+            },
+            "missing": {
+                "title": "Thiếu Secret",
+                "description": "Các secrets sau được dùng trong code nhưng chưa tồn tại:"
+            },
+            "list": {
+                "title": "Danh sách Secret",
+                "searchPlaceholder": "Tìm secret",
+                "emptySearch": "Không tìm thấy secret nào khớp với tìm kiếm của bạn.",
+                "empty": "Chưa có secret nào được lưu.",
+                "protected": "Được bảo vệ",
+                "menu": {
+                    "edit": "Sửa Secret",
+                    "delete": "Xóa Secret"
+                },
+                "lastUpdated": "Cập nhật lần cuối: {{date}}"
+            },
+            "time": {
+                "justNow": "Vừa xong"
+            },
+            "toasts": {
+                "added_one": "Đã thêm secret",
+                "added_other": "Đã thêm {{count}} secrets",
+                "deleted": "Đã xóa secret",
+                "updated": "Đã cập nhật secrets"
+            },
+            "errors": {
+                "unableToAdd": "Không thể thêm secret",
+                "unableToDelete": "Không thể xóa secret",
+                "unableToUpdate": "Không thể cập nhật secrets"
+            }
+        }
+    }
+}

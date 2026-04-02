@@ -1,0 +1,119 @@
+# Image Generation Models Configuration
+# This file defines all supported image generation models and their capabilities
+
+models:
+  - id: nano-banana-pro
+    label: Nano Banana Pro
+    model_name: gemini-3-pro-image-preview
+    provider: gemini
+    type: image
+    description: "Latest Gemini image model, top quality"
+    supported_resolutions:
+      - "1K"
+      - "2K"
+      - "4K"
+    supported_aspect_ratios:
+      - "1:1"
+      - "2:3"
+      - "3:2"
+      - "3:4"
+      - "4:3"
+      - "9:16"
+      - "16:9"
+      - "21:9"
+    icon: nano-banana
+
+  - id: gpt-image-1.5
+    label: GPT Image 1.5
+    model_name: gpt-image-1.5
+    provider: openai
+    type: image
+    description: "OpenAI GPT Image 1.5"
+    # GPT Image 1.5 only supports: 1024x1024 (1:1), 1536x1024 (3:2 landscape), 1024x1536 (2:3 portrait)
+    # No resolution options - fixed at these sizes
+    supported_resolutions:
+      - "1K"
+    supported_aspect_ratios:
+      - "1:1"
+      - "3:2"
+      - "2:3"
+    icon: openai
+
+  - id: imagen-4.0-generate-001
+    label: Imagen 4.0 Generate 001
+    model_name: imagen-4.0-generate-001
+    provider: gemini
+    type: image
+    description: "Imagen 4.0 Generate 001"
+    supported_resolutions:
+      - "1K"
+      - "2K"
+    supported_aspect_ratios:
+      - "1:1"
+      - "2:3"
+      - "3:2"
+      - "3:4"
+      - "4:3"
+      - "9:16"
+      - "16:9"
+    icon: google
+
+# Storybook-specific models (same models but with storybook type)
+storybook_models:
+  - id: nano-banana-pro
+    label: Nano Banana Pro
+    model_name: gemini-3-pro-image-preview
+    provider: gemini
+    type: storybook
+    description: "Latest Gemini image model, top quality"
+    supported_resolutions:
+      - "1K"
+      - "2K"
+      - "4K"
+    supported_aspect_ratios:
+      - "1:1"
+      - "3:2"
+      - "4:3"
+      - "9:16"
+      - "16:9"
+    icon: nano-banana
+
+  - id: gpt-image-1.5
+    label: GPT Image 1.5
+    model_name: gpt-image-1.5
+    provider: openai
+    type: storybook
+    description: "OpenAI GPT Image 1.5"
+    supported_resolutions:
+      - "1K"
+    supported_aspect_ratios:
+      - "1:1"
+      - "3:2"
+    icon: openai
+
+  - id: imagen-4.0-generate-001
+    label: Imagen 4.0 Generate 001
+    model_name: imagen-4.0-generate-001
+    provider: gemini
+    type: storybook
+    description: "Imagen 4.0 Generate 001"
+    supported_resolutions:
+      - "1K"
+      - "2K"
+    supported_aspect_ratios:
+      - "1:1"
+      - "4:3"
+      - "16:9"
+    icon: google
+
+# Suggestions for image generation prompts
+suggestions:
+  - "Render cinematic perfume visuals on frosted glass"
+  - "Design cyberpunk mech poster with brand markings"
+  - "Create editorial portrait with dramatic rim light"
+
+# Suggestions for storybook generation prompts
+storybook_suggestions:
+  - "Summarize the entire Harry Potter story for me in a Ghibli-style storybook"
+  - "Illustrate a children's story about a magical forest with friendly animals"
+  - "Create a storybook about a brave little toaster who goes on an adventure to find his owner"

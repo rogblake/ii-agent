@@ -35,11 +35,11 @@ export function useUploadFiles() {
         ): Promise<{ fileUrl: string; fileId: string } | null> => {
             try {
                 // Step 1: Request signed upload URL + create pending asset
-                const { asset_id, upload_url } =
+                const { id, upload_url } =
                     await uploadService.generateUploadUrl({
-                        filename: file.name,
+                        file_name: file.name,
                         content_type: file.type || 'application/octet-stream',
-                        size_bytes: file.size
+                        file_size: file.size
                     })
 
                 // Step 2: Upload file directly to signed URL
@@ -84,13 +84,19 @@ export function useUploadFiles() {
 
                 // Step 3: Mark upload complete
                 const completeResponse = await uploadService.uploadComplete(
-                    asset_id,
-                    { session_id: sessionId }
+                    id,
+                    {
+                        id,
+                        file_name: file.name,
+                        file_size: file.size,
+                        content_type: file.type || 'application/octet-stream',
+                        session_id: sessionId
+                    }
                 )
 
                 return {
-                    fileUrl: completeResponse.url ?? '',
-                    fileId: asset_id
+                    fileUrl: completeResponse.file_url,
+                    fileId: id
                 }
             } catch (error) {
                 console.error('Upload error:', error)

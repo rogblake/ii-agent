@@ -7,10 +7,11 @@ import uuid
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select
-from ii_agent.realtime.events.app_events import AgentResponseInterruptedEvent, EventGroup
+from ii_agent.realtime.events.app_events import AgentResponseInterruptedEvent
+from ii_agent.realtime.events.models import ApplicationEvent
 from ii_agent.realtime.events.repository import EventRepository
 from ii_agent.core.db import get_db_session_local
-from ii_agent.tasks.models import RunTask
+from ii_agent.tasks.models import RunTask, TaskLog
 from ii_agent.tasks.types import RunStatus
 from ii_agent.chat.messages.models import ChatMessage
 from ii_agent.core.logger import logger
@@ -20,10 +21,17 @@ from ii_agent.core.logger import logger
 scheduler = AsyncIOScheduler()
 
 
+def _coerce_uuid(value: object) -> uuid.UUID:
+    """Normalize UUID-like values returned by async drivers."""
+    if isinstance(value, uuid.UUID):
+        return value
+    return uuid.UUID(str(value))
+
+
 async def cleanup_long_running_tasks():
     """
     Clean up RunTasks that have been running for more than 45 minutes.
-    Marks them as system_interrupted instead of deleting.
+    Marks them as failed and emits an interrupted event instead of deleting.
     """
     try:
         # Calculate the cutoff time (45 minutes ago)
@@ -57,29 +65,47 @@ async def cleanup_long_running_tasks():
                     logger.info("No more stale RunTasks found")
                     break
 
-                # Update each task - optimistic locking will be enforced on commit
-                batch_count = len(tasks)
+                batch_count = 0
 
                 event_repo = EventRepository()
                 for task in tasks:
-                    # Update the task status - this will use optimistic locking via version column
+                    session_id = _coerce_uuid(task.session_id)
+                    run_id = _coerce_uuid(task.id)
+
                     task.status = RunStatus.FAILED
+                    task.error_message = "Agent run task timed out during cron cleanup."
                     task.updated_at = datetime.now(timezone.utc)
-                    # The version column will be automatically incremented by SQLAlchemy on commit
+                    db.add(TaskLog(task_id=run_id, status=RunStatus.FAILED))
+
                     event = AgentResponseInterruptedEvent(
-                        session_id=uuid.UUID(task.session_id),
+                        session_id=session_id,
+                        run_id=run_id,
                         content={
                             "message": "Agent run task was interrupted by system cleanup due to timeout.",
-                            "run_id": str(task.id) if task.id else None,
+                            "run_id": str(run_id),
+                            "run_status": RunStatus.FAILED,
                         },
                     )
-                    await event_repo.save(db, uuid.UUID(task.session_id), event)
+                    await event_repo.save(
+                        db,
+                        ApplicationEvent(
+                            id=event.id,
+                            event_type=event.name,
+                            event_group=event.group,
+                            session_id=session_id,
+                            run_id=run_id,
+                            user_id=event.user_id,
+                            content=event.content,
+                        ),
+                    )
+                    batch_count += 1
+
                 # Commit all updates in one transaction
                 await db.commit()
 
                 total_processed += batch_count
                 logger.info(
-                    f"Marked {batch_count} stale RunTasks as system_interrupted. "
+                    f"Marked {batch_count} stale RunTasks as failed due to timeout. "
                     f"Total processed: {total_processed}/{max_processed}"
                 )
 
@@ -94,7 +120,7 @@ async def cleanup_long_running_tasks():
                     break
 
         logger.info(
-            f"Cleanup completed. Total RunTasks marked as system_interrupted: {total_processed}"
+            f"Cleanup completed. Total RunTasks marked as failed due to timeout: {total_processed}"
         )
 
     except Exception as e:
@@ -161,9 +187,7 @@ async def cleanup_long_running_chat_messages():
                     )
                     break
 
-        logger.info(
-            f"Chat message cleanup completed. Total marked as finished: {total_processed}"
-        )
+        logger.info(f"Chat message cleanup completed. Total marked as finished: {total_processed}")
 
     except Exception as e:
         logger.opt(exception=True).error(f"Error during ChatMessage cleanup: {e}")

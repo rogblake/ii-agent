@@ -134,9 +134,9 @@ export const AdvancedModeModal = ({
         try {
             // Step 1: Generate upload URL
             const generateUrlResponse = await uploadService.generateUploadUrl({
-                filename: file.name,
+                file_name: file.name,
                 content_type: file.type || 'image/jpeg',
-                size_bytes: file.size
+                file_size: file.size
             })
 
             // Step 2: Upload file to the signed URL
@@ -167,13 +167,19 @@ export const AdvancedModeModal = ({
 
             // Step 3: Call upload complete with session_id
             const completeResponse = await uploadService.uploadComplete(
-                generateUrlResponse.asset_id,
-                { session_id: sessionId }
+                generateUrlResponse.id,
+                {
+                    id: generateUrlResponse.id,
+                    file_name: file.name,
+                    file_size: file.size,
+                    content_type: file.type || 'image/jpeg',
+                    session_id: sessionId
+                }
             )
 
             return {
-                fileUrl: completeResponse.url ?? '',
-                fileId: completeResponse.id
+                fileUrl: completeResponse.file_url,
+                fileId: generateUrlResponse.id
             }
         } catch (error) {
             console.error('Upload error:', error)

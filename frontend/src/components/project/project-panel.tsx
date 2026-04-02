@@ -106,7 +106,8 @@ const ProjectPanel = ({
                     value:
                         typeof value === 'string'
                             ? value
-                            : JSON.stringify(value, null, 2)
+                            : JSON.stringify(value, null, 2),
+                    updatedAt: response.updated_at ?? undefined
                 })
             )
             setSecretsEntries(entries.length > 0 ? entries : [])
@@ -276,8 +277,7 @@ const ProjectPanel = ({
             toast.error(t('project.panel.errors.missingSession'))
             return
         }
-        const newEntries = [...secretsEntries, ...secrets]
-        const payload = newEntries.reduce<Record<string, string>>(
+        const payload = secrets.reduce<Record<string, string>>(
             (acc, entry) => {
                 const k = entry.key.trim()
                 if (k) {
@@ -289,7 +289,7 @@ const ProjectPanel = ({
         )
         try {
             setIsSavingSecrets(true)
-            await projectService.updateProjectSecrets(sessionId, payload)
+            await projectService.addProjectSecrets(sessionId, payload)
             toast.success(
                 t('project.secrets.toasts.added', { count: secrets.length })
             )
@@ -344,7 +344,7 @@ const ProjectPanel = ({
         )
         try {
             setIsSavingSecrets(true)
-            await projectService.updateProjectSecrets(sessionId, payload)
+            await projectService.replaceProjectSecrets(sessionId, payload)
             toast.success(t('project.secrets.toasts.updated'))
             await fetchSecrets()
         } catch (error) {
@@ -360,20 +360,14 @@ const ProjectPanel = ({
             toast.error(t('project.panel.errors.missingSession'))
             return
         }
-        const newEntries = secretsEntries.filter((_, idx) => idx !== index)
-        const payload = newEntries.reduce<Record<string, string>>(
-            (acc, entry) => {
-                const k = entry.key.trim()
-                if (k) {
-                    acc[k] = entry.value
-                }
-                return acc
-            },
-            {}
-        )
+        const secretKey = secretsEntries[index]?.key?.trim()
+        if (!secretKey) {
+            toast.error(t('project.secrets.errors.unableToDelete'))
+            return
+        }
         try {
             setIsSavingSecrets(true)
-            await projectService.updateProjectSecrets(sessionId, payload)
+            await projectService.deleteProjectSecrets(sessionId, [secretKey])
             toast.success(t('project.secrets.toasts.deleted'))
             await fetchSecrets()
         } catch (error) {
@@ -403,7 +397,7 @@ const ProjectPanel = ({
 
         try {
             setIsSavingSecrets(true)
-            await projectService.updateProjectSecrets(sessionId, payload)
+            await projectService.replaceProjectSecrets(sessionId, payload)
             toast.success(t('project.secrets.toasts.updated'))
             await fetchSecrets()
         } catch (error) {

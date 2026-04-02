@@ -11,6 +11,12 @@ class ProjectSecretsRequest(BaseModel):
     secrets: Dict[str, Any]
 
 
+class ProjectSecretsDeleteRequest(BaseModel):
+    """Payload for deleting specific secrets from a project."""
+
+    secret_keys: list[str]
+
+
 class ProjectSecretsResponse(BaseModel):
     """Response containing decrypted secrets for a project session."""
 

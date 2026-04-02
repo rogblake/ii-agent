@@ -97,7 +97,7 @@ export const SecretsInput = ({
         setIsSubmitting(true)
         try {
             // Save secrets using project service
-            await projectService.updateProjectSecrets(sessionId, secretsObject)
+            await projectService.addProjectSecrets(sessionId, secretsObject)
 
             toast.success(t('agent.secrets.toasts.saved'))
 

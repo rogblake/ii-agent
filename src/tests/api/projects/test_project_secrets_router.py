@@ -10,6 +10,8 @@ pytestmark = pytest.mark.unit
 EXPECTED_ROUTES = {
     ("GET", "/project/{session_id}/secrets"),
     ("POST", "/project/{session_id}/secrets"),
+    ("PUT", "/project/{session_id}/secrets"),
+    ("DELETE", "/project/{session_id}/secrets"),
 }
 
 

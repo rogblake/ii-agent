@@ -22,13 +22,39 @@ class ProjectService {
         return response.data
     }
 
-    async updateProjectSecrets(
+    async addProjectSecrets(
         sessionId: string,
         secrets: Record<string, unknown>
     ): Promise<ProjectSecretsResponse> {
         const response = await axiosInstance.post<ProjectSecretsResponse>(
             `/v1/project/${sessionId}/secrets`,
             { secrets }
+        )
+        return response.data
+    }
+
+    async replaceProjectSecrets(
+        sessionId: string,
+        secrets: Record<string, unknown>
+    ): Promise<ProjectSecretsResponse> {
+        const response = await axiosInstance.put<ProjectSecretsResponse>(
+            `/v1/project/${sessionId}/secrets`,
+            { secrets }
+        )
+        return response.data
+    }
+
+    async deleteProjectSecrets(
+        sessionId: string,
+        secretKeys: string[]
+    ): Promise<ProjectSecretsResponse> {
+        const response = await axiosInstance.delete<ProjectSecretsResponse>(
+            `/v1/project/${sessionId}/secrets`,
+            {
+                data: {
+                    secret_keys: secretKeys
+                }
+            }
         )
         return response.data
     }

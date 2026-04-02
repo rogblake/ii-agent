@@ -78,7 +78,7 @@ async def set_session_project_secrets(
     if isinstance(database_url, str) and database_url:
         await database_service.upsert_database_from_url(
             db,
-            session_id=session_id,
+            session_id=session_uuid,
             connection_string=database_url,
         )
 
@@ -137,7 +137,11 @@ async def replace_session_project_secrets(
         session_id=session_id,
         secrets=current_secrets,
         project_path=project.project_path,
-        database_url=extract_db_url(project.database_json),
+        database_url=await database_service.get_project_db_connection(
+            db,
+            project_id=project.id,
+            user_id=current_user.id,
+        ),
     )
 
     return _build_project_secrets_response(

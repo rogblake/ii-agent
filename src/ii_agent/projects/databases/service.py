@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import List, Optional
+from typing import Any, List, Optional
 from urllib.parse import urlparse
 
 from sqlalchemy import MetaData, Table, create_engine, func, inspect, select
@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.projects.databases import utils
 from ii_agent.projects.databases.exceptions import ProjectDatabaseError
 from ii_agent.projects.databases.schemas import ProjectDatabaseResponse, TableRecordsResult
@@ -91,6 +91,58 @@ class DatabaseService:
         self._project_repo = project_repo
         self._db_repo = db_repo or ProjectDatabaseRepository()
 
+    @staticmethod
+    def _serialize_database_record(db_record: ProjectDatabase) -> dict[str, Any]:
+        """Normalize a ProjectDatabase row into the project-facing payload shape."""
+        payload: dict[str, Any] = {
+            "id": str(db_record.id),
+            "session_id": str(db_record.session_id),
+            "source": str(db_record.source),
+            "connection_string": db_record.connection_string,
+            "host": db_record.host,
+            "database_name": db_record.database_name,
+            "role_name": db_record.role_name,
+            "branch_name": db_record.branch_name,
+            "is_active": db_record.is_active,
+        }
+        if isinstance(db_record.db_metadata, dict):
+            payload.update(db_record.db_metadata)
+        return {key: value for key, value in payload.items() if value is not None}
+
+    async def get_session_db_payload(
+        self,
+        db: AsyncSession,
+        session_id: uuid.UUID,
+    ) -> Optional[dict[str, Any]]:
+        """Return the active ProjectDatabase payload for a session if one exists."""
+        db_record = await self._db_repo.get_active_by_session_id(db, session_id)
+        if not db_record:
+            return None
+        return self._serialize_database_record(db_record)
+
+    async def get_project_db_payload(
+        self,
+        db: AsyncSession,
+        project_id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> Optional[dict[str, Any]]:
+        """Return the project database payload, preferring ProjectDatabase rows."""
+        project = await self._project_repo.get_by_id_and_user(
+            db, project_id=project_id, user_id=user_id
+        )
+        if not project:
+            return None
+
+        if project.session_id:
+            db_payload = await self.get_session_db_payload(db, project.session_id)
+            if db_payload:
+                return db_payload
+
+        if isinstance(project.database_json, dict):
+            return project.database_json
+
+        return None
+
     async def get_project_db_connection(
         self,
         db: AsyncSession,
@@ -98,13 +150,10 @@ class DatabaseService:
         user_id: uuid.UUID,
     ) -> Optional[str]:
         """Fetch the database connection URL for a project."""
-        project = await self._project_repo.get_by_id_and_user(
+        database_payload = await self.get_project_db_payload(
             db, project_id=project_id, user_id=user_id
         )
-        if not project:
-            return None
-
-        return utils.extract_db_url(project.database_json)
+        return utils.extract_db_url(database_payload)
 
     async def get_project_db_tables(
         self,

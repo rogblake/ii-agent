@@ -348,6 +348,10 @@ class FullStackInitTool(BaseSandboxTool):
         description_str = description if isinstance(description, str) else None
         database = raw_result.get("database")
         database_payload = database if isinstance(database, dict) else None
+        if database_payload is None:
+            database_payload = await self._get_active_database_payload(str(session_id))
+            if database_payload is not None:
+                raw_result["database"] = database_payload
 
         project_record = await self._persist_project_metadata(
             session_id=str(session_id),
@@ -355,7 +359,7 @@ class FullStackInitTool(BaseSandboxTool):
             framework=framework_str,
             project_path=project_dir_str,
             description=description_str,
-            database=database_payload,
+            database=None,
         )
 
         if project_record:
@@ -440,3 +444,42 @@ class FullStackInitTool(BaseSandboxTool):
         except Exception as exc:
             logger.error("Failed to save DATABASE_URL to project secrets: {}", exc)
             logger.error("Failed to save DATABASE_URL to project secrets: {}", exc)
+
+    async def _get_active_database_payload(
+        self,
+        session_id: str,
+    ) -> dict[str, Any] | None:
+        """Return the active ProjectDatabase payload for the session if it exists."""
+        try:
+            import uuid as _uuid
+
+            session_uuid = _uuid.UUID(session_id)
+            db_repo = ProjectDatabaseRepository()
+            async with get_db_session_local() as db:
+                db_record = await db_repo.get_active_by_session_id(db, session_uuid)
+
+            if not db_record:
+                return None
+
+            payload: dict[str, Any] = {
+                "id": str(db_record.id),
+                "session_id": str(db_record.session_id),
+                "source": str(db_record.source),
+                "connection_string": db_record.connection_string,
+                "host": db_record.host,
+                "database_name": db_record.database_name,
+                "role_name": db_record.role_name,
+                "branch_name": db_record.branch_name,
+                "is_active": db_record.is_active,
+            }
+            if isinstance(db_record.db_metadata, dict):
+                payload.update(db_record.db_metadata)
+
+            return {key: value for key, value in payload.items() if value is not None}
+        except Exception as exc:
+            logger.warning(
+                "Failed to load active database payload for session {}: {}",
+                session_id,
+                exc,
+            )
+            return None

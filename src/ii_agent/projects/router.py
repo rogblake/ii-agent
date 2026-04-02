@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter
 
 from ii_agent.auth.dependencies import CurrentUser, DBSession
-from ii_agent.projects.dependencies import ProjectServiceDep
+from ii_agent.projects.dependencies import DatabaseServiceDep, ProjectServiceDep
 from ii_agent.projects.schemas import SessionProjectResponse
 
 from ii_agent.projects.databases.router import router as database_router
@@ -27,6 +27,7 @@ async def get_session_project(
     session_id: uuid.UUID,
     current_user: CurrentUser,
     project_service: ProjectServiceDep,
+    database_service: DatabaseServiceDep,
     db: DBSession,
 ) -> SessionProjectResponse:
     """Return the project metadata associated with a session for the current user."""
@@ -35,4 +36,10 @@ async def get_session_project(
         session_id=session_id,
         user_id=current_user.id,
     )
-    return SessionProjectResponse.model_validate(project)
+    response = SessionProjectResponse.model_validate(project)
+    if project.session_id:
+        response.database = (
+            await database_service.get_session_db_payload(db, project.session_id)
+            or response.database
+        )
+    return response

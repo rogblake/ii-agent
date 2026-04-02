@@ -67,6 +67,8 @@ class ShellRunCommand(BaseSandboxTool):
         command = tool_input.get("command")
         timeout = tool_input.get("timeout", DEFAULT_TIMEOUT)
         wait_for_output = tool_input.get("wait_for_output", True)
+        sandbox_service = self.get_sandbox_service()
+        session_id = self.get_session_id()
 
         if not command:
             return ToolResult(llm_content="Command is required", is_error=True)
@@ -78,7 +80,8 @@ class ShellRunCommand(BaseSandboxTool):
             )
 
         try:
-            result = await self.sandbox.run_shell_command(
+            result = await sandbox_service.run_shell_command(
+                session_id,
                 session_name,
                 command,
                 timeout=timeout,
@@ -90,7 +93,10 @@ class ShellRunCommand(BaseSandboxTool):
                 is_error=False,
             )
         except ShellCommandTimeoutError:
-            current_output = await self.sandbox.get_shell_session_output(session_name)
+            current_output = await sandbox_service.get_shell_session_output(
+                session_id,
+                session_name,
+            )
             message = f"Command timed out. Current view:\n\n{current_output.clean_output}."
             return ToolResult(
                 llm_content=self._truncate_llm_content(message),
@@ -100,7 +106,10 @@ class ShellRunCommand(BaseSandboxTool):
                 is_error=True,
             )
         except ShellBusyError:
-            current_output = await self.sandbox.get_shell_session_output(session_name)
+            current_output = await sandbox_service.get_shell_session_output(
+                session_id,
+                session_name,
+            )
             message = (
                 "The last command is not finished. Current view:\n\n"
                 f"{current_output.clean_output}. Use another session or wait for the last command to finish."
@@ -111,5 +120,10 @@ class ShellRunCommand(BaseSandboxTool):
                     "The last command is not finished. Current view:\n\n"
                     f"{current_output.ansi_output}."
                 ),
+                is_error=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return ToolResult(
+                llm_content=f"Error running command: {exc}",
                 is_error=True,
             )

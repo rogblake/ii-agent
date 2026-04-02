@@ -38,9 +38,11 @@ class ShellInit(BaseSandboxTool):
     async def execute(self, tool_input: dict) -> ToolResult:
         session_name = tool_input.get("session_name")
         start_directory = tool_input.get("start_directory")
+        sandbox_service = self.get_sandbox_service()
+        session_id = self.get_session_id()
 
         try:
-            all_current_sessions = await self.sandbox.get_all_shell_sessions()
+            all_current_sessions = await sandbox_service.list_shell_sessions(session_id)
             if session_name in all_current_sessions:
                 return ToolResult(
                     llm_content=f"Session '{session_name}' already exists",
@@ -50,7 +52,11 @@ class ShellInit(BaseSandboxTool):
             if not start_directory:
                 start_directory = get_settings().workspace_path
 
-            await self.sandbox.create_shell_session(session_name, start_directory)
+            await sandbox_service.create_shell_session(
+                session_id,
+                session_name,
+                start_directory,
+            )
             return ToolResult(
                 llm_content=(
                     f"Session '{session_name}' initialized successfully at start directory "

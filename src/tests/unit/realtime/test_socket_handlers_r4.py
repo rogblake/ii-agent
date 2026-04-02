@@ -106,6 +106,10 @@ def _mock_services(**overrides) -> dict:
 
     sandbox_service = MagicMock()
     sandbox_service.resolve_sandbox_for_session = AsyncMock(return_value=None)
+    sandbox_service.get_sandbox_for_session = AsyncMock(return_value=None)
+    sandbox_service.list_shell_sessions = AsyncMock(return_value=[])
+    sandbox_service.create_shell_session = AsyncMock()
+    sandbox_service.run_shell_command = AsyncMock()
 
     project_service = MagicMock()
     project_service.get_session_project_or_none = AsyncMock(return_value=None)
@@ -186,6 +190,10 @@ def _mock_container(**overrides) -> MagicMock:
     container.session_service = MagicMock()
     container.sandbox_service = MagicMock()
     container.sandbox_service.resolve_sandbox_for_session = AsyncMock(return_value=None)
+    container.sandbox_service.get_sandbox_for_session = AsyncMock(return_value=None)
+    container.sandbox_service.list_shell_sessions = AsyncMock(return_value=[])
+    container.sandbox_service.create_shell_session = AsyncMock()
+    container.sandbox_service.run_shell_command = AsyncMock()
     container.project_service = MagicMock()
     container.project_service.get_session_project_or_none = AsyncMock(return_value=None)
     container.deployments_service = MagicMock()
@@ -520,17 +528,20 @@ class TestPublishProjectHandlerShellHelpers:
     @pytest.mark.asyncio
     async def test_ensure_shell_session_creates_missing_session(self):
         handler = self._get_handler()
-        sandbox = MagicMock()
-        sandbox.get_all_shell_sessions = AsyncMock(return_value=["other-session"])
-        sandbox.create_shell_session = AsyncMock()
+        session_id = uuid.uuid4()
+        handler._container.sandbox_service.list_shell_sessions = AsyncMock(
+            return_value=["other-session"]
+        )
+        handler._container.sandbox_service.create_shell_session = AsyncMock()
 
         await handler._ensure_shell_session(
-            sandbox,
+            session_id,
             "deploy-session",
             "/workspace/project",
         )
 
-        sandbox.create_shell_session.assert_awaited_once_with(
+        handler._container.sandbox_service.create_shell_session.assert_awaited_once_with(
+            session_id,
             "deploy-session",
             "/workspace/project",
         )
@@ -538,26 +549,30 @@ class TestPublishProjectHandlerShellHelpers:
     @pytest.mark.asyncio
     async def test_ensure_shell_session_skips_existing_session(self):
         handler = self._get_handler()
-        sandbox = MagicMock()
-        sandbox.get_all_shell_sessions = AsyncMock(return_value=["deploy-session"])
-        sandbox.create_shell_session = AsyncMock()
+        session_id = uuid.uuid4()
+        handler._container.sandbox_service.list_shell_sessions = AsyncMock(
+            return_value=["deploy-session"]
+        )
+        handler._container.sandbox_service.create_shell_session = AsyncMock()
 
         await handler._ensure_shell_session(
-            sandbox,
+            session_id,
             "deploy-session",
             "/workspace/project",
         )
 
-        sandbox.create_shell_session.assert_not_called()
+        handler._container.sandbox_service.create_shell_session.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_run_shell_command_returns_clean_output(self):
         handler = self._get_handler()
-        sandbox = MagicMock()
-        sandbox.run_shell_command = AsyncMock(return_value=MagicMock(clean_output="command output"))
+        session_id = uuid.uuid4()
+        handler._container.sandbox_service.run_shell_command = AsyncMock(
+            return_value=MagicMock(clean_output="command output")
+        )
 
         output = await handler._run_shell_command(
-            sandbox,
+            session_id,
             "deploy-session",
             "pwd",
             description="Print working directory",
@@ -566,7 +581,8 @@ class TestPublishProjectHandlerShellHelpers:
         )
 
         assert output == "command output"
-        sandbox.run_shell_command.assert_awaited_once_with(
+        handler._container.sandbox_service.run_shell_command.assert_awaited_once_with(
+            session_id,
             "deploy-session",
             "pwd",
             timeout=42,

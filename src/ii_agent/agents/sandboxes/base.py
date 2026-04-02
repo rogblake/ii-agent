@@ -17,10 +17,9 @@ from ii_agent.agents.sandboxes.schemas import (
     SandboxFileInfo,
     SandboxInfo,
 )
+from ii_agent.agents.sandboxes.shell import Shell
 from ii_agent.agents.sandboxes.terminal import LiveTerminalHandle, TerminalDataCallback
 from ii_agent.agents.sandboxes.types import SandboxProviderType, SandboxStatus
-
-from ii_agent.agents.sandboxes.shell import ShellResult, ShellSessionState
 
 
 class Sandbox(ABC):
@@ -81,62 +80,10 @@ class Sandbox(ABC):
         """Default upload directory inside the sandbox."""
         ...
 
-    @abstractmethod
-    async def get_all_shell_sessions(self) -> list[str]:
-        """List persistent shell session names for this sandbox."""
-        pass
-
-    @abstractmethod
-    async def create_shell_session(
-        self,
-        session_name: str,
-        start_directory: str,
-        timeout: int = 60,
-    ) -> None:
-        """Create and initialize a persistent shell session."""
-        pass
-
-    @abstractmethod
-    async def delete_shell_session(self, session_name: str) -> None:
-        """Delete a persistent shell session."""
-        pass
-
-    @abstractmethod
-    async def run_shell_command(
-        self,
-        session_name: str,
-        command: str,
-        run_dir: str | None = None,
-        timeout: int = 60,
-        wait_for_output: bool = True,
-    ) -> ShellResult:
-        """Run a command in a persistent shell session."""
-        pass
-
-    @abstractmethod
-    async def kill_shell_command(self, session_name: str, timeout: int = 60) -> ShellResult:
-        """Interrupt the currently running command in a shell session."""
-        pass
-
-    @abstractmethod
-    async def get_shell_session_state(self, session_name: str) -> ShellSessionState:
-        """Return whether a shell session is busy or idle."""
-        pass
-
-    @abstractmethod
-    async def get_shell_session_output(self, session_name: str) -> ShellResult:
-        """Return the latest output for a shell session."""
-        pass
-
-    @abstractmethod
-    async def write_to_shell_process(
-        self,
-        session_name: str,
-        data: str,
-        press_enter: bool,
-    ) -> ShellResult:
-        """Write stdin into a shell session."""
-        pass
+    @property
+    def shell(self) -> Shell | None:
+        """Return the persistent shell capability when the provider supports it."""
+        return None
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
 

@@ -7,6 +7,7 @@ the provider (E2B, Docker, ...) or the database directly.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from typing import Any, Dict, Optional
@@ -15,13 +16,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.agents.sandboxes.base import Sandbox
 from ii_agent.agents.sandboxes.e2b import E2BSandbox
-from ii_agent.agents.sandboxes.exceptions import SandboxCreationError
+from ii_agent.agents.sandboxes.exceptions import SandboxCreationError, SandboxNotFoundException
 from ii_agent.agents.sandboxes.models import AgentSandbox
 from ii_agent.agents.sandboxes.repository import SandboxRepository
+from ii_agent.agents.sandboxes.shell import (
+    Shell,
+    ShellBusyError,
+    ShellOperationError,
+    ShellResult,
+    ShellSessionExistsError,
+    ShellSessionNotFoundError,
+    ShellSessionRecord,
+    ShellSessionState,
+)
 from ii_agent.agents.sandboxes.types import SandboxProviderType, SandboxStatus
 from ii_agent.core.config.settings import Settings
+from ii_agent.core.db import get_db_session_local
 from ii_agent.core.logger import logger
 from ii_agent.sessions.repository import SessionRepository
+
+
+_SHELL_LOCKS: dict[str, asyncio.Lock] = {}
 
 
 class SandboxService:
@@ -105,7 +120,12 @@ class SandboxService:
         db: AsyncSession,
         session_id: uuid.UUID,
     ) -> Optional[Sandbox]:
-        """Get existing sandbox for a session without creating one."""
+        """Get existing sandbox for a session without creating one.
+
+        Returns ``None`` when no active sandbox record exists. Provider connection
+        errors are allowed to propagate so callers can distinguish "not found"
+        from "failed to reconnect".
+        """
         record = await self._resolve_sandbox_record(
             db,
             session_id,
@@ -113,11 +133,7 @@ class SandboxService:
         )
         if record is None:
             return None
-        try:
-            return await self._connect_provider(record)
-        except Exception:
-            logger.warning(f"Failed to connect to sandbox {record.id}", exc_info=True)
-            return None
+        return await self._connect_provider(record)
 
     async def get_by_session_id(
         self,
@@ -151,6 +167,315 @@ class SandboxService:
     ) -> None:
         """Update sandbox status in database."""
         await self._sandbox_repo.update_status(db, sandbox_id, status)
+
+    async def load_provider_data(
+        self,
+        sandbox_id: uuid.UUID,
+    ) -> dict[str, Any]:
+        """Load provider metadata for a sandbox."""
+        async with get_db_session_local() as db:
+            record = await self._sandbox_repo.get_by_id(db, sandbox_id)
+            if record is None:
+                raise SandboxNotFoundException(str(sandbox_id))
+            return dict(record.provider_data or {})
+
+    async def persist_provider_data(
+        self,
+        sandbox_id: uuid.UUID,
+        provider_data: dict[str, Any],
+    ) -> None:
+        """Persist provider metadata for a sandbox."""
+        async with get_db_session_local() as db:
+            record = await self._sandbox_repo.update_provider_info(
+                db,
+                sandbox_id,
+                provider_data=provider_data,
+            )
+            if record is None:
+                raise SandboxNotFoundException(str(sandbox_id))
+
+    async def list_shell_sessions(
+        self,
+        session_id: uuid.UUID | str,
+    ) -> list[str]:
+        """List persistent shell sessions for a sandbox-backed session."""
+        sandbox, shell = await self._get_shell_backend_for_session(session_id)
+        async with self._get_shell_lock(sandbox.sandbox_id):
+            sessions = await self._load_shell_sessions(sandbox.sandbox_id)
+            live_sessions: dict[str, ShellSessionRecord] = {}
+            stale_session_names: list[str] = []
+
+            for session_name, record in sessions.items():
+                if await shell.is_session_live(record):
+                    live_sessions[session_name] = record
+                else:
+                    stale_session_names.append(session_name)
+
+            if stale_session_names:
+                logger.info(
+                    "Pruning stale PTY sessions for sandbox %s: %s",
+                    sandbox.sandbox_id,
+                    stale_session_names,
+                )
+                await self._save_shell_sessions(
+                    sandbox.sandbox_id,
+                    shell,
+                    live_sessions,
+                )
+
+            return sorted(live_sessions.keys())
+
+    async def create_shell_session(
+        self,
+        session_id: uuid.UUID | str,
+        session_name: str,
+        start_directory: str,
+        timeout: int = 60,
+    ) -> None:
+        """Create a persistent shell session for a sandbox-backed session."""
+        sandbox, shell = await self._get_shell_backend_for_session(session_id)
+        shell.validate_session_name(session_name)
+        start_directory = await shell.normalize_directory(start_directory)
+
+        async with self._get_shell_lock(sandbox.sandbox_id):
+            sessions = await self._load_shell_sessions(sandbox.sandbox_id)
+            existing_record = sessions.get(session_name)
+            if existing_record is not None:
+                if await shell.is_session_live(existing_record):
+                    raise ShellSessionExistsError(f"Session '{session_name}' already exists")
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+
+            record = await shell.create_session_record(
+                session_name,
+                start_directory,
+                timeout=timeout,
+            )
+            sessions[session_name] = record
+            await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+
+    async def delete_shell_session(
+        self,
+        session_id: uuid.UUID | str,
+        session_name: str,
+    ) -> None:
+        """Delete a persistent shell session for a sandbox-backed session."""
+        sandbox, shell = await self._get_shell_backend_for_session(session_id)
+
+        async with self._get_shell_lock(sandbox.sandbox_id):
+            sessions = await self._load_shell_sessions(sandbox.sandbox_id)
+            record = sessions.get(session_name)
+            if record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            await shell.delete_session(session_name, record)
+            sessions.pop(session_name, None)
+            await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+
+    async def run_shell_command(
+        self,
+        session_id: uuid.UUID | str,
+        session_name: str,
+        command: str,
+        *,
+        run_dir: str | None = None,
+        timeout: int = 60,
+        wait_for_output: bool = True,
+    ) -> ShellResult:
+        """Run a command in a persistent shell session."""
+        sandbox, shell = await self._get_shell_backend_for_session(session_id)
+        if timeout > shell.max_timeout:
+            raise ShellOperationError(
+                "run_command",
+                f"Timeout must be less than {shell.max_timeout} seconds",
+            )
+
+        normalized_run_dir = None
+        if run_dir:
+            normalized_run_dir = await shell.normalize_directory(run_dir)
+
+        async with self._get_shell_lock(sandbox.sandbox_id):
+            sessions = await self._load_shell_sessions(sandbox.sandbox_id)
+            existing_record = sessions.get(session_name)
+            default_directory = normalized_run_dir or (
+                existing_record.cwd if existing_record is not None else shell.workspace_path
+            )
+
+            if existing_record is None:
+                record = await shell.create_session_record(
+                    session_name,
+                    default_directory,
+                    timeout=timeout,
+                )
+                sessions[session_name] = record
+                await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+            else:
+                if not await shell.is_session_live(existing_record):
+                    sessions.pop(session_name, None)
+                    await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+                    record = await shell.create_session_record(
+                        session_name,
+                        default_directory,
+                        timeout=timeout,
+                    )
+                    sessions[session_name] = record
+                    await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+                else:
+                    record, _ = await shell.refresh_session_record(existing_record)
+                    if record.status == ShellSessionState.BUSY:
+                        raise ShellBusyError("Session is busy, the last command is not finished.")
+
+            request = await shell.build_command_request(
+                record,
+                command,
+                run_dir=normalized_run_dir,
+            )
+            sessions[session_name] = request.record
+            await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+
+            try:
+                await shell.send_stdin(session_name, request.record, request.stdin)
+            except ShellSessionNotFoundError:
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+                raise
+
+        if not wait_for_output:
+            return await self.get_shell_session_output(session_id, session_name)
+
+        await shell.wait_for_prompt(
+            request.record,
+            minimum_prompt_seq=request.expected_prompt_seq or request.record.prompt_seq,
+            timeout=timeout,
+        )
+
+        async with self._get_shell_lock(sandbox.sandbox_id):
+            sessions = await self._load_shell_sessions(sandbox.sandbox_id)
+            latest_record = sessions.get(session_name)
+            if latest_record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+            latest_record, _ = await shell.refresh_session_record(latest_record)
+            sessions[session_name] = latest_record
+            await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+
+        return await shell.read_command_output(
+            request.record,
+            start_offset=request.log_offset,
+        )
+
+    async def kill_shell_command(
+        self,
+        session_id: uuid.UUID | str,
+        session_name: str,
+        *,
+        timeout: int = 60,
+    ) -> ShellResult:
+        """Interrupt the current command in a persistent shell session."""
+        sandbox, shell = await self._get_shell_backend_for_session(session_id)
+
+        async with self._get_shell_lock(sandbox.sandbox_id):
+            sessions = await self._load_shell_sessions(sandbox.sandbox_id)
+            record = sessions.get(session_name)
+            if record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            if not await shell.is_session_live(record):
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            request = await shell.build_interrupt_request(record)
+            sessions[session_name] = request.record
+            await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+
+            try:
+                await shell.send_stdin(session_name, request.record, request.stdin)
+            except ShellSessionNotFoundError:
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+                raise
+
+        await shell.wait_for_prompt(
+            request.record,
+            minimum_prompt_seq=request.expected_prompt_seq or request.record.prompt_seq,
+            timeout=timeout,
+        )
+
+        async with self._get_shell_lock(sandbox.sandbox_id):
+            sessions = await self._load_shell_sessions(sandbox.sandbox_id)
+            latest_record = sessions.get(session_name)
+            if latest_record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+            latest_record, _ = await shell.refresh_session_record(latest_record)
+            sessions[session_name] = latest_record
+            await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+
+        return await shell.read_command_output(
+            request.record,
+            start_offset=request.log_offset,
+        )
+
+    async def get_shell_session_output(
+        self,
+        session_id: uuid.UUID | str,
+        session_name: str,
+    ) -> ShellResult:
+        """Return the latest output for a persistent shell session."""
+        sandbox, shell = await self._get_shell_backend_for_session(session_id)
+
+        async with self._get_shell_lock(sandbox.sandbox_id):
+            sessions = await self._load_shell_sessions(sandbox.sandbox_id)
+            record = sessions.get(session_name)
+            if record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            if not await shell.is_session_live(record):
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            record, changed = await shell.refresh_session_record(record)
+            if changed:
+                sessions[session_name] = record
+                await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+
+            return await shell.read_session_output(record)
+
+    async def write_to_shell_process(
+        self,
+        session_id: uuid.UUID | str,
+        session_name: str,
+        data: str,
+        press_enter: bool,
+    ) -> ShellResult:
+        """Write stdin to a persistent shell session."""
+        sandbox, shell = await self._get_shell_backend_for_session(session_id)
+
+        async with self._get_shell_lock(sandbox.sandbox_id):
+            sessions = await self._load_shell_sessions(sandbox.sandbox_id)
+            record = sessions.get(session_name)
+            if record is None:
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            if not await shell.is_session_live(record):
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+                raise ShellSessionNotFoundError(f"Session '{session_name}' not found")
+
+            request = await shell.build_process_input_request(record, data, press_enter)
+            if press_enter:
+                sessions[session_name] = request.record
+                await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+
+            try:
+                await shell.send_stdin(session_name, request.record, request.stdin)
+            except ShellSessionNotFoundError:
+                sessions.pop(session_name, None)
+                await self._save_shell_sessions(sandbox.sandbox_id, shell, sessions)
+                raise
+
+        await asyncio.sleep(shell.poll_interval)
+        return await self.get_shell_session_output(session_id, session_name)
 
     # ── Provider resolution ───────────────────────────────────────────────
 
@@ -186,6 +511,74 @@ class SandboxService:
                 provider_sandbox_id=record.provider_sandbox_id,
             )
         raise SandboxCreationError(f"Unsupported provider: {record.provider}")
+
+    @staticmethod
+    def _normalize_session_id(session_id: uuid.UUID | str) -> uuid.UUID:
+        return session_id if isinstance(session_id, uuid.UUID) else uuid.UUID(str(session_id))
+
+    def _get_shell_lock(self, sandbox_id: str) -> asyncio.Lock:
+        return _SHELL_LOCKS.setdefault(sandbox_id, asyncio.Lock())
+
+    async def _load_shell_sessions(
+        self,
+        sandbox_id: str,
+    ) -> dict[str, ShellSessionRecord]:
+        provider_data = await self.load_provider_data(uuid.UUID(sandbox_id))
+        raw_sessions = provider_data.get("pty_sessions") or {}
+        if not isinstance(raw_sessions, dict):
+            return {}
+
+        sessions: dict[str, ShellSessionRecord] = {}
+        for session_name, raw_record in raw_sessions.items():
+            try:
+                sessions[session_name] = ShellSessionRecord.model_validate(raw_record)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "Invalid shell session metadata for sandbox %s session %s: %s",
+                    sandbox_id,
+                    session_name,
+                    exc,
+                )
+        return sessions
+
+    async def _save_shell_sessions(
+        self,
+        sandbox_id: str,
+        shell: Shell,
+        sessions: dict[str, ShellSessionRecord],
+    ) -> None:
+        provider_data = await self.load_provider_data(uuid.UUID(sandbox_id))
+        provider_data["pty_sessions"] = {
+            session_name: record.model_dump(mode="json")
+            for session_name, record in sessions.items()
+        }
+        await self.persist_provider_data(uuid.UUID(sandbox_id), provider_data)
+
+    async def _get_shell_backend_for_session(
+        self,
+        session_id: uuid.UUID | str,
+    ) -> tuple[Sandbox, Shell]:
+        normalized_session_id = self._normalize_session_id(session_id)
+        async with get_db_session_local() as db:
+            sandbox = await self.get_sandbox_for_session(
+                db,
+                session_id=normalized_session_id,
+            )
+
+        if sandbox is None:
+            raise ShellOperationError(
+                "resolve_shell_session",
+                f"No sandbox found for session {normalized_session_id}",
+            )
+
+        shell = getattr(sandbox, "shell", None)
+        if shell is None:
+            raise ShellOperationError(
+                "resolve_shell_session",
+                f"Persistent shell sessions are not supported by sandbox {sandbox.sandbox_id}",
+            )
+
+        return sandbox, shell
 
     async def _resolve_sandbox_record(
         self,

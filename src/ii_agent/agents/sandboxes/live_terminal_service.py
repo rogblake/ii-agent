@@ -113,27 +113,27 @@ class LiveTerminalService:
         size_cols, size_rows = self.normalize_size(cols, rows)
         loop = asyncio.get_running_loop()
 
-        async with get_db_session_local() as db:
-            sandbox_manager = await self._sandbox_service.get_sandbox_for_session(
-                db, session_info.id
-            )
-        if sandbox_manager is None:
-            raise RuntimeError(f"No sandbox found for session {session_info.id}")
-
-        def on_data(data: bytes) -> None:
-            text = data.decode("utf-8", errors="replace")
-            if not text:
-                return
-            loop.call_soon_threadsafe(
-                self._schedule_emit,
-                sid,
-                "pty_output",
-                {"terminal_id": terminal_id, "data": text},
-            )
-
         handle: LiveTerminalHandle | None = None
         state_registered = False
         try:
+            async with get_db_session_local() as db:
+                sandbox_manager = await self._sandbox_service.get_sandbox_for_session(
+                    db, session_info.id
+                )
+            if sandbox_manager is None:
+                raise RuntimeError(f"No sandbox found for session {session_info.id}")
+
+            def on_data(data: bytes) -> None:
+                text = data.decode("utf-8", errors="replace")
+                if not text:
+                    return
+                loop.call_soon_threadsafe(
+                    self._schedule_emit,
+                    sid,
+                    "pty_output",
+                    {"terminal_id": terminal_id, "data": text},
+                )
+
             handle = await sandbox_manager.create_live_terminal(
                 cols=size_cols,
                 rows=size_rows,

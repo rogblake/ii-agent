@@ -1,8 +1,17 @@
 import uuid
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from ii_agent.agents.sandboxes.shell import (
+    ShellExecutionRequest,
+    ShellOperationError,
+    ShellResult,
+    ShellSessionRecord,
+    ShellSessionState,
+)
 from ii_agent.agents.sandboxes.service import SandboxService
 from ii_agent.agents.sandboxes.types import SandboxProviderType, SandboxStatus
 
@@ -21,6 +30,72 @@ class FakeSessionRepo:
 
     async def get_by_id(self, db, session_id):
         return self.sessions_by_id.get(session_id)
+
+
+@asynccontextmanager
+async def _noop_db_cm():
+    yield None
+
+
+def _make_record(
+    *,
+    status: ShellSessionState = ShellSessionState.IDLE,
+    prompt_seq: int = 7,
+    pending_prompt_seq: int | None = None,
+) -> ShellSessionRecord:
+    return ShellSessionRecord(
+        pid=123,
+        cwd="/workspace/project",
+        log_path="/workspace/.ii_agent/pty/build.log",
+        state_path="/workspace/.ii_agent/pty/build.state",
+        status=status,
+        prompt_seq=prompt_seq,
+        pending_prompt_seq=pending_prompt_seq,
+        updated_at="2026-04-02T00:00:00+00:00",
+    )
+
+
+def _make_connected_shell(
+    monkeypatch, service, *, sessions: dict[str, ShellSessionRecord] | None = None
+):
+    shell = MagicMock()
+    shell.workspace_path = "/workspace"
+    shell.max_timeout = 180
+    shell.poll_interval = 0
+    shell.validate_session_name = MagicMock()
+    shell.normalize_directory = AsyncMock(side_effect=lambda directory: directory)
+    shell.is_session_live = AsyncMock(return_value=True)
+    shell.refresh_session_record = AsyncMock(side_effect=lambda record: (record, False))
+    shell.send_stdin = AsyncMock()
+    shell.wait_for_prompt = AsyncMock()
+    shell.read_command_output = AsyncMock(
+        return_value=ShellResult(clean_output="ok", ansi_output="ok")
+    )
+    shell.read_session_output = AsyncMock(
+        return_value=ShellResult(clean_output="tail", ansi_output="tail")
+    )
+
+    sandbox = SimpleNamespace(shell=shell, sandbox_id=str(uuid.uuid4()))
+    monkeypatch.setattr(service, "get_sandbox_for_session", AsyncMock(return_value=sandbox))
+    monkeypatch.setattr(
+        "ii_agent.agents.sandboxes.service.get_db_session_local",
+        lambda: _noop_db_cm(),
+    )
+    monkeypatch.setattr(
+        service,
+        "load_provider_data",
+        AsyncMock(
+            return_value={
+                "provider": "e2b",
+                "pty_sessions": {
+                    session_name: record.model_dump(mode="json")
+                    for session_name, record in (sessions or {}).items()
+                },
+            }
+        ),
+    )
+    monkeypatch.setattr(service, "persist_provider_data", AsyncMock())
+    return sandbox, shell
 
 
 @pytest.mark.asyncio
@@ -84,3 +159,250 @@ async def test_get_sandbox_for_session_uses_parent_sandbox_for_fork(settings_fac
     sandbox = await service.get_sandbox_for_session(None, child_id)
 
     assert sandbox is expected_sandbox
+
+
+@pytest.mark.asyncio
+async def test_get_sandbox_for_session_propagates_provider_connection_errors(
+    settings_factory, monkeypatch
+):
+    session_id = uuid.uuid4()
+    record = SimpleNamespace(
+        id=uuid.uuid4(),
+        session_id=session_id,
+        provider=SandboxProviderType.E2B,
+        provider_sandbox_id="sbx-1",
+        status=SandboxStatus.RUNNING,
+        expired_at=None,
+        provider_data={},
+    )
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({session_id: record}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+
+    async def fake_connect(_record):
+        raise RuntimeError("e2b unavailable")
+
+    monkeypatch.setattr(service, "_connect_provider", fake_connect)
+
+    with pytest.raises(RuntimeError, match="e2b unavailable"):
+        await service.get_sandbox_for_session(None, session_id)
+
+
+@pytest.mark.asyncio
+async def test_list_shell_sessions_prunes_stale_records(settings_factory, monkeypatch):
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+    live_record = _make_record()
+    stale_record = _make_record()
+    sandbox, shell = _make_connected_shell(
+        monkeypatch,
+        service,
+        sessions={"build": live_record, "old": stale_record},
+    )
+    shell.is_session_live = AsyncMock(side_effect=[True, False])
+
+    result = await service.list_shell_sessions(uuid.uuid4())
+
+    assert result == ["build"]
+    service.persist_provider_data.assert_awaited_once()
+    persisted_provider_data = service.persist_provider_data.await_args.args[1]
+    assert list(persisted_provider_data["pty_sessions"]) == ["build"]
+    assert str(sandbox.sandbox_id)
+
+
+@pytest.mark.asyncio
+async def test_create_shell_session_persists_record(settings_factory, monkeypatch):
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+    record = _make_record()
+    _, shell = _make_connected_shell(monkeypatch, service)
+    shell.create_session_record = AsyncMock(return_value=record)
+    session_id = uuid.uuid4()
+
+    await service.create_shell_session(
+        session_id,
+        "build",
+        "/workspace/project",
+        timeout=42,
+    )
+
+    shell.validate_session_name.assert_called_once_with("build")
+    shell.normalize_directory.assert_awaited_once_with("/workspace/project")
+    shell.create_session_record.assert_awaited_once_with(
+        "build",
+        "/workspace/project",
+        timeout=42,
+    )
+    persisted_provider_data = service.persist_provider_data.await_args.args[1]
+    assert persisted_provider_data["pty_sessions"]["build"] == record.model_dump(mode="json")
+
+
+@pytest.mark.asyncio
+async def test_run_shell_command_uses_service_owned_session_registry(settings_factory, monkeypatch):
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+    record = _make_record()
+    _, shell = _make_connected_shell(monkeypatch, service, sessions={"build": record})
+    shell.refresh_session_record = AsyncMock(side_effect=[(record, False), (record, False)])
+    shell.build_command_request = AsyncMock(
+        return_value=ShellExecutionRequest(
+            record=record,
+            stdin=b"pwd\n",
+            log_offset=12,
+            expected_prompt_seq=10,
+        )
+    )
+    session_id = uuid.uuid4()
+
+    result = await service.run_shell_command(
+        session_id,
+        "build",
+        "pwd",
+        timeout=42,
+        wait_for_output=True,
+    )
+
+    assert result.clean_output == "ok"
+    shell.build_command_request.assert_awaited_once_with(record, "pwd", run_dir=None)
+    shell.send_stdin.assert_awaited_once_with("build", record, b"pwd\n")
+    shell.wait_for_prompt.assert_awaited_once_with(
+        record,
+        minimum_prompt_seq=10,
+        timeout=42,
+    )
+    shell.read_command_output.assert_awaited_once_with(record, start_offset=12)
+
+
+@pytest.mark.asyncio
+async def test_delete_shell_session_uses_connected_shell(settings_factory, monkeypatch):
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+    record = _make_record()
+    _, shell = _make_connected_shell(monkeypatch, service, sessions={"build": record})
+    shell.delete_session = AsyncMock()
+    session_id = uuid.uuid4()
+
+    await service.delete_shell_session(session_id, "build")
+
+    shell.delete_session.assert_awaited_once_with("build", record)
+    persisted_provider_data = service.persist_provider_data.await_args.args[1]
+    assert persisted_provider_data["pty_sessions"] == {}
+
+
+@pytest.mark.asyncio
+async def test_kill_shell_command_uses_connected_shell(settings_factory, monkeypatch):
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+    record = _make_record(status=ShellSessionState.BUSY, pending_prompt_seq=8)
+    _, shell = _make_connected_shell(monkeypatch, service, sessions={"build": record})
+    shell.build_interrupt_request = AsyncMock(
+        return_value=ShellExecutionRequest(
+            record=record,
+            stdin=b"\x03",
+            log_offset=5,
+            expected_prompt_seq=8,
+        )
+    )
+    shell.refresh_session_record = AsyncMock(return_value=(record, False))
+    session_id = uuid.uuid4()
+
+    result = await service.kill_shell_command(
+        session_id,
+        "build",
+        timeout=42,
+    )
+
+    assert result.clean_output == "ok"
+    shell.build_interrupt_request.assert_awaited_once_with(record)
+    shell.send_stdin.assert_awaited_once_with("build", record, b"\x03")
+    shell.wait_for_prompt.assert_awaited_once_with(
+        record,
+        minimum_prompt_seq=8,
+        timeout=42,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_shell_session_output_uses_connected_shell(settings_factory, monkeypatch):
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+    record = _make_record()
+    _, shell = _make_connected_shell(monkeypatch, service, sessions={"build": record})
+    session_id = uuid.uuid4()
+
+    result = await service.get_shell_session_output(session_id, "build")
+
+    assert result.clean_output == "tail"
+    shell.read_session_output.assert_awaited_once_with(record)
+
+
+@pytest.mark.asyncio
+async def test_write_to_shell_process_uses_connected_shell(settings_factory, monkeypatch):
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+    record = _make_record()
+    _, shell = _make_connected_shell(monkeypatch, service, sessions={"build": record})
+    shell.build_process_input_request = AsyncMock(
+        return_value=ShellExecutionRequest(record=record, stdin=b"yes")
+    )
+    monkeypatch.setattr(
+        service,
+        "get_shell_session_output",
+        AsyncMock(return_value=ShellResult(clean_output="prompt", ansi_output="prompt")),
+    )
+    session_id = uuid.uuid4()
+
+    result = await service.write_to_shell_process(
+        session_id,
+        "build",
+        "yes",
+        press_enter=False,
+    )
+
+    assert result.clean_output == "prompt"
+    shell.build_process_input_request.assert_awaited_once_with(record, "yes", False)
+    shell.send_stdin.assert_awaited_once_with("build", record, b"yes")
+
+
+@pytest.mark.asyncio
+async def test_get_shell_backend_for_session_raises_when_sandbox_missing(
+    settings_factory,
+    monkeypatch,
+):
+    service = SandboxService(
+        sandbox_repo=FakeSandboxRepo({}),
+        session_repo=FakeSessionRepo({}),
+        config=settings_factory(),
+    )
+
+    monkeypatch.setattr(service, "get_sandbox_for_session", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        "ii_agent.agents.sandboxes.service.get_db_session_local",
+        lambda: _noop_db_cm(),
+    )
+
+    with pytest.raises(ShellOperationError, match="No sandbox found for session"):
+        await service.list_shell_sessions(uuid.uuid4())

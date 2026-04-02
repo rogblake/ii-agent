@@ -14,6 +14,7 @@ from ii_agent.agents.sandboxes.types import SandboxStatus
 from ii_agent.auth.dependencies import CurrentUser
 from ii_agent.core.dependencies import DBSession
 from ii_agent.core.exceptions import ServiceUnavailableError, ValidationError
+from ii_agent.core.logger import logger
 from ii_agent.sessions.dependencies import SessionRepositoryDep
 
 router = APIRouter(prefix="/sandbox-files", tags=["Sandboxes"])
@@ -61,7 +62,11 @@ async def preview_sandbox_file(
     if not is_image_file_path(normalized_path):
         raise ValidationError("Preview is only available for image files")
 
-    sandbox = await sandbox_service.get_sandbox_for_session(db, session_id)
+    try:
+        sandbox = await sandbox_service.get_sandbox_for_session(db, session_id)
+    except Exception as exc:
+        logger.warning("Failed to connect to sandbox for preview session %s: %s", session_id, exc)
+        raise ServiceUnavailableError("Failed to connect to the sandbox for this session") from exc
     if not sandbox:
         raise ServiceUnavailableError("No active sandbox is available for this session")
 

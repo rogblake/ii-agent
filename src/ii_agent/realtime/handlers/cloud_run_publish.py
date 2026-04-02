@@ -29,9 +29,7 @@ from ii_agent.realtime.handlers.base import (
     CommandType,
 )
 from ii_agent.realtime.schemas import CloudRunPublishContent
-from ii_agent.agents.sandboxes import E2BSandbox
 from ii_agent.agents.sandboxes.base import Sandbox
-from ii_agent.agents.sandboxes.repository import SandboxRepository
 
 
 class CloudRunPublishHandler(BaseCommandHandler[CloudRunPublishContent]):
@@ -120,14 +118,43 @@ class CloudRunPublishHandler(BaseCommandHandler[CloudRunPublishContent]):
                     logger.warning("Failed to create deployment record: %s", exc)
 
             # Get sandbox for the session
-            await self.send_event(AgentStatusUpdateEvent(
-                session_id=session_id,
-                message="Connecting to sandbox...",
-                status="connecting",
-                content={"message": "Connecting to sandbox..."},
-            ))
+            await self.send_event(
+                AgentStatusUpdateEvent(
+                    session_id=session_id,
+                    message="Connecting to sandbox...",
+                    status="connecting",
+                    content={"message": "Connecting to sandbox..."},
+                )
+            )
 
-            sandbox = await self._get_sandbox(session_info, container)
+            try:
+                sandbox = await self._get_sandbox(session_info, container)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to connect to sandbox for Cloud Run publish session %s: %s",
+                    session_id,
+                    exc,
+                )
+                if deployment_id:
+                    async with get_db_session_local() as db:
+                        await container.deployments_service.update_deployment_status(
+                            db,
+                            deployment_id=deployment_id,
+                            status="failed",
+                            error_message=f"Failed to connect to sandbox: {exc}",
+                            error_phase="upload",
+                            error_details={
+                                "code": "SANDBOX_CONNECTION_FAILED",
+                                "message": str(exc),
+                            },
+                        )
+                await self._send_error_event(
+                    session_id,
+                    error_code=ErrorCode.SANDBOX_CONNECTION_FAILED,
+                    message=f"Failed to connect to the sandbox environment.\nDetails: {exc}",
+                )
+                return
+
             if not sandbox:
                 if deployment_id:
                     async with get_db_session_local() as db:
@@ -142,16 +169,19 @@ class CloudRunPublishHandler(BaseCommandHandler[CloudRunPublishContent]):
                 await self._send_error_event(
                     session_id,
                     error_code=ErrorCode.SANDBOX_CONNECTION_FAILED,
+                    message="No active sandbox is available for this session.",
                 )
                 return
 
             # Download source from sandbox
-            await self.send_event(AgentStatusUpdateEvent(
-                session_id=session_id,
-                message="Downloading source code from sandbox...",
-                status="downloading",
-                content={"message": "Downloading source code from sandbox..."},
-            ))
+            await self.send_event(
+                AgentStatusUpdateEvent(
+                    session_id=session_id,
+                    message="Downloading source code from sandbox...",
+                    status="downloading",
+                    content={"message": "Downloading source code from sandbox..."},
+                )
+            )
 
             upload_start = time.time()
             source_bytes = await self._download_source_from_sandbox(
@@ -178,12 +208,14 @@ class CloudRunPublishHandler(BaseCommandHandler[CloudRunPublishContent]):
             env_vars = self._extract_env_vars(content)
 
             # Deploy to Cloud Run
-            await self.send_event(AgentStatusUpdateEvent(
-                session_id=session_id,
-                message="Uploading source code...",
-                status="uploading",
-                content={"message": "Uploading source code..."},
-            ))
+            await self.send_event(
+                AgentStatusUpdateEvent(
+                    session_id=session_id,
+                    message="Uploading source code...",
+                    status="uploading",
+                    content={"message": "Uploading source code..."},
+                )
+            )
 
             # Update deployment status to building
             if deployment_id:
@@ -196,12 +228,14 @@ class CloudRunPublishHandler(BaseCommandHandler[CloudRunPublishContent]):
 
             # Create status callback
             async def on_status(status: DeploymentStatus, message: str):
-                await self.send_event(AgentStatusUpdateEvent(
-                    session_id=session_id,
-                    message=message,
-                    status=status.value if hasattr(status, "value") else str(status),
-                    content={"message": message},
-                ))
+                await self.send_event(
+                    AgentStatusUpdateEvent(
+                        session_id=session_id,
+                        message=message,
+                        status=status.value if hasattr(status, "value") else str(status),
+                        content={"message": message},
+                    )
+                )
 
             # Set up status callback (synchronous wrapper)
             def status_callback(status: DeploymentStatus, message: str):
@@ -306,25 +340,27 @@ class CloudRunPublishHandler(BaseCommandHandler[CloudRunPublishContent]):
                 )
 
             # Send success event
-            await self.send_event(SystemNotificationEvent(
-                session_id=session_id,
-                message=f"Deployment live at {deployment_url}",
-                content={
-                    "message": f"Deployment live at {deployment_url}",
-                    "deployment_url": deployment_url,
-                    "project_id": service_name,
-                    "project_name": project_name,
-                    "deployment": {
-                        "url": deployment_url,
-                        "cloud_run_url": deployment_url,
+            await self.send_event(
+                SystemNotificationEvent(
+                    session_id=session_id,
+                    message=f"Deployment live at {deployment_url}",
+                    content={
+                        "message": f"Deployment live at {deployment_url}",
+                        "deployment_url": deployment_url,
                         "project_id": service_name,
                         "project_name": project_name,
-                        "provider": "cloud_run",
-                        "deployment_id": str(deployment_id) if deployment_id else None,
-                        "version": 1,
+                        "deployment": {
+                            "url": deployment_url,
+                            "cloud_run_url": deployment_url,
+                            "project_id": service_name,
+                            "project_name": project_name,
+                            "provider": "cloud_run",
+                            "deployment_id": str(deployment_id) if deployment_id else None,
+                            "version": 1,
+                        },
                     },
-                },
-            ))
+                )
+            )
 
         except Exception as exc:
             logger.exception("Failed to deploy to Cloud Run")
@@ -370,36 +406,11 @@ class CloudRunPublishHandler(BaseCommandHandler[CloudRunPublishContent]):
         Returns:
             Sandbox instance or None if not found
         """
-        sandbox_repo = SandboxRepository()
-
-        try:
-            if session_info.api_version == "v1":
-                async with get_db_session_local() as db:
-                    # Try to get sandbox by session_id
-                    sandbox_record = await sandbox_repo.get_by_session_id(
-                        db, session_id=session_info.id
-                    )
-
-                    if sandbox_record and sandbox_record.provider_sandbox_id:
-                        # Connect to existing sandbox
-                        sandbox = await E2BSandbox.connect(
-                            sandbox_id=str(sandbox_record.id),
-                            session_id=str(sandbox_record.session_id),
-                            provider_sandbox_id=sandbox_record.provider_sandbox_id,
-                        )
-                        return sandbox
-                    else:
-                        return None
-            else:
-                async with get_db_session_local() as db:
-                    sandbox = await container.sandbox_service.get_sandbox_for_session(
-                        db, session_id=session_info.id
-                    )
-                return sandbox
-
-        except Exception:
-            logger.exception("Failed to get sandbox for session %s", session_info.id)
-            return None
+        async with get_db_session_local() as db:
+            return await container.sandbox_service.get_sandbox_for_session(
+                db,
+                session_id=session_info.id,
+            )
 
     async def _download_source_from_sandbox(
         self,

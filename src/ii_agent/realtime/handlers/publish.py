@@ -24,8 +24,6 @@ from ii_agent.realtime.handlers.base import (
     CommandType,
 )
 from ii_agent.realtime.schemas import PublishProjectContent
-from ii_agent.agents.sandboxes import E2BSandbox, Sandbox
-from ii_agent.agents.sandboxes.repository import SandboxRepository
 
 
 class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
@@ -103,54 +101,58 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
 
         deploy_start = time.time()
 
-        sandbox_repo = SandboxRepository()
-
-        sandbox_manager: Sandbox | None = None
-
-        if session_info.api_version == "v1":
+        try:
             async with get_db_session_local() as db:
-                # First try to get sandbox by session_id
-                sandbox_record = await sandbox_repo.get_by_session_id(db, session_id=session_id)
-
-                if sandbox_record and sandbox_record.provider_sandbox_id:
-                    # Connect to existing sandbox (this wakes it up)
-                    sandbox_manager = await E2BSandbox.connect(
-                        sandbox_id=str(sandbox_record.id),
-                        session_id=str(sandbox_record.session_id),
-                        provider_sandbox_id=sandbox_record.provider_sandbox_id,
-                    )
-                else:
-                    if deployment_id:
-                        async with get_db_session_local() as status_db:
-                            await container.deployments_service.update_deployment_status(
-                                status_db,
-                                deployment_id=deployment_id,
-                                status="failed",
-                                error_message="No sandbox found for session",
-                                error_phase="upload",
-                                error_details={"code": "SANDBOX_NOT_FOUND"},
-                            )
-                    raise ValueError("No sandbox found for session")
-        else:
-            async with get_db_session_local() as db:
-                sandbox_manager = await container.sandbox_service.get_sandbox_for_session(
-                    db, session_id=session_id
+                sandbox = await container.sandbox_service.get_sandbox_for_session(
+                    db,
+                    session_id=session_id,
                 )
-            if sandbox_manager is None:
-                if deployment_id:
-                    async with get_db_session_local() as db:
-                        await container.deployments_service.update_deployment_status(
-                            db,
-                            deployment_id=deployment_id,
-                            status="failed",
-                            error_message="No sandbox found for session",
-                            error_phase="upload",
-                            error_details={"code": "SANDBOX_NOT_FOUND"},
-                        )
-                raise ValueError("No sandbox found for session")
+        except Exception as exc:
+            logger.warning(
+                "Failed to connect to sandbox for publish session %s: %s",
+                session_id,
+                exc,
+            )
+            if deployment_id:
+                async with get_db_session_local() as db:
+                    await container.deployments_service.update_deployment_status(
+                        db,
+                        deployment_id=deployment_id,
+                        status="failed",
+                        error_message=f"Failed to connect to sandbox: {exc}",
+                        error_phase="upload",
+                        error_details={
+                            "code": "SANDBOX_CONNECTION_FAILED",
+                            "message": str(exc),
+                        },
+                    )
+            await self._send_error_event(
+                session_id,
+                error_code=ErrorCode.SANDBOX_CONNECTION_FAILED,
+                message=f"Failed to connect to the sandbox environment.\nDetails: {exc}",
+            )
+            return
+
+        if sandbox is None:
+            if deployment_id:
+                async with get_db_session_local() as db:
+                    await container.deployments_service.update_deployment_status(
+                        db,
+                        deployment_id=deployment_id,
+                        status="failed",
+                        error_message="No sandbox found for session",
+                        error_phase="upload",
+                        error_details={"code": "SANDBOX_NOT_FOUND"},
+                    )
+            await self._send_error_event(
+                session_id,
+                error_code=ErrorCode.SANDBOX_CONNECTION_FAILED,
+                message="No active sandbox is available for this session.",
+            )
+            return
 
         await self._ensure_shell_session(
-            sandbox_manager,
+            session_id,
             shell_session_name,
             workspace_project_path,
         )
@@ -181,7 +183,7 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
 
         try:
             link_output = await self._run_shell_command(
-                sandbox_manager,
+                session_id,
                 shell_session_name,
                 link_command,
                 description="Link Vercel project",
@@ -267,7 +269,7 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
 
         try:
             deploy_output = await self._run_shell_command(
-                sandbox_manager,
+                session_id,
                 shell_session_name,
                 deploy_command,
                 description="Deploy project to Vercel",
@@ -428,7 +430,7 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
 
     async def _collect_env_from_files(
         self,
-        sandbox_manager: Sandbox,
+        session_id: uuid.UUID,
         session_name: str,
         project_path: str,
     ) -> dict[str, str]:
@@ -439,7 +441,7 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
             command = self._append_success_marker(command)
             try:
                 output = await self._run_shell_command(
-                    sandbox_manager,
+                    session_id,
                     session_name,
                     command,
                     description=f"Read {filename} environment file",
@@ -495,18 +497,22 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
 
     async def _ensure_shell_session(
         self,
-        sandbox_manager: Sandbox,
+        session_id: uuid.UUID,
         session_name: str,
         start_directory: str,
     ) -> None:
-        current_sessions = await sandbox_manager.get_all_shell_sessions()
+        current_sessions = await self._container.sandbox_service.list_shell_sessions(session_id)
         if session_name in current_sessions:
             return
-        await sandbox_manager.create_shell_session(session_name, start_directory)
+        await self._container.sandbox_service.create_shell_session(
+            session_id,
+            session_name,
+            start_directory,
+        )
 
     async def _run_shell_command(
         self,
-        sandbox_manager: Sandbox,
+        session_id: uuid.UUID,
         session_name: str,
         command: str,
         *,
@@ -515,7 +521,8 @@ class PublishProjectHandler(BaseCommandHandler[PublishProjectContent]):
         wait_for_output: bool = True,
     ) -> str:
         del description
-        result = await sandbox_manager.run_shell_command(
+        result = await self._container.sandbox_service.run_shell_command(
+            session_id,
             session_name,
             command,
             timeout=timeout,

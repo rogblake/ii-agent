@@ -3,8 +3,6 @@
 Extracted from ``server.socket.command.awake_sandbox_handler``.
 """
 
-import uuid
-
 from ii_agent.realtime.pubsub import AsyncIOPubSub
 from ii_agent.realtime.events.app_events import SandboxStatusChangedEvent
 from ii_agent.core.container import ApplicationContainer
@@ -41,9 +39,7 @@ class AwakeSandboxHandler(BaseCommandHandler[AwakeSandboxContent]):
         if session_info.api_version == "v1":
             async with get_db_session_local() as db:
                 # First try to get sandbox by session_id
-                sandbox_record = await sandbox_repo.get_by_session_id(
-                    db, session_info.id
-                )
+                sandbox_record = await sandbox_repo.get_by_session_id(db, session_info.id)
 
                 if sandbox_record and sandbox_record.provider_sandbox_id:
                     # Connect to existing sandbox (this wakes it up)
@@ -58,9 +54,7 @@ class AwakeSandboxHandler(BaseCommandHandler[AwakeSandboxContent]):
         else:
             sandbox_svc = container.sandbox_service
             await sandbox_svc.wake_up_sandbox_by_session(session_info.id)
-            status = await sandbox_svc.get_sandbox_status_by_session(
-                session_info.id
-            )
+            status = await sandbox_svc.get_sandbox_status_by_session(session_info.id)
 
         valid_statuses = {"starting", "ready", "paused", "terminated", "error"}
         event_status = status if status in valid_statuses else "starting"

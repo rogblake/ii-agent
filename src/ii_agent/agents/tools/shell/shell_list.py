@@ -15,7 +15,15 @@ class ShellList(BaseSandboxTool):
     read_only = True
 
     async def execute(self, tool_input: dict) -> ToolResult:
-        all_current_sessions = await self.sandbox.get_all_shell_sessions()
-        result = f"Available sessions: {all_current_sessions}\n"
-        result += "For the detailed output of a session, use `BashView`."
-        return ToolResult(llm_content=result, is_error=False)
+        try:
+            all_current_sessions = await self.get_sandbox_service().list_shell_sessions(
+                self.get_session_id()
+            )
+            result = f"Available sessions: {all_current_sessions}\n"
+            result += "For the detailed output of a session, use `BashView`."
+            return ToolResult(llm_content=result, is_error=False)
+        except Exception as exc:  # noqa: BLE001
+            return ToolResult(
+                llm_content=f"Error listing sessions: {exc}",
+                is_error=True,
+            )

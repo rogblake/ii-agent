@@ -18,6 +18,7 @@ from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
     from ii_agent.agents.agent import IIAgent
+    from ii_agent.agents.sandboxes.service import SandboxService
     from ii_agent.agents.tools.function import FunctionCall
 
 
@@ -52,9 +53,7 @@ class BaseSandboxTool(BaseAgentTool):
                 fc.sandbox = await agent.sandbox.get_info()
                 return
 
-            logger.info(
-                f"Lazily initializing sandbox for session={agent.session_id}"
-            )
+            logger.info(f"Lazily initializing sandbox for session={agent.session_id}")
             sandbox_service = get_app_container().sandbox_service
             async with get_db_session_local() as db:
                 sandbox = await sandbox_service.init_sandbox(
@@ -66,3 +65,9 @@ class BaseSandboxTool(BaseAgentTool):
             agent.sandbox = sandbox
             agent._sandbox_was_initialized = True
             fc.sandbox = await sandbox.get_info()
+
+    def get_sandbox_service(self) -> "SandboxService":
+        return get_app_container().sandbox_service
+
+    def get_session_id(self) -> _uuid.UUID:
+        return _uuid.UUID(self.sandbox.session_id)

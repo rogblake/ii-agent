@@ -79,7 +79,8 @@ import {
     TAB,
     TOOL,
     ToolConfirmationData,
-    isActiveRunStatus
+    isActiveRunStatus,
+    isTerminalRunStatus
 } from '@/typings/agent'
 import { normalizeAttachment } from '@/utils/attachments'
 

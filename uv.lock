@@ -1456,6 +1456,23 @@ wheels = [
 ]
 
 [[package]]
+name = "elevenlabs"
+version = "2.32.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-core" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+    { name = "websockets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/09/d945c793699a0df0de3f0038e3517c851093249a78f83e010e0a047d513f/elevenlabs-2.32.0.tar.gz", hash = "sha256:b3f7d41c12a1054b0b0130555099b6b8011cf134239ecedb1d4286e96461fd36", size = 454997, upload-time = "2026-01-26T10:56:14.936Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/95/6e/794c320b96dcd4531f6f6ad2cb99fbbaf5b425d6ad617321401fe723d19c/elevenlabs-2.32.0-py3-none-any.whl", hash = "sha256:396c8ff4a229a88ea3120e02c44ef840dda057c7f439b9fa070222dc4b644a4d", size = 1213229, upload-time = "2026-01-26T10:56:12.76Z" },
+]
+
+[[package]]
 name = "email-validator"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2494,6 +2511,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "a2a-sdk" },
+    { name = "aiohttp" },
     { name = "aiosqlite" },
     { name = "alembic" },
     { name = "anthropic", extra = ["vertex"] },
@@ -2508,6 +2526,7 @@ dependencies = [
     { name = "ddgs" },
     { name = "duckduckgo-search" },
     { name = "e2b-code-interpreter" },
+    { name = "elevenlabs" },
     { name = "email-validator" },
     { name = "exa-py" },
     { name = "fal-client" },
@@ -2548,6 +2567,7 @@ dependencies = [
     { name = "psycopg2-binary" },
     { name = "puremagic" },
     { name = "pydantic" },
+    { name = "pydantic-settings" },
     { name = "pydub" },
     { name = "pygithub" },
     { name = "pyjwt" },
@@ -2560,6 +2580,7 @@ dependencies = [
     { name = "python-pptx" },
     { name = "python-socketio" },
     { name = "redis" },
+    { name = "requests" },
     { name = "rich" },
     { name = "speechrecognition" },
     { name = "sqlalchemy" },
@@ -2596,9 +2617,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", specifier = "==0.3.9" },
+    { name = "aiohttp", specifier = ">=3.11.18" },
     { name = "aiosqlite", specifier = ">=0.21.0" },
     { name = "alembic", specifier = ">=1.16.1" },
-    { name = "anthropic", extras = ["vertex"], specifier = ">=0.50.0" },
     { name = "anthropic", extras = ["vertex"], specifier = ">=0.72.0" },
     { name = "apscheduler", specifier = ">=3.11.0" },
     { name = "ast-grep-cli", specifier = ">=0.39.5" },
@@ -2612,6 +2633,7 @@ requires-dist = [
     { name = "ddgs", specifier = ">=9.9.1" },
     { name = "duckduckgo-search", specifier = ">=8.0.1" },
     { name = "e2b-code-interpreter", specifier = ">=2.4.1" },
+    { name = "elevenlabs", specifier = "==2.32.0" },
     { name = "email-validator", specifier = ">=2.0.0" },
     { name = "exa-py", specifier = ">=2.0.1" },
     { name = "fal-client", specifier = ">=0.13.2" },
@@ -2627,7 +2649,6 @@ requires-dist = [
     { name = "google-cloud-secret-manager", specifier = ">=2.20.0" },
     { name = "google-cloud-storage", specifier = ">=3.7.0" },
     { name = "google-genai", specifier = ">=1.66.0" },
-    { name = "httpx", specifier = ">=0.25.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "huggingface-hub", marker = "extra == 'gaia'", specifier = ">=0.31.1" },
     { name = "ii-researcher", specifier = ">=0.1.5" },
@@ -2654,6 +2675,7 @@ requires-dist = [
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "puremagic", specifier = ">=1.29" },
     { name = "pydantic", specifier = "==2.11.7" },
+    { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "pydub", specifier = ">=0.25.1" },
     { name = "pygithub", specifier = ">=2.5.0" },
     { name = "pyjwt", specifier = ">=2.8.0" },
@@ -2666,9 +2688,10 @@ requires-dist = [
     { name = "python-pptx", specifier = ">=1.0.2" },
     { name = "python-socketio", specifier = ">=5.13.0" },
     { name = "redis", specifier = ">=5.0.0" },
+    { name = "requests", specifier = ">=2.32.3" },
     { name = "rich", specifier = "==14.1.0" },
     { name = "speechrecognition", specifier = ">=3.14.2" },
-    { name = "sqlalchemy", specifier = ">=2.0.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.36" },
     { name = "starlette", extras = ["full"], specifier = ">=0.46.2" },
     { name = "strictyaml", specifier = ">=1.7.0" },
     { name = "stripe", specifier = ">=11.1.0" },

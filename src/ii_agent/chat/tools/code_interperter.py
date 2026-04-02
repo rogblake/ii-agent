@@ -27,7 +27,7 @@ from ii_agent.chat.types import ErrorTextContent, JsonResultContent
 from .base import BaseTool, ToolInfo, ToolCallInput, ToolResponse
 from ii_agent.chat.messages.models import ChatMessage
 from ii_agent.files.models import FileAsset, SessionAsset
-from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.core.storage.providers.base import StorageProvider
 from ii_agent.core.storage.path_resolver import path_resolver
 from ii_agent.files.types import AssetType
@@ -46,12 +46,12 @@ class CodeInterpreter(BaseTool):
 
     def __init__(
         self,
-        llm_config: LLMConfig,
+        llm_config: ModelConfig,
         db_session: AsyncSession,
         storage: StorageProvider,
-        session_id: str,
+        session_id: uuid.UUID,
         parent_message_id: uuid.UUID,
-        user_id: str,
+        user_id: uuid.UUID,
     ):
         self.llm_config = llm_config
         self.db_session = db_session

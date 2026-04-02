@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import TYPE_CHECKING, List, Optional
 
 import httpx
@@ -67,7 +68,7 @@ class VideoMediaHandler(BaseMediaHandler):
     async def create_tools(
         self,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
         container: ApplicationContainer,
@@ -107,7 +108,7 @@ class VideoMediaHandler(BaseMediaHandler):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
     ) -> List[BinaryContent | TextContent]:
@@ -182,7 +183,7 @@ class VideoMediaHandler(BaseMediaHandler):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
         mode_strategy: BaseModeStrategy,
     ) -> str:

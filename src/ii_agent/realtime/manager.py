@@ -189,8 +189,8 @@ class SocketIOManager:
     # Helpers
     # ------------------------------------------------------------------
 
-    def _is_session_owner(self, user_id: str, session: SessionInfo) -> bool:
-        return str(session.user_id) == str(user_id)
+    def _is_session_owner(self, user_id: uuid.UUID, session: SessionInfo) -> bool:
+        return session.user_id == user_id
 
     async def _get_bound_session(
         self, sid: str

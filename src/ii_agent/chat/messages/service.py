@@ -35,7 +35,7 @@ class MessageService:
     async def create_message(
         self,
         db: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         role: MessageRole,
         model_id: str,
         parts: List[ContentPart],
@@ -142,7 +142,7 @@ class MessageService:
     async def list_messages_after_id(
         self,
         db: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         after_message_id: uuid.UUID,
         limit: int = 1000,
     ) -> List[Message]:
@@ -159,7 +159,7 @@ class MessageService:
     async def list_messages_after_timestamp(
         self,
         db: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         after_timestamp: datetime,
         limit: int = 1000,
     ) -> List[Message]:
@@ -179,7 +179,7 @@ class MessageService:
         return messages
 
     async def list_by_session(
-        self, db: AsyncSession, session_id: str, limit: int = 50
+        self, db: AsyncSession, session_id: uuid.UUID, limit: int = 50
     ) -> List[Message]:
         """List messages for a session."""
         db_messages = await self._repo.list_by_session(db, session_id, limit)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
@@ -19,9 +20,9 @@ class BillingScope:
     def __init__(
         self,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         app_kind: str,
-        session_id: str,
+        session_id: uuid.UUID,
         billing_context: BillingContextValue,
         run_id: str | None = None,
     ) -> None:
@@ -35,9 +36,9 @@ class BillingScope:
     def for_session(
         cls,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         app_kind: str,
-        session_id: str,
+        session_id: uuid.UUID,
         billing_context: BillingContextValue,
         run_id: str | None = None,
     ) -> BillingScope:
@@ -52,7 +53,7 @@ class BillingScope:
     def billing_metadata(self) -> dict:
         return {
             "app_kind": self.app_kind,
-            "session_id": self.session_id,
+            "session_id": str(self.session_id),
             "billing_context": str(self.billing_context),
         }
 

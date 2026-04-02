@@ -17,7 +17,7 @@ from ii_agent.chat.types import (
 from ii_agent.chat.messages.service import MessageService
 from ii_agent.chat.messages.models import ChatSummary
 from ii_agent.sessions.models import Session
-from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.chat.llm import LLMProviderFactory
 from ii_agent.chat.prompts.context_prompts import PREVIOUS_SUMMARY, SUMMARY_PROMPT
 
@@ -52,7 +52,7 @@ class ContextWindowManager:
         cls,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
     ) -> List[Message]:
         """
         Load existing context for LLM call.
@@ -113,9 +113,9 @@ class ContextWindowManager:
         *,
         db_session: AsyncSession,
         messages: List[Message],
-        session_id: str,
-        llm_config: LLMConfig,
-        user_id: str,
+        session_id: uuid.UUID,
+        llm_config: ModelConfig,
+        user_id: uuid.UUID,
     ) -> List[Message]:
         """
         Emergency compression during tool execution loop.
@@ -204,9 +204,9 @@ class ContextWindowManager:
         cls,
         *,
         db_session: AsyncSession,
-        session_id: str,
-        llm_config: LLMConfig,
-        user_id: str,
+        session_id: uuid.UUID,
+        llm_config: ModelConfig,
+        user_id: uuid.UUID,
     ) -> None:
         """
         Check and summarize AFTER LLM response completes.
@@ -298,11 +298,11 @@ class ContextWindowManager:
         cls,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         messages: List[Message],
         parent_summary: Optional[ChatSummary],
-        llm_config: LLMConfig,
-        user_id: str,
+        llm_config: ModelConfig,
+        user_id: uuid.UUID,
     ) -> ChatSummary:
         """Create new summary, optionally chaining from parent."""
 
@@ -324,7 +324,7 @@ class ContextWindowManager:
 
         # Create DB record
         summary = ChatSummary(
-            id=str(uuid.uuid4()),
+            id=uuid.uuid4(),
             session_id=session_id,
             summary_text=summary_text,
             end_message_id=messages[-1].id,  # Last message summarized
@@ -351,7 +351,7 @@ class ContextWindowManager:
     async def _get_active_summary(
         cls,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
     ) -> Optional[ChatSummary]:
         """Get most recent summary (highest end_message_id)."""
         result = await db_session.execute(
@@ -440,8 +440,8 @@ class SummarizationService:
         cls,
         *,
         messages: List[Message],
-        llm_config: LLMConfig,
-        user_id: str,
+        llm_config: ModelConfig,
+        user_id: uuid.UUID,
         db_session: AsyncSession,
         parent_summary_text: Optional[str] = None,
     ) -> str:
@@ -481,7 +481,7 @@ class SummarizationService:
             id=uuid.uuid4(),
             role=MessageRole.USER,
             parts=[TextContent(text=prompt)],
-            session_id="summarization",  # Not stored
+            session_id=uuid.UUID(int=0),  # Placeholder, not stored
             created_at=int(datetime.now(timezone.utc).timestamp()),
             updated_at=int(datetime.now(timezone.utc).timestamp()),
         )

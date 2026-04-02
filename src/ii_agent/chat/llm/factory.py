@@ -4,7 +4,7 @@ import logging
 from typing import Type
 
 from ii_agent.settings.llm import Provider
-from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.chat.llm.custom import CustomProvider
 from ii_agent.chat.base import LLMClient
 from ii_agent.chat.llm.anthropic import AnthropicProvider
@@ -26,7 +26,7 @@ class LLMProviderFactory:
     }
 
     @classmethod
-    def create_provider(cls, llm_config: LLMConfig) -> LLMClient:
+    def create_provider(cls, llm_config: ModelConfig) -> LLMClient:
         """
         Create appropriate provider based on provider type.
 
@@ -105,6 +105,6 @@ class LLMProviderFactory:
         return [provider.value for provider in cls._provider_registry.keys()]
 
 
-def get_client(config: LLMConfig) -> LLMClient:
+def get_client(config: ModelConfig) -> LLMClient:
     """Get an LLM client for a given config. Convenience wrapper around LLMProviderFactory."""
     return LLMProviderFactory.create_provider(config)

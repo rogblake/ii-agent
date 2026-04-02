@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import List
 
@@ -26,9 +27,9 @@ class FileSearchTool(BaseTool):
 
     def __init__(
         self,
-        session_id: str,
+        session_id: uuid.UUID,
         vector_store_id: str,
-        user_id: str,
+        user_id: uuid.UUID,
     ):
         self._llm_config: ModelConfig | None = None
         self._client: AsyncOpenAI | None = None

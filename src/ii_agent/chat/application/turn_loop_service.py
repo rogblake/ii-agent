@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import AsyncIterator, Dict, List, Any, TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,13 +20,15 @@ from ii_agent.chat.types import (
     ToolResult,
 )
 from ii_agent.core.redis import cancel
+from ii_agent.realtime.events.app_events import ModelUsageEvent, ToolUsageEvent
+from ii_agent.settings.llm.schemas import ModelConfig
 
 if TYPE_CHECKING:
     from ii_agent.chat.api.schemas import ChatMessageRequest
     from ii_agent.chat.types import Message, RunResponseOutput
     from ii_agent.chat.application.tool_service import ChatToolService
-    from ii_agent.core.config.llm_config import LLMConfig
     from ii_agent.chat.tools.base import BaseTool
+    from ii_agent.realtime.pubsub.asyncio_pubsub import AsyncIOPubSub
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +40,10 @@ class LLMTurnLoopService:
         self,
         *,
         message_service: MessageService,
-        llm_billing: Any = None,  # reserved for future billing integration
+        pubsub: AsyncIOPubSub | None = None,
     ) -> None:
         self._message_service = message_service
-        self._llm_billing = llm_billing
+        self._pubsub = pubsub
 
     async def run(
         self,
@@ -51,12 +54,12 @@ class LLMTurnLoopService:
         tool_registry: Dict[str, BaseTool],
         tools_to_pass: List[Dict[str, Any]],
         is_code_interpreter_enabled: bool,
-        session_id: str,
-        user_id: str,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
         model_id: str,
         user_message: Message,
         run_id: str,
-        llm_config: LLMConfig,
+        model_config: ModelConfig,
         chat_request: ChatMessageRequest,
         tool_service: ChatToolService,
     ) -> AsyncIterator[Dict]:
@@ -64,6 +67,8 @@ class LLMTurnLoopService:
 
         Yields SSE events for the frontend.
         """
+        run_uuid = uuid.UUID(run_id) if isinstance(run_id, str) else run_id
+
         while True:
             await cancel.raise_if_cancelled(run_id)
 
@@ -71,7 +76,7 @@ class LLMTurnLoopService:
                 db_session=db,
                 messages=messages,
                 session_id=session_id,
-                llm_config=llm_config,
+                llm_config=model_config,
                 user_id=user_id,
             )
 
@@ -102,6 +107,15 @@ class LLMTurnLoopService:
                         "cache_write_tokens": run_response.usage.cache_write_tokens,
                     },
                 }
+
+                # Publish ModelUsageEvent for credit deduction
+                await self._publish_llm_usage(
+                    run_response=run_response,
+                    session_id=session_id,
+                    user_id=user_id,
+                    run_id=run_uuid,
+                    model_config=model_config,
+                )
 
             if run_response and run_response.files:
                 file_parts.extend(run_response.files)
@@ -190,13 +204,21 @@ class LLMTurnLoopService:
                         "output": tool_result.output.model_dump(),
                     }
 
+                    # Publish ToolUsageEvent for credit deduction
+                    await self._publish_tool_usage(
+                        tool_result=tool_result,
+                        session_id=session_id,
+                        user_id=user_id,
+                        run_id=run_uuid,
+                    )
+
                     tool_result_parts.append(tool_result)
 
                 if use_storybook_polling:
                     await ContextWindowManager.check_and_summarize_after_response(
                         db_session=db,
                         session_id=session_id,
-                        llm_config=llm_config,
+                        llm_config=model_config,
                         user_id=user_id,
                     )
 
@@ -228,7 +250,7 @@ class LLMTurnLoopService:
             await ContextWindowManager.check_and_summarize_after_response(
                 db_session=db,
                 session_id=session_id,
-                llm_config=llm_config,
+                llm_config=model_config,
                 user_id=user_id,
             )
 
@@ -243,3 +265,78 @@ class LLMTurnLoopService:
                 "files": file_parts,
             }
             break
+
+    # ------------------------------------------------------------------
+    # Billing event publishers
+    # ------------------------------------------------------------------
+
+    async def _publish_llm_usage(
+        self,
+        *,
+        run_response: RunResponseOutput,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
+        run_id: uuid.UUID,
+        model_config: ModelConfig,
+    ) -> None:
+        """Publish ModelUsageEvent so CreditUsageHandler can deduct credits."""
+        if not self._pubsub:
+            return
+        if not run_response.usage:
+            return
+
+        try:
+            await self._pubsub.publish(
+                ModelUsageEvent(
+                    session_id=session_id,
+                    user_id=user_id,
+                    run_id=run_id,
+                    setting_id=model_config.id,
+                    model_id=model_config.model_id,
+                    provider=model_config.provider,
+                    pricing=model_config.pricing,
+                    input_tokens=run_response.usage.input_tokens,
+                    output_tokens=run_response.usage.output_tokens,
+                    cache_read_tokens=run_response.usage.cache_read_tokens,
+                    cache_write_tokens=run_response.usage.cache_write_tokens,
+                    reasoning_tokens=run_response.usage.reasoning_tokens,
+                    is_user_key=model_config.is_user_model(),
+                )
+            )
+        except Exception:
+            logger.exception(
+                "Failed to publish LLM usage event (session=%s, model=%s)",
+                session_id,
+                model_config.model_id,
+            )
+
+    async def _publish_tool_usage(
+        self,
+        *,
+        tool_result: ToolResult,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
+        run_id: uuid.UUID,
+    ) -> None:
+        """Publish ToolUsageEvent so CreditUsageHandler can deduct credits."""
+        if not self._pubsub:
+            return
+        if not tool_result.cost_usd or tool_result.cost_usd <= 0:
+            return
+
+        try:
+            await self._pubsub.publish(
+                ToolUsageEvent(
+                    session_id=session_id,
+                    user_id=user_id,
+                    run_id=run_id,
+                    tool_name=tool_result.name,
+                    cost_usd=tool_result.cost_usd,
+                )
+            )
+        except Exception:
+            logger.exception(
+                "Failed to publish tool usage event (session=%s, tool=%s)",
+                session_id,
+                tool_result.name,
+            )

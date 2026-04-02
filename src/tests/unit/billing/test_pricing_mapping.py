@@ -1,29 +1,28 @@
 import pytest
 
-from ii_agent.credits.pricing import ModelPricing
+from ii_agent.settings.llm import PricingInfo
 from ii_agent.settings.llm import Provider
 
 pytestmark = pytest.mark.unit
 
 
 def test_pricing_exact_and_prefix_model_match():
-    exact = ModelPricing.get_default_pricing("gpt-4o")
-    prefix = ModelPricing.get_default_pricing("claude-sonnet-4-5-20250929")
+    exact = PricingInfo.get_default_pricing("gpt-4o")
+    prefix = PricingInfo.get_default_pricing("claude-sonnet-4-5-20250929")
 
-    assert exact.model_id == "gpt-4o"
-    assert prefix.provider == Provider.ANTHROPIC
+    assert exact.input_price_per_million == 2.5
     assert prefix.input_price_per_million == 3.0
 
 
 def test_pricing_provider_fallback_when_unknown_model():
-    pricing = ModelPricing.get_default_pricing("unknown-model", provider=Provider.GOOGLE)
+    pricing = PricingInfo.get_default_pricing("unknown-model", provider=Provider.GOOGLE)
 
-    assert pricing.provider == Provider.GOOGLE
     assert pricing.input_price_per_million == 0.15
+    assert pricing.is_fallback is True
 
 
 def test_pricing_global_default_without_provider():
-    pricing = ModelPricing.get_default_pricing("totally-unknown")
+    pricing = PricingInfo.get_default_pricing("totally-unknown")
 
     assert pricing.input_price_per_million == 2.5
     assert pricing.output_price_per_million == 10.0
@@ -33,11 +32,10 @@ def test_pricing_case_insensitive():
     """Model IDs are normalized to lowercase for matching."""
     # Use a model whose pricing differs from the global default (2.5/10.0)
     # so the test distinguishes a real match from a fallback.
-    pricing = ModelPricing.get_default_pricing("CLAUDE-SONNET-4-5")
+    pricing = PricingInfo.get_default_pricing("CLAUDE-SONNET-4-5")
 
     assert pricing.input_price_per_million == 3.0
     assert pricing.output_price_per_million == 15.0
-    assert pricing.provider == Provider.ANTHROPIC
 
 
 @pytest.mark.parametrize(
@@ -61,23 +59,24 @@ def test_pricing_case_insensitive():
 )
 def test_pricing_all_known_models(model_id, expected_input, expected_output):
     """Every known model ID returns correct input/output pricing."""
-    pricing = ModelPricing.get_default_pricing(model_id)
+    pricing = PricingInfo.get_default_pricing(model_id)
 
     assert pricing.input_price_per_million == expected_input
     assert pricing.output_price_per_million == expected_output
 
 
-def test_pricing_prefix_match_preserves_original_model_id():
-    """Prefix-matched pricing preserves the full model_id in the result."""
-    pricing = ModelPricing.get_default_pricing("claude-opus-4-5-20250101")
+def test_pricing_prefix_match_returns_correct_pricing():
+    """Prefix-matched pricing returns the correct pricing values."""
+    pricing = PricingInfo.get_default_pricing("claude-opus-4-5-20250101")
 
-    assert pricing.model_id == "claude-opus-4-5-20250101"
-    assert pricing.provider == Provider.ANTHROPIC
+    assert pricing.input_price_per_million == 5.0
+    assert pricing.output_price_per_million == 25.0
+    assert pricing.is_fallback is False
 
 
 def test_pricing_anthropic_has_cache_write():
     """Anthropic models have non-zero cache_write pricing."""
-    pricing = ModelPricing.get_default_pricing("claude-sonnet-4-5")
+    pricing = PricingInfo.get_default_pricing("claude-sonnet-4-5")
 
     assert pricing.cache_write_price_per_million > 0
     assert pricing.cache_read_price_per_million > 0
@@ -85,7 +84,7 @@ def test_pricing_anthropic_has_cache_write():
 
 def test_pricing_openai_no_cache_write():
     """OpenAI models have zero cache_write pricing."""
-    pricing = ModelPricing.get_default_pricing("gpt-4o")
+    pricing = PricingInfo.get_default_pricing("gpt-4o")
 
     assert pricing.cache_write_price_per_million == 0.0
     assert pricing.cache_read_price_per_million > 0
@@ -93,16 +92,16 @@ def test_pricing_openai_no_cache_write():
 
 def test_pricing_provider_default_openai():
     """Unknown OpenAI model gets OpenAI provider defaults."""
-    pricing = ModelPricing.get_default_pricing("gpt-future", provider=Provider.OPENAI)
+    pricing = PricingInfo.get_default_pricing("gpt-future", provider=Provider.OPENAI)
 
-    assert pricing.provider == Provider.OPENAI
     assert pricing.input_price_per_million == 2.5
+    assert pricing.is_fallback is True
 
 
 def test_pricing_provider_default_anthropic():
     """Unknown Anthropic model gets Anthropic provider defaults."""
-    pricing = ModelPricing.get_default_pricing("claude-future", provider=Provider.ANTHROPIC)
+    pricing = PricingInfo.get_default_pricing("claude-future", provider=Provider.ANTHROPIC)
 
-    assert pricing.provider == Provider.ANTHROPIC
     assert pricing.input_price_per_million == 3.0
     assert pricing.cache_write_price_per_million == 3.75
+    assert pricing.is_fallback is True

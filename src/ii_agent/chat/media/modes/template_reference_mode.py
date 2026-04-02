@@ -1,6 +1,7 @@
 """Template reference mode strategy for media generation."""
 
 import logging
+import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,7 +37,7 @@ class TemplateReferenceModeStrategy(BaseModeStrategy):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
     ) -> None:
         """Fetch template preview URL for reference-based generation."""
@@ -64,7 +65,7 @@ class TemplateReferenceModeStrategy(BaseModeStrategy):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
     ) -> str | None:
         await self._ensure_template_loaded(
@@ -78,7 +79,7 @@ class TemplateReferenceModeStrategy(BaseModeStrategy):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
     ) -> str:
         """Build prompt context for template reference mode."""

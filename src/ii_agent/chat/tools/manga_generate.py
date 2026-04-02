@@ -19,7 +19,7 @@ class MangaGenerationTool(StorybookGenerationTool):
 
     def __init__(
         self,
-        session_id: str,
+        session_id: uuid.UUID,
         *,
         container: ApplicationContainer,
         media_preferences: Optional[MediaPreferences] = None,

@@ -106,7 +106,7 @@ class BaseCommandHandler(ABC, Generic[TContent]):
         """Build the per-user skill loader used by realtime agents."""
         from ii_agent.agents.skills.db_creator import DbSkillCreator
 
-        return DbSkillCreator(user_id=str(user_id), storage=get_storage())
+        return DbSkillCreator(user_id=user_id, storage=get_storage())
 
     async def _send_error_event(
         self,

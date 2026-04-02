@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,7 +44,7 @@ class InfographicMediaHandler(BaseMediaHandler):
     async def create_tools(
         self,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
         container: ApplicationContainer,
@@ -64,7 +65,7 @@ class InfographicMediaHandler(BaseMediaHandler):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
     ) -> List[BinaryContent | TextContent]:
@@ -75,7 +76,7 @@ class InfographicMediaHandler(BaseMediaHandler):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
         mode_strategy: BaseModeStrategy,
     ) -> str:

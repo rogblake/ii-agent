@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import Optional, Any, TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,8 +30,8 @@ class ChatFileProcessor:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
-        session_id: str,
+        user_id: uuid.UUID,
+        session_id: uuid.UUID,
         user_message: "Message",
         llm_content: str,
         display_content: str,

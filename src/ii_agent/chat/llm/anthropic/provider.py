@@ -35,7 +35,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from ii_agent.settings.llm import Provider
-from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.core.storage.path_resolver import path_resolver
 from ii_agent.files.models import FileAsset, SessionAsset
 from ii_agent.files.types import AssetType
@@ -104,7 +104,7 @@ class FileResponseObject(BaseModel):
 class AnthropicProvider(LLMClient):
     """Provider for Anthropic Claude models using official SDK."""
 
-    def __init__(self, llm_config: LLMConfig):
+    def __init__(self, llm_config: ModelConfig):
         """Initialize Anthropic provider."""
         self.llm_config = llm_config
         self.model_name = llm_config.model
@@ -180,7 +180,7 @@ class AnthropicProvider(LLMClient):
             return None
 
     async def upload_files(
-        self, user_message: Message, session_id: str
+        self, user_message: Message, session_id: uuid.UUID
     ) -> List[FileResponseObject]:
         """Upload files from user message to Anthropic Files API.
 
@@ -497,7 +497,7 @@ class AnthropicProvider(LLMClient):
         messages: List[Message],
         tools: Optional[List[Any]] = None,
         provider_options: Optional[Dict[str, Any]] = None,
-        session_id: Optional[str] = None,
+        session_id: Optional[uuid.UUID] = None,
     ) -> RunResponseOutput:
         """Send messages and get complete response with extended thinking."""
         self._validate_inline_image_sizes(messages)
@@ -567,7 +567,7 @@ class AnthropicProvider(LLMClient):
         messages: List[Message],
         tools: Optional[List[Any]] = None,
         is_code_interpreter_enabled: bool = False,
-        session_id: Optional[str] = None,
+        session_id: Optional[uuid.UUID] = None,
         provider_options: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[RunResponseEvent]:
         """Stream response with granular events."""
@@ -846,7 +846,7 @@ class AnthropicProvider(LLMClient):
         return {"id": self.model_name, "name": self.model_name}
 
     async def _download_file_and_upload(
-        self, file_ids: List[str], session_id: str
+        self, file_ids: List[str], session_id: uuid.UUID
     ) -> List[Dict[str, Any]]:
         """
         Download files created by Anthropic code execution and store them locally.

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.chat.types import (
     BinaryContent,
     CouncilMemberOutput,
@@ -31,9 +31,11 @@ from ii_agent.chat.application.tool_service import ChatToolService
 from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
 from ii_agent.chat.messages.history_service import ChatMessageHistoryService
 from ii_agent.chat.application.council_service import CouncilService, MIN_COUNCIL_MODELS
+from ii_agent.billing.exceptions import InsufficientCreditsError
+from ii_agent.credits.constants import MINIMUM_REQUIRED_CREDITS
+from ii_agent.credits.service import CreditService
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
-from ii_agent.credits.service import CreditService
 from ii_agent.core.redis import cancel
 from ii_agent.chat.exceptions import ModelNotFoundError
 from ii_agent.sessions.exceptions import SessionNotFoundError
@@ -41,6 +43,7 @@ from ii_agent.sessions.title_service import SessionTitleService
 
 if TYPE_CHECKING:
     from ii_agent.core.container import ApplicationContainer
+    from ii_agent.realtime.pubsub.asyncio_pubsub import AsyncIOPubSub
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +157,7 @@ class ChatService:
                 self._title_service.schedule_title_update(
                     session_id,
                     query,
-                    user_id=str(session.user_id),
+                    user_id=session.user_id,
                     app_kind=str(getattr(session, "app_kind", "chat") or "chat"),
                 )
                 logger.info(f"Scheduled background title update for session {session_id}")
@@ -184,9 +187,9 @@ class ChatService:
         if not model_info:
             raise ModelNotFoundError(f"Model not found: {model_id}")
 
-    async def get_llm_config(
+    async def get_model_config(
         self, db: AsyncSession, *, model_id: str, user_id: uuid.UUID
-    ) -> LLMConfig:
+    ) -> ModelConfig:
         all_models = await self._model_setting_service.get_all_available_models(
             db,
             user_id=user_id,
@@ -206,6 +209,27 @@ class ChatService:
                 )
 
         return await self._model_setting_service.resolve_system_config(db, model_id=model_id)
+
+    async def _check_credits(
+        self, db: AsyncSession, *, user_id: uuid.UUID, model_config: ModelConfig
+    ) -> None:
+        """Pre-run credit gate. Raises InsufficientCreditsError if balance is too low."""
+        if not self._credit_service:
+            return
+        if model_config.is_user_model():
+            return
+
+        has_credits = await self._credit_service.has_sufficient_credits(
+            db, user_id, MINIMUM_REQUIRED_CREDITS
+        )
+        if not has_credits:
+            balance = await self._credit_service.get_balance(db, user_id)
+            available = float(balance.credits + balance.bonus_credits) if balance else 0.0
+            raise InsufficientCreditsError(
+                "Insufficient credits to start chat. Please add more credits.",
+                available_credits=available,
+                required_credits=float(MINIMUM_REQUIRED_CREDITS),
+            )
 
     async def build_message_history_response(
         self,
@@ -343,9 +367,12 @@ class ChatService:
         messages.append(llm_user_message)
 
         # Phase 2: Build tool registry
-        llm_config = await self.get_llm_config(db, model_id=model_id, user_id=user_id)
-        provider = LLMProviderFactory.create_provider(llm_config)
+        model_config = await self.get_model_config(db, model_id=model_id, user_id=user_id)
+        provider = LLMProviderFactory.create_provider(model_config)
         is_code_interpreter_enabled = bool(tools and tools.get("code_interpreter"))
+
+        # Pre-run credit check
+        await self._check_credits(db, user_id=user_id, model_config=model_config)
 
         tool_registry, tools_to_pass = await self._tool_service.build_tool_registry(
             db,
@@ -371,7 +398,7 @@ class ChatService:
                 model_id=model_id,
                 user_message=user_message,
                 run_id=run_id,
-                llm_config=llm_config,
+                model_config=model_config,
                 chat_request=chat_request,
                 tool_service=self._tool_service,
             ):
@@ -503,18 +530,20 @@ class ChatService:
         )
         messages.append(llm_user_message)
 
-        # Resolve LLM configs for all council models + synthesis model
+        # Resolve model configs for all council models + synthesis model
         all_model_ids = [m.model_id for m in council_prefs.council_models]
         if council_prefs.synthesis_model_id not in all_model_ids:
             all_model_ids.append(council_prefs.synthesis_model_id)
 
-        llm_configs = {}
+        model_configs: Dict[str, ModelConfig] = {}
         model_names = {}
         all_models = await self._model_setting_service.get_all_available_models(db, user_id=user_id)
         failed_models = []
         for mid in all_model_ids:
             try:
-                llm_configs[mid] = await self.get_llm_config(db, model_id=mid, user_id=user_id)
+                model_configs[mid] = await self.get_model_config(
+                    db, model_id=mid, user_id=user_id
+                )
                 model_info = self._find_model_info(all_models, mid)
                 model_names[mid] = model_info.model if model_info else mid
             except Exception as e:
@@ -522,7 +551,7 @@ class ChatService:
                 failed_models.append(mid)
 
         # Fail fast: synthesis model config is required
-        if council_prefs.synthesis_model_id not in llm_configs:
+        if council_prefs.synthesis_model_id not in model_configs:
             await cancel.cleanup_run(run_id)
             raise ValueError(
                 f"Synthesis model '{council_prefs.synthesis_model_id}' could not be resolved"
@@ -530,7 +559,7 @@ class ChatService:
 
         # Fail fast: need at least 2 council models with valid configs
         valid_council_count = sum(
-            1 for m in council_prefs.council_models if m.model_id in llm_configs
+            1 for m in council_prefs.council_models if m.model_id in model_configs
         )
         if valid_council_count < MIN_COUNCIL_MODELS:
             await cancel.cleanup_run(run_id)
@@ -549,7 +578,7 @@ class ChatService:
                 messages=messages,
                 user_question=display_content,
                 council_preferences=council_prefs,
-                llm_configs=llm_configs,
+                model_configs=model_configs,
                 model_names=model_names,
                 run_id=run_id,
                 session_id=session_id,
@@ -609,13 +638,13 @@ class ChatService:
 
             # Post-response summarization
             try:
-                llm_config = await self.get_llm_config(
+                model_config = await self.get_model_config(
                     db, model_id=chat_request.model_id, user_id=user_id
                 )
                 await ContextWindowManager.check_and_summarize_after_response(
                     db_session=db,
                     session_id=session_id,
-                    llm_config=llm_config,
+                    llm_config=model_config,
                     user_id=user_id,
                 )
             except Exception as e:
@@ -653,6 +682,16 @@ class ChatService:
 
     async def clear_messages(self, db: AsyncSession, *, session_id: uuid.UUID) -> int:
         return await self._message_history._repo.delete_by_session(db, session_id)
+
+    async def delete_messages_from(
+        self, db: AsyncSession, *, session_id: uuid.UUID, message_id: uuid.UUID
+    ) -> int:
+        """Delete a message and all subsequent messages."""
+        deleted = await self._message_history._repo.delete_from_message(
+            db, session_id, message_id
+        )
+        await db.commit()
+        return deleted
 
     async def stop_conversation(
         self, db: AsyncSession, *, session_id: uuid.UUID

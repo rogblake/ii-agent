@@ -1,5 +1,7 @@
 """Advanced mode strategy for media generation."""
 
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.chat.types import MediaPreferences
@@ -25,7 +27,7 @@ class AdvancedModeStrategy(BaseModeStrategy):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
     ) -> str:
         """Build comprehensive prompt context for advanced mode."""

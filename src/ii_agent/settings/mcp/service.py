@@ -41,7 +41,7 @@ class MCPSettingService:
         self._repo = repo
 
     async def create_mcp_settings(
-        self, db: AsyncSession, *, mcp_setting_in: MCPSettingCreate, user_id: str
+        self, db: AsyncSession, *, mcp_setting_in: MCPSettingCreate, user_id: uuid.UUID
     ) -> MCPSettingInfo:
         """Create new MCP settings for a user."""
         # Deactivate any existing active settings for this user
@@ -73,7 +73,7 @@ class MCPSettingService:
         *,
         setting_id: str,
         setting_update: MCPSettingUpdate,
-        user_id: str,
+        user_id: uuid.UUID,
     ) -> MCPSettingInfo:
         """Update existing MCP settings.
 
@@ -98,7 +98,7 @@ class MCPSettingService:
         return _to_mcp_setting_info(updated)
 
     async def get_mcp_settings(
-        self, db: AsyncSession, *, setting_id: str, user_id: str
+        self, db: AsyncSession, *, setting_id: str, user_id: uuid.UUID
     ) -> MCPSettingInfo:
         """Get MCP settings by ID.
 
@@ -116,7 +116,7 @@ class MCPSettingService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         only_active: bool = False,
         no_metadata: bool = False,
     ) -> MCPSettingList:
@@ -128,7 +128,7 @@ class MCPSettingService:
         return MCPSettingList(settings=settings_list)
 
     async def delete_mcp_settings(
-        self, db: AsyncSession, *, setting_id: str, user_id: str
+        self, db: AsyncSession, *, setting_id: str, user_id: uuid.UUID
     ) -> bool:
         """Delete MCP settings by ID."""
         setting = await self._repo.get_by_id_and_user(db, setting_id, user_id)
@@ -141,7 +141,7 @@ class MCPSettingService:
     # -- Codex / Claude Code convenience methods ----------------------------
 
     async def get_codex_setting(
-        self, db: AsyncSession, *, user_id: str
+        self, db: AsyncSession, *, user_id: uuid.UUID
     ) -> Optional[MCPSettingInfo]:
         """Return the Codex MCP setting for a user, or None."""
         setting = await self._repo.get_by_user_and_tool_type(db, user_id, "codex")
@@ -150,7 +150,7 @@ class MCPSettingService:
         return _to_mcp_setting_info(setting)
 
     async def get_claude_code_setting(
-        self, db: AsyncSession, *, user_id: str
+        self, db: AsyncSession, *, user_id: uuid.UUID
     ) -> Optional[MCPSettingInfo]:
         """Return the Claude Code MCP setting for a user, or None."""
         setting = await self._repo.get_by_user_and_tool_type(db, user_id, "claude_code")
@@ -162,7 +162,7 @@ class MCPSettingService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         auth_json: Optional[Dict[str, Any]],
         apikey: Optional[str],
         model: Optional[str],
@@ -218,7 +218,7 @@ class MCPSettingService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         authorization_code: str,
     ) -> MCPSettingInfo:
         """Exchange OAuth code, build Claude Code MCP config and create-or-update.
@@ -270,7 +270,7 @@ class MCPSettingService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         metadata_cls: type,
         mcp_config: MCPServersConfig,
         metadata: CodexMetadata | ClaudeCodeMetadata,

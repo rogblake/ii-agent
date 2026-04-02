@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,8 +47,8 @@ class ChatToolService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
-        session_id: str,
+        user_id: uuid.UUID,
+        session_id: uuid.UUID,
         tools: Dict[str, bool],
         chat_request: "ChatMessageRequest",
         vector_store: Optional[Any],
@@ -128,7 +129,7 @@ class ChatToolService:
         self,
         *,
         db: AsyncSession,
-        user_id: str,
+        user_id: uuid.UUID,
         chat_request: "ChatMessageRequest",
         tools: Dict[str, bool],
         all_search_tools: List["BaseTool"],

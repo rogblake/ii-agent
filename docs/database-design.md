@@ -165,7 +165,7 @@ Standalone:  waitlist, media_templates, slide_templates
 ### JSONB Usage
 Heavy JSONB usage for flexible/nested data:
 - `llm_settings.configs` — provider-specific settings (temperature, thinking_tokens, max_retries, vertex_region, azure_endpoint, etc.)
-- `llm_settings.pricing` — ModelPricing data (input/output/cache prices per million tokens)
+- `llm_settings.pricing` — PricingInfo data (input/output/cache prices per million tokens)
 - Message content, tools, metrics, metadata across chat/agent tables
 - Provider configs (mcp_config, composio enabled_tools)
 - Deployment metadata, error details
@@ -243,7 +243,7 @@ The `llm_settings` table uses a dual-mode design:
 | `base_url` | String | Custom API endpoint URL |
 | `display_name` | String | Human-readable label for UI |
 | `configs` | JSONB | Provider settings: temperature, thinking_tokens, max_retries, max_message_chars, vertex_region, azure_endpoint |
-| `pricing` | JSONB | ModelPricing: input_price, output_price, cache_price per million tokens |
+| `pricing` | JSONB | PricingInfo: input_price, output_price, cache_price per million tokens |
 | `config_type` | String | "user" or "system" discriminator |
 | `is_default` | Boolean | Default model for user/system |
 | `is_active` | Boolean | Soft-disable without deletion |

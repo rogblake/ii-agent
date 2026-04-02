@@ -1,5 +1,7 @@
 """Storybook mode strategy for narrative generation."""
 
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.chat.types import MediaPreferences
@@ -24,7 +26,7 @@ class StorybookModeStrategy(BaseModeStrategy):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
     ) -> str:
         """Build narrative generation guidance for storybook mode."""

@@ -8,6 +8,7 @@ Consolidated from:
 """
 
 import logging
+import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Query
@@ -64,7 +65,7 @@ async def list_media_templates(
 
 @templates_router.get("/{template_id}", response_model=MediaTemplateInfo)
 async def get_media_template(
-    template_id: str,
+    template_id: uuid.UUID,
     media_template_service: MediaTemplateServiceDep,
     db: DBSession,
 ):

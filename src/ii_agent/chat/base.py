@@ -1,6 +1,7 @@
 """Provider interface definitions matching research architecture."""
 
 from abc import ABC, abstractmethod
+import uuid
 
 from typing import (
     AsyncIterator,
@@ -33,7 +34,7 @@ class LLMClient(ABC):
         """
         return {}
 
-    async def get_or_create_container(self, session_id: str) -> Optional[str]:
+    async def get_or_create_container(self, session_id: uuid.UUID) -> Optional[str]:
         """Ensure code interpreter container exists when provider supports it."""
         return None
 
@@ -82,7 +83,7 @@ class LLMClient(ABC):
         messages: List[Message],
         tools: Optional[List[Any]] = None,
         is_code_interpreter_enabled: bool = False,
-        session_id: Optional[str] = None,
+        session_id: Optional[uuid.UUID] = None,
         provider_options: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[RunResponseEvent]:
         """

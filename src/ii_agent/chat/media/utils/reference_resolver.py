@@ -1,6 +1,7 @@
 """Utility for resolving media references and session images."""
 
 import logging
+import uuid
 from typing import Any, List
 
 from sqlalchemy import select
@@ -94,7 +95,7 @@ class ReferenceResolver:
     @staticmethod
     async def get_session_images(
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
     ) -> List[str]:
         """
         Get all generated images from conversation history in this session.

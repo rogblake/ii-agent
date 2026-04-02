@@ -71,7 +71,7 @@ class OpenAIVectorStore(VectorStore):
         return self._llm_config
 
     async def retrieve(
-        self, user_id: str, session_id: str
+        self, user_id: uuid.UUID, session_id: uuid.UUID
     ) -> Optional[VectorStoreMetadata]:
         """
         Retrieve vector store metadata for a user session.
@@ -104,7 +104,7 @@ class OpenAIVectorStore(VectorStore):
             files=file_list_stores.model_dump(),
         )
 
-    async def add_file(self, user_id: str, session_id: str, file_id: str) -> int:
+    async def add_file(self, user_id: uuid.UUID, session_id: uuid.UUID, file_id: str) -> int:
         """
         Add a file to the user's vector store.
 
@@ -150,8 +150,8 @@ class OpenAIVectorStore(VectorStore):
                 vector_store_id=vector_store.vector_store_id,
                 file_id=openai_file.id,
                 attributes={
-                    "user_id": user_id,
-                    "session_id": session_id,
+                    "user_id": str(user_id),
+                    "session_id": str(session_id),
                     "date": datetime.utcnow().timestamp(),
                 },
                 poll_interval_ms=100,
@@ -170,8 +170,8 @@ class OpenAIVectorStore(VectorStore):
 
     async def add_files_batch(
         self,
-        user_id: str,
-        session_id: str,
+        user_id: uuid.UUID,
+        session_id: uuid.UUID,
         file_ids: list[str],
     ) -> list[VectorStoreFileObject]:
         """
@@ -256,8 +256,8 @@ class OpenAIVectorStore(VectorStore):
                     {
                         "file_id": f["openai_file_id"],
                         "attributes": {
-                            "user_id": user_id,
-                            "session_id": session_id,
+                            "user_id": str(user_id),
+                            "session_id": str(session_id),
                             "file_name": f["file_name"],
                             "content_type": f["content_type"],
                             "date": datetime.now(timezone.utc).timestamp(),
@@ -295,7 +295,7 @@ class OpenAIVectorStore(VectorStore):
             return []
 
     async def delete(
-        self, db_session: AsyncSession, user_id: str, session_id: str
+        self, db_session: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID
     ) -> bool:
         """
         Delete vector store for a user session.
@@ -333,7 +333,7 @@ class OpenAIVectorStore(VectorStore):
         return True
 
     async def search(
-        self, user_id: str, session_id: str, query: str
+        self, user_id: uuid.UUID, session_id: uuid.UUID, query: str
     ) -> list[dict[str, Any]]:
         """
         Search through vector store using a query.
@@ -417,7 +417,7 @@ class OpenAIVectorStore(VectorStore):
             return []
 
     async def _get_or_create_vector_store(
-        self, db_session: AsyncSession, user_id: str
+        self, db_session: AsyncSession, user_id: uuid.UUID
     ) -> ChatProviderVectorStore:
         vector_store = await self._get_vector_store_from_db(db_session, user_id)
         now = datetime.now(timezone.utc)
@@ -462,7 +462,7 @@ class OpenAIVectorStore(VectorStore):
         return vector_store
 
     async def _get_vector_store_from_db(
-        self, db_session: AsyncSession, user_id: str
+        self, db_session: AsyncSession, user_id: uuid.UUID
     ) -> Optional[ChatProviderVectorStore]:
         """Get vector store from database for a specific user."""
         result = await db_session.execute(
@@ -514,7 +514,7 @@ class OpenAIVectorStore(VectorStore):
             # If we can't retrieve it, treat as expired so a new one will be created
             return True
 
-    async def _create_vector_store_on_provider(self, user_id: str) -> Any:
+    async def _create_vector_store_on_provider(self, user_id: uuid.UUID) -> Any:
         """Create a new vector store on OpenAI."""
         try:
             # Create vector store with a name
@@ -536,7 +536,7 @@ class OpenAIVectorStore(VectorStore):
     async def _save_vector_store_to_db(
         self,
         db_session: AsyncSession,
-        user_id: str,
+        user_id: uuid.UUID,
         vector_store_id: str,
         raw_vector_object: dict,
     ) -> ChatProviderVectorStore:

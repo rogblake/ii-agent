@@ -38,7 +38,7 @@ def _build_event_info(e: "SessionEventDetail", session_id: uuid.UUID) -> EventIn
         content=e.content,
         created_at=e.created_at,
         run_id=str(e.run_id) if e.run_id is not None else None,
-        session_id=str(session_id),
+        session_id=session_id,
     )
 from ii_agent.sessions.wishlist.router import router as wishlist_router
 

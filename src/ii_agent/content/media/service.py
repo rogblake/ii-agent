@@ -70,7 +70,7 @@ class MediaTemplateService:
         self._cache = cache
 
     async def get_media_template_by_id(
-        self, db: AsyncSession, template_id: str
+        self, db: AsyncSession, template_id: uuid.UUID
     ) -> Optional[MediaTemplateInfo]:
         """Get a media template by ID.
 
@@ -209,11 +209,11 @@ class MediaTemplateService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         prompt: str,
         reference_type: str,
         aspect_ratio: Optional[str] = None,
-        session_id: Optional[str] = None,
+        session_id: Optional[uuid.UUID] = None,
         user_api_key: str,
         model_name: Optional[str] = None,
         provider: Optional[str] = None,
@@ -228,7 +228,7 @@ class MediaTemplateService:
                 prompt=prompt,
                 reference_type=reference_type,
                 aspect_ratio=aspect_ratio,
-                session_id=session_id or str(uuid.uuid4()),
+                session_id=session_id or uuid.uuid4(),
                 user_api_key=user_api_key,
                 model_name=model_name,
                 provider=provider,
@@ -339,7 +339,7 @@ async def _generate_image(
     aspect_ratio: str = "16:9",
     image_size: str = "2K",
     image_urls: Optional[list[str]] = None,
-    session_id: str,
+    session_id: uuid.UUID,
     user_api_key: str,
     model_name: Optional[str] = None,
     provider: Optional[str] = None,
@@ -352,7 +352,7 @@ async def _generate_image(
 
     # Add metadata
     kwargs["metadata"] = {
-        "session_id": session_id,
+        "session_id": str(session_id),
         "user_api_key": user_api_key,
     }
 
@@ -387,7 +387,7 @@ async def _generate_reference_image(
     prompt: str,
     reference_type: str,
     aspect_ratio: str = "1:1",
-    session_id: str,
+    session_id: uuid.UUID,
     user_api_key: str,
     model_name: Optional[str] = None,
     provider: Optional[str] = None,

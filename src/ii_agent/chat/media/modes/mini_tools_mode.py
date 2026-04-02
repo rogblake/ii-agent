@@ -1,6 +1,7 @@
 """Mini tools mode strategy for media generation."""
 
 import logging
+import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,7 +34,7 @@ class MiniToolsModeStrategy(BaseModeStrategy):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
     ) -> str:
         """Build prompt context for mini tools mode."""

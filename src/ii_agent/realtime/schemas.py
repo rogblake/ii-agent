@@ -380,7 +380,7 @@ class DesignGetStateContent(BaseModel):
     """Payload for loading persisted design-mode state."""
 
     command: Literal[CommandType.DESIGN_GET_STATE] = CommandType.DESIGN_GET_STATE
-    session_id: str
+    session_id: uuid.UUID
     request_id: str | None = None
 
     model_config = ConfigDict(extra="allow")
@@ -390,7 +390,7 @@ class DesignSaveStateContent(BaseModel):
     """Payload for saving design-mode state (pending changes)."""
 
     command: Literal[CommandType.DESIGN_SAVE_STATE] = CommandType.DESIGN_SAVE_STATE
-    session_id: str
+    session_id: uuid.UUID
     changes: list[Any] = []
     redo_changes: list[Any] | None = None
     request_id: str | None = None
@@ -402,7 +402,7 @@ class DesignSyncStateContent(BaseModel):
     """Payload for syncing persisted design-mode changes to source."""
 
     command: Literal[CommandType.DESIGN_SYNC_STATE] = CommandType.DESIGN_SYNC_STATE
-    session_id: str
+    session_id: uuid.UUID
     request_id: str | None = None
 
     model_config = ConfigDict(extra="allow")
@@ -412,7 +412,7 @@ class SlideDeckSyncStateContent(BaseModel):
     """Payload for syncing persisted slide design-mode changes."""
 
     command: Literal[CommandType.SLIDE_DECK_SYNC_STATE] = CommandType.SLIDE_DECK_SYNC_STATE
-    session_id: str
+    session_id: uuid.UUID
     presentation_name: str
 
     model_config = ConfigDict(extra="allow")

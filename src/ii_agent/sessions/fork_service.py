@@ -9,16 +9,25 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from ii_agent.agents.sandboxes.models import AgentSandbox
+from ii_agent.agents.sandboxes.repository import SandboxRepository
 from pydantic import TypeAdapter
+from sqlalchemy import exc as sa_exc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.sessions.exceptions import SessionNotFoundError, SessionValidationError
 from ii_agent.sessions.models import Session
 from ii_agent.sessions.repository import SessionRepository
+from ii_agent.sessions.schemas import (
+    ForkSessionResponse,
+    FORK_TYPE_VALID_SOURCES,
+    SandboxMode,
+    get_target_agent_type,
+    validate_fork_source,
+)
 from ii_agent.core.config.settings import Settings
 
 if TYPE_CHECKING:
-    from ii_agent.sessions.schemas import ForkSessionRequest, ForkSessionResponse
+    from ii_agent.sessions.schemas import ForkSessionRequest
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +41,7 @@ class SessionForkService:
         self,
         *,
         session_repo: SessionRepository,
-        sandbox_repo,
+        sandbox_repo: SandboxRepository,
         config: Settings,
     ) -> None:
         self._session_repo = session_repo
@@ -45,7 +54,7 @@ class SessionForkService:
         parent_session_id: uuid.UUID,
         user_id: uuid.UUID,
         request: "ForkSessionRequest",
-    ) -> "ForkSessionResponse":
+    ) -> ForkSessionResponse:
         """Fork a session to create a new session with inherited context.
 
         Validates parent ownership, fork type against parent's agent_type,
@@ -56,14 +65,6 @@ class SessionForkService:
             SessionNotFoundError: If parent session not found or access denied.
             SessionValidationError: If fork type is invalid for the parent's agent_type.
         """
-        from ii_agent.sessions.schemas import (
-            ForkSessionResponse,
-            FORK_TYPE_VALID_SOURCES,
-            SandboxMode,
-            get_target_agent_type,
-            validate_fork_source,
-        )
-
         # 1. Get and validate parent session
         parent = await self._session_repo.get_by_id_and_user(db, parent_session_id, user_id)
         if not parent:
@@ -88,6 +89,7 @@ class SessionForkService:
         if model_setting_id is None and parent.model_setting_id:
             model_setting_id = parent.model_setting_id
 
+        # 5. Resolve sandbox sharing
         shared_sandbox = None
         if request.sandbox_mode == SandboxMode.SHARE:
             shared_sandbox = await self._sandbox_repo.get_by_session_id(db, parent_session_id)
@@ -123,24 +125,52 @@ class SessionForkService:
             session_metadata=session_metadata,
             api_version="v1",
         )
-        await self._session_repo.save(db, new_session)
+
+        try:
+            await self._session_repo.save(db, new_session)
+        except sa_exc.IntegrityError as e:
+            await db.rollback()
+            constraint = str(e.orig) if e.orig else str(e)
+            logger.warning(
+                "Fork session integrity error for parent %s: %s",
+                parent_session_id,
+                constraint,
+            )
+            if "model_setting_id" in constraint or "model_settings" in constraint:
+                raise SessionValidationError(
+                    f"Invalid model_setting_id: {model_setting_id}"
+                ) from e
+            raise SessionValidationError(
+                f"Failed to create forked session: {constraint}"
+            ) from e
 
         if shared_sandbox is not None:
-            await self._sandbox_repo.save(
-                db,
-                AgentSandbox(
-                    session_id=new_session.id,
-                    provider=shared_sandbox.provider,
-                    provider_sandbox_id=shared_sandbox.provider_sandbox_id,
-                    status=shared_sandbox.status,
-                    expired_at=shared_sandbox.expired_at,
-                    provider_data=deepcopy(shared_sandbox.provider_data),
-                ),
-            )
+            try:
+                await self._sandbox_repo.save(
+                    db,
+                    AgentSandbox(
+                        session_id=new_session.id,
+                        provider=shared_sandbox.provider,
+                        provider_sandbox_id=shared_sandbox.provider_sandbox_id,
+                        status=shared_sandbox.status,
+                        expired_at=shared_sandbox.expired_at,
+                        provider_data=deepcopy(shared_sandbox.provider_data),
+                    ),
+                )
+            except sa_exc.IntegrityError:
+                logger.warning(
+                    "Failed to share sandbox from parent %s to forked session %s; "
+                    "continuing without shared sandbox",
+                    parent_session_id,
+                    new_session.id,
+                )
 
         logger.info(
-            f"Created forked session {new_session.id} from parent {parent_session_id} "
-            f"with fork_type={request.fork_type.value}, agent_type={target_agent_type}"
+            "Created forked session %s from parent %s with fork_type=%s, agent_type=%s",
+            new_session.id,
+            parent_session_id,
+            request.fork_type.value,
+            target_agent_type,
         )
 
         return ForkSessionResponse(

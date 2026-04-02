@@ -41,7 +41,7 @@ class ExtractFramesTool(BaseTool):
         "storage.cloud.google.com",
     ]
 
-    def __init__(self, session_id: str, *, container):
+    def __init__(self, session_id: uuid.UUID, *, container):
         self._container = container
         self.session_id = session_id
         self._user_id: uuid.UUID | None = None

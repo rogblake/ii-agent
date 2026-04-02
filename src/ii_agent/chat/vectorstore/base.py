@@ -1,6 +1,7 @@
 """Abstract base class for vector store implementations."""
 
 from abc import ABC, abstractmethod
+import uuid
 from datetime import datetime
 from typing import Optional, Any
 
@@ -20,7 +21,7 @@ class VectorStoreFileObject(BaseModel):
 class VectorStoreMetadata(BaseModel):
     """Generic metadata for vector store across all providers."""
 
-    user_id: str
+    user_id: uuid.UUID
     provider: str
     created_at: datetime
     updated_at: datetime
@@ -34,7 +35,7 @@ class VectorStore(ABC):
 
     @abstractmethod
     async def retrieve(
-        self, db_session: AsyncSession, user_id: str, session_id: str
+        self, db_session: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID
     ) -> Optional[VectorStoreMetadata]:
         """
         Retrieve vector store metadata for a user session.
@@ -50,7 +51,7 @@ class VectorStore(ABC):
         pass
 
     @abstractmethod
-    async def add_file(self, user_id: str, session_id: str, file_id: str) -> int:
+    async def add_file(self, user_id: uuid.UUID, session_id: uuid.UUID, file_id: str) -> int:
         """
         Add a file to the user's vector store.
 
@@ -67,8 +68,8 @@ class VectorStore(ABC):
     @abstractmethod
     async def add_files_batch(
         self,
-        user_id: str,
-        session_id: str,
+        user_id: uuid.UUID,
+        session_id: uuid.UUID,
         file_ids: list[str],
     ) -> list[VectorStoreFileObject]:
         """
@@ -86,7 +87,7 @@ class VectorStore(ABC):
 
     @abstractmethod
     async def delete(
-        self, db_session: AsyncSession, user_id: str, session_id: str
+        self, db_session: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID
     ) -> bool:
         """
         Delete vector store for a user session.
@@ -103,7 +104,7 @@ class VectorStore(ABC):
 
     @abstractmethod
     async def search(
-        self, user_id: str, session_id: str, query: str
+        self, user_id: uuid.UUID, session_id: uuid.UUID, query: str
     ) -> list[dict[str, Any]]:
         """
         Search through vector store using a query.

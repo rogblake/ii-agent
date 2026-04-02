@@ -42,7 +42,7 @@ class SkillService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         github_url: str,
         storage: StorageProvider,
         github_token: Optional[str] = None,
@@ -122,7 +122,7 @@ class SkillService:
         self,
         db: AsyncSession,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         include_builtin: bool = True,
     ) -> SkillList:
         """List skills for a user."""
@@ -168,7 +168,7 @@ class SkillService:
         db: AsyncSession,
         *,
         skill_id: str,
-        user_id: str,
+        user_id: uuid.UUID,
     ) -> Optional[SkillInfo]:
         """Get skill by ID (builtin or user's own)."""
         skill = await self._repo.get_by_id_for_user(db, skill_id, user_id)
@@ -179,7 +179,7 @@ class SkillService:
         db: AsyncSession,
         *,
         skill_id: str,
-        user_id: str,
+        user_id: uuid.UUID,
         is_enabled: bool,
     ) -> Optional[SkillInfo]:
         """Toggle skill enabled state."""
@@ -240,7 +240,7 @@ class SkillService:
         db: AsyncSession,
         *,
         skill_id: str,
-        user_id: str,
+        user_id: uuid.UUID,
         storage: Optional[StorageProvider] = None,
     ) -> bool:
         """Delete a custom skill.

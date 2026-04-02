@@ -26,7 +26,7 @@ class ModelSetting(Base):
         display_name: Human-readable label shown in the UI.
         configs: JSONB bag for provider-specific settings (temperature, thinking_tokens,
                  max_retries, max_message_chars, vertex_region, azure_endpoint, etc.).
-        pricing: JSONB storing ModelPricing data (input/output/cache prices per million tokens).
+        pricing: JSONB storing PricingInfo data (input/output/cache prices per million tokens).
         config_type: "user" or "system" discriminator.
         is_default: Whether this is the default model for the user/system.
     """

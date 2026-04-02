@@ -1,6 +1,7 @@
 """Unified file processor for routing and content extraction."""
 
 import io
+import uuid
 from typing import List, Set, Optional, BinaryIO, Tuple
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
@@ -316,7 +317,7 @@ async def process_files_for_message(
     db_session: AsyncSession,
     file_ids: List[str],
     storage,
-    session_id: str,
+    session_id: uuid.UUID,
     provider: Provider | None = None,
 ) -> ProcessedFiles:
     """

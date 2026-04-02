@@ -2,7 +2,7 @@
 
 Subscribes to ``ModelUsageEvent`` and ``ToolUsageEvent`` on the pub/sub bus.
 For each event it:
-1. Calculates the credit cost (via ``ModelPricing`` / USD conversion).
+1. Calculates the credit cost (via ``PricingInfo`` / USD conversion).
 2. Atomically deducts credits via ``CreditService``.
 3. Publishes ``CreditsDeductedEvent`` for frontend balance updates + audit.
 4. Cancels the agent run if the user's balance is exhausted.
@@ -18,8 +18,8 @@ from typing import TYPE_CHECKING, Any
 from ii_agent.core.db import get_db_session_local
 from ii_agent.core.redis.cancel import cancel_run
 from ii_agent.credits.constants import MINIMUM_REQUIRED_CREDITS
-from ii_agent.credits.pricing import ModelPricing
 from ii_agent.credits.service import CreditService
+from ii_agent.settings.llm import PricingInfo
 from ii_agent.credits.types import TransactionType
 from ii_agent.realtime.events.app_events import (
     BaseEvent,
@@ -164,8 +164,8 @@ class CreditUsageHandler(EventCallbackHandler):
     # ------------------------------------------------------------------
 
     def _calculate_llm_credits(self, event: ModelUsageEvent) -> Decimal:
-        """Calculate credit cost from token counts using ModelPricing."""
-        pricing = ModelPricing.get_default_pricing(event.model_id)
+        """Calculate credit cost from token counts using PricingInfo."""
+        pricing = PricingInfo.get_default_pricing(event.model_id)
 
         input_cost = (
             Decimal(event.input_tokens)

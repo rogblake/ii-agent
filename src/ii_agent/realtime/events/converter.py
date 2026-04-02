@@ -80,7 +80,7 @@ def _get_sub_agent_info(event: Union[RunOutputEvent, RunOutput]) -> dict:
 def convert_agent_event_to_realtime(
     event: Union[RunOutputEvent, RunOutput],
     run_id: uuid.UUID,
-    session_id: str | uuid.UUID,
+    session_id: uuid.UUID,
 ) -> Optional[AppEvent]:
     """Convert a V1 agent event to a BaseEvent subclass for frontend compatibility.
 
@@ -91,7 +91,7 @@ def convert_agent_event_to_realtime(
     Returns:
         BaseEvent subclass or None if the event should be skipped
     """
-    session_uuid = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
+    session_uuid = session_id
 
     # Extract sub-agent identification info
     sub_agent_info = _get_sub_agent_info(event)

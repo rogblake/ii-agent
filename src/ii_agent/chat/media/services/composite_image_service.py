@@ -3,6 +3,7 @@
 import base64
 import logging
 import os
+import uuid
 from typing import Literal, Tuple
 
 import httpx
@@ -60,7 +61,7 @@ async def create_composite(
     text_content: str,
     text_position: TextPosition,
     text_percentage: int,
-    session_id: str = "default",
+    session_id: uuid.UUID | str = "default",
     user_api_key: str | None = None,
     aspect_ratio: str = "16:9",
     resolution: str = "1K",
@@ -97,7 +98,7 @@ async def create_composite(
 
 async def _render_via_tool_server(
     html_content: str,
-    session_id: str = "default",
+    session_id: uuid.UUID | str = "default",
     user_api_key: str | None = None,
     width: int = DEFAULT_WIDTH,
     height: int = DEFAULT_HEIGHT,
@@ -117,7 +118,7 @@ async def _render_via_tool_server(
             response = await client.post(
                 f"{tool_server_url}/composite-image",
                 json={
-                    "session_id": session_id,
+                    "session_id": str(session_id),
                     "html_content": html_content,
                     "width": width,
                     "height": height,

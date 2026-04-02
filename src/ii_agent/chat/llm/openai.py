@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator, Dict, List, Literal, Optional, Tuple, Union
 
@@ -81,7 +82,7 @@ from ii_agent.chat.types import (
     ToolCall,
 )
 from ii_agent.settings.llm import Provider
-from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.core.db import get_db_session_local
 from ii_agent.core.storage.client import get_storage
 from ii_agent.core.storage.path_resolver import path_resolver
@@ -160,7 +161,7 @@ class OpenAIProvider(LLMClient):
     CONTAINER_TTL_MINUTES = 20
     FILE_TTL_SECONDS = 6 * 60 * 60  # 6 hours
 
-    def __init__(self, llm_config: LLMConfig):
+    def __init__(self, llm_config: ModelConfig):
         """Initialize OpenAI provider."""
         self.llm_config = llm_config
         self.model_name = llm_config.model
@@ -183,7 +184,7 @@ class OpenAIProvider(LLMClient):
                 max_retries=1,
             )
 
-    async def get_or_create_container(self, session_id: str) -> ChatProviderContainer:
+    async def get_or_create_container(self, session_id: uuid.UUID) -> ChatProviderContainer:
         """Ensure an OpenAI container exists for the given session.
 
         Uses dedicated provider_containers table:
@@ -625,7 +626,7 @@ class OpenAIProvider(LLMClient):
     async def _download_file_citations(
         self,
         file_citations: List[AnnotationContainerFileCitation],
-        session_id: str,
+        session_id: uuid.UUID,
     ) -> ContainerFile:
         """
         Download files from OpenAI container file citations and store them as FileAsset records.
@@ -732,7 +733,7 @@ class OpenAIProvider(LLMClient):
 
         return ContainerFile(container_id=container_id, files=file_objects)
 
-    async def _get_files_within_session(self, session_id: str, container_id: str) -> ContainerFile:
+    async def _get_files_within_session(self, session_id: uuid.UUID, container_id: str) -> ContainerFile:
         async with get_db_session_local() as db_session:
             now = datetime.now(timezone.utc)
             result = await db_session.execute(
@@ -950,7 +951,7 @@ class OpenAIProvider(LLMClient):
     async def stream(
         self,
         messages: List[Message],
-        session_id: str,
+        session_id: uuid.UUID,
         tools: Optional[List[Any]] = None,
         is_code_interpreter_enabled: bool = False,
         provider_options: Optional[Dict[str, Any]] = None,

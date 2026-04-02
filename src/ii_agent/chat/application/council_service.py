@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
 from typing import Any, AsyncIterator, Dict, List
 
 from ii_agent.chat.types import (
@@ -13,7 +14,7 @@ from ii_agent.chat.types import (
     CouncilPreferences,
 )
 from ii_agent.chat.llm import get_client
-from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.core.redis import cancel
 
 logger = logging.getLogger(__name__)
@@ -78,14 +79,14 @@ class CouncilService:
     async def stream_council_response(
         cls,
         *,
-        user_id: str,
+        user_id: uuid.UUID,
         messages: List[Message],
         user_question: str,
         council_preferences: CouncilPreferences,
-        llm_configs: Dict[str, LLMConfig],
+        model_configs: Dict[str, ModelConfig],
         model_names: Dict[str, str],
         run_id: str,
-        session_id: str,
+        session_id: uuid.UUID,
     ) -> AsyncIterator[Dict[str, Any]]:
         """Run council models in parallel, then synthesize.
 
@@ -101,7 +102,7 @@ class CouncilService:
         council_had_error = False
         member_outputs: Dict[str, str] = {}  # model_id -> collected content
 
-        async def run_single_model(model_id: str, config: LLMConfig) -> None:
+        async def run_single_model(model_id: str, config: ModelConfig) -> None:
             nonlocal council_had_error
             display_name = model_names.get(model_id, model_id)
 
@@ -159,7 +160,7 @@ class CouncilService:
             # Phase 1: Launch all council models in parallel
             for model_config in council_preferences.council_models:
                 mid = model_config.model_id
-                config = llm_configs.get(mid)
+                config = model_configs.get(mid)
                 if not config:
                     logger.warning(f"No LLM config for council model {mid}, skipping")
                     continue
@@ -194,7 +195,7 @@ class CouncilService:
                 return
 
             synthesis_model_id = council_preferences.synthesis_model_id
-            synthesis_config = llm_configs.get(synthesis_model_id)
+            synthesis_config = model_configs.get(synthesis_model_id)
             if not synthesis_config:
                 yield {
                     "type": "council_synthesis_error",

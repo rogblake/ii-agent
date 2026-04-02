@@ -125,6 +125,33 @@ class ChatMessageRepository:
         await db.flush()
         return result.rowcount
 
+    async def delete_from_message(
+        self, db: AsyncSession, session_id: uuid.UUID, message_id: uuid.UUID
+    ) -> int:
+        """Delete a message and all subsequent messages in a session.
+
+        Finds the target message's created_at, then deletes it and all messages
+        created at or after that timestamp in the same session.
+        """
+        result = await db.execute(
+            select(ChatMessage.created_at).where(
+                ChatMessage.id == message_id,
+                ChatMessage.session_id == session_id,
+            )
+        )
+        target_ts = result.scalar_one_or_none()
+        if target_ts is None:
+            return 0
+
+        result = await db.execute(
+            delete(ChatMessage).where(
+                ChatMessage.session_id == session_id,
+                ChatMessage.created_at >= target_ts,
+            )
+        )
+        await db.flush()
+        return result.rowcount
+
     async def get_last_by_session(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[ChatMessage]:
         """Get the most recent message in a session."""
         result = await db.execute(

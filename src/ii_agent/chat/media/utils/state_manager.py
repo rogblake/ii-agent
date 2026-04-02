@@ -1,5 +1,6 @@
 """Utility for managing advanced mode state persistence."""
 
+import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import select, update
@@ -17,7 +18,7 @@ class AdvancedModeStateManager:
     @staticmethod
     async def get_state(
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
     ) -> AdvancedModeState:
         """
         Fetch persisted advanced mode state for a session.
@@ -55,7 +56,7 @@ class AdvancedModeStateManager:
     @staticmethod
     async def update_state(
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         enabled: bool,
         references: list[MediaReference] | None,
     ) -> AdvancedModeState:

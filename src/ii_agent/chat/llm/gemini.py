@@ -10,7 +10,7 @@ from datetime import datetime
 from google import genai
 from google.genai import types
 
-from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.chat.base import LLMClient
 from ii_agent.billing.schemas import TokenUsage
 from ii_agent.chat.types import (
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 class GeminiProvider(LLMClient):
     """Provider for Google Gemini models using official SDK."""
 
-    def __init__(self, llm_config: LLMConfig):
+    def __init__(self, llm_config: ModelConfig):
         """Initialize Gemini provider."""
         self.llm_config = llm_config
         self.model_name = llm_config.model

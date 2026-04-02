@@ -159,7 +159,7 @@ class ModelSettingService:
         db: AsyncSession,
         *,
         model_name: str,
-        user_id: str | uuid.UUID,
+        user_id: uuid.UUID,
         include_key: bool = False,
     ) -> ModelSettingInfoWithKey | ModelSettingInfo | None:
         """Get model settings by model_id string."""
@@ -173,7 +173,7 @@ class ModelSettingService:
         self,
         db: AsyncSession,
         *,
-        user_id: str | uuid.UUID,
+        user_id: uuid.UUID,
         provider: str | None = None,
     ) -> ModelSettingList:
         """List all model settings for a user."""

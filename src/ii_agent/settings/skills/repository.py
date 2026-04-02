@@ -1,5 +1,6 @@
 """Repository layer for skills domain - data access only."""
 
+import uuid
 from typing import List, Optional
 
 from sqlalchemy import and_, or_, select
@@ -15,7 +16,7 @@ class SkillRepository(BaseRepository[Skill]):
     model = Skill
 
     async def get_by_id_for_user(
-        self, db: AsyncSession, skill_id: str, user_id: str
+        self, db: AsyncSession, skill_id: uuid.UUID, user_id: uuid.UUID
     ) -> Optional[Skill]:
         """Get a skill that is either builtin or owned by user."""
         result = await db.execute(
@@ -32,7 +33,7 @@ class SkillRepository(BaseRepository[Skill]):
         return result.scalar_one_or_none()
 
     async def get_user_skill(
-        self, db: AsyncSession, skill_id: str, user_id: str
+        self, db: AsyncSession, skill_id: uuid.UUID, user_id: uuid.UUID
     ) -> Optional[Skill]:
         """Get a skill owned by user (not builtin)."""
         result = await db.execute(
@@ -45,7 +46,7 @@ class SkillRepository(BaseRepository[Skill]):
         )
         return result.scalar_one_or_none()
 
-    async def get_builtin_by_id(self, db: AsyncSession, skill_id: str) -> Optional[Skill]:
+    async def get_builtin_by_id(self, db: AsyncSession, skill_id: uuid.UUID) -> Optional[Skill]:
         """Get a builtin skill by ID."""
         result = await db.execute(
             select(Skill).where(
@@ -58,7 +59,7 @@ class SkillRepository(BaseRepository[Skill]):
         return result.scalar_one_or_none()
 
     async def get_by_name_and_user(
-        self, db: AsyncSession, name: str, user_id: str
+        self, db: AsyncSession, name: str, user_id: uuid.UUID
     ) -> Optional[Skill]:
         """Get a skill by name for a specific user."""
         result = await db.execute(
@@ -72,7 +73,7 @@ class SkillRepository(BaseRepository[Skill]):
         return result.scalar_one_or_none()
 
     async def get_user_builtin_override(
-        self, db: AsyncSession, user_id: str, skill_name: str
+        self, db: AsyncSession, user_id: uuid.UUID, skill_name: str
     ) -> Optional[Skill]:
         """Get user's override for a builtin skill."""
         result = await db.execute(
@@ -86,7 +87,7 @@ class SkillRepository(BaseRepository[Skill]):
         )
         return result.scalar_one_or_none()
 
-    async def list_by_user(self, db: AsyncSession, user_id: str) -> List[Skill]:
+    async def list_by_user(self, db: AsyncSession, user_id: uuid.UUID) -> List[Skill]:
         """List all skills owned by a user."""
         result = await db.execute(select(Skill).where(Skill.user_id == user_id))
         return list(result.scalars().all())

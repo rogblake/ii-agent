@@ -113,7 +113,7 @@ class StorybookGenerationTool(BaseTool):
 
     def __init__(
         self,
-        session_id: str,
+        session_id: uuid.UUID,
         *,
         container: ApplicationContainer,
         media_preferences: Optional[MediaPreferences] = None,
@@ -342,7 +342,7 @@ class StorybookGenerationTool(BaseTool):
         *,
         scene_index: int,
         scene: dict,
-        storybook_id: str,
+        storybook_id: uuid.UUID,
         user_api_key: str,
         style_context: str,
         storybook_title: Optional[str] = None,

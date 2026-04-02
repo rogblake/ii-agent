@@ -1,5 +1,6 @@
 """Database-backed skill creator implementation."""
 
+import uuid
 from typing import TYPE_CHECKING, Optional
 
 from ii_agent.core.db import get_db_session_local
@@ -31,7 +32,7 @@ class DbSkillCreator(SkillCreator):
 
     def __init__(
         self,
-        user_id: str,
+        user_id: uuid.UUID,
         enabled_only: bool = True,
         storage: Optional["BaseStorage"] = None,
     ):

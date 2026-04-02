@@ -151,7 +151,7 @@ class StorybookContext(BaseModel):
     reference images and scripts from the storybook to guide video generation.
     """
 
-    storybook_id: str = Field(..., description="ID of the source storybook")
+    storybook_id: UUID = Field(..., description="ID of the source storybook")
     reference_images: list[str] = Field(
         default_factory=list,
         description="List of image URLs from storybook pages (first 5 pages)",
@@ -170,7 +170,7 @@ class MediaPreferences(BaseModel):
     mini_tools: MiniTools | None = Field(
         None, description="Selected mini tool configuration for media generation"
     )
-    template_id: str | None = Field(
+    template_id: UUID | None = Field(
         None, description="Selected media template ID for media generation"
     )
     aspect_ratio: str | None = None
@@ -531,7 +531,7 @@ class StorybookProgressContent(BaseModel):
     """
 
     type: Literal["storybook_progress"] = "storybook_progress"
-    storybook_id: str
+    storybook_id: UUID
     storybook_name: str
     total_pages: int
     completed_pages: int
@@ -556,7 +556,7 @@ class StorybookResultContent(BaseModel):
     """
 
     type: Literal["storybook"] = "storybook"
-    storybook_id: str
+    storybook_id: UUID
     storybook_name: str
     version: int = 1
     pages: List[StorybookPageResult]
@@ -742,7 +742,7 @@ class Message(BaseModel):
 
     id: UUID
     role: MessageRole
-    session_id: str
+    session_id: UUID
     parts: List[ContentPart]
     model: Optional[str] = None
     provider: Optional[str] = None
@@ -757,8 +757,8 @@ class Message(BaseModel):
 
     @field_validator("session_id", mode="before")
     @classmethod
-    def _normalize_session_id(cls, value: str | UUID) -> str:
-        return str(value)
+    def _normalize_session_id(cls, value: str | UUID) -> UUID:
+        return value if isinstance(value, UUID) else UUID(value)
 
     def content(self) -> Optional[TextContent]:
         """Extract first text content part."""

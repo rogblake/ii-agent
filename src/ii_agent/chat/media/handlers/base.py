@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List
 
@@ -50,7 +51,7 @@ class BaseMediaHandler(ABC):
     async def create_tools(
         self,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
         container: ApplicationContainer,
@@ -77,7 +78,7 @@ class BaseMediaHandler(ABC):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         mode_strategy: BaseModeStrategy,
         media_preferences: MediaPreferences,
     ) -> List[BinaryContent | TextContent]:
@@ -100,7 +101,7 @@ class BaseMediaHandler(ABC):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
         mode_strategy: BaseModeStrategy,
     ) -> str:

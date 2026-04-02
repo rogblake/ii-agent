@@ -19,6 +19,7 @@ from ii_agent.core.db import get_db_session_local as get_db
 
 if TYPE_CHECKING:
     from ii_agent.core.container import ApplicationContainer
+    from ii_agent.realtime.pubsub.asyncio_pubsub import AsyncIOPubSub
 
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -45,3 +46,16 @@ def _get_container(request: Request) -> ApplicationContainer:
 
 
 ContainerDep = Annotated[Any, Depends(_get_container)]
+
+
+# ---------------------------------------------------------------------------
+# PubSub (application-scoped, created once in lifespan)
+# ---------------------------------------------------------------------------
+
+
+def _get_pubsub(request: Request) -> AsyncIOPubSub:
+    """Pull the AsyncIOPubSub from app.state (set during lifespan startup)."""
+    return request.app.state.pubsub
+
+
+PubSubDep = Annotated[Any, Depends(_get_pubsub)]

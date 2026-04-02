@@ -52,7 +52,7 @@ class ChatMessageRequest(BaseModel):
     )
     model_id: str = Field(..., description="LLM model ID")
     file_ids: Optional[List[str]] = Field(
-        None, description="List of file paths to include in the message"
+        None, description="List of uploaded file IDs to include in the message"
     )
     session_id: Optional[UUID] = Field(None, description="Existing session ID")
     tools: Optional[Dict[str, bool]] = Field(

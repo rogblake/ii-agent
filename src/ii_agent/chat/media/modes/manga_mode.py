@@ -1,5 +1,7 @@
 """Manga mode strategy for manga-style panel layout generation."""
 
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.chat.types import MediaPreferences
@@ -24,7 +26,7 @@ class MangaModeStrategy(BaseModeStrategy):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
     ) -> str:
         """Build narrative generation guidance for manga mode."""

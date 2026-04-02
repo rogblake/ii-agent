@@ -13,6 +13,7 @@ For custom skills from GitHub:
 """
 
 import io
+import uuid
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -193,7 +194,7 @@ async def copy_skill_to_sandbox(
 
 async def upload_skill_to_gcs(
     storage: "StorageProvider",
-    user_id: str,
+    user_id: uuid.UUID,
     skill_name: str,
     files: list["GitHubFile"],
 ) -> str:

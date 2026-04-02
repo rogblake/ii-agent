@@ -484,7 +484,7 @@ class WorkspaceInfoEvent(ConnectionEvent):
     name: Literal["connection.workspace_info"] = "connection.workspace_info"
     transient: bool = False  # persist — used for session reconstruction
     workspace_path: str = ""
-    sandbox_id: str | None = None
+    sandbox_id: uuid.UUID | None = None
     sandbox_status: str | None = None
 
 
@@ -499,7 +499,7 @@ class SandboxEvent(BaseEvent):
     model_config = ConfigDict(frozen=True)
 
     group: EventGroup = EventGroup.SANDBOX
-    sandbox_id: str | None = None
+    sandbox_id: uuid.UUID | None = None
     provider: str | None = None
 
 
@@ -507,7 +507,7 @@ class SandboxInitializedEvent(SandboxEvent):
     """A sandbox was provisioned and is ready."""
 
     name: Literal["sandbox.initialized"] = "sandbox.initialized"
-    template_id: str | None = None
+    template_id: uuid.UUID | None = None
 
 
 class SandboxStatusChangedEvent(SandboxEvent):

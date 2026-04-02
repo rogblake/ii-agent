@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 def make_message(
     *,
     role: MessageRole,
-    session_id: str,
+    session_id: _uuid_mod.UUID,
     parts: list[ContentPart],
 ) -> Message:
     """Build an in-memory ``Message`` with a fresh UUID."""
@@ -63,7 +63,7 @@ class ToolLoopResult:
 async def run_tool_loop(
     *,
     client: LLMClient,
-    session_id: str,
+    session_id: _uuid_mod.UUID,
     messages: list[Message],
     tools: list[Any],
     final_tool_name: str,

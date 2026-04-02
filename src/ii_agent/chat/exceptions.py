@@ -2,11 +2,14 @@
 
 from typing import Optional
 
-from ii_agent.core.exceptions import NotFoundError, PayloadTooLargeError
+from ii_agent.core.exceptions import NotFoundError, PayloadTooLargeError, ValidationError
 
 
-class ModelNotFoundError(NotFoundError):
-    """Raised when a requested LLM model is not found."""
+class ModelNotFoundError(ValidationError):
+    """Raised when a requested LLM model is not found.
+
+    Uses 400 (not 404) to avoid confusion with route-not-found.
+    """
 
     pass
 

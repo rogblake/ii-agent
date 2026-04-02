@@ -1,5 +1,7 @@
 """Normal mode strategy for media generation."""
 
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.chat.types import MediaPreferences
@@ -23,7 +25,7 @@ class NormalModeStrategy(BaseModeStrategy):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
     ) -> str:
         """Build simple prompt context for normal mode."""

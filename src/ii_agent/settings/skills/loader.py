@@ -16,22 +16,11 @@ from ii_agent.core.logger import logger
 SANDBOX_SKILLS_PATH = "/workspace/.skills"
 
 
-def _coerce_user_id(user_id: str | uuid.UUID) -> str | uuid.UUID:
-    """Convert UUID-like strings to UUID objects for ORM comparisons."""
-    if isinstance(user_id, uuid.UUID):
-        return user_id
-
-    try:
-        return uuid.UUID(user_id)
-    except (TypeError, ValueError, AttributeError):
-        return user_id
-
-
-def _user_ids_match(skill_user_id: object, user_id: str | uuid.UUID) -> bool:
-    """Compare ORM-loaded UUIDs and string IDs consistently."""
+def _user_ids_match(skill_user_id: object, user_id: uuid.UUID) -> bool:
+    """Compare ORM-loaded UUIDs and user IDs consistently."""
     if skill_user_id is None:
         return False
-    return str(skill_user_id) == str(user_id)
+    return skill_user_id == user_id
 
 
 def load_builtin_skills() -> list[dict]:
@@ -133,7 +122,7 @@ async def sync_builtin_to_db(db: AsyncSession) -> int:
 
 
 async def get_user_skills(
-    db: AsyncSession, user_id: str | uuid.UUID, enabled_only: bool = True
+    db: AsyncSession, user_id: uuid.UUID, enabled_only: bool = True
 ) -> list[Skill]:
     """Get skills available to a user, with user skills overriding builtins.
 
@@ -149,13 +138,11 @@ async def get_user_skills(
     Returns:
         List of Skill objects (builtin + user, with user overriding builtin by name)
     """
-    normalized_user_id = _coerce_user_id(user_id)
-
     # Query ALL builtin and user skills first (don't filter by is_enabled yet)
     query = select(Skill).where(
         or_(
             Skill.user_id.is_(None),  # Builtin skills
-            Skill.user_id == normalized_user_id,  # User's own skills
+            Skill.user_id == user_id,  # User's own skills
         )
     )
 
@@ -179,7 +166,7 @@ async def get_user_skills(
 
 
 async def get_skill_by_name(
-    db: AsyncSession, user_id: str | uuid.UUID, skill_name: str
+    db: AsyncSession, user_id: uuid.UUID, skill_name: str
 ) -> Optional[Skill]:
     """Get a specific skill by name, preferring user's version over builtin.
 
@@ -194,12 +181,10 @@ async def get_skill_by_name(
     Returns:
         Skill object or None if not found or disabled
     """
-    normalized_user_id = _coerce_user_id(user_id)
-
     # First check if user has an override for this skill
     result = await db.execute(
         select(Skill).where(
-            Skill.user_id == normalized_user_id,
+            Skill.user_id == user_id,
             Skill.name == skill_name,
         )
     )

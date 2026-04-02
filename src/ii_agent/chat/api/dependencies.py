@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from ii_agent.core.dependencies import ContainerDep
+from ii_agent.core.dependencies import ContainerDep, PubSubDep
 from ii_agent.chat.messages.repository import ChatMessageRepository
 from ii_agent.chat.messages.service import MessageService
 from ii_agent.chat.application.chat_service import ChatService
@@ -91,8 +91,9 @@ def get_chat_service(
     session_repo: SessionRepositoryDep,
     container: ContainerDep,
     title_service: SessionTitleServiceDep,
+    pubsub: PubSubDep,
 ) -> ChatService:
-    llm_loop = LLMTurnLoopService(message_service=message_service, llm_billing=None)
+    llm_loop = LLMTurnLoopService(message_service=message_service, pubsub=pubsub)
     return ChatService(
         file_processor=file_processor,
         tool_service=tool_service,

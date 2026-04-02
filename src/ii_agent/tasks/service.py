@@ -69,7 +69,7 @@ class RunTaskService:
             await db.rollback()
             raise TaskConflictException(
                 task_type=task_type,
-                session_id=str(session_id),
+                session_id=session_id,
             )
 
         log = TaskLog(task_id=task.id, status=status)

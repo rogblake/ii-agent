@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, List
 
@@ -94,7 +95,7 @@ class MediaOrchestrator:
     async def prepare_default_media_tools(
         cls,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         media_type: str = "image",
         container: ApplicationContainer,
     ) -> List[BaseTool]:
@@ -152,7 +153,7 @@ class MediaOrchestrator:
         cls,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
         chat_request: ChatMessageRequest,
         container: ApplicationContainer,
@@ -236,8 +237,8 @@ class MediaOrchestrator:
         cls,
         *,
         db_session: AsyncSession,
-        session_id: str,
-        user_id: str,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
     ) -> AdvancedModeState:
         """
         Fetch advanced mode state for a session.
@@ -262,8 +263,8 @@ class MediaOrchestrator:
         cls,
         *,
         db_session: AsyncSession,
-        session_id: str,
-        user_id: str,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
         enabled: bool,
         references: list[MediaReference] | None,
     ) -> AdvancedModeState:

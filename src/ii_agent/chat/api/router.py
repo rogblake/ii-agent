@@ -485,7 +485,27 @@ async def get_message_history(
     )
 
 
-@router.delete("/conversation/{session_id}", response_model=ClearHistoryResponse)
+@router.delete("/conversations/{session_id}/messages/{message_id}")
+async def delete_messages_from(
+    session_id: uuid.UUID,
+    message_id: uuid.UUID,
+    current_user: CurrentUser,
+    db_session: DBSession,
+    chat_service: ChatServiceDep,
+) -> dict:
+    """Delete a specific message and all subsequent messages in a conversation."""
+    await chat_service.validate_session_access(
+        db_session,
+        session_id=session_id,
+        user_id=current_user.id,
+    )
+    deleted_count = await chat_service.delete_messages_from(
+        db_session, session_id=session_id, message_id=message_id
+    )
+    return {"deleted_count": deleted_count}
+
+
+@router.delete("/conversations/{session_id}", response_model=ClearHistoryResponse)
 async def clear_conversation(
     session_id: uuid.UUID,
     current_user: CurrentUser,

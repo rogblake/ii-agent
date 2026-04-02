@@ -49,7 +49,7 @@ class ChatMessageHistoryService:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         limit: int = 50,
         before: Optional[str] = None,
     ) -> Tuple[List[ChatMessage], bool]:
@@ -60,7 +60,7 @@ class ChatMessageHistoryService:
         self,
         db: AsyncSession,
         *,
-        session_id: str,
+        session_id: uuid.UUID,
         limit: int = 50,
         before: Optional[str] = None,
     ) -> MessageHistoryResponse:
@@ -116,12 +116,11 @@ class ChatMessageHistoryService:
         if not all_file_ids:
             return {}
 
-        file_ids_str = [str(fid) if isinstance(fid, uuid.UUID) else fid for fid in all_file_ids]
-        file_uploads = await self._file_repo.get_by_ids(db, file_ids_str)
+        file_uploads = await self._file_repo.get_by_ids(db, list(all_file_ids))
 
         file_map: dict[uuid.UUID, FileAttachmentResponse] = {}
         for file_upload in file_uploads:
-            file_id = uuid.UUID(file_upload.id)
+            file_id = file_upload.id
             file_map[file_id] = FileAttachmentResponse(
                 id=file_id,
                 file_name=file_upload.file_name,

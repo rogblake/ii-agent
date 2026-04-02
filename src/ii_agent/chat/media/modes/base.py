@@ -1,5 +1,6 @@
 """Base class for media generation mode strategies."""
 
+import uuid
 from abc import ABC, abstractmethod
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +32,7 @@ class BaseModeStrategy(ABC):
         self,
         *,
         db_session: AsyncSession,
-        session_id: str,
+        session_id: uuid.UUID,
         media_preferences: MediaPreferences,
     ) -> str:
         """

@@ -7,7 +7,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 from litellm import acompletion
 
 from ii_agent.settings.llm import Provider
-from ii_agent.core.config.llm_config import LLMConfig
+from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.billing.schemas import TokenUsage
 from ii_agent.chat.types import (
     ImageUrlContentPart,
@@ -44,13 +44,13 @@ logger = logging.getLogger(__name__)
 class CustomProvider(LLMClient):
     """Provider for other models that use openai compatible API. Use litellm"""
 
-    def __init__(self, llm_config: LLMConfig):
+    def __init__(self, llm_config: ModelConfig):
         dummy_llm_config = deepcopy(llm_config)
         if llm_config.provider == Provider.GOOGLE:
-            dummy_llm_config.model = f"gemini/{dummy_llm_config.model}"
+            dummy_llm_config.model_id = f"gemini/{dummy_llm_config.model_id}"
             dummy_llm_config.provider = Provider.CUSTOM
         self.llm_config = dummy_llm_config
-        self.model_name = dummy_llm_config.model
+        self.model_name = dummy_llm_config.model_id
         self.base_url = dummy_llm_config.base_url
 
         self.api_key = (

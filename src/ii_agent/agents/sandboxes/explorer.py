@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from ii_agent.agents.sandboxes.schemas import (
     INLINE_CONTENT_PREFETCH_DEPTH,
+    WATCHER_IGNORED_PATHS,
     WATCHER_IGNORED_PREFIXES,
     is_binary_file_path,
 )
@@ -295,7 +296,7 @@ class WorkspaceExplorer:
             evt_type = evt.type.value if hasattr(evt.type, "value") else str(evt.type)
             evt_name = str(evt.name)
             path = evt_name if evt_name.startswith("/") else f"{WATCH_ROOT}/{evt_name.lstrip('/')}"
-            if path.startswith(WATCHER_IGNORED_PREFIXES):
+            if path in WATCHER_IGNORED_PATHS or path.startswith(WATCHER_IGNORED_PREFIXES):
                 continue
             changes.append({"type": evt_type.lower(), "name": evt_name, "path": path})
         return changes

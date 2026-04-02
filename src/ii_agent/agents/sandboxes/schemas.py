@@ -97,33 +97,35 @@ EXCLUDED_DIRS = frozenset(
         "coverage",
         ".turbo",
         ".ii_app",
+        ".ii-app",
         "logs",
     }
 )
 
-# Paths under WATCH_ROOT to ignore in watcher events.
-# Events whose path starts with any of these prefixes are silently dropped
+# Directory names under WATCH_ROOT to ignore in watcher events.
+# Events for these directories and their descendants are silently dropped
 # so that high-frequency writes (e.g. log streaming, npm install) don't flood the client.
-WATCHER_IGNORED_PREFIXES = tuple(
-    f"/workspace/{d}/" for d in (
-        ".ii_app",
-        "logs",
-        "node_modules",
-        ".next",
-        ".git",
-        "__pycache__",
-        ".cache",
-        ".venv",
-        "venv",
-        ".tox",
-        ".mypy_cache",
-        ".pytest_cache",
-        "coverage",
-        ".turbo",
-        "dist",
-        "build",
-    )
+WATCHER_IGNORED_DIRS = (
+    ".ii_app",
+    ".ii-app",
+    "logs",
+    "node_modules",
+    ".next",
+    ".git",
+    "__pycache__",
+    ".cache",
+    ".venv",
+    "venv",
+    ".tox",
+    ".mypy_cache",
+    ".pytest_cache",
+    "coverage",
+    ".turbo",
+    "dist",
+    "build",
 )
+WATCHER_IGNORED_PATHS = frozenset(f"/workspace/{directory}" for directory in WATCHER_IGNORED_DIRS)
+WATCHER_IGNORED_PREFIXES = tuple(f"{path}/" for path in WATCHER_IGNORED_PATHS)
 
 # Map file extensions to language identifiers for syntax highlighting
 EXTENSION_TO_LANGUAGE = {

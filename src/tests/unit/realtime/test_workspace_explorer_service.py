@@ -8,7 +8,6 @@ from unittest.mock import ANY, AsyncMock, MagicMock, patch
 import pytest
 
 from ii_agent.agents.sandboxes.explorer import WorkspaceExplorer, _WatcherState
-from ii_agent.agents.sandboxes.types import SandboxStatus
 from ii_agent.realtime.events.app_events import FileTreeUpdateEvent
 
 pytestmark = pytest.mark.unit
@@ -171,6 +170,28 @@ async def test_flush_skips_tree_refresh_for_write_only():
     evt = pubsub.publish.await_args.args[0]
     assert "tree" not in evt.content
     sandbox.list_files_with_contents.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        ".ii_app",
+        ".ii_app/cache.json",
+        ".ii-app",
+        ".ii-app/web.json",
+        "/workspace/.ii-app/web.json",
+    ],
+)
+def test_build_changes_ignores_ii_app_cache_paths(name: str):
+    changes = WorkspaceExplorer._build_changes([_FakeEvent("WRITE", name)])
+
+    assert changes == []
+
+
+def test_build_changes_keeps_regular_dotfiles():
+    changes = WorkspaceExplorer._build_changes([_FakeEvent("WRITE", ".gitignore")])
+
+    assert changes == [{"type": "write", "name": ".gitignore", "path": "/workspace/.gitignore"}]
 
 
 # ── Watcher start ────────────────────────────────────────────────

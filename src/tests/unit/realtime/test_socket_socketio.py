@@ -10,11 +10,8 @@ stub so the tests remain meaningful.
 
 from __future__ import annotations
 
-import sys
 import uuid
-from contextlib import asynccontextmanager
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -113,8 +110,7 @@ class StubSocketIOManager:
         if not token:
             return False
         try:
-            from ii_agent.auth.jwt_handler import JWTHandler
-            from ii_agent.core.config.settings import get_settings
+            pass
         except Exception:
             return False
 

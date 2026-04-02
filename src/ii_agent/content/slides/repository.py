@@ -42,9 +42,7 @@ class SlideContentRepository(BaseRepository[SlideContent]):
         )
         return result.scalar_one_or_none()
 
-    async def get_presentations_summary(
-        self, db: AsyncSession, session_id: str
-    ) -> List:
+    async def get_presentations_summary(self, db: AsyncSession, session_id: str) -> List:
         """Get presentation summary (name, count, last_updated) for a session."""
         result = await db.execute(
             select(
@@ -89,9 +87,7 @@ class SlideContentRepository(BaseRepository[SlideContent]):
         if presentation_name:
             query = query.where(SlideContent.presentation_name == presentation_name)
 
-        query = query.order_by(
-            SlideContent.presentation_name, SlideContent.slide_number
-        )
+        query = query.order_by(SlideContent.presentation_name, SlideContent.slide_number)
 
         result = await db.execute(query)
         return list(result.scalars().all())

@@ -74,9 +74,7 @@ def _normalize_allowed_durations(
     allowed_durations: list[int] | tuple[int, ...] | None,
 ) -> list[int]:
     normalized = {
-        int(duration)
-        for duration in (allowed_durations or [4, 6, 8])
-        if int(duration) > 0
+        int(duration) for duration in (allowed_durations or [4, 6, 8]) if int(duration) > 0
     }
     return sorted(normalized, reverse=True)
 
@@ -272,7 +270,9 @@ async def extract_last_frame(video_path: Path, output_path: Path):
     # Check for errors
     if proc.returncode != 0:
         error_msg = stderr.decode() if stderr else "Unknown error"
-        raise RuntimeError(f"ffmpeg extract_last_frame failed with return code {proc.returncode}: {error_msg}")
+        raise RuntimeError(
+            f"ffmpeg extract_last_frame failed with return code {proc.returncode}: {error_msg}"
+        )
 
     # Verify output file exists
     output_path_obj = Path(output_path_str)
@@ -296,9 +296,7 @@ async def read_image_to_base64(image_path: Path) -> str:
     return await anyio.to_thread.run_sync(_read_and_encode)
 
 
-async def merge_videos(
-    video_paths: list[Path], output_path: Path, temp_dir: Path | None = None
-):
+async def merge_videos(video_paths: list[Path], output_path: Path, temp_dir: Path | None = None):
     """
     Merge videos into a single video using ffmpeg.
     """

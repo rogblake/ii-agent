@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from ii_agent.content.storybook.edit_service import (
-    STORYBOOK_INLINE_EDIT_SCRIPT,
     StorybookEditService,
 )
 from ii_agent.content.storybook.schemas import DesignChange

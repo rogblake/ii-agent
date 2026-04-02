@@ -6,9 +6,8 @@ expected dependencies injected.  External services are mocked.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
 
 from ii_agent.chat.api.dependencies import (
     get_chat_file_processor,
@@ -20,7 +19,6 @@ from ii_agent.chat.api.dependencies import (
 )
 from ii_agent.core.dependencies import _get_container as get_container
 from ii_agent.chat.application.file_processing_service import ChatFileProcessor
-from ii_agent.chat.application.turn_loop_service import LLMTurnLoopService
 from ii_agent.chat.messages.history_service import ChatMessageHistoryService
 from ii_agent.chat.messages.service import MessageService
 from ii_agent.chat.messages.repository import ChatMessageRepository

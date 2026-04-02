@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Optional
 from ii_agent.agents.tools.function import Function
 from ii_agent.core.logger import logger
 
+
 class Toolkit:
     # Set to True for toolkits that require connection management (e.g., database connections)
     # When True, the Agent will automatically call connect() before using tools and close() after

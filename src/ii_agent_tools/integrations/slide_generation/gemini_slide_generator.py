@@ -154,9 +154,7 @@ COLOR AND STYLE:
             raise SlideGenerationError(f"Failed to generate slide image: {e}")
 
         if not image_data:
-            raise SlideGenerationError(
-                "Failed to generate slide image - no image data returned"
-            )
+            raise SlideGenerationError("Failed to generate slide image - no image data returned")
 
         cost = self._token_to_cost(prompt_tokens, output_tokens)
 
@@ -196,9 +194,7 @@ COLOR AND STYLE:
 
         # Create storage path using blob_name_prefix
         unique_id = str(uuid.uuid4())[:8]
-        storage_path = (
-            f"{self.blob_name_prefix}/{unique_id}_{content_hash[:8]}{extension}"
-        )
+        storage_path = f"{self.blob_name_prefix}/{unique_id}_{content_hash[:8]}{extension}"
 
         if self.bucket:
 
@@ -248,7 +244,5 @@ COLOR AND STYLE:
             method="GET",
         )
 
-    def _token_to_cost(
-        self, input_tokens_count: int, output_tokens_count: int
-    ) -> float:
+    def _token_to_cost(self, input_tokens_count: int, output_tokens_count: int) -> float:
         return input_tokens_count * 2 / 1_000_000 + output_tokens_count * 12 / 1_000_000

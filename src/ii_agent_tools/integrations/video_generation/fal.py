@@ -7,7 +7,6 @@ from ii_agent_tools.integrations.fal_ai import (
     build_fal_video_payload,
     extract_cost,
     extract_first_media_asset,
-    infer_file_name,
     infer_mime_type,
     persist_fal_media_asset,
     resolve_fal_video_application,
@@ -64,9 +63,7 @@ class FalVideoGenerationClient(BaseVideoGenerationClient):
             application,
             start_frame=start_frame,
             end_frame=end_frame,
-            reference_images=[
-                image.model_dump(exclude_none=True) for image in reference_images
-            ]
+            reference_images=[image.model_dump(exclude_none=True) for image in reference_images]
             if reference_images
             else None,
             source_video=source_video_url,
@@ -85,9 +82,7 @@ class FalVideoGenerationClient(BaseVideoGenerationClient):
             negative_prompt=negative_prompt,
             person_generation=person_generation,
             seed=seed,
-            reference_images=[
-                image.model_dump(exclude_none=True) for image in reference_images
-            ]
+            reference_images=[image.model_dump(exclude_none=True) for image in reference_images]
             if reference_images
             else None,
             provider_payload=provider_payload,

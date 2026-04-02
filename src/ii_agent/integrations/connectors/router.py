@@ -242,7 +242,6 @@ async def download_google_drive_files(
     Note: This endpoint maintains the original implementation for file operations.
     The file download logic is connector-specific and kept in the route for now.
     """
-    from datetime import datetime, timezone
     from io import BytesIO
 
     from googleapiclient.discovery import build
@@ -315,10 +314,7 @@ async def download_google_drive_files(
             )
             logger.info(f"File metadata retrieved: {file_metadata}")
 
-            is_folder = (
-                file_metadata.get("mimeType")
-                == "application/vnd.google-apps.folder"
-            )
+            is_folder = file_metadata.get("mimeType") == "application/vnd.google-apps.folder"
             logger.info(f"File {file_metadata.get('name')} is_folder: {is_folder}")
 
             if is_folder:
@@ -357,9 +353,7 @@ async def download_google_drive_files(
                     .execute()
                 )
 
-                request_obj = service.files().get_media(
-                    fileId=file_id, supportsAllDrives=True
-                )
+                request_obj = service.files().get_media(fileId=file_id, supportsAllDrives=True)
 
                 fh = BytesIO()
                 downloader = MediaIoBaseDownload(fh, request_obj)
@@ -367,7 +361,11 @@ async def download_google_drive_files(
                 while not done:
                     status, done = downloader.next_chunk()
 
-                ext = file_metadata['name'].rsplit('.', 1)[-1] if '.' in file_metadata['name'] else 'bin'
+                ext = (
+                    file_metadata["name"].rsplit(".", 1)[-1]
+                    if "." in file_metadata["name"]
+                    else "bin"
+                )
                 asset_type = AssetType.from_content_type(file_metadata.get("mimeType"))
                 storage_path = path_resolver.user_file(current_user.id, asset_type, file_id, ext)
                 fh.seek(0)
@@ -394,26 +392,24 @@ async def download_google_drive_files(
             continue
 
         if folder_info["folder_name"]:
-            downloaded_files.append({
-                "id": ",".join(str(fid) for fid in folder_info["file_uploads"]),
-                "name": folder_info["folder_name"],
-                "size": 0,
-                "mime_type": "application/vnd.google-apps.folder",
-                "file_url": None,
-                "is_folder": True,
-                "file_ids": folder_info["file_uploads"],
-                "file_count": len(folder_info["file_uploads"])
-            })
+            downloaded_files.append(
+                {
+                    "id": ",".join(str(fid) for fid in folder_info["file_uploads"]),
+                    "name": folder_info["folder_name"],
+                    "size": 0,
+                    "mime_type": "application/vnd.google-apps.folder",
+                    "file_url": None,
+                    "is_folder": True,
+                    "file_ids": folder_info["file_uploads"],
+                    "file_count": len(folder_info["file_uploads"]),
+                }
+            )
         else:
             file_upload_id = folder_info["file_uploads"][0]
-            result = await db.execute(
-                select(FileAsset).where(FileAsset.id == file_upload_id)
-            )
+            result = await db.execute(select(FileAsset).where(FileAsset.id == file_upload_id))
             file_upload = result.scalar_one()
 
-            url_map = await file_service.resolve_signed_urls(
-                db, [file_upload.id]
-            )
+            url_map = await file_service.resolve_signed_urls(db, [file_upload.id])
             downloaded_files.append(
                 {
                     "id": str(file_upload.id),
@@ -571,9 +567,7 @@ async def get_github_repositories(
         for repo in repos_data
     ]
 
-    logger.info(
-        f"Successfully fetched {len(repositories)} repositories for user {current_user.id}"
-    )
+    logger.info(f"Successfully fetched {len(repositories)} repositories for user {current_user.id}")
     return GitHubRepositoriesResponse(repositories=repositories)
 
 

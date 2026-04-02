@@ -71,6 +71,7 @@ class GetDatabaseConnection(BaseAgentTool):
                 )
 
             import uuid as _uuid
+
             session_uuid = _uuid.UUID(str(self._session_id))
             container = get_app_container()
             db_repo = ProjectDatabaseRepository()
@@ -91,9 +92,7 @@ class GetDatabaseConnection(BaseAgentTool):
 
             # Check if an active database already exists for this session
             async with get_db_session_local() as db:
-                existing_db_record = await db_repo.get_active_by_session_id(
-                    db, session_uuid
-                )
+                existing_db_record = await db_repo.get_active_by_session_id(db, session_uuid)
             existing_database = None
             if existing_db_record:
                 existing_database = {
@@ -178,6 +177,7 @@ class GetDatabaseConnection(BaseAgentTool):
         """Save DATABASE_URL to project secrets (add or overwrite existing secrets)."""
         try:
             import uuid as _uuid
+
             container = get_app_container()
             session_uuid = _uuid.UUID(session_id)
             user_uuid = _uuid.UUID(user_id)
@@ -185,7 +185,9 @@ class GetDatabaseConnection(BaseAgentTool):
             async with get_db_session_local() as db:
                 # Get existing project to retrieve current secrets
                 project = await container.project_service.get_session_project_or_none(
-                    db, session_id=session_uuid, user_id=user_uuid,
+                    db,
+                    session_id=session_uuid,
+                    user_id=user_uuid,
                 )
                 if not project:
                     return

@@ -17,7 +17,9 @@ def get_media_template_repository() -> MediaTemplateRepository:
     return MediaTemplateRepository()
 
 
-MediaTemplateRepositoryDep = Annotated[MediaTemplateRepository, Depends(get_media_template_repository)]
+MediaTemplateRepositoryDep = Annotated[
+    MediaTemplateRepository, Depends(get_media_template_repository)
+]
 
 
 # ==================== Service Dependencies ====================
@@ -27,9 +29,7 @@ def _get_media_template_service(container: ContainerDep) -> MediaTemplateService
     return container.media_template_service
 
 
-MediaTemplateServiceDep = Annotated[
-    MediaTemplateService, Depends(_get_media_template_service)
-]
+MediaTemplateServiceDep = Annotated[MediaTemplateService, Depends(_get_media_template_service)]
 
 
 __all__ = [

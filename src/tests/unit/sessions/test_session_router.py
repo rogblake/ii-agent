@@ -16,7 +16,10 @@ from ii_agent.core.exceptions import IIAgentError
 from ii_agent.core.middleware import ii_agent_error_handler
 from ii_agent.sessions.dependencies import _get_run_task_service
 from ii_agent.files.dependencies import _get_file_service as get_file_service
-from ii_agent.sessions.dependencies import _get_session_fork_service as get_session_fork_service, _get_session_service as get_session_service
+from ii_agent.sessions.dependencies import (
+    _get_session_fork_service as get_session_fork_service,
+    _get_session_service as get_session_service,
+)
 from ii_agent.sessions.router import router
 from ii_agent.sessions.schemas import SessionEventDetail, SessionInfo
 

@@ -17,10 +17,8 @@ _DEFAULT_TIMEOUT = 60
 _MAX_TIMEOUT = 180
 _POLL_INTERVAL = 0.5
 _DEFAULT_PROMPT_PREFIX = "root@sandbox"
-_PROMPT_FORMAT = (
-    r"\[\033[01;32m\]{PREFIX}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ ".format(
-        PREFIX=_DEFAULT_PROMPT_PREFIX
-    )
+_PROMPT_FORMAT = r"\[\033[01;32m\]{PREFIX}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ ".format(
+    PREFIX=_DEFAULT_PROMPT_PREFIX
 )
 _PREFIX_SESSION_NAME = "II-AGENT-"
 _ENV_SOURCE_CMD = "source /app/.user_env.sh"
@@ -83,9 +81,7 @@ class BaseShellManager(ABC):
         pass
 
     @abstractmethod
-    def create_session(
-        self, session_name: str, base_dir: str, timeout: int = _DEFAULT_TIMEOUT
-    ):
+    def create_session(self, session_name: str, base_dir: str, timeout: int = _DEFAULT_TIMEOUT):
         pass
 
     @abstractmethod
@@ -116,9 +112,7 @@ class BaseShellManager(ABC):
         pass
 
     @abstractmethod
-    def write_to_process(
-        self, session_name: str, input: str, press_enter: bool
-    ) -> ShellResult:
+    def write_to_process(self, session_name: str, input: str, press_enter: bool) -> ShellResult:
         pass
 
 
@@ -145,18 +139,13 @@ class TmuxSessionManager(BaseShellManager):
             raise ShellRunDirNotFoundError(f"Invalid directory path: {e}")
 
     def get_all_sessions(self) -> List[str]:
-        return [
-            session.name for session in self.server.sessions if session and session.name
-        ]
+        return [session.name for session in self.server.sessions if session and session.name]
 
     def create_session(
         self, session_name: str, start_directory: str, timeout: int = _DEFAULT_TIMEOUT
     ):
         """Create a new session with the given name and start directory."""
-        if (
-            not session_name
-            or not session_name.replace("_", "").replace("-", "").isalnum()
-        ):
+        if not session_name or not session_name.replace("_", "").replace("-", "").isalnum():
             raise ShellInvalidSessionNameError(
                 "Invalid session name. Only alphanumeric characters, hyphens, and underscores are allowed."
             )
@@ -269,9 +258,7 @@ class TmuxSessionManager(BaseShellManager):
 
         return self.get_session_output(session_name)
 
-    def write_to_process(
-        self, session_name: str, input: str, press_enter: bool
-    ) -> ShellResult:
+    def write_to_process(self, session_name: str, input: str, press_enter: bool) -> ShellResult:
         pane = self._get_active_pane(session_name)
         pane.send_keys(input, enter=press_enter)
         time.sleep(0.1)
@@ -343,9 +330,7 @@ class TmuxWindowManager(BaseShellManager):
             raise ShellRunDirNotFoundError(f"Invalid directory path: {e}")
 
     def get_all_sessions(self) -> List[str]:
-        return [
-            window.name for window in self.session.windows if window and window.name
-        ]
+        return [window.name for window in self.session.windows if window and window.name]
 
     def _configure_session(self, session_name: str, timeout: int = _DEFAULT_TIMEOUT):
         pane = self._get_active_pane(session_name)
@@ -359,10 +344,7 @@ class TmuxWindowManager(BaseShellManager):
         self, session_name: str, start_directory: str, timeout: int = _DEFAULT_TIMEOUT
     ):
         """Create a new session with the given name and start directory."""
-        if (
-            not session_name
-            or not session_name.replace("_", "").replace("-", "").isalnum()
-        ):
+        if not session_name or not session_name.replace("_", "").replace("-", "").isalnum():
             raise ShellInvalidSessionNameError(
                 "Invalid session name. Only alphanumeric characters, hyphens, and underscores are allowed."
             )
@@ -463,9 +445,7 @@ class TmuxWindowManager(BaseShellManager):
 
         return self.get_session_output(session_name)
 
-    def write_to_process(
-        self, session_name: str, input: str, press_enter: bool
-    ) -> ShellResult:
+    def write_to_process(self, session_name: str, input: str, press_enter: bool) -> ShellResult:
         pane = self._get_active_pane(session_name)
         pane.send_keys(input, enter=press_enter)
         time.sleep(0.1)

@@ -60,6 +60,7 @@ class ReferenceResolver:
         # Resolve FileService if not provided
         if file_service is None:
             from ii_agent.core.container import get_app_container
+
             file_service = get_app_container().file_service
 
         # Batch-resolve signed URLs via FileService (cached + DB-persisted)
@@ -122,14 +123,11 @@ class ReferenceResolver:
             generated_files = result.scalars().all()
 
             file_ids = [str(file.id) for file in generated_files]
-            logger.info(
-                f"Found {len(file_ids)} generated images in session {session_id}"
-            )
+            logger.info(f"Found {len(file_ids)} generated images in session {session_id}")
             return file_ids
 
         except Exception as e:
             logger.error(
-                f"Error fetching generated images for session {session_id}: {e}",
-                exc_info=True
+                f"Error fetching generated images for session {session_id}: {e}", exc_info=True
             )
             return []

@@ -74,7 +74,9 @@ class CommandHandlerFactory:
             CommandType.PUBLISH_CLOUD_RUN: CloudRunPublishHandler(pubsub=ps, container=ct),
             CommandType.SAVE_ENV: SaveEnvHandler(pubsub=ps, container=ct),
             CommandType.START_FORK: StartForkHandler(
-                pubsub=ps, query_handler=query_handler, container=ct,
+                pubsub=ps,
+                query_handler=query_handler,
+                container=ct,
             ),
             CommandType.SUBMIT_TESTFLIGHT: SubmitTestflightHandler(pubsub=ps, container=ct),
             CommandType.APPLE_AUTH_LOGIN: AppleAuthLoginHandler(pubsub=ps, container=ct),

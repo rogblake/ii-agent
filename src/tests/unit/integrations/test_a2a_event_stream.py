@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import uuid
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -175,7 +174,7 @@ class TestConvertEvent:
             event = _make_event(event_type, {"status": "working"})
             result = adapter._convert_event(event)
             assert len(result) == 1
-            from a2a.types import TaskStatusUpdateEvent, TaskState
+            from a2a.types import TaskState
 
             assert result[0].status.state == TaskState.working
 
@@ -217,8 +216,6 @@ class TestConvertEvent:
         assert result[0].status.state == TaskState.input_required
 
     def test_artifact_events_produce_artifact_update(self):
-        from a2a.types import TaskArtifactUpdateEvent
-
         adapter = _make_adapter()
         for event_type in [
             EventType.REASONING_DELTA,
@@ -317,8 +314,6 @@ class TestArtifactUpdate:
         assert isinstance(result[0], TaskArtifactUpdateEvent)
 
     def test_artifact_append_for_same_stream_key(self):
-        from a2a.types import TaskArtifactUpdateEvent
-
         adapter = _make_adapter()
         # First event creates stream
         event1 = _make_event(EventType.RUN_CONTENT, {"text": "chunk 1"})

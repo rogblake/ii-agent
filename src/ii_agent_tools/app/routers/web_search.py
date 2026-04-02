@@ -49,9 +49,7 @@ async def web_search(
         result = await search_service.search(
             request.query, request.max_results, request.service_type
         )
-        response = WebSearchResponse(
-            success=True, results=result.result, cost=result.cost
-        )
+        response = WebSearchResponse(success=True, results=result.result, cost=result.cost)
 
         return response
     except WebSearchExhaustedError as e:

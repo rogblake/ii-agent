@@ -559,7 +559,7 @@ class VideoGenerationTool(BaseTool):
         import httpx
         from ii_agent.agents.utils.heic import convert_heic_to_jpeg
 
-        logger.info(f"[VIDEO_TOOL] Converting HEIC URL frame to JPEG")
+        logger.info("[VIDEO_TOOL] Converting HEIC URL frame to JPEG")
 
         async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
             resp = await client.get(heic_url)

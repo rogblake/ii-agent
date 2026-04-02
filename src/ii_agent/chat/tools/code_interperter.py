@@ -1,5 +1,4 @@
 import json
-import os
 import uuid
 import logging
 import io
@@ -167,9 +166,7 @@ class CodeInterpreter(BaseTool):
                         purpose="assistants",
                     )
                     openai_file_ids.append(file_obj.id)
-                    logger.info(
-                        f"Uploaded file {file_upload.id} to OpenAI as {file_obj.id}"
-                    )
+                    logger.info(f"Uploaded file {file_upload.id} to OpenAI as {file_obj.id}")
 
                 except Exception as e:
                     logger.error(
@@ -230,9 +227,7 @@ class CodeInterpreter(BaseTool):
                 file_bytes = await anyio.to_thread.run_sync(file_content_response.read)
 
                 # Determine file extension and content type
-                ext, content_type = self._get_file_extension_and_content_type(
-                    openai_file_id
-                )
+                ext, content_type = self._get_file_extension_and_content_type(openai_file_id)
 
                 # Create a file-like object
                 file_obj = io.BytesIO(file_bytes)
@@ -242,7 +237,9 @@ class CodeInterpreter(BaseTool):
                 file_ext = ext.lstrip(".") or "bin"
                 file_uuid = str(uuid.uuid4())
                 asset_type = AssetType.from_content_type(content_type)
-                storage_path = path_resolver.user_file(self.user_id, asset_type, file_uuid, file_ext)
+                storage_path = path_resolver.user_file(
+                    self.user_id, asset_type, file_uuid, file_ext
+                )
 
                 # Upload to GCS
                 await self.storage.write(storage_path, file_obj, content_type)
@@ -260,9 +257,7 @@ class CodeInterpreter(BaseTool):
                 self.db_session.add(db_file)
                 await self.db_session.flush()
                 # Link to session
-                self.db_session.add(
-                    SessionAsset(session_id=self.session_id, asset_id=db_file.id)
-                )
+                self.db_session.add(SessionAsset(session_id=self.session_id, asset_id=db_file.id))
 
                 output_files.append(
                     {
@@ -280,9 +275,7 @@ class CodeInterpreter(BaseTool):
                 )
 
             except Exception as e:
-                logger.error(
-                    f"Error downloading file {openai_file_id}: {e}", exc_info=True
-                )
+                logger.error(f"Error downloading file {openai_file_id}: {e}", exc_info=True)
 
         return output_files
 
@@ -292,9 +285,7 @@ class CodeInterpreter(BaseTool):
             params = json.loads(tool_call.input)
             query = params["query"]
         except (json.JSONDecodeError, KeyError) as e:
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Invalid tool input: {e}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Invalid tool input: {e}"))
 
         try:
             # Get files from parent message
@@ -372,9 +363,7 @@ class CodeInterpreter(BaseTool):
 
                             # Extract file IDs from annotations
                             for annotation in content_part.annotations:
-                                if isinstance(
-                                    annotation, AnnotationContainerFileCitation
-                                ):
+                                if isinstance(annotation, AnnotationContainerFileCitation):
                                     file_ids_to_download.append(annotation.file_id)
 
                 elif isinstance(item, ResponseCodeInterpreterToolCall):
@@ -392,9 +381,7 @@ class CodeInterpreter(BaseTool):
 
             # Download any generated files from annotations or outputs
             if file_ids_to_download:
-                generated_files = await self._download_files_from_openai(
-                    file_ids_to_download
-                )
+                generated_files = await self._download_files_from_openai(file_ids_to_download)
                 if generated_files:
                     output_files.extend(generated_files)
 
@@ -429,6 +416,4 @@ class CodeInterpreter(BaseTool):
 
         except Exception as e:
             logger.error(f"Code interpreter error: {e}", exc_info=True)
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Code execution failed: {str(e)}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Code execution failed: {str(e)}"))

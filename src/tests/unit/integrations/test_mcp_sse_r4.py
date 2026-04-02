@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
 import time
 import uuid
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -710,7 +708,6 @@ class TestCreateCallToolHandler:
         from mcp import types as mcp_types
         from ii_agent.integrations.mcp_sse.widgets import (
             create_call_tool_handler,
-            _generate_request_hash,
         )
         import ii_agent.integrations.mcp_sse.widgets as widgets_mod
 

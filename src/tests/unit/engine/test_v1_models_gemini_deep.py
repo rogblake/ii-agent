@@ -16,10 +16,7 @@ Covers deeper branches not tested by the existing test file:
 
 from __future__ import annotations
 
-import copy
-import json
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -27,17 +24,12 @@ from pydantic import BaseModel
 
 from ii_agent.agents.models.google.gemini import (
     Gemini,
-    _normalize_function_definition,
-    format_function_definitions,
-    format_image_for_message,
-    prepare_response_schema,
 )
 from ii_agent.agents.models.message import Message
 from ii_agent.agents.models.metrics import Metrics
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.exceptions import ModelProviderError
-from ii_agent.files.media import Image, File, Audio, Video
-from ii_agent.settings.llm import Provider
+from ii_agent.files.media import Image, Audio, Video
 
 from google.genai.types import Content, Part
 
@@ -254,8 +246,6 @@ class TestGeminiGetRequestParamsDeep:
         assert isinstance(params, dict)
 
     def test_safety_settings_included(self):
-        from google.genai.types import GenerateContentConfig
-
         safety = [
             {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"}
         ]
@@ -499,7 +489,6 @@ class TestGeminiParseProviderResponseDeep:
 
     def test_thought_with_signature(self):
         g = _make_gemini()
-        import base64
 
         sig_bytes = b"thought_sig_bytes"
 

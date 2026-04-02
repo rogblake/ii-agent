@@ -25,12 +25,12 @@ from ii_agent.tasks.models import RunTask
 from ii_agent.tasks.types import RunStatus
 from ii_agent.sessions.models import Session
 from ii_agent.agents.runs.models import AgentRunMessage, SessionSummary
-from ii_agent.agents.sessions.summary import SessionSummary as SessionSummaryData
 from ii_agent.agents.models.message import Message
 from ii_agent.agents.runs.agent import RunOutput
 from ii_agent.agents.sessions.agent import AgentSession
 from ii_agent.agents.sessions.base import SessionStore
 from ii_agent.core.logger import logger
+
 
 class AgentSessionStore(SessionStore):
     """
@@ -95,9 +95,7 @@ class AgentSessionStore(SessionStore):
         async with self._get_db_session() as db:
             try:
                 task_id = uuid.UUID(run_id)
-                result = await db.execute(
-                    select(RunTask).where(RunTask.id == task_id)
-                )
+                result = await db.execute(select(RunTask).where(RunTask.id == task_id))
                 run_task = result.scalar_one_or_none()
                 if run_task:
                     return run_task
@@ -240,9 +238,7 @@ class AgentSessionStore(SessionStore):
                 run_uuid = uuid.UUID(run.run_id)
 
                 # Fetch the existing run task (must exist)
-                existing_task = await db.execute(
-                    select(RunTask).where(RunTask.id == run_uuid)
-                )
+                existing_task = await db.execute(select(RunTask).where(RunTask.id == run_uuid))
                 task = existing_task.scalar_one_or_none()
 
                 if task is None:
@@ -313,9 +309,7 @@ class AgentSessionStore(SessionStore):
                 if run.summary is not None:
                     await db.refresh(message_record)
                     existing_summary = await db.execute(
-                        select(SessionSummary).where(
-                            SessionSummary.session_id == run.session_id
-                        )
+                        select(SessionSummary).where(SessionSummary.session_id == run.session_id)
                     )
                     summary_record = existing_summary.scalar_one_or_none()
 
@@ -637,9 +631,7 @@ class AgentSessionStore(SessionStore):
                     )
 
                 # 2. Check if a summary exists for this session
-                summary_stmt = select(SessionSummary).where(
-                    SessionSummary.session_id == session_id
-                )
+                summary_stmt = select(SessionSummary).where(SessionSummary.session_id == session_id)
                 summary_result = await db.execute(summary_stmt)
                 summary_row = summary_result.scalar_one_or_none()
 

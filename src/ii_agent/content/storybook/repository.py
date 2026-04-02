@@ -1,6 +1,5 @@
 """Repository layer for storybook domain - data access only."""
 
-import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -21,22 +20,22 @@ class StorybookRepository(BaseRepository[Storybook]):
 
     model = Storybook
 
-    async def get_by_id(
-        self, db: AsyncSession, storybook_id: Any
-    ) -> Optional[Storybook]:
+    async def get_by_id(self, db: AsyncSession, storybook_id: Any) -> Optional[Storybook]:
         """Get a storybook by ID, always eager-loading pages."""
-        query = select(Storybook).where(Storybook.id == storybook_id).options(
-            selectinload(Storybook.pages)
+        query = (
+            select(Storybook)
+            .where(Storybook.id == storybook_id)
+            .options(selectinload(Storybook.pages))
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_by_session_id(
-        self, db: AsyncSession, session_id: str
-    ) -> List[Storybook]:
+    async def get_by_session_id(self, db: AsyncSession, session_id: str) -> List[Storybook]:
         """Get all storybooks for a session, always eager-loading pages."""
-        query = select(Storybook).where(Storybook.session_id == session_id).options(
-            selectinload(Storybook.pages)
+        query = (
+            select(Storybook)
+            .where(Storybook.session_id == session_id)
+            .options(selectinload(Storybook.pages))
         )
         result = await db.execute(query)
         return list(result.scalars().all())
@@ -99,9 +98,7 @@ class StorybookRepository(BaseRepository[Storybook]):
         audio_link: Optional[str] = None,
     ) -> Optional[StorybookPage]:
         """Update a storybook page's fields."""
-        result = await db.execute(
-            select(StorybookPage).where(StorybookPage.id == page_id)
-        )
+        result = await db.execute(select(StorybookPage).where(StorybookPage.id == page_id))
         page = result.scalar_one_or_none()
         if not page:
             return None
@@ -137,9 +134,7 @@ class StorybookRepository(BaseRepository[Storybook]):
         Uses FOR UPDATE row locking to prevent race conditions.
         """
         result = await db.execute(
-            select(Storybook)
-            .where(Storybook.id == storybook_id)
-            .with_for_update()
+            select(Storybook).where(Storybook.id == storybook_id).with_for_update()
         )
         storybook = result.scalar_one_or_none()
         if not storybook:

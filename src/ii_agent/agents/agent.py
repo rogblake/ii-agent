@@ -121,6 +121,7 @@ from ii_agent.agents.utils.string import generate_id_from_name
 from ii_agent.agents.tools.base import AgentAsTool, BaseAgentTool
 from ii_agent.core.logger import logger
 
+
 @dataclass
 class IIAgent:
     user_id: str
@@ -422,9 +423,7 @@ class IIAgent:
                 adelegate_task_to_member,
                 name="sub_agent_task",
             )
-            delegate_func.description = (
-                f"Delegate a task to a specific sub-agent. Available sub-agents:\n{sub_agents_description}"
-            )
+            delegate_func.description = f"Delegate a task to a specific sub-agent. Available sub-agents:\n{sub_agents_description}"
 
         delegate_func.stop_after_tool_call = False
         delegate_func.show_result = True
@@ -2462,7 +2461,7 @@ class IIAgent:
                     tool_name=tool_name,
                     tool_args=tool_args,
                     tool_call_error=is_error,
-                    stop_after_tool_call=True
+                    stop_after_tool_call=True,
                 )
                 run_messages.messages.append(fake_result_message)
                 logger.debug(
@@ -3035,7 +3034,9 @@ class IIAgent:
             logger.debug(f"Added delegation tool for {len(self.sub_agents)} sub-agents")
 
         logger.debug(f"[V1 Agent] Converted {len(_functions)} tools to Functions for LLM")
-        logger.debug(f"[V1 Agent] Function names: {[f.name if isinstance(f, Function) else str(f.get('name', 'unknown')) for f in _functions]}")
+        logger.debug(
+            f"[V1 Agent] Function names: {[f.name if isinstance(f, Function) else str(f.get('name', 'unknown')) for f in _functions]}"
+        )
 
         return _functions
 
@@ -3244,7 +3245,9 @@ class IIAgent:
                 is_summary=True,
                 from_history=False,  # This is a new message for this run, will be stored
                 metrics=run_response.summary.metrics,
-                created_at=int(run_response.summary.updated_at.timestamp()) if run_response.summary.updated_at else int(time.time()),
+                created_at=int(run_response.summary.updated_at.timestamp())
+                if run_response.summary.updated_at
+                else int(time.time()),
             )
             run_messages.messages.append(summary_message)
             logger.debug("Added session summary - skipping history (already summarized)")
@@ -3266,7 +3269,7 @@ class IIAgent:
 
                 run_messages.messages += history_copy
 
-        if len(run_messages.messages) == 1 and run_messages.messages[0].role == 'system':
+        if len(run_messages.messages) == 1 and run_messages.messages[0].role == "system":
             # If there is only system message but a summary exists, add the summary
             if session.summary and session.summary.content:
                 summary_message = Message(
@@ -3275,7 +3278,9 @@ class IIAgent:
                     is_summary=True,
                     from_history=False,  # This is a new message for this run, will be stored
                     metrics=session.summary.metrics,
-                    created_at=int(session.summary.updated_at.timestamp()) if session.summary.updated_at else int(time.time()),
+                    created_at=int(session.summary.updated_at.timestamp())
+                    if session.summary.updated_at
+                    else int(time.time()),
                 )
                 run_messages.messages.append(summary_message)
                 logger.debug("Added session summary - skipping history (already summarized)")

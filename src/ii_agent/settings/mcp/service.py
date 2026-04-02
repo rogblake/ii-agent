@@ -15,7 +15,7 @@ from ii_agent.settings.mcp.models import MCPSetting
 from ii_agent.settings.mcp.exceptions import MCPSettingNotFoundError
 from ii_agent.settings.mcp.repository import MCPSettingRepository
 from ii_agent.core.config.mcp import MCPSettings
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.settings.mcp.schemas import (
     CodexMetadata,
     ClaudeCodeMetadata,
@@ -82,9 +82,7 @@ class MCPSettingService:
         """
         setting = await self._repo.get_by_id_and_user(db, setting_id, user_id)
         if not setting:
-            raise MCPSettingNotFoundError(
-                f"MCP setting {setting_id} not found or access denied"
-            )
+            raise MCPSettingNotFoundError(f"MCP setting {setting_id} not found or access denied")
 
         if setting_update.mcp_config is not None:
             setting.mcp_config = setting_update.mcp_config.model_dump(exclude_none=True)
@@ -107,9 +105,7 @@ class MCPSettingService:
         """
         setting = await self._repo.get_by_id_and_user(db, setting_id, user_id)
         if not setting:
-            raise MCPSettingNotFoundError(
-                f"MCP setting {setting_id} not found or access denied"
-            )
+            raise MCPSettingNotFoundError(f"MCP setting {setting_id} not found or access denied")
         return _to_mcp_setting_info(setting)
 
     async def list_mcp_settings(
@@ -176,6 +172,7 @@ class MCPSettingService:
         """
         if not auth_json and not apikey:
             from ii_agent.settings.mcp.exceptions import MCPOAuthError as _MCPOAuthError
+
             raise _MCPOAuthError("Authentication JSON or API Key is required")
         elif not auth_json and apikey:
             auth_json = {"OPENAI_API_KEY": apikey}
@@ -195,15 +192,17 @@ class MCPSettingService:
         if search:
             server_args.append("--search")
 
-        mcp_config = MCPServersConfig.model_validate({
-            "mcpServers": {
-                "codex-as-mcp": {
-                    "command": "uvx",
-                    "type": "stdio",
-                    "args": uvx_args + server_args,
+        mcp_config = MCPServersConfig.model_validate(
+            {
+                "mcpServers": {
+                    "codex-as-mcp": {
+                        "command": "uvx",
+                        "type": "stdio",
+                        "args": uvx_args + server_args,
+                    }
                 }
             }
-        })
+        )
         metadata = CodexMetadata(auth_json=auth_json, store_path="")  # pyright: ignore
 
         return await self._upsert_by_metadata_type(
@@ -230,6 +229,7 @@ class MCPSettingService:
         splits = authorization_code.split("#")
         if len(splits) != 2:
             from ii_agent.settings.mcp.exceptions import MCPOAuthError as _MCPOAuthError
+
             raise _MCPOAuthError(
                 "Invalid authorization code format. Expected format: code#verifier"
             )
@@ -247,14 +247,16 @@ class MCPSettingService:
         }
         metadata = ClaudeCodeMetadata(auth_json=auth_json, store_path="")  # pyright: ignore
 
-        mcp_config = MCPServersConfig.model_validate({
-            "mcpServers": {
-                "claude-code-mcp": {
-                    "command": "npx",
-                    "args": ["-y", "@steipete/claude-code-mcp@latest"],
-                },
+        mcp_config = MCPServersConfig.model_validate(
+            {
+                "mcpServers": {
+                    "claude-code-mcp": {
+                        "command": "npx",
+                        "args": ["-y", "@steipete/claude-code-mcp@latest"],
+                    },
+                }
             }
-        })
+        )
 
         return await self._upsert_by_metadata_type(
             db,
@@ -276,9 +278,7 @@ class MCPSettingService:
         metadata: CodexMetadata | ClaudeCodeMetadata,
     ) -> MCPSettingInfo:
         """Find existing setting by metadata type and update, or create new."""
-        existing = await self._repo.get_by_user_and_tool_type(
-            db, user_id, metadata.tool_type
-        )
+        existing = await self._repo.get_by_user_and_tool_type(db, user_id, metadata.tool_type)
 
         if existing:
             return await self.update_mcp_settings(
@@ -293,7 +293,8 @@ class MCPSettingService:
         return await self.create_mcp_settings(
             db,
             mcp_setting_in=MCPSettingCreate(
-                mcp_config=mcp_config, metadata=metadata,
+                mcp_config=mcp_config,
+                metadata=metadata,
             ),
             user_id=user_id,
         )
@@ -306,9 +307,7 @@ class MCPSettingService:
 from ii_agent.settings.mcp.exceptions import MCPOAuthError  # noqa: E402
 
 
-async def _exchange_code_for_tokens(
-    code: str, verifier: str, mcp_config: MCPSettings
-) -> dict:
+async def _exchange_code_for_tokens(code: str, verifier: str, mcp_config: MCPSettings) -> dict:
     """Exchange authorization code for access and refresh tokens.
 
     Raises:
@@ -329,9 +328,7 @@ async def _exchange_code_for_tokens(
         )
 
     if not response.is_success:
-        raise MCPOAuthError(
-            f"Failed to exchange authorization code for tokens: {response.text}"
-        )
+        raise MCPOAuthError(f"Failed to exchange authorization code for tokens: {response.text}")
 
     data = response.json()
     return {

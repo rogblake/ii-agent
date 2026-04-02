@@ -40,9 +40,7 @@ async def test_media_library_pagination_and_source_classification(settings_facto
     storage_mock.signed_urls_batch = AsyncMock(
         side_effect=lambda paths, **kw: [f"https://signed.local/{p}" for p in paths]
     )
-    storage_mock.public_url = MagicMock(
-        side_effect=lambda p: f"https://public.local/{p}"
-    )
+    storage_mock.public_url = MagicMock(side_effect=lambda p: f"https://public.local/{p}")
 
     service = FileService(
         file_repo=FakeFileRepo(),

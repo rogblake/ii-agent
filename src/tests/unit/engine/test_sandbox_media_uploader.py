@@ -6,7 +6,6 @@ and uploads them to a sandbox, decoupled from the Agent class.
 
 from __future__ import annotations
 
-import asyncio
 from typing import List
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -20,6 +19,7 @@ from ii_agent.agents.sandboxes.schemas import FileUpload
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_sandbox(upload_path: str = "/uploads") -> MagicMock:
     """Create a mock Sandbox with write_files and create_directory."""
     sandbox = MagicMock()
@@ -29,7 +29,9 @@ def _make_sandbox(upload_path: str = "/uploads") -> MagicMock:
     return sandbox
 
 
-def _make_file(file_id: str = "f1", url: str = "https://example.com/file.txt", filename: str = "file.txt") -> File:
+def _make_file(
+    file_id: str = "f1", url: str = "https://example.com/file.txt", filename: str = "file.txt"
+) -> File:
     return File(id=file_id, url=url, filename=filename)
 
 
@@ -40,6 +42,7 @@ def _make_image(url: str = "https://example.com/img.png", mime_type: str = "imag
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_upload_files_only():

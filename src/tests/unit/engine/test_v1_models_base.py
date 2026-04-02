@@ -8,8 +8,6 @@ Tests cover:
 
 from __future__ import annotations
 
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # RunStatus (from engine.agents.models - re-exported through run/base)

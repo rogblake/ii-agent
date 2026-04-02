@@ -5,7 +5,6 @@ from typing import Any, TYPE_CHECKING
 
 from ii_agent.agents.tools.base import ToolResult, FileURLContent
 from ii_agent.agents.tools.clients import tool_client
-from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
     from ii_agent.agents.agent import IIAgent

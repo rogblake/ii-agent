@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from ii_agent.core.exceptions import NotFoundError, PayloadTooLargeError, ValidationError
+from ii_agent.core.exceptions import PayloadTooLargeError, ValidationError
 
 
 class ModelNotFoundError(ValidationError):
@@ -20,6 +20,4 @@ class AnthropicImageTooLargeError(PayloadTooLargeError):
     def __init__(self, size_bytes: Optional[int] = None):
         self.size_bytes = size_bytes
         suffix = f" ({size_bytes} bytes)" if size_bytes is not None else ""
-        super().__init__(
-            f"Image exceeds Anthropic's 5 MB inline limit{suffix}"
-        )
+        super().__init__(f"Image exceeds Anthropic's 5 MB inline limit{suffix}")

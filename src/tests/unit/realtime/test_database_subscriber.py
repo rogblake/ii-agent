@@ -49,9 +49,7 @@ async def test_database_subscriber_skips_ignored_event_types(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr(
-        "ii_agent.realtime.pubsub.callbacks.get_db_session_local", _db_cm
-    )
+    monkeypatch.setattr("ii_agent.realtime.pubsub.callbacks.get_db_session_local", _db_cm)
     monkeypatch.setattr(
         "ii_agent.realtime.pubsub.callbacks.EventRepository.save_application_event",
         _fake_save,
@@ -82,9 +80,7 @@ async def test_database_subscriber_converts_file_url_tool_result(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr(
-        "ii_agent.realtime.pubsub.callbacks.get_db_session_local", _db_cm
-    )
+    monkeypatch.setattr("ii_agent.realtime.pubsub.callbacks.get_db_session_local", _db_cm)
     monkeypatch.setattr(
         "ii_agent.realtime.pubsub.callbacks.EventRepository.save_application_event",
         _fake_save,
@@ -124,9 +120,7 @@ async def test_database_subscriber_ignores_integrity_errors(monkeypatch):
     async def _db_cm():
         yield None
 
-    monkeypatch.setattr(
-        "ii_agent.realtime.pubsub.callbacks.get_db_session_local", _db_cm
-    )
+    monkeypatch.setattr("ii_agent.realtime.pubsub.callbacks.get_db_session_local", _db_cm)
     monkeypatch.setattr(
         "ii_agent.realtime.pubsub.callbacks.EventRepository.save_application_event",
         _raise_integrity,

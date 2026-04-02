@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import io
 import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -14,10 +13,10 @@ from fastapi.testclient import TestClient
 
 from ii_agent.auth.dependencies import get_current_user
 from ii_agent.core.dependencies import _db_session_dependency
-from ii_agent.core.exceptions import IIAgentError, ValidationError
+from ii_agent.core.exceptions import IIAgentError
 from ii_agent.core.middleware import ii_agent_error_handler
 from ii_agent.files.dependencies import _get_file_service as get_file_service
-from ii_agent.files.exceptions import FileAccessDeniedError, FileUploadNotFoundError
+from ii_agent.files.exceptions import FileAccessDeniedError
 from ii_agent.files.router import router
 from ii_agent.sessions.dependencies import get_session_repository
 
@@ -92,7 +91,6 @@ def _build_app(
     user: SimpleNamespace | None = None,
     settings: SimpleNamespace | None = None,
 ) -> FastAPI:
-    from ii_agent.core.dependencies import SettingsDep
     from ii_agent.core.config.settings import get_settings
 
     app = FastAPI()
@@ -316,7 +314,6 @@ def test_download_public_file_success():
     app.dependency_overrides[get_file_service] = lambda: svc
     app.dependency_overrides[get_session_repository] = lambda: session_repo
 
-
     client = TestClient(app)
     resp = client.get(f"/public/chat/{_SESSION_ID}/files/{_FILE_ID}")
 
@@ -334,7 +331,6 @@ def test_download_public_file_session_not_found():
     app.dependency_overrides[_db_session_dependency] = lambda: AsyncMock()
     app.dependency_overrides[get_file_service] = lambda: svc
     app.dependency_overrides[get_session_repository] = lambda: session_repo
-
 
     client = TestClient(app, raise_server_exceptions=False)
     resp = client.get(f"/public/chat/{_SESSION_ID}/files/{_FILE_ID}")
@@ -391,7 +387,6 @@ def test_generate_download_urls_empty_paths_returns_400():
 
 def test_list_user_media_library_success():
     """Arrange: user with media; Act: GET media library; Assert: items returned."""
-    from datetime import datetime, timezone
     from ii_agent.files.schemas import MediaLibraryResponse, MediaLibraryItem
 
     items = [

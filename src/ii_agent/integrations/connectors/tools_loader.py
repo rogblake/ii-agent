@@ -44,9 +44,7 @@ async def load_connector_tools(
     connector_tools: List[BaseAgentTool] = []
 
     # Query all connectors for the user
-    result = await db_session.execute(
-        select(Connector).where(Connector.user_id == user_id)
-    )
+    result = await db_session.execute(select(Connector).where(Connector.user_id == user_id))
     connectors = result.scalars().all()
 
     # Process each connector and instantiate appropriate tools
@@ -68,9 +66,7 @@ async def load_connector_tools(
                 logger.info(f"Loaded GitHub tool for user {user_id}")
 
         except Exception as e:
-            logger.error(
-                f"Failed to load connector tool for {connector.connector_type}: {e}"
-            )
+            logger.error(f"Failed to load connector tool for {connector.connector_type}: {e}")
             # Continue loading other connectors even if one fails
             continue
 

@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import dataclasses
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
-import pytest
 from pydantic import BaseModel
 
 from ii_agent.agents.utils.json_schema import (

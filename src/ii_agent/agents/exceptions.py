@@ -129,7 +129,9 @@ class BaseCheckError(Exception):
     ):
         super().__init__(message)
         self.type = error_type
-        self.error_id = check_trigger.value if isinstance(check_trigger, CheckTrigger) else str(check_trigger)
+        self.error_id = (
+            check_trigger.value if isinstance(check_trigger, CheckTrigger) else str(check_trigger)
+        )
         self.message = message
         self.check_trigger = check_trigger
         self.additional_data = additional_data

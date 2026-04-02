@@ -50,9 +50,7 @@ class StorageService:
     async def read(self, path: str) -> BinaryIO:
         return await self._provider.read(path)
 
-    async def write(
-        self, path: str, content: BinaryIO, content_type: str | None = None
-    ) -> str:
+    async def write(self, path: str, content: BinaryIO, content_type: str | None = None) -> str:
         return await self._provider.write(path, content, content_type)
 
     async def write_from_url(

@@ -1,6 +1,5 @@
 from types import SimpleNamespace
 
-import pytest
 
 from ii_agent.core.secrets.keys import ALL_SECRETS, SecretKey
 from ii_agent.core.secrets.provider import EnvSecretProvider, GCPSecretProvider, SecretProvider

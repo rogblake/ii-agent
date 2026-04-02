@@ -16,16 +16,13 @@ Tests cover:
 - OpenAIResponses ainvoke happy path
 """
 
-import json
-from typing import Any, Dict, List, Optional
+from typing import List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
 
 from ii_agent.agents.models.openai.responses import OpenAIResponses
 from ii_agent.agents.models.message import Message
-from ii_agent.agents.models.metrics import Metrics
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.exceptions import (
     ModelAuthenticationError,

@@ -45,9 +45,7 @@ class ComposioCacheService:
 
     async def set_all_toolkits(self, toolkits_data: Dict[str, Any]) -> bool:
         try:
-            return await self._cache.set(
-                "toolkits:all", toolkits_data, ttl=self.TTL_TOOLKITS_LIST
-            )
+            return await self._cache.set("toolkits:all", toolkits_data, ttl=self.TTL_TOOLKITS_LIST)
         except Exception as e:
             logger.error("Error caching toolkits: %s", e)
             return False

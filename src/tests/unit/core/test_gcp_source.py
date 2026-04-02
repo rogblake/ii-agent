@@ -1,5 +1,4 @@
 import ii_agent.core.secrets.provider as provider_module
-import pytest
 
 from ii_agent.core.config.gcp_source import GCPSecretManagerSource
 from ii_agent.core.config.settings import Settings

@@ -32,8 +32,8 @@ class MangaModeStrategy(BaseModeStrategy):
         """Build narrative generation guidance for manga mode."""
         # Build page count instruction if provided
         page_count_instruction = ""
-        page_count = getattr(media_preferences, 'page_count', None)
-        if page_count and page_count != 'unlimited':
+        page_count = getattr(media_preferences, "page_count", None)
+        if page_count and page_count != "unlimited":
             total_scenes = int(page_count) + 1  # +1 for cover page
             page_count_instruction = f"""
 **CRITICAL PAGE COUNT REQUIREMENT:**
@@ -44,7 +44,7 @@ class MangaModeStrategy(BaseModeStrategy):
 - DO NOT generate more or fewer scenes than {total_scenes}
 - The cover page does NOT count toward the {page_count} content pages
 """
-        elif page_count == 'unlimited':
+        elif page_count == "unlimited":
             page_count_instruction = """
 **UNLIMITED PAGES MODE:**
 - You have freedom to generate as many pages as needed for the story
@@ -62,7 +62,7 @@ class MangaModeStrategy(BaseModeStrategy):
 
         # Build language instruction if provided
         language_instruction = ""
-        language = getattr(media_preferences, 'language', None)
+        language = getattr(media_preferences, "language", None)
         if language:
             language_instruction = (
                 f"\n\n*** CRITICAL LANGUAGE INSTRUCTION ***\n"
@@ -73,10 +73,14 @@ class MangaModeStrategy(BaseModeStrategy):
 
         # Build genre instruction if provided
         genre_instruction = ""
-        genre = getattr(media_preferences, 'genre', None)
+        genre = getattr(media_preferences, "genre", None)
         if genre:
             try:
-                template = await get_app_container().media_template_service.get_media_template_by_name(db_session, genre)
+                template = (
+                    await get_app_container().media_template_service.get_media_template_by_name(
+                        db_session, genre
+                    )
+                )
                 if template and template.prompt:
                     genre_instruction = f"\n**GENRE STYLE GUIDE ({genre}):**\n{template.prompt}\n"
             except Exception:
@@ -84,10 +88,14 @@ class MangaModeStrategy(BaseModeStrategy):
 
         # Build template instruction if provided (via template_id)
         template_instruction = ""
-        template_id = getattr(media_preferences, 'template_id', None)
+        template_id = getattr(media_preferences, "template_id", None)
         if template_id:
             try:
-                template = await get_app_container().media_template_service.get_media_template_by_id(db_session, template_id)
+                template = (
+                    await get_app_container().media_template_service.get_media_template_by_id(
+                        db_session, template_id
+                    )
+                )
                 if template and template.prompt:
                     template_instruction = (
                         f"\n\n**TEMPLATE INSTRUCTIONS ({template.name}):**\n"
@@ -101,7 +109,7 @@ class MangaModeStrategy(BaseModeStrategy):
 
         # Build rich dialogue + manga combined instruction if rich_dialogue is enabled
         combined_mode_instruction = ""
-        rich_dialogue = getattr(media_preferences, 'rich_dialogue', None)
+        rich_dialogue = getattr(media_preferences, "rich_dialogue", None)
         if rich_dialogue:
             combined_mode_instruction = """
 

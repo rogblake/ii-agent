@@ -52,14 +52,18 @@ def _get_storybook_export_service(container: ContainerDep) -> StorybookExportSer
     return container.storybook_export_service
 
 
-StorybookExportServiceDep = Annotated[StorybookExportService, Depends(_get_storybook_export_service)]
+StorybookExportServiceDep = Annotated[
+    StorybookExportService, Depends(_get_storybook_export_service)
+]
 
 
 def _get_storybook_version_service(container: ContainerDep) -> StorybookVersionService:
     return container.storybook_version_service
 
 
-StorybookVersionServiceDep = Annotated[StorybookVersionService, Depends(_get_storybook_version_service)]
+StorybookVersionServiceDep = Annotated[
+    StorybookVersionService, Depends(_get_storybook_version_service)
+]
 
 
 def _get_storybook_voice_service(container: ContainerDep) -> StorybookVoiceService:
@@ -73,7 +77,9 @@ def _get_storybook_ai_edit_service(container: ContainerDep) -> StorybookAIEditSe
     return container.storybook_ai_edit_service
 
 
-StorybookAIEditServiceDep = Annotated[StorybookAIEditService, Depends(_get_storybook_ai_edit_service)]
+StorybookAIEditServiceDep = Annotated[
+    StorybookAIEditService, Depends(_get_storybook_ai_edit_service)
+]
 
 
 __all__ = [

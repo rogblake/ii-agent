@@ -136,7 +136,12 @@ CONCRETE_EVENTS: list[tuple[type, str]] = [
 
 # SessionUpdatedEvent is also in the union but not in EventType enum — add it separately
 CONCRETE_EVENTS.append(
-    (__import__("ii_agent.realtime.events.app_events", fromlist=["SessionUpdatedEvent"]).SessionUpdatedEvent, "session.updated"),
+    (
+        __import__(
+            "ii_agent.realtime.events.app_events", fromlist=["SessionUpdatedEvent"]
+        ).SessionUpdatedEvent,
+        "session.updated",
+    ),
 )
 
 
@@ -178,8 +183,6 @@ class TestAppEventDiscriminator:
             adapter.validate_python({"name": "some.random.event", "group": "agent"})
 
 
-
-
 class TestToSocketPayload:
     """to_socket_payload() uses ``name`` as the FE dispatch key."""
 
@@ -204,7 +207,12 @@ class TestToSocketPayload:
 GROUP_CASES: list[tuple[str, type, str, type]] = [
     ("AgentAppEvent", AgentAppEvent, "agent.response", AgentResponseEvent),
     ("SessionAppEvent", SessionAppEvent, "session.created", SessionCreatedEvent),
-    ("ConnectionAppEvent", ConnectionAppEvent, "connection.established", ConnectionEstablishedEvent),
+    (
+        "ConnectionAppEvent",
+        ConnectionAppEvent,
+        "connection.established",
+        ConnectionEstablishedEvent,
+    ),
     ("SandboxAppEvent", SandboxAppEvent, "sandbox.status_changed", SandboxStatusChangedEvent),
     ("BillingAppEvent", BillingAppEvent, "billing.credits.deducted", CreditsDeductedEvent),
     ("PlanAppEvent", PlanAppEvent, "plan.milestone.generated", PlanGeneratedEvent),

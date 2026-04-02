@@ -20,8 +20,8 @@ Tests cover:
 import copy
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import List, Optional
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import BaseModel

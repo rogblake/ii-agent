@@ -489,9 +489,13 @@ class OpenAIResponses(Model):
                 if message.files:
                     file_paths = [str(f.filepath) for f in message.files if f.filepath]
                     if file_paths:
-                        files_text = "\n\nAttached files:\n" + "\n".join(f" - {p}" for p in file_paths)
+                        files_text = "\n\nAttached files:\n" + "\n".join(
+                            f" - {p}" for p in file_paths
+                        )
                         if isinstance(message_dict.get("content"), list):
-                            message_dict["content"].append({"type": "input_text", "text": files_text})
+                            message_dict["content"].append(
+                                {"type": "input_text", "text": files_text}
+                            )
                         elif isinstance(message_dict.get("content"), str):
                             message_dict["content"] = message_dict["content"] + files_text
                         else:

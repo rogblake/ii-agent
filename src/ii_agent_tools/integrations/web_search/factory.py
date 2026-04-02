@@ -29,9 +29,7 @@ def create_web_search_client(
 
     if client_type == "serpapi":
         if not serpapi_key:
-            logger.warning(
-                "SerpAPI API key not found. Falling back to DuckDuckGo client"
-            )
+            logger.warning("SerpAPI API key not found. Falling back to DuckDuckGo client")
         else:
             logger.info("Using SerpAPI to search")
             return SerpAPIWebSearchClient(api_key=serpapi_key)

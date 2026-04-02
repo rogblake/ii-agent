@@ -99,7 +99,11 @@ class UserMCPTool(BaseSandboxTool):
             ToolResult containing the tool's output or error information
         """
         try:
-            mcp_tool_name = f"mcp_{self.mcp_server_id}_{self.name}" if self.mcp_server_id else f"mcp_{self.name}"
+            mcp_tool_name = (
+                f"mcp_{self.mcp_server_id}_{self.name}"
+                if self.mcp_server_id
+                else f"mcp_{self.name}"
+            )
             async with self.mcp_client:
                 mcp_results = await self.mcp_client.call_tool(
                     mcp_tool_name,

@@ -20,8 +20,8 @@ Tests cover:
 
 import copy
 import json
-from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from typing import List
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -37,7 +37,6 @@ from ii_agent.agents.models.google.interactions import (
     prepare_response_schema,
 )
 from ii_agent.agents.models.message import Message, File
-from ii_agent.agents.models.metrics import Metrics
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.exceptions import ModelProviderError
 from ii_agent.files.media import Image

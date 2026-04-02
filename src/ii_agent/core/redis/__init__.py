@@ -14,7 +14,7 @@ from ii_agent.core.redis.client import (
     shutdown_redis_client,
     get_session_manager,
     set_session_manager,
-    shutdown_session_manager
+    shutdown_session_manager,
 )
 
 from ii_agent.core.redis.cache import (
@@ -46,8 +46,7 @@ __all__ = [
     "get_redis_client",
     "set_redis_client",
     "shutdown_redis_client",
-    "shutdown_session_manager"
-    "get_session_manager",
+    "shutdown_session_managerget_session_manager",
     "set_session_manager",
     # Cache
     "EntityCache",

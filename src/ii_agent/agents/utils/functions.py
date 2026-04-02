@@ -6,6 +6,8 @@ from ii_agent.core.logger import logger
 
 
 T = TypeVar("T")
+
+
 def get_function_call(
     name: str,
     arguments: Optional[str] = None,

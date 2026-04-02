@@ -20,9 +20,7 @@ def fetch_discovery(issuer: str) -> Dict[str, Any]:
     with _get_http() as client:
         r = client.get(url)
         if r.status_code != 200:
-            raise OIDCConfigError(
-                f"Discovery fetch failed: HTTP {r.status_code} - {r.text}"
-            )
+            raise OIDCConfigError(f"Discovery fetch failed: HTTP {r.status_code} - {r.text}")
         return r.json()
 
 
@@ -97,9 +95,7 @@ def verify_at_hash_if_present(
     import base64
 
     # Per JWA spec: use the left-most half of the hash, then base64url encode it
-    hash_fn = {"RS256": "sha256", "ES256": "sha256", "PS256": "sha256"}.get(
-        alg, "sha256"
-    )
+    hash_fn = {"RS256": "sha256", "ES256": "sha256", "PS256": "sha256"}.get(alg, "sha256")
     digest = getattr(hashlib, hash_fn)(access_token.encode("ascii")).digest()
     left_half = digest[: len(digest) // 2]
     calc = base64.urlsafe_b64encode(left_half).rstrip(b"=").decode("ascii")

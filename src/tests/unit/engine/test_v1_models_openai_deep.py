@@ -19,9 +19,7 @@ Covers deeper branches not tested by existing test files:
 from __future__ import annotations
 
 import copy
-import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -30,14 +28,11 @@ from pydantic import BaseModel
 from ii_agent.agents.models.openai.responses import OpenAIResponses
 from ii_agent.agents.models.openai.completions import OpenAIChat, _format_file_for_message
 from ii_agent.agents.models.message import Message
-from ii_agent.agents.models.metrics import Metrics
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.exceptions import (
-    ModelAuthenticationError,
     ModelProviderError,
 )
 from ii_agent.files.media import File, Audio, Image
-from ii_agent.settings.llm import Provider
 
 
 # ---------------------------------------------------------------------------

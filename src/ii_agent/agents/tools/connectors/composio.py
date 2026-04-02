@@ -15,13 +15,14 @@ from ii_agent.integrations.connectors.composio import ComposioCacheService, Tool
 from ii_agent.integrations.connectors.composio.default_toolkit_tools import get_default_tools
 from ii_agent.core.logger import logger
 
+
 def _to_dict(obj: Any) -> Dict[str, Any]:
     """Convert various object types to dictionary."""
     if isinstance(obj, dict):
         return obj
-    if hasattr(obj, 'model_dump'):
+    if hasattr(obj, "model_dump"):
         return obj.model_dump(exclude_none=True)
-    if hasattr(obj, 'dict'):
+    if hasattr(obj, "dict"):
         return obj.dict(exclude_none=True)
     return {"type": "object", "properties": {}}
 
@@ -70,7 +71,7 @@ class ComposioAgentTool(BaseAgentTool):
         if self._actions is None:
             # Try to get actions from cache first
             cached_data = await ComposioCacheService.get_toolkit_actions(self.toolkit_slug)
-            
+
             if cached_data and cached_data.get("actions"):
                 logger.debug(f"Using cached actions for toolkit {self.toolkit_slug}")
                 self._actions = cached_data["actions"]
@@ -82,47 +83,51 @@ class ComposioAgentTool(BaseAgentTool):
                     toolkits=[self.toolkit_slug],
                     limit=1000,
                 )
-                
+
                 # Extract metadata and format actions
                 formatted_actions = []
                 categories = set()
                 default_tool_slugs = set(get_default_tools(self.toolkit_slug))
-                
+
                 # Get excepted actions for this toolkit
                 excepted_actions = ToolkitService.EXCEPT_TOOLKIT.get(self.toolkit_slug, [])
-                
+
                 for action in actions:
                     name, description, parameters = self._extract_action_metadata(action)
-                    
+
                     # Skip if action is in the exception list
                     if name in excepted_actions:
                         logger.debug(f"Skipping excepted action: {name}")
                         continue
-                    
+
                     # Extract category from action name
                     parts = name.split("_")
                     category = parts[1] if len(parts) > 1 else "OTHER"
                     categories.add(category)
-                    
-                    formatted_actions.append({
-                        'name': name,
-                        'description': description,
-                        'category': category,
-                        'read_only': 'read' in name.lower() or 'get' in name.lower() or 'list' in name.lower(),
-                        'display_name': name,
-                        'default_enabled': name in default_tool_slugs,
-                        "parameters": parameters,
-                    })
-                
+
+                    formatted_actions.append(
+                        {
+                            "name": name,
+                            "description": description,
+                            "category": category,
+                            "read_only": "read" in name.lower()
+                            or "get" in name.lower()
+                            or "list" in name.lower(),
+                            "display_name": name,
+                            "default_enabled": name in default_tool_slugs,
+                            "parameters": parameters,
+                        }
+                    )
+
                 # Cache formatted actions
                 await ComposioCacheService.set_toolkit_actions(
                     self.toolkit_slug,
                     actions_data=formatted_actions,
                     categories=sorted(list(categories)),
                 )
-                
+
                 self._actions = formatted_actions
-        
+
         return self._actions
 
     async def get_sub_tools(self) -> List["BaseAgentTool"]:
@@ -136,9 +141,9 @@ class ComposioAgentTool(BaseAgentTool):
         action_tools: List[ComposioActionTool] = []
         for action in all_actions:
             # Actions are already formatted dictionaries from _get_actions
-            name = action.get('name', '')
-            description = action.get('description', '')
-            parameters = action.get('parameters', {})
+            name = action.get("name", "")
+            description = action.get("description", "")
+            parameters = action.get("parameters", {})
 
             if enabled_set and name.lower() not in enabled_set:
                 continue
@@ -167,8 +172,8 @@ class ComposioAgentTool(BaseAgentTool):
             tool_input: Must include 'action' key with action name,
                        and 'params' with action parameters
         """
-        action_name = tool_input.get('action')
-        params = tool_input.get('params', {})
+        action_name = tool_input.get("action")
+        params = tool_input.get("params", {})
 
         if not action_name:
             return self._error_result("Action name is required")
@@ -193,18 +198,26 @@ class ComposioAgentTool(BaseAgentTool):
             logger.error(f"Error executing Composio action {action_name}: {e}", exc_info=True)
             return self._error_result(f"Error executing {action_name}: {str(e)}")
 
-    def _extract_action_metadata(self, action: Any) -> (str, str, Dict[str, Any]): # type: ignore
+    def _extract_action_metadata(self, action: Any) -> (str, str, Dict[str, Any]):  # type: ignore
         """Handle action metadata whether returned as dict or SDK object."""
         if isinstance(action, dict):
             fn_data = action.get("function", {}) if isinstance(action.get("function"), dict) else {}
             name = fn_data.get("name") or action.get("name", "")
             description = fn_data.get("description") or action.get("description", "")
-            parameters = fn_data.get("parameters") or action.get("input_parameters") or action.get("parameters", {})
+            parameters = (
+                fn_data.get("parameters")
+                or action.get("input_parameters")
+                or action.get("parameters", {})
+            )
         else:
             fn = getattr(action, "function", None)
             name = getattr(fn, "name", "") or getattr(action, "name", "")
             description = getattr(fn, "description", "") or getattr(action, "description", "")
-            parameters = getattr(fn, "parameters", None) or getattr(action, "input_parameters", {}) or getattr(action, "parameters", {})
+            parameters = (
+                getattr(fn, "parameters", None)
+                or getattr(action, "input_parameters", {})
+                or getattr(action, "parameters", {})
+            )
 
         name = name or ""
 
@@ -221,17 +234,17 @@ class ComposioAgentTool(BaseAgentTool):
     def _parse_result(self, action_name: str, result: Dict) -> ToolResult:
         """Parse Composio action result into ToolResult."""
         # Composio uses both 'successful' and 'successfull' spellings
-        is_success = result.get('successful') or result.get('successfull')
+        is_success = result.get("successful") or result.get("successfull")
 
         if not is_success:
-            error_msg = result.get('error', 'Unknown error')
+            error_msg = result.get("error", "Unknown error")
             return self._error_result(f"Action failed: {error_msg}")
 
-        error = result.get('error')
+        error = result.get("error")
         if error:
             return self._error_result(f"Action completed with error: {error}")
 
-        data = result.get('data', {})
+        data = result.get("data", {})
         response_text = self._format_response(action_name, data)
 
         return ToolResult(
@@ -243,7 +256,7 @@ class ComposioAgentTool(BaseAgentTool):
     def _format_response(self, action_name: str, data: Dict) -> str:
         """Format Composio response data for display."""
         # Handle list responses (e.g., calendar events)
-        items = data.get('items')
+        items = data.get("items")
         if isinstance(items, list):
             return self._format_items_list(action_name, items)
 
@@ -256,11 +269,11 @@ class ComposioAgentTool(BaseAgentTool):
 
         lines = [f"Found {len(items)} items:\n"]
 
-        for i, item in enumerate(items[:self.MAX_DISPLAY_ITEMS], 1):
-            if isinstance(item, dict) and 'summary' in item:
+        for i, item in enumerate(items[: self.MAX_DISPLAY_ITEMS], 1):
+            if isinstance(item, dict) and "summary" in item:
                 lines.append(f"{i}. {item['summary']}")
-                start = item.get('start', {})
-                start_time = start.get('dateTime') or start.get('date')
+                start = item.get("start", {})
+                start_time = start.get("dateTime") or start.get("date")
                 if start_time:
                     lines.append(f"   Start: {start_time}")
             else:
@@ -276,7 +289,7 @@ class ComposioActionTool(BaseAgentTool):
     """Individual Composio action tool."""
 
     # Keywords that indicate a mutating operation
-    MUTATING_KEYWORDS = ('delete', 'update', 'create', 'remove', 'modify')
+    MUTATING_KEYWORDS = ("delete", "update", "create", "remove", "modify")
 
     def __init__(
         self,
@@ -307,7 +320,9 @@ class ComposioActionTool(BaseAgentTool):
             name=self.name,
             description=self.description,
             parameters=self.input_schema,
-            required=self.input_schema.get("required", []) if isinstance(self.input_schema, dict) else []
+            required=self.input_schema.get("required", [])
+            if isinstance(self.input_schema, dict)
+            else [],
         )
 
     def should_confirm_execute(
@@ -326,10 +341,7 @@ class ComposioActionTool(BaseAgentTool):
         if isinstance(content, str):
             return content
         if isinstance(content, list):
-            return "\n".join(
-                item.text if hasattr(item, 'text') else str(item)
-                for item in content
-            )
+            return "\n".join(item.text if hasattr(item, "text") else str(item) for item in content)
         return str(content)
 
     async def run(self, tool_call):
@@ -343,25 +355,23 @@ class ComposioActionTool(BaseAgentTool):
 
             if result.is_error:
                 return ToolResponse(
-                    output=ErrorTextContent(value=str(result.llm_content)),
-                    error=True
+                    output=ErrorTextContent(value=str(result.llm_content)), error=True
                 )
 
             return ToolResponse(
                 output=TextResultContent(value=self._format_llm_content(result.llm_content)),
-                error=False
+                error=False,
             )
 
         except Exception as e:
             logger.error(f"Error executing Composio action {self.name}: {e}", exc_info=True)
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Error: {str(e)}"),
-                error=True
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Error: {str(e)}"), error=True)
 
     async def execute(self, tool_input: Dict[str, Any]) -> ToolResult:
         """Execute this specific action via the parent tool."""
-        return await self.parent_tool.execute({
-            'action': self.action_name,
-            'params': tool_input,
-        })
+        return await self.parent_tool.execute(
+            {
+                "action": self.action_name,
+                "params": tool_input,
+            }
+        )

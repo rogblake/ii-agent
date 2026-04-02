@@ -68,9 +68,7 @@ async def health_check_readiness(
         # LLM is optional, so don't mark as unhealthy
         # all_healthy = False
 
-    status_code = (
-        status.HTTP_200_OK if all_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
-    )
+    status_code = status.HTTP_200_OK if all_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
 
     return JSONResponse(
         status_code=status_code,

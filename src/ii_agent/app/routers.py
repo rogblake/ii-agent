@@ -39,27 +39,31 @@ def include_routers(app: FastAPI) -> None:
     # ── Versioned API routes (/v1) ───────────────────────────────────────
     v1_router = APIRouter(prefix="/v1")
 
-    v1_router.include_router(sessions_router)      # /v1/sessions (includes /pins, /wishlist)
-    v1_router.include_router(credits_router)        # /v1/credits
-    v1_router.include_router(chat_router)           # /v1/chat
-    v1_router.include_router(files_router)          # /v1/assets/*
-    v1_router.include_router(slides_router)         # /v1/slides (includes /templates, /design, /nano-banana)
-    v1_router.include_router(storybook_router)      # /v1/storybooks
-    v1_router.include_router(project_router)        # /v1/project (includes /design, /subdomains, /database, /secrets, /deployment)
-    v1_router.include_router(connectors_router)     # /v1/connectors/*
-    v1_router.include_router(enhance_prompt_router) # /v1/enhance-prompt
-    v1_router.include_router(settings_router)       # /v1/user-settings (includes /models, /mcp, /skills)
-    v1_router.include_router(media_router)          # /v1/media, /v1/media-templates, /v1/media-tools
+    v1_router.include_router(sessions_router)  # /v1/sessions (includes /pins, /wishlist)
+    v1_router.include_router(credits_router)  # /v1/credits
+    v1_router.include_router(chat_router)  # /v1/chat
+    v1_router.include_router(files_router)  # /v1/assets/*
+    v1_router.include_router(
+        slides_router
+    )  # /v1/slides (includes /templates, /design, /nano-banana)
+    v1_router.include_router(storybook_router)  # /v1/storybooks
+    v1_router.include_router(
+        project_router
+    )  # /v1/project (includes /design, /subdomains, /database, /secrets, /deployment)
+    v1_router.include_router(connectors_router)  # /v1/connectors/*
+    v1_router.include_router(enhance_prompt_router)  # /v1/enhance-prompt
+    v1_router.include_router(settings_router)  # /v1/user-settings (includes /models, /mcp, /skills)
+    v1_router.include_router(media_router)  # /v1/media, /v1/media-templates, /v1/media-tools
 
     app.include_router(v1_router)
 
     # ── Public API routes (/v1/public) ───────────────────────────────────
     v1_public_router = APIRouter(prefix="/v1/public")
 
-    v1_public_router.include_router(sessions_public_router)   # /v1/public/sessions
-    v1_public_router.include_router(files_public_router)      # /v1/public/sessions (assets)
-    v1_public_router.include_router(chat_public_router)       # /v1/public/chat/conversations
+    v1_public_router.include_router(sessions_public_router)  # /v1/public/sessions
+    v1_public_router.include_router(files_public_router)  # /v1/public/sessions (assets)
+    v1_public_router.include_router(chat_public_router)  # /v1/public/chat/conversations
     v1_public_router.include_router(storybook_public_router)  # /v1/public/storybooks
-    v1_public_router.include_router(slides_public_router)     # /v1/public/slides
+    v1_public_router.include_router(slides_public_router)  # /v1/public/slides
 
     app.include_router(v1_public_router)

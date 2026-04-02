@@ -21,26 +21,18 @@ class SessionPin(Base):
     __tablename__ = "session_pins"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE")
     )
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="session_pins")
-    session: Mapped["Session"] = relationship(
-        "Session",
-        back_populates="pinned_by"
-    )
+    session: Mapped["Session"] = relationship("Session", back_populates="pinned_by")
 
     # Add composite unique index to prevent duplicate pin entries
-    __table_args__ = (
-        Index("idx_session_pins_user_session", "user_id", "session_id", unique=True),
-    )
+    __table_args__ = (Index("idx_session_pins_user_session", "user_id", "session_id", unique=True),)

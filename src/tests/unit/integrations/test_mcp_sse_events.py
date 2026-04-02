@@ -4,18 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import json
-import sys
-import types
 import uuid
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 pytest.skip("ii_agent.integrations.mcp_sse was removed during refactoring", allow_module_level=True)
 
-import sys
-import types
 
 from ii_agent.realtime.events import ApplicationEvent, EventGroup, EventType
 

@@ -73,10 +73,15 @@ class StripeWebhookRegisterTool(BaseSandboxTool):
     async def execute(self, tool_input: dict[str, Any]) -> ToolResult:
         try:
             cmd_parts = [
-                "ii-app", "stripe", "register-webhook",
-                "--stripe-secret-key", tool_input["stripe_secret_key"],
-                "--endpoint-url", tool_input["endpoint_url"],
-                "--project-directory", tool_input["project_directory"],
+                "ii-app",
+                "stripe",
+                "register-webhook",
+                "--stripe-secret-key",
+                tool_input["stripe_secret_key"],
+                "--endpoint-url",
+                tool_input["endpoint_url"],
+                "--project-directory",
+                tool_input["project_directory"],
                 "--json",
             ]
 

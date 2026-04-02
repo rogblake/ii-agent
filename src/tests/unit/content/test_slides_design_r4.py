@@ -9,17 +9,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from ii_agent.content.slides.design.service import SlideDesignService
 from ii_agent.content.slides.design.schemas import (
     SlideSyncBatchRequest,
-    SlideSyncBatchResponse,
     SlideSyncChange,
     SlideDeckSyncBatchRequest,
-    SlideDeckSyncBatchResponse,
     SlideDeckSyncChange,
-    SlideDeckSyncStateRequest,
 )
 from ii_agent.projects.design.exceptions import (
     DesignSessionNotFoundError,
     DesignSessionAccessDeniedError,
-    DesignValidationError,
 )
 from ii_agent.content.slides.design.exceptions import DesignSlideNotFoundError
 from ii_agent.projects.design.schemas import StyleChange

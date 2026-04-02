@@ -1,9 +1,6 @@
 """Unit tests for agent utility functions."""
 
-import inspect
-from asyncio import Future
-from typing import Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest

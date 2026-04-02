@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pytest
 
 from ii_agent.content.slides.content_processor import SlideContentProcessor
 

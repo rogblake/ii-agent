@@ -2,26 +2,20 @@
 
 from __future__ import annotations
 
-import json
 import uuid
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from ii_agent.projects.design.exceptions import (
-    DesignProxyFetchError,
-    DesignProxyHostNotAllowedError,
     DesignSessionAccessDeniedError,
     DesignSessionNotFoundError,
     DesignSandboxUnavailableError,
     DesignValidationError,
 )
 from ii_agent.projects.design.schemas import (
-    AIChangeRequest,
     DesignStateRequest,
     ElementInfoRequest,
-    IframeAIPlanRequest,
     IframeDocumentSnapshotNode,
     StyleChange,
     SyncRequest,

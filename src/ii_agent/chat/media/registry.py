@@ -26,9 +26,11 @@ def register_handler(media_type: str) -> Callable[[Type[BaseMediaHandler]], Type
     Returns:
         Decorator function
     """
+
     def decorator(cls: Type[BaseMediaHandler]) -> Type[BaseMediaHandler]:
         _HANDLER_REGISTRY[media_type] = cls
         return cls
+
     return decorator
 
 

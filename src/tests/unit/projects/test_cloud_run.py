@@ -12,11 +12,9 @@ Covers:
 
 from __future__ import annotations
 
-import gzip
 import io
 import os
 import tarfile
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest

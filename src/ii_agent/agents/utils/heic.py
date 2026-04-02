@@ -7,8 +7,6 @@ so images must be converted to JPEG before sending.
 import io
 from typing import Optional
 
-from ii_agent.core.logger import logger
-
 
 def is_heic_format(
     image_format: Optional[str] = None,

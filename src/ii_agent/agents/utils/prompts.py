@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from ii_agent.core.logger import logger
 
+
 def get_json_output_prompt(output_schema: Union[str, list, BaseModel]) -> str:
     """Return the JSON output prompt for the Agent.
 

@@ -143,9 +143,7 @@ def convert_tool_result_content(result) -> Tuple[Any, bool]:
                         }
                     )
                 else:
-                    logger.warning(
-                        f"Unsupported file media type in tool result: {item.mime_type}"
-                    )
+                    logger.warning(f"Unsupported file media type in tool result: {item.mime_type}")
             elif isinstance(item, ImageUrlContentPart):
                 content_parts.append(
                     {
@@ -325,11 +323,7 @@ def convert_to_anthropic_messages(
                                     case TextContent():
                                         text_block = {"type": "text", "text": part.text}
 
-                                        if (
-                                            should_cache_block
-                                            and is_last_part
-                                            and validator
-                                        ):
+                                        if should_cache_block and is_last_part and validator:
                                             cache_ctrl = validator.get_cache_control(
                                                 cache_control_config,
                                                 {
@@ -354,11 +348,7 @@ def convert_to_anthropic_messages(
                                                 },
                                             }
 
-                                            if (
-                                                should_cache_block
-                                                and is_last_part
-                                                and validator
-                                            ):
+                                            if should_cache_block and is_last_part and validator:
                                                 cache_ctrl = validator.get_cache_control(
                                                     cache_control_config,
                                                     {
@@ -367,9 +357,7 @@ def convert_to_anthropic_messages(
                                                     },
                                                 )
                                                 if cache_ctrl:
-                                                    content_block["cache_control"] = (
-                                                        cache_ctrl
-                                                    )
+                                                    content_block["cache_control"] = cache_ctrl
                                             anthropic_content.append(content_block)
 
                                         elif part.mime_type in (
@@ -386,11 +374,7 @@ def convert_to_anthropic_messages(
                                                 },
                                             }
 
-                                            if (
-                                                should_cache_block
-                                                and is_last_part
-                                                and validator
-                                            ):
+                                            if should_cache_block and is_last_part and validator:
                                                 cache_ctrl = validator.get_cache_control(
                                                     cache_control_config,
                                                     {
@@ -399,9 +383,7 @@ def convert_to_anthropic_messages(
                                                     },
                                                 )
                                                 if cache_ctrl:
-                                                    content_block["cache_control"] = (
-                                                        cache_ctrl
-                                                    )
+                                                    content_block["cache_control"] = cache_ctrl
                                             anthropic_content.append(content_block)
 
                                         else:
@@ -417,11 +399,7 @@ def convert_to_anthropic_messages(
                                             "type": "image",
                                             "source": {"type": "url", "url": part.url},
                                         }
-                                        if (
-                                            should_cache_block
-                                            and is_last_part
-                                            and validator
-                                        ):
+                                        if should_cache_block and is_last_part and validator:
                                             cache_ctrl = validator.get_cache_control(
                                                 cache_control_config,
                                                 {
@@ -430,9 +408,7 @@ def convert_to_anthropic_messages(
                                                 },
                                             )
                                             if cache_ctrl:
-                                                image_block["cache_control"] = (
-                                                    cache_ctrl
-                                                )
+                                                image_block["cache_control"] = cache_ctrl
                                         anthropic_content.append(image_block)
 
                             # tool results
@@ -461,35 +437,23 @@ def convert_to_anthropic_messages(
                                                 "tool_use_id": part.tool_call_id,
                                                 "content": {
                                                     "type": output_value["type"],
-                                                    "stdout": output_value.get(
-                                                        "stdout", ""
-                                                    ),
-                                                    "stderr": output_value.get(
-                                                        "stderr", ""
-                                                    ),
+                                                    "stdout": output_value.get("stdout", ""),
+                                                    "stderr": output_value.get("stderr", ""),
                                                     "return_code": output_value.get(
                                                         "return_code", 0
                                                     ),
                                                 },
                                             }
-                                            if (
-                                                should_cache_block
-                                                and is_last_part
-                                                and validator
-                                            ):
-                                                cache_ctrl = (
-                                                    validator.get_cache_control(
-                                                        cache_control_config,
-                                                        {
-                                                            "type": "tool result",
-                                                            "can_cache": True,
-                                                        },
-                                                    )
+                                            if should_cache_block and is_last_part and validator:
+                                                cache_ctrl = validator.get_cache_control(
+                                                    cache_control_config,
+                                                    {
+                                                        "type": "tool result",
+                                                        "can_cache": True,
+                                                    },
                                                 )
                                                 if cache_ctrl:
-                                                    code_exec_result[
-                                                        "cache_control"
-                                                    ] = cache_ctrl
+                                                    code_exec_result["cache_control"] = cache_ctrl
                                             anthropic_content.append(code_exec_result)
 
                                         # Code execution 20250825
@@ -502,24 +466,16 @@ def convert_to_anthropic_messages(
                                                 "tool_use_id": part.tool_call_id,
                                                 "content": output_value,
                                             }
-                                            if (
-                                                should_cache_block
-                                                and is_last_part
-                                                and validator
-                                            ):
-                                                cache_ctrl = (
-                                                    validator.get_cache_control(
-                                                        cache_control_config,
-                                                        {
-                                                            "type": "tool result",
-                                                            "can_cache": True,
-                                                        },
-                                                    )
+                                            if should_cache_block and is_last_part and validator:
+                                                cache_ctrl = validator.get_cache_control(
+                                                    cache_control_config,
+                                                    {
+                                                        "type": "tool result",
+                                                        "can_cache": True,
+                                                    },
                                                 )
                                                 if cache_ctrl:
-                                                    bash_result["cache_control"] = (
-                                                        cache_ctrl
-                                                    )
+                                                    bash_result["cache_control"] = cache_ctrl
                                             anthropic_content.append(bash_result)
 
                                         elif result_type in (
@@ -531,30 +487,22 @@ def convert_to_anthropic_messages(
                                                 "tool_use_id": part.tool_call_id,
                                                 "content": output_value,
                                             }
-                                            if (
-                                                should_cache_block
-                                                and is_last_part
-                                                and validator
-                                            ):
-                                                cache_ctrl = (
-                                                    validator.get_cache_control(
-                                                        cache_control_config,
-                                                        {
-                                                            "type": "tool result",
-                                                            "can_cache": True,
-                                                        },
-                                                    )
+                                            if should_cache_block and is_last_part and validator:
+                                                cache_ctrl = validator.get_cache_control(
+                                                    cache_control_config,
+                                                    {
+                                                        "type": "tool result",
+                                                        "can_cache": True,
+                                                    },
                                                 )
                                                 if cache_ctrl:
-                                                    text_editor_result[
-                                                        "cache_control"
-                                                    ] = cache_ctrl
+                                                    text_editor_result["cache_control"] = cache_ctrl
                                             anthropic_content.append(text_editor_result)
 
                                         else:
                                             # Unknown code execution result type, fallback to normal handling
-                                            content_value, is_error = (
-                                                convert_tool_result_content(part)
+                                            content_value, is_error = convert_tool_result_content(
+                                                part
                                             )
                                             tool_result_block = {
                                                 "type": "tool_result",
@@ -562,41 +510,27 @@ def convert_to_anthropic_messages(
                                                 "content": content_value,
                                                 "is_error": is_error,
                                             }
-                                            if (
-                                                should_cache_block
-                                                and is_last_part
-                                                and validator
-                                            ):
-                                                cache_ctrl = (
-                                                    validator.get_cache_control(
-                                                        cache_control_config,
-                                                        {
-                                                            "type": "tool result",
-                                                            "can_cache": True,
-                                                        },
-                                                    )
+                                            if should_cache_block and is_last_part and validator:
+                                                cache_ctrl = validator.get_cache_control(
+                                                    cache_control_config,
+                                                    {
+                                                        "type": "tool result",
+                                                        "can_cache": True,
+                                                    },
                                                 )
                                                 if cache_ctrl:
-                                                    tool_result_block[
-                                                        "cache_control"
-                                                    ] = cache_ctrl
+                                                    tool_result_block["cache_control"] = cache_ctrl
                                             anthropic_content.append(tool_result_block)
                                     else:
                                         # Invalid code execution result, fallback to normal handling
-                                        content_value, is_error = (
-                                            convert_tool_result_content(part)
-                                        )
+                                        content_value, is_error = convert_tool_result_content(part)
                                         tool_result_block = {
                                             "type": "tool_result",
                                             "tool_use_id": part.tool_call_id,
                                             "content": content_value,
                                             "is_error": is_error,
                                         }
-                                        if (
-                                            should_cache_block
-                                            and is_last_part
-                                            and validator
-                                        ):
+                                        if should_cache_block and is_last_part and validator:
                                             cache_ctrl = validator.get_cache_control(
                                                 cache_control_config,
                                                 {
@@ -605,15 +539,11 @@ def convert_to_anthropic_messages(
                                                 },
                                             )
                                             if cache_ctrl:
-                                                tool_result_block["cache_control"] = (
-                                                    cache_ctrl
-                                                )
+                                                tool_result_block["cache_control"] = cache_ctrl
                                         anthropic_content.append(tool_result_block)
                                 else:
                                     # Normal tool result
-                                    content_value, is_error = (
-                                        convert_tool_result_content(part)
-                                    )
+                                    content_value, is_error = convert_tool_result_content(part)
                                     tool_result_block = {
                                         "type": "tool_result",
                                         "tool_use_id": part.tool_call_id,
@@ -621,28 +551,18 @@ def convert_to_anthropic_messages(
                                         "is_error": is_error,
                                     }
 
-                                    if (
-                                        should_cache_block
-                                        and is_last_part
-                                        and validator
-                                    ):
+                                    if should_cache_block and is_last_part and validator:
                                         cache_ctrl = validator.get_cache_control(
                                             cache_control_config,
                                             {"type": "tool result", "can_cache": True},
                                         )
                                         if cache_ctrl:
-                                            tool_result_block["cache_control"] = (
-                                                cache_ctrl
-                                            )
+                                            tool_result_block["cache_control"] = cache_ctrl
 
                                     anthropic_content.append(tool_result_block)
                         case _:
-                            logger.warning(
-                                f"Unknown message role in user block: {msg.role}"
-                            )
-                anthropic_messages.append(
-                    {"role": "user", "content": anthropic_content}
-                )
+                            logger.warning(f"Unknown message role in user block: {msg.role}")
+                anthropic_messages.append({"role": "user", "content": anthropic_content})
             case "assistant":
                 # Validate tool calls/results within this assistant block.
                 # Note: We only validate provider-executed tools (e.g., code_execution).
@@ -714,20 +634,12 @@ def convert_to_anthropic_messages(
                             case ToolCall():
                                 # Skip unpaired provider-executed tools only
                                 # (client-executed tools are always kept)
-                                if (
-                                    part.provider_executed
-                                    and part.id not in valid_provider_calls
-                                ):
-                                    logger.debug(
-                                        f"Skipping unpaired provider tool call: {part.id}"
-                                    )
+                                if part.provider_executed and part.id not in valid_provider_calls:
+                                    logger.debug(f"Skipping unpaired provider tool call: {part.id}")
                                     continue
 
                                 # Handle provider-executed tools (currently only code_execution)
-                                if (
-                                    part.provider_executed
-                                    and part.name == "code_execution"
-                                ):
+                                if part.provider_executed and part.name == "code_execution":
                                     tool_input = (
                                         json.loads(part.input)
                                         if isinstance(part.input, str)
@@ -747,16 +659,10 @@ def convert_to_anthropic_messages(
                                         server_tool_block = {
                                             "type": "server_tool_use",
                                             "id": part.id,
-                                            "name": tool_input[
-                                                "type"
-                                            ],  # Use subtool name
+                                            "name": tool_input["type"],  # Use subtool name
                                             "input": tool_input,
                                         }
-                                        if (
-                                            should_cache_block
-                                            and is_last_part
-                                            and validator
-                                        ):
+                                        if should_cache_block and is_last_part and validator:
                                             cache_ctrl = validator.get_cache_control(
                                                 cache_control_config,
                                                 {
@@ -765,9 +671,7 @@ def convert_to_anthropic_messages(
                                                 },
                                             )
                                             if cache_ctrl:
-                                                server_tool_block["cache_control"] = (
-                                                    cache_ctrl
-                                                )
+                                                server_tool_block["cache_control"] = cache_ctrl
                                         anthropic_content.append(server_tool_block)
                                     else:
                                         # Code execution 20250522
@@ -777,11 +681,7 @@ def convert_to_anthropic_messages(
                                             "name": "code_execution",
                                             "input": tool_input,
                                         }
-                                        if (
-                                            should_cache_block
-                                            and is_last_part
-                                            and validator
-                                        ):
+                                        if should_cache_block and is_last_part and validator:
                                             cache_ctrl = validator.get_cache_control(
                                                 cache_control_config,
                                                 {
@@ -790,9 +690,7 @@ def convert_to_anthropic_messages(
                                                 },
                                             )
                                             if cache_ctrl:
-                                                server_tool_block["cache_control"] = (
-                                                    cache_ctrl
-                                                )
+                                                server_tool_block["cache_control"] = cache_ctrl
                                         anthropic_content.append(server_tool_block)
                                 else:
                                     # Normal tool use
@@ -807,11 +705,7 @@ def convert_to_anthropic_messages(
                                         ),
                                     }
 
-                                    if (
-                                        should_cache_block
-                                        and is_last_part
-                                        and validator
-                                    ):
+                                    if should_cache_block and is_last_part and validator:
                                         cache_ctrl = validator.get_cache_control(
                                             cache_control_config,
                                             {
@@ -851,35 +745,23 @@ def convert_to_anthropic_messages(
                                                 "tool_use_id": part.tool_call_id,
                                                 "content": {
                                                     "type": output_value["type"],
-                                                    "stdout": output_value.get(
-                                                        "stdout", ""
-                                                    ),
-                                                    "stderr": output_value.get(
-                                                        "stderr", ""
-                                                    ),
+                                                    "stdout": output_value.get("stdout", ""),
+                                                    "stderr": output_value.get("stderr", ""),
                                                     "return_code": output_value.get(
                                                         "return_code", 0
                                                     ),
                                                 },
                                             }
-                                            if (
-                                                should_cache_block
-                                                and is_last_part
-                                                and validator
-                                            ):
-                                                cache_ctrl = (
-                                                    validator.get_cache_control(
-                                                        cache_control_config,
-                                                        {
-                                                            "type": "tool result",
-                                                            "can_cache": True,
-                                                        },
-                                                    )
+                                            if should_cache_block and is_last_part and validator:
+                                                cache_ctrl = validator.get_cache_control(
+                                                    cache_control_config,
+                                                    {
+                                                        "type": "tool result",
+                                                        "can_cache": True,
+                                                    },
                                                 )
                                                 if cache_ctrl:
-                                                    code_exec_result[
-                                                        "cache_control"
-                                                    ] = cache_ctrl
+                                                    code_exec_result["cache_control"] = cache_ctrl
                                             anthropic_content.append(code_exec_result)
 
                                         # Code execution 20250825
@@ -892,24 +774,16 @@ def convert_to_anthropic_messages(
                                                 "tool_use_id": part.tool_call_id,
                                                 "content": output_value,
                                             }
-                                            if (
-                                                should_cache_block
-                                                and is_last_part
-                                                and validator
-                                            ):
-                                                cache_ctrl = (
-                                                    validator.get_cache_control(
-                                                        cache_control_config,
-                                                        {
-                                                            "type": "tool result",
-                                                            "can_cache": True,
-                                                        },
-                                                    )
+                                            if should_cache_block and is_last_part and validator:
+                                                cache_ctrl = validator.get_cache_control(
+                                                    cache_control_config,
+                                                    {
+                                                        "type": "tool result",
+                                                        "can_cache": True,
+                                                    },
                                                 )
                                                 if cache_ctrl:
-                                                    bash_result["cache_control"] = (
-                                                        cache_ctrl
-                                                    )
+                                                    bash_result["cache_control"] = cache_ctrl
                                             anthropic_content.append(bash_result)
 
                                         elif result_type in (
@@ -924,24 +798,16 @@ def convert_to_anthropic_messages(
                                                 "tool_use_id": part.tool_call_id,
                                                 "content": output_value,
                                             }
-                                            if (
-                                                should_cache_block
-                                                and is_last_part
-                                                and validator
-                                            ):
-                                                cache_ctrl = (
-                                                    validator.get_cache_control(
-                                                        cache_control_config,
-                                                        {
-                                                            "type": "tool result",
-                                                            "can_cache": True,
-                                                        },
-                                                    )
+                                            if should_cache_block and is_last_part and validator:
+                                                cache_ctrl = validator.get_cache_control(
+                                                    cache_control_config,
+                                                    {
+                                                        "type": "tool result",
+                                                        "can_cache": True,
+                                                    },
                                                 )
                                                 if cache_ctrl:
-                                                    text_editor_result[
-                                                        "cache_control"
-                                                    ] = cache_ctrl
+                                                    text_editor_result["cache_control"] = cache_ctrl
                                             anthropic_content.append(text_editor_result)
 
                                         else:
@@ -965,9 +831,7 @@ def convert_to_anthropic_messages(
                                     f"Unknown message part in assistant block: {part.type}"
                                 )
 
-                anthropic_messages.append(
-                    {"role": "assistant", "content": anthropic_content}
-                )
+                anthropic_messages.append({"role": "assistant", "content": anthropic_content})
     # Get warnings from validator
     warnings = []
     if validator:

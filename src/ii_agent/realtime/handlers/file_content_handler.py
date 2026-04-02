@@ -7,6 +7,7 @@ from ii_agent.realtime.handlers.base import BaseCommandHandler, CommandType
 from ii_agent.realtime.schemas import FileContentContent
 from ii_agent.sessions.schemas import SessionInfo
 
+
 class FileContentHandler(BaseCommandHandler[FileContentContent]):
     """Read one file from the sandbox via the workspace explorer service."""
 

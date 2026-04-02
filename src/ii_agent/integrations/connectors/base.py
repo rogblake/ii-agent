@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ii_agent.integrations.connectors.models import Connector, ConnectorType
 
 
-
 @dataclass
 class ConnectorData:
     """Data returned from OAuth callback."""
@@ -308,7 +307,9 @@ class BaseConnector(ABC):
 
         if expiry.tzinfo is None:
             from datetime import timezone
+
             expiry = expiry.replace(tzinfo=timezone.utc)
 
         from datetime import timedelta
+
         return expiry <= now + timedelta(minutes=5)

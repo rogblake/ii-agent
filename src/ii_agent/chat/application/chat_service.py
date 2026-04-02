@@ -44,7 +44,6 @@ from ii_agent.sessions.title_service import SessionTitleService
 
 if TYPE_CHECKING:
     from ii_agent.core.container import ApplicationContainer
-    from ii_agent.realtime.pubsub.asyncio_pubsub import AsyncIOPubSub
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +292,9 @@ class ChatService:
                     db_session=db,
                     session_id=session_id,
                 )
-                logger.info(f"Loaded full context for session {session_id} ({len(messages)} messages)")
+                logger.info(
+                    f"Loaded full context for session {session_id} ({len(messages)} messages)"
+                )
 
             # Build user message content
             display_content = chat_request.content
@@ -477,7 +478,9 @@ class ChatService:
                 db_session=db,
                 session_id=session_id,
             )
-            logger.info(f"Council: loaded context for session {session_id} ({len(messages)} messages)")
+            logger.info(
+                f"Council: loaded context for session {session_id} ({len(messages)} messages)"
+            )
 
             # Build user message content
             display_content = chat_request.content
@@ -521,7 +524,9 @@ class ChatService:
 
             model_configs: Dict[str, ModelConfig] = {}
             model_names = {}
-            all_models = await self._model_setting_service.get_all_available_models(db, user_id=user_id)
+            all_models = await self._model_setting_service.get_all_available_models(
+                db, user_id=user_id
+            )
             failed_models = []
             for mid in all_model_ids:
                 try:
@@ -707,9 +712,7 @@ class ChatService:
         self, db: AsyncSession, *, session_id: uuid.UUID, message_id: uuid.UUID
     ) -> int:
         """Delete a message and all subsequent messages."""
-        deleted = await self._message_history._repo.delete_from_message(
-            db, session_id, message_id
-        )
+        deleted = await self._message_history._repo.delete_from_message(db, session_id, message_id)
         await db.commit()
         return deleted
 

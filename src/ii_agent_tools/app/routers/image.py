@@ -116,9 +116,7 @@ async def generate_image(
 class ImageSearchRequest(BaseRequest):
     query: str
     aspect_ratio: Literal["all", "square", "tall", "wide", "panoramic"] = "all"
-    image_type: Literal["all", "face", "photo", "clipart", "lineart", "animated"] = (
-        "all"
-    )
+    image_type: Literal["all", "face", "photo", "clipart", "lineart", "animated"] = "all"
     min_width: int = 0
     min_height: int = 0
     is_product: bool = False

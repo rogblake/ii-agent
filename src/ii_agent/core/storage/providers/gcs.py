@@ -29,9 +29,7 @@ class GCSProvider(StorageProvider):
         bucket_name: str,
         custom_domain: str | None = None,
     ) -> None:
-        credentials, _ = default(
-            scopes=["https://www.googleapis.com/auth/devstorage.full_control"]
-        )
+        credentials, _ = default(scopes=["https://www.googleapis.com/auth/devstorage.full_control"])
         self._client = storage.Client(project=project_id, credentials=credentials)
         self._bucket = self._client.bucket(bucket_name)
         self._custom_domain = custom_domain
@@ -59,9 +57,7 @@ class GCSProvider(StorageProvider):
             ):
                 self._signer = self._credentials.signer
                 if hasattr(self._credentials, "service_account_email"):
-                    self._service_account_email = (
-                        self._credentials.service_account_email
-                    )
+                    self._service_account_email = self._credentials.service_account_email
             elif isinstance(self._credentials, compute_engine.Credentials):
                 self._use_iam_signer = True
                 auth_request = auth_requests.Request()
@@ -96,9 +92,7 @@ class GCSProvider(StorageProvider):
     # StorageProvider interface
     # ------------------------------------------------------------------
 
-    async def write(
-        self, path: str, content: BinaryIO, content_type: str | None = None
-    ) -> str:
+    async def write(self, path: str, content: BinaryIO, content_type: str | None = None) -> str:
         def _upload() -> str:
             blob = self._bucket.blob(path)
             content.seek(0)
@@ -179,17 +173,13 @@ class GCSProvider(StorageProvider):
         def _copy() -> str:
             src_blob = self._bucket.blob(source_path)
             if not src_blob.exists():
-                raise StorageObjectNotFoundError(
-                    f"Source object '{source_path}' not found."
-                )
+                raise StorageObjectNotFoundError(f"Source object '{source_path}' not found.")
             self._bucket.copy_blob(src_blob, self._bucket, dest_path)
             return dest_path
 
         return await self._run_sync(_copy)
 
-    async def signed_download_url(
-        self, path: str, expiry_seconds: int = 3600
-    ) -> str:
+    async def signed_download_url(self, path: str, expiry_seconds: int = 3600) -> str:
         def _sign() -> str:
             blob = self._bucket.blob(path)
             kwargs = self._signed_url_kwargs(

@@ -62,16 +62,12 @@ async def detect_template_type(source_bytes: bytes) -> TemplateType:
             return TemplateType.REACT_TAILWIND_PYTHON
 
         # Check for Next.js
-        has_next_config = (
-            "next.config.js" in files_found or "next.config.mjs" in files_found
-        )
+        has_next_config = "next.config.js" in files_found or "next.config.mjs" in files_found
         if has_next_config:
             return TemplateType.NEXTJS_SHADCN
 
         # Check for Vite React
-        has_vite_config = (
-            "vite.config.ts" in files_found or "vite.config.js" in files_found
-        )
+        has_vite_config = "vite.config.ts" in files_found or "vite.config.js" in files_found
         has_package_json = "package.json" in files_found
 
         if has_vite_config and has_package_json:
@@ -82,9 +78,7 @@ async def detect_template_type(source_bytes: bytes) -> TemplateType:
     return await asyncio.to_thread(_detect)
 
 
-async def prepare_source_with_dockerfile(
-    source_bytes: bytes, template_type: TemplateType
-) -> bytes:
+async def prepare_source_with_dockerfile(source_bytes: bytes, template_type: TemplateType) -> bytes:
     """Add Dockerfile and II-Agent watermark to source archive.
 
     Args:
@@ -147,9 +141,7 @@ async def prepare_source_with_dockerfile(
 
                     dockerfile_info = tarfile.TarInfo(name="Dockerfile")
                     dockerfile_info.size = len(dockerfile_bytes)
-                    output_tar.addfile(
-                        dockerfile_info, io.BytesIO(dockerfile_bytes)
-                    )
+                    output_tar.addfile(dockerfile_info, io.BytesIO(dockerfile_bytes))
 
                 # Inject II-Agent watermark
                 if watermark_config and entry_file_content and entry_file_member:
@@ -167,7 +159,9 @@ async def prepare_source_with_dockerfile(
                             if variant in entry_file_content:
                                 search_pattern = variant
                                 # Adjust replace pattern for the variant
-                                replace_pattern = replace_pattern.replace("<App />", variant.replace("</App>", ""))
+                                replace_pattern = replace_pattern.replace(
+                                    "<App />", variant.replace("</App>", "")
+                                )
                                 if variant == "<App></App>":
                                     replace_pattern = "<><App></App><IIAgentBadge /></>"
                                 pattern_found = True
@@ -176,10 +170,10 @@ async def prepare_source_with_dockerfile(
                     # Only inject if pattern was found (avoids unused import errors)
                     if pattern_found:
                         # Add the watermark component file
-                        component_bytes = get_watermark_component(watermark_config["component_path"]).encode("utf-8")
-                        component_info = tarfile.TarInfo(
-                            name=watermark_config["component_path"]
-                        )
+                        component_bytes = get_watermark_component(
+                            watermark_config["component_path"]
+                        ).encode("utf-8")
+                        component_info = tarfile.TarInfo(name=watermark_config["component_path"])
                         component_info.size = len(component_bytes)
                         output_tar.addfile(component_info, io.BytesIO(component_bytes))
 
@@ -188,7 +182,9 @@ async def prepare_source_with_dockerfile(
                         lines = entry_file_content.split("\n")
                         last_import_idx = -1
                         for i, line in enumerate(lines):
-                            if line.strip().startswith("import ") or line.strip().startswith("from "):
+                            if line.strip().startswith("import ") or line.strip().startswith(
+                                "from "
+                            ):
                                 last_import_idx = i
 
                         if last_import_idx >= 0:
@@ -206,13 +202,9 @@ async def prepare_source_with_dockerfile(
 
                         # Add modified entry file
                         modified_bytes = entry_file_content.encode("utf-8")
-                        modified_info = tarfile.TarInfo(
-                            name=entry_file_member.name
-                        )
+                        modified_info = tarfile.TarInfo(name=entry_file_member.name)
                         modified_info.size = len(modified_bytes)
-                        output_tar.addfile(
-                            modified_info, io.BytesIO(modified_bytes)
-                        )
+                        output_tar.addfile(modified_info, io.BytesIO(modified_bytes))
                     else:
                         # Pattern not found - add entry file unmodified
                         # (don't add import to avoid unused import errors)

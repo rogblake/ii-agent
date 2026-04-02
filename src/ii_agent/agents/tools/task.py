@@ -3,7 +3,6 @@ from ii_agent.agents.agent import IIAgent
 from ii_agent.agents.runs.agent import RunOutput
 from ii_agent.agents.tools.base import BaseAgentTool, ToolResult
 from ii_agent.agents.tools.function import FunctionCall
-from ii_agent.core.logger import logger
 
 if TYPE_CHECKING:
     from ii_agent.agents.runs.base import RunContext
@@ -180,7 +179,8 @@ class TaskAgentTool(BaseAgentTool):
         if run_context:
             self._parent_run_id = run_context.run_id or (
                 run_context.session_state.get("current_run_id")
-                if run_context.session_state else None
+                if run_context.session_state
+                else None
             )
 
     async def execute(self, tool_input: dict[str, Any]) -> ToolResult:

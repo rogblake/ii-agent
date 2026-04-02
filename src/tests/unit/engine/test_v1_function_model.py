@@ -8,9 +8,7 @@ Tests cover:
 
 from __future__ import annotations
 
-import pytest
 from functools import partial
-from unittest.mock import MagicMock
 
 
 # ---------------------------------------------------------------------------

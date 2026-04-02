@@ -31,7 +31,9 @@ class RunTask(Base):
     __tablename__ = "run_tasks"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
         comment="Primary key, also used as run_id for the Redis cancel system",
     )
     session_id: Mapped[uuid.UUID] = mapped_column(
@@ -41,30 +43,38 @@ class RunTask(Base):
         comment="The session this task belongs to",
     )
     task_type: Mapped[TaskType] = mapped_column(
-        String(32), nullable=False,
+        String(32),
+        nullable=False,
         comment="Discriminator: agent_run, chat_run, or media_generation",
     )
     status: Mapped[RunStatus] = mapped_column(
-        String(32), nullable=False, default=RunStatus.RUNNING,
+        String(32),
+        nullable=False,
+        default=RunStatus.RUNNING,
         comment="Current run status: pending, running, completed, paused, aborting, cancelled, failed",
     )
     error_message: Mapped[Optional[str]] = mapped_column(
-        String, nullable=True,
+        String,
+        nullable=True,
         comment="Error details when status is failed",
     )
     data: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSONB, nullable=True,
+        JSONB,
+        nullable=True,
         comment="Arbitrary metadata attached to the task",
     )
 
     # Optimistic locking
     version: Mapped[int] = mapped_column(
-        BigInteger, default=0, nullable=False,
+        BigInteger,
+        default=0,
+        nullable=False,
         comment="Optimistic locking counter for concurrent updates",
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn, default=lambda: datetime.now(timezone.utc),
+        TimestampColumn,
+        default=lambda: datetime.now(timezone.utc),
         comment="Timestamp when the task was created",
     )
     updated_at: Mapped[datetime] = mapped_column(
@@ -110,7 +120,9 @@ class TaskLog(Base):
     __tablename__ = "task_logs"
 
     id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True,
+        BigInteger,
+        primary_key=True,
+        autoincrement=True,
         comment="Auto-increment primary key",
     )
     task_id: Mapped[uuid.UUID] = mapped_column(
@@ -120,15 +132,18 @@ class TaskLog(Base):
         comment="FK to the run_task this log entry belongs to",
     )
     status: Mapped[RunStatus] = mapped_column(
-        String(32), nullable=False,
+        String(32),
+        nullable=False,
         comment="The status the task transitioned to",
     )
     data: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSONB, nullable=True,
+        JSONB,
+        nullable=True,
         comment="Optional snapshot of metadata at the time of transition",
     )
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn, default=lambda: datetime.now(timezone.utc),
+        TimestampColumn,
+        default=lambda: datetime.now(timezone.utc),
         comment="Timestamp when this status transition occurred",
     )
 

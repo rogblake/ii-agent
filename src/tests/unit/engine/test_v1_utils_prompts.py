@@ -9,7 +9,6 @@ import json
 from enum import Enum
 from typing import Optional
 
-import pytest
 from pydantic import BaseModel, Field
 
 

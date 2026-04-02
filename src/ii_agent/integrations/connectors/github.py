@@ -166,9 +166,7 @@ class GitHubConnector(BaseConnector):
             # Parse expiry from response (ISO 8601 format)
             expires_at_str = token_data.get("expires_at")
             if expires_at_str:
-                token_expiry = datetime.fromisoformat(
-                    expires_at_str.replace("Z", "+00:00")
-                )
+                token_expiry = datetime.fromisoformat(expires_at_str.replace("Z", "+00:00"))
             else:
                 # Default to 1 hour from now
                 token_expiry = datetime.now(timezone.utc) + timedelta(
@@ -308,9 +306,7 @@ class GitHubConnector(BaseConnector):
 
                     # Generate installation access token
                     try:
-                        installation_data = await self._generate_installation_token(
-                            installation_id
-                        )
+                        installation_data = await self._generate_installation_token(installation_id)
                         return ConnectorData(
                             access_token=installation_data.access_token,
                             refresh_token=None,
@@ -527,9 +523,7 @@ class GitHubConnector(BaseConnector):
         app_name = get_settings().oauth.github_app_name or None
 
         if app_name:
-            installation_url = (
-                f"https://github.com/apps/{app_name}/installations/select_target"
-            )
+            installation_url = f"https://github.com/apps/{app_name}/installations/select_target"
         else:
             installation_url = None
 

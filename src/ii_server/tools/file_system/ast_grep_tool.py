@@ -115,9 +115,7 @@ def _run_ast_grep(
         cmd.append(str(search_path))
 
         # Execute ast-grep
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=COMMAND_TIMEOUT
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=COMMAND_TIMEOUT)
 
         if result.returncode == 1:
             # No matches found
@@ -151,9 +149,7 @@ def _run_ast_grep(
         raise ASTGrepToolError("Search operation timed out")
     except subprocess.CalledProcessError as e:
         error_msg = (
-            e.stderr.strip()
-            if e.stderr
-            else f"Command failed with exit code {e.returncode}"
+            e.stderr.strip() if e.stderr else f"Command failed with exit code {e.returncode}"
         )
         raise ASTGrepToolError(f"ast-grep command failed: {error_msg}")
     except FileNotFoundError:
@@ -264,9 +260,7 @@ class ASTGrepTool(BaseTool):
             matches = _run_ast_grep(pattern, search_dir, include, language)
 
             # Format and return results
-            result_content = self._format_results(
-                matches, pattern, search_dir, include, language
-            )
+            result_content = self._format_results(matches, pattern, search_dir, include, language)
             return ToolResult(llm_content=result_content, is_error=False)
 
         except (

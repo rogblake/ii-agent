@@ -35,9 +35,7 @@ def get_slide_template_service(
     )
 
 
-SlideTemplateServiceDep = Annotated[
-    SlideTemplateService, Depends(get_slide_template_service)
-]
+SlideTemplateServiceDep = Annotated[SlideTemplateService, Depends(get_slide_template_service)]
 
 
 __all__ = [

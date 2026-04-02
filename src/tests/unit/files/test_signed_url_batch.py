@@ -32,9 +32,7 @@ async def test_generate_download_urls_reports_missing_paths(settings_factory):
     storage_mock.signed_urls_batch = AsyncMock(
         side_effect=lambda paths, **kw: [f"https://signed.local/{p}" for p in paths]
     )
-    storage_mock.public_url = MagicMock(
-        side_effect=lambda p: f"https://public.local/{p}"
-    )
+    storage_mock.public_url = MagicMock(side_effect=lambda p: f"https://public.local/{p}")
 
     service = FileService(
         file_repo=FakeFileRepo(),

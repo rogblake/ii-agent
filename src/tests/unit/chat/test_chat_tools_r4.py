@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 import pytest
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from ii_agent.chat.tools.base import ToolCallInput, ToolResponse
+from ii_agent.chat.tools.base import ToolCallInput
 from ii_agent.chat.types import ErrorTextContent, MediaPreferences
 
 pytestmark = pytest.mark.unit

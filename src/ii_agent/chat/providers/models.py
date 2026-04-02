@@ -66,9 +66,7 @@ class ChatProviderFile(Base):
         nullable=False,
     )
     provider = Column(String, nullable=False)  # 'openai', 'anthropic', 'gemini', etc.
-    provider_file_id = Column(
-        String, nullable=False
-    )  # Provider's file ID (e.g., 'file-abc123')
+    provider_file_id = Column(String, nullable=False)  # Provider's file ID (e.g., 'file-abc123')
     raw_file_object = Column(JSONB, nullable=True)  # Raw file object from provider API
     created_at = Column(
         TimestampColumn,
@@ -110,9 +108,7 @@ class ChatProviderVectorStore(Base):
     provider = Column(String, nullable=False)  # 'openai', 'anthropic', 'gemini', etc.
     vector_store_id = Column(String, nullable=False)  # Provider's vector store ID
     version = Column(BigInteger, default=0, nullable=False)
-    raw_vector_object = Column(
-        JSONB, nullable=True
-    )  # Raw vector store object from provider API
+    raw_vector_object = Column(JSONB, nullable=True)  # Raw vector store object from provider API
     created_at = Column(
         TimestampColumn,
         nullable=False,
@@ -124,9 +120,7 @@ class ChatProviderVectorStore(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
-    expires_at = Column(
-        TimestampColumn, nullable=True
-    )  # Vector store expiration timestamp
+    expires_at = Column(TimestampColumn, nullable=True)  # Vector store expiration timestamp
     __mapper_args__ = {"version_id_col": version}
     __table_args__ = (
         Index("idx_chat_provider_vector_stores_user_id", "user_id"),

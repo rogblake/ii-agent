@@ -1,10 +1,5 @@
 """Tests for _orchestrator.py."""
 
-import uuid
-
-import pytest
-
-from ii_agent.projects.design.schemas import StyleChange
 from ii_agent.projects.design.source_mapping_sync._orchestrator import (
     _apply_changes_with_source_mapping,
     _emit_design_mode_sync_progress,

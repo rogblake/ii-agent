@@ -5,7 +5,6 @@ from __future__ import annotations
 import io
 import json
 
-import pytest
 
 from ii_agent.chat.application.file_processor import (
     ContentExtractorFactory,

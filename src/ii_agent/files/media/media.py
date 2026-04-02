@@ -10,7 +10,7 @@ class Image(BaseModel):
 
     # Core content fields (exactly one required)
     url: Optional[str] = None  # Remote location
-    filepath: Optional[Union[Path, str]] = None  # file sandbox path 
+    filepath: Optional[Union[Path, str]] = None  # file sandbox path
     content: Optional[bytes] = None  # Raw image bytes (standardized to bytes)
 
     # Metadata fields
@@ -121,7 +121,7 @@ class Audio(BaseModel):
 
     # Core content fields (exactly one required)
     url: Optional[str] = None
-    filepath: Optional[Union[Path, str]] = None # file sandbox path
+    filepath: Optional[Union[Path, str]] = None  # file sandbox path
     content: Optional[bytes] = None  # Raw audio bytes (standardized to bytes)
 
     # Metadata fields
@@ -237,7 +237,7 @@ class Video(BaseModel):
 
     # Core content fields (exactly one required)
     url: Optional[str] = None
-    filepath: Optional[Union[Path, str]] = None # file sandbox path 
+    filepath: Optional[Union[Path, str]] = None  # file sandbox path
     content: Optional[bytes] = None  # Raw video bytes (standardized to bytes)
 
     # Metadata fields

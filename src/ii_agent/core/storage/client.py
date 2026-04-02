@@ -31,9 +31,7 @@ def _create_storage() -> StorageProvider:
         from ii_agent.core.storage.providers.gcs import GCSProvider
 
         if not s.project_id or not s.bucket_name:
-            raise ValueError(
-                "GCS requires STORAGE_PROJECT_ID and STORAGE_BUCKET_NAME"
-            )
+            raise ValueError("GCS requires STORAGE_PROJECT_ID and STORAGE_BUCKET_NAME")
         return GCSProvider(
             project_id=s.project_id,
             bucket_name=s.bucket_name,

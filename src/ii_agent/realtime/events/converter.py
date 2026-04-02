@@ -17,21 +17,17 @@ from ii_agent.realtime.events.app_events import (
     AgentToolConfirmationEvent,
     AgentToolResultEvent,
     AppEvent,
-    BaseEvent,
     ErrorCode,
-    EventGroup,
     SandboxStatusChangedEvent,
     SubAgentCompleteEvent,
     SystemErrorEvent,
 )
 from ii_agent.tasks.types import RunStatus
 
-from ii_agent.core.logger import logger
 from ii_agent.agents.runs.agent import (
     RunStartedEvent,
     RunContentEvent,
     RunContentDeltaEvent,
-    RunContentCompletedEvent,
     RunCompletedEvent,
     RunErrorEvent,
     RunCancelledEvent,
@@ -48,6 +44,7 @@ from ii_agent.agents.runs.agent import (
     RunOutput,
     RunOutputEvent,
 )
+
 
 def _get_sub_agent_info(event: Union[RunOutputEvent, RunOutput]) -> dict:
     """Extract sub-agent identification info from an event.
@@ -211,7 +208,9 @@ def convert_agent_event_to_realtime(
     if isinstance(event, RunErrorEvent):
         # Map runtime error_type string to strict ErrorCode; default to EXECUTION_ERROR.
         try:
-            error_code = ErrorCode(event.error_type) if event.error_type else ErrorCode.EXECUTION_ERROR
+            error_code = (
+                ErrorCode(event.error_type) if event.error_type else ErrorCode.EXECUTION_ERROR
+            )
         except ValueError:
             error_code = ErrorCode.EXECUTION_ERROR
 
@@ -376,7 +375,9 @@ def convert_agent_event_to_realtime(
     # ReasoningDeltaEvent -> AGENT_REASONING_DELTA (streaming reasoning tokens)
     if isinstance(event, ReasoningDeltaEvent):
         # Use redacted content if available, otherwise use regular content
-        reasoning_text = event.redacted_reasoning_content if event.is_redacted else event.reasoning_content
+        reasoning_text = (
+            event.redacted_reasoning_content if event.is_redacted else event.reasoning_content
+        )
         return AgentReasoningDeltaEvent(
             run_id=run_id,
             session_id=session_uuid,
@@ -439,13 +440,17 @@ def convert_agent_event_to_realtime(
         tool = event.tool
         tool_data = {"origin": origin}
         if tool:
-            tool_data.update({
-                "tool_call_id": tool.tool_call_id if hasattr(tool, "tool_call_id") else None,
-                "tool_name": tool.tool_name if hasattr(tool, "tool_name") else None,
-                "tool_input": tool.tool_args if hasattr(tool, "tool_args") else None,
-                "tool_display_name": tool.display_name if hasattr(tool, "display_name") and tool.display_name else tool.tool_name,
-                "tool_logo": tool.tool_logo if hasattr(tool, "tool_logo") else None,
-            })
+            tool_data.update(
+                {
+                    "tool_call_id": tool.tool_call_id if hasattr(tool, "tool_call_id") else None,
+                    "tool_name": tool.tool_name if hasattr(tool, "tool_name") else None,
+                    "tool_input": tool.tool_args if hasattr(tool, "tool_args") else None,
+                    "tool_display_name": tool.display_name
+                    if hasattr(tool, "display_name") and tool.display_name
+                    else tool.tool_name,
+                    "tool_logo": tool.tool_logo if hasattr(tool, "tool_logo") else None,
+                }
+            )
         # Include sub-agent info in tool_data
         tool_data.update(sub_agent_info)
         tool_data["run_id"] = str(run_id) if run_id else None
@@ -499,7 +504,9 @@ def convert_agent_event_to_realtime(
                     "tool_call_id": tool.tool_call_id if hasattr(tool, "tool_call_id") else None,
                     "tool_name": tool.tool_name if hasattr(tool, "tool_name") else None,
                     "tool_input": tool.tool_args if hasattr(tool, "tool_args") else None,
-                    "tool_display_name": tool.display_name if hasattr(tool, "display_name") and tool.display_name else tool.tool_name,
+                    "tool_display_name": tool.display_name
+                    if hasattr(tool, "display_name") and tool.display_name
+                    else tool.tool_name,
                     "tool_logo": tool.tool_logo if hasattr(tool, "tool_logo") else None,
                 }
             )

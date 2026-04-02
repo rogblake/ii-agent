@@ -49,7 +49,9 @@ class ProjectDatabaseRepository(BaseRepository[ProjectDatabase]):
         )
         return list(result.scalars().all())
 
-    async def deactivate(self, db: AsyncSession, database_id: uuid.UUID) -> Optional[ProjectDatabase]:
+    async def deactivate(
+        self, db: AsyncSession, database_id: uuid.UUID
+    ) -> Optional[ProjectDatabase]:
         """Deactivate a database record (soft delete)."""
         db_record = await self.get_by_id(db, database_id)
         if not db_record:
@@ -66,4 +68,3 @@ class ProjectDatabaseRepository(BaseRepository[ProjectDatabase]):
             )
         )
         return result.scalar() or 0
-

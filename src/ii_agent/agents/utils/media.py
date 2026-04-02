@@ -1,4 +1,3 @@
-import base64
 import time
 from enum import Enum
 from pathlib import Path

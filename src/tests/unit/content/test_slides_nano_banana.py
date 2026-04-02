@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -23,16 +22,10 @@ from ii_agent.content.slides.nano_banana.schemas import (
     ComponentStyles,
     DetectedComponent,
     DetectRequest,
-    DetectResponse,
-    GetVersionsResponse,
     Instruction,
     InstructionType,
     RegenerateRequest,
-    RegenerateResponse,
-    RemoveBackgroundRequest,
-    RemoveBackgroundResponse,
     RevertRequest,
-    RevertResponse,
     Selection,
     SelectionType,
 )

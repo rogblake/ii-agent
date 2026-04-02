@@ -16,18 +16,10 @@ class ToolClientSettings(BaseSettings):
     web_search_config: WebSearchConfig = Field(default_factory=WebSearchConfig)
     web_visit_config: WebVisitConfig = Field(default_factory=WebVisitConfig)
     image_search_config: ImageSearchConfig = Field(default_factory=ImageSearchConfig)
-    audio_generate_config: AudioGenerateConfig = Field(
-        default_factory=AudioGenerateConfig
-    )
-    video_generate_config: VideoGenerateConfig = Field(
-        default_factory=VideoGenerateConfig
-    )
-    image_generate_config: ImageGenerateConfig = Field(
-        default_factory=ImageGenerateConfig
-    )
-    voice_generate_config: VoiceGenerateConfig = Field(
-        default_factory=VoiceGenerateConfig
-    )
+    audio_generate_config: AudioGenerateConfig = Field(default_factory=AudioGenerateConfig)
+    video_generate_config: VideoGenerateConfig = Field(default_factory=VideoGenerateConfig)
+    image_generate_config: ImageGenerateConfig = Field(default_factory=ImageGenerateConfig)
+    voice_generate_config: VoiceGenerateConfig = Field(default_factory=VoiceGenerateConfig)
     database_config: DatabaseConfig = Field(default_factory=DatabaseConfig)
     storage_config: StorageConfig = Field(default_factory=StorageConfig)
     llm_config: LLMConfig = Field(default_factory=LLMConfig)

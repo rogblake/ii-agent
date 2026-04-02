@@ -13,6 +13,7 @@ BACKGROUND_HOOK_COPY_KEYS = frozenset(
     }
 )
 
+
 def copy_args_for_background(args: Dict[str, Any]) -> Dict[str, Any]:
     """
     Create a copy of hook arguments for background execution.

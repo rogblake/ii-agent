@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import SecretStr
@@ -726,7 +726,6 @@ class TestConvertTools:
 class TestSystemPromptTemplate:
     def test_template_has_current_date_placeholder(self):
         from ii_agent.chat.prompts.openai_system_prompt import (
-            SYSTEM_PROMPT_TEMPLATE,
             template,
         )
         from datetime import datetime

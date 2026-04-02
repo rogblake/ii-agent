@@ -9,7 +9,7 @@ from pydantic import TypeAdapter
 
 from ii_agent.chat.messages.models import ChatMessage
 from ii_agent.chat.messages.repository import ChatMessageRepository
-from ii_agent.files.models import FileAsset, SessionAsset
+from ii_agent.files.models import SessionAsset
 
 from ii_agent.billing.schemas import TokenUsage
 from ii_agent.chat.types import (
@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 encoding = tiktoken.get_encoding("cl100k_base")
+
 
 class MessageService:
     """Service for managing chat messages."""
@@ -128,11 +129,7 @@ class MessageService:
             tokens=db_msg.tokens,
             created_at=int(db_msg.created_at.timestamp()),
             updated_at=int(db_msg.updated_at.timestamp()),
-            file_ids=(
-                [str(fid) for fid in db_msg.file_ids]
-                if db_msg.file_ids
-                else None
-            ),
+            file_ids=([str(fid) for fid in db_msg.file_ids] if db_msg.file_ids else None),
             tools_enabled=db_msg.tools,
             metadata=db_msg.message_metadata,
             provider_metadata=db_msg.provider_metadata,
@@ -167,9 +164,7 @@ class MessageService:
 
         Used for advanced mode to load only messages created after entering advanced mode.
         """
-        db_messages = await self._repo.list_after_timestamp(
-            db, session_id, after_timestamp, limit
-        )
+        db_messages = await self._repo.list_after_timestamp(db, session_id, after_timestamp, limit)
 
         messages = []
         for db_msg in db_messages:

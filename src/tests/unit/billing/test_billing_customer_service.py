@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -14,8 +12,6 @@ pytest.skip(
     allow_module_level=True,
 )
 
-from ii_agent.billing.customers.models import BillingCustomer  # noqa: E402
-from ii_agent.billing.customers.repository import BillingCustomerRepository  # noqa: E402
 from ii_agent.billing.customers.service import BillingCustomerService  # noqa: E402
 
 pytestmark = pytest.mark.unit

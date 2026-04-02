@@ -14,13 +14,11 @@ Covers:
   - response.py
 """
 
-import dataclasses
 import time
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from unittest.mock import MagicMock
 
 import pytest
 from pydantic import BaseModel

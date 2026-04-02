@@ -28,9 +28,7 @@ class LocalProvider(StorageProvider):
     # StorageProvider interface
     # ------------------------------------------------------------------
 
-    async def write(
-        self, path: str, content: BinaryIO, content_type: str | None = None
-    ) -> str:
+    async def write(self, path: str, content: BinaryIO, content_type: str | None = None) -> str:
         dest = self._full_path(path)
         dest.parent.mkdir(parents=True, exist_ok=True)
         content.seek(0)
@@ -53,9 +51,7 @@ class LocalProvider(StorageProvider):
     async def read(self, path: str) -> BinaryIO:
         fp = self._full_path(path)
         if not fp.exists():
-            raise StorageObjectNotFoundError(
-                f"Object '{path}' not found in local storage."
-            )
+            raise StorageObjectNotFoundError(f"Object '{path}' not found in local storage.")
         return io.BytesIO(fp.read_bytes())
 
     async def exists(self, path: str) -> bool:
@@ -64,17 +60,13 @@ class LocalProvider(StorageProvider):
     async def size(self, path: str) -> int:
         fp = self._full_path(path)
         if not fp.exists():
-            raise StorageObjectNotFoundError(
-                f"Object '{path}' not found in local storage."
-            )
+            raise StorageObjectNotFoundError(f"Object '{path}' not found in local storage.")
         return fp.stat().st_size
 
     async def delete(self, path: str) -> None:
         fp = self._full_path(path)
         if not fp.exists():
-            raise StorageObjectNotFoundError(
-                f"Object '{path}' not found in local storage."
-            )
+            raise StorageObjectNotFoundError(f"Object '{path}' not found in local storage.")
         fp.unlink()
 
     async def copy(self, source_path: str, dest_path: str) -> str:
@@ -88,9 +80,7 @@ class LocalProvider(StorageProvider):
         dest.write_bytes(src.read_bytes())
         return dest_path
 
-    async def signed_download_url(
-        self, path: str, expiry_seconds: int = 3600
-    ) -> str:
+    async def signed_download_url(self, path: str, expiry_seconds: int = 3600) -> str:
         expires = int(time.time()) + expiry_seconds
         return f"{self._serve_url}/{path}?token=dev&expires={expires}"
 
@@ -98,9 +88,7 @@ class LocalProvider(StorageProvider):
         self, paths: list[str], expiry_seconds: int = 3600
     ) -> list[str | None]:
         expires = int(time.time()) + expiry_seconds
-        return [
-            f"{self._serve_url}/{p}?token=dev&expires={expires}" for p in paths
-        ]
+        return [f"{self._serve_url}/{p}?token=dev&expires={expires}" for p in paths]
 
     async def signed_upload_url(
         self, path: str, content_type: str, expiry_seconds: int = 3600

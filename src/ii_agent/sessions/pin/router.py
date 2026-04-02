@@ -35,9 +35,7 @@ async def pin_session(
     db: DBSession,
 ) -> PinActionResponse:
     """Pin a session for the current user."""
-    success = await pin_service.pin_session(
-        db, current_user.id, session_id
-    )
+    success = await pin_service.pin_session(db, current_user.id, session_id)
 
     if not success:
         return PinActionResponse(
@@ -46,9 +44,7 @@ async def pin_session(
             session_id=session_id,
         )
 
-    return PinActionResponse(
-        success=True, message="Session pinned", session_id=session_id
-    )
+    return PinActionResponse(success=True, message="Session pinned", session_id=session_id)
 
 
 @router.delete("/{session_id}", response_model=PinActionResponse)
@@ -59,9 +55,7 @@ async def unpin_session(
     db: DBSession,
 ) -> PinActionResponse:
     """Unpin a session for the current user."""
-    success = await pin_service.unpin_session(
-        db, current_user.id, session_id
-    )
+    success = await pin_service.unpin_session(db, current_user.id, session_id)
 
     if not success:
         return PinActionResponse(
@@ -70,6 +64,4 @@ async def unpin_session(
             session_id=session_id,
         )
 
-    return PinActionResponse(
-        success=True, message="Session unpinned", session_id=session_id
-    )
+    return PinActionResponse(success=True, message="Session unpinned", session_id=session_id)

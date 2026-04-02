@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
-import types
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch

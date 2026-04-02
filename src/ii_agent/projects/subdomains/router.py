@@ -12,7 +12,10 @@ from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.core.exceptions import IIAgentError, PermissionDeniedError, ValidationError
 from ii_agent.core.logger import logger
 from ii_agent.projects.exceptions import ProjectNotFoundError
-from ii_agent.projects.subdomains.exceptions import SubdomainNotFoundError, SubdomainServiceUnavailableError
+from ii_agent.projects.subdomains.exceptions import (
+    SubdomainNotFoundError,
+    SubdomainServiceUnavailableError,
+)
 from ii_agent.projects.subdomains.dependencies import (
     BaseDomainDep,
     CloudflareKVServiceDep,
@@ -153,15 +156,11 @@ async def claim_subdomain(
 
         # Release old subdomain after successfully claiming the new one
         if old_subdomain:
-            logger.info(
-                f"Releasing old subdomain '{old_subdomain}' for project {project_id}"
-            )
+            logger.info(f"Releasing old subdomain '{old_subdomain}' for project {project_id}")
             try:
                 await kv_service.delete_subdomain(old_subdomain)
             except Exception as delete_error:
-                logger.warning(
-                    f"Failed to release old subdomain '{old_subdomain}': {delete_error}"
-                )
+                logger.warning(f"Failed to release old subdomain '{old_subdomain}': {delete_error}")
 
         full_domain_url = f"https://{subdomain}.{base_domain}"
 
@@ -196,9 +195,7 @@ async def get_reserved_subdomains(
     current_user: CurrentUser,
 ) -> ReservedSubdomainsResponse:
     """Get list of reserved subdomains that cannot be used."""
-    return ReservedSubdomainsResponse(
-        reserved=sorted(list(RESERVED_SUBDOMAINS))
-    )
+    return ReservedSubdomainsResponse(reserved=sorted(list(RESERVED_SUBDOMAINS)))
 
 
 @router.get("/base-domain/info")

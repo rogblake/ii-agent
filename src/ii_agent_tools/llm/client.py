@@ -54,13 +54,9 @@ class LLMClient(ABC):
         if llm_config.openai_base_url:
             self.llm_client.base_url = llm_config.openai_base_url
 
-    def _calculate_cost(
-        self, model_name: str, input_tokens: int, output_tokens: int
-    ) -> float:
+    def _calculate_cost(self, model_name: str, input_tokens: int, output_tokens: int) -> float:
         cost_info = model_name_to_cost[model_name]
-        return (
-            input_tokens * cost_info["input"] + output_tokens * cost_info["output"]
-        ) / 1_000_000
+        return (input_tokens * cost_info["input"] + output_tokens * cost_info["output"]) / 1_000_000
 
     async def generate(
         self,

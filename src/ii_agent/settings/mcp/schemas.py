@@ -1,7 +1,6 @@
 """Pydantic schemas (DTOs) for mcp_settings domain."""
 
 import json
-import uuid as _uuid
 from fastmcp.mcp_config import RemoteMCPServer, StdioMCPServer
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any, Union

@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from ii_agent_tools.integrations.image_search import utils
 from ii_agent_tools.integrations.image_search.base import ImageSearchResult
@@ -12,15 +12,11 @@ logger = get_logger(__name__)
 
 
 class ImageSearchService:
-    def __init__(
-        self, image_search_config: ImageSearchConfig, storage: BaseStorage
-    ) -> None:
+    def __init__(self, image_search_config: ImageSearchConfig, storage: BaseStorage) -> None:
         self.client = create_image_search_client(image_search_config)
         self.storage = storage
 
-    async def _check_and_upload(
-        self, result: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+    async def _check_and_upload(self, result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Check a single image URL and upload to storage if available."""
         url = result["image_url"]
         is_available, content_type = await utils.is_image_url_available(url)

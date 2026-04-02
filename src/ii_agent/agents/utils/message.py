@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from ii_agent.agents.models.message import Message
 from ii_agent.core.logger import logger
 
+
 def filter_tool_calls(messages: List[Message], max_tool_calls: int) -> None:
     """
     Filter messages (in-place) to keep only the most recent N tool calls.

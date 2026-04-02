@@ -51,15 +51,17 @@ async def list_media_templates(
     media_template_service: MediaTemplateServiceDep,
     db: DBSession,
     page: int = Query(0, ge=0, description="Page number (0-indexed)"),
-    page_size: int = Query(
-        20, ge=1, le=100, description="Number of templates per page"
-    ),
+    page_size: int = Query(20, ge=1, le=100, description="Number of templates per page"),
     name: Optional[str] = Query(None, description="Search in template name"),
     type: Optional[str] = Query(None, description="Filter by media type (e.g., image, video)"),
 ):
     """Get a paginated list of media templates."""
     return await media_template_service.list_media_templates(
-        db, page=page, page_size=page_size, search=name, media_type=type,
+        db,
+        page=page,
+        page_size=page_size,
+        search=name,
+        media_type=type,
     )
 
 
@@ -88,16 +90,15 @@ async def list_media_tools_endpoint(
     media_template_service: MediaTemplateServiceDep,
     db: DBSession,
     page: int = Query(0, ge=0, description="Page number (0-indexed)"),
-    page_size: int = Query(
-        20, ge=1, le=100, description="Number of tools per page"
-    ),
-    name: Optional[str] = Query(
-        None, description="Search in mini tool name"
-    ),
+    page_size: int = Query(20, ge=1, le=100, description="Number of tools per page"),
+    name: Optional[str] = Query(None, description="Search in mini tool name"),
 ):
     """List mini tools stored in media_templates (type = image-mini-tools)."""
     return await media_template_service.list_media_tools(
-        db, page=page, page_size=page_size, name=name,
+        db,
+        page=page,
+        page_size=page_size,
+        name=name,
     )
 
 
@@ -172,6 +173,7 @@ async def generate_reference_image(
 # Media Model Config Routes (ported from legacy_media/media.py)
 # =============================================================================
 
+
 @reference_router.get("/models/video", response_model=VideoModelsResponse)
 async def get_video_models():
     """Get all available video generation models and their configurations."""
@@ -199,8 +201,7 @@ async def get_image_models():
     return ImageModelsResponse(
         models=[MediaModelConfig(**model) for model in config.get("models", [])],
         storybook_models=[
-            MediaModelConfig(**model)
-            for model in config.get("storybook_models", [])
+            MediaModelConfig(**model) for model in config.get("storybook_models", [])
         ],
         suggestions=config.get("suggestions", []),
         storybook_suggestions=config.get("storybook_suggestions", []),

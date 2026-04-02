@@ -78,10 +78,7 @@ class CreditsSettings(BaseSettings):
         Returns:
             float: Credit amount for the plan, or default if plan not found
         """
-        return self.default_plans_credits.get(
-            plan.lower(),
-            self.default_user_credits
-        )
+        return self.default_plans_credits.get(plan.lower(), self.default_user_credits)
 
     def should_grant_beta_bonus(self) -> bool:
         """Check if beta bonus credits should be granted.

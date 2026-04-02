@@ -19,9 +19,7 @@ class RunTaskRepository(BaseRepository[RunTask]):
 
     # ── Queries ────────────────────────────────────────────────────────────
 
-    async def find_last_by_session(
-        self, db: AsyncSession, session_id: uuid.UUID
-    ) -> RunTask | None:
+    async def find_last_by_session(self, db: AsyncSession, session_id: uuid.UUID) -> RunTask | None:
         result = await db.execute(
             select(RunTask)
             .where(RunTask.session_id == session_id)
@@ -46,9 +44,7 @@ class RunTaskRepository(BaseRepository[RunTask]):
         )
         return result.scalar_one_or_none()
 
-    async def list_by_session(
-        self, db: AsyncSession, session_id: uuid.UUID
-    ) -> list[RunTask]:
+    async def list_by_session(self, db: AsyncSession, session_id: uuid.UUID) -> list[RunTask]:
         result = await db.execute(
             select(RunTask)
             .where(RunTask.session_id == session_id)
@@ -70,12 +66,8 @@ class TaskLogRepository(BaseRepository[TaskLog]):
 
     model = TaskLog
 
-    async def list_by_task(
-        self, db: AsyncSession, task_id: uuid.UUID
-    ) -> list[TaskLog]:
+    async def list_by_task(self, db: AsyncSession, task_id: uuid.UUID) -> list[TaskLog]:
         result = await db.execute(
-            select(TaskLog)
-            .where(TaskLog.task_id == task_id)
-            .order_by(TaskLog.created_at.asc())
+            select(TaskLog).where(TaskLog.task_id == task_id).order_by(TaskLog.created_at.asc())
         )
         return list(result.scalars().all())

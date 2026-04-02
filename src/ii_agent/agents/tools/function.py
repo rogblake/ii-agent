@@ -32,6 +32,8 @@ if TYPE_CHECKING:
     from ii_agent.agents.runs import RunContext
 
 T = TypeVar("T")
+
+
 def get_entrypoint_docstring(entrypoint: Callable) -> str:
     from inspect import getdoc
 
@@ -72,7 +74,7 @@ class Function(BaseModel):
 
     # Display metadata (for frontend rendering)
     display_name: Optional[str] = None  # Human-readable name for the tool
-    tool_logo: Optional[str] = None     # URL for tool icon/logo
+    tool_logo: Optional[str] = None  # URL for tool icon/logo
 
     instructions: Optional[str] = None
     # If True, add instructions to the Agent's system message
@@ -344,9 +346,7 @@ class Function(BaseModel):
         # Convert input_schema to parameters format
         # BaseTool.input_schema is already in JSON Schema format
         parameters = (
-            tool.input_schema
-            if tool.input_schema
-            else {"type": "object", "properties": {}}
+            tool.input_schema if tool.input_schema else {"type": "object", "properties": {}}
         )
 
         # Generate user_input_schema from the tool's input_schema for pre-execution HITL

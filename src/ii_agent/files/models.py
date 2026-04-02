@@ -22,7 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ii_agent.core.db.base import Base, TimestampColumn
+from ii_agent.core.db.base import Base
 from ii_agent.files.types import AssetSource, AssetType, UploadStatus
 
 if TYPE_CHECKING:

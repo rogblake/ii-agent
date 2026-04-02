@@ -267,9 +267,7 @@ class Parser(BaseModel):
                             index = i + 1
                             found = True
                             break
-                if not found and not [
-                    s for s in lines[:index] if s.strip() == def_str.strip()
-                ]:
+                if not found and not [s for s in lines[:index] if s.strip() == def_str.strip()]:
                     # def str is a skip ahead operator
                     for i, s in enumerate(lines[index:], index):
                         if s.strip() == def_str.strip():
@@ -320,9 +318,7 @@ class DiffError(ValueError):
 
 
 # Utility functions
-def find_context_core(
-    lines: list[str], context: list[str], start: int
-) -> tuple[int, int]:
+def find_context_core(lines: list[str], context: list[str], start: int) -> tuple[int, int]:
     if not context:
         return start, 0
 
@@ -332,22 +328,16 @@ def find_context_core(
             return i, 0
     # RStrip is ok
     for i in range(start, len(lines)):
-        if [s.rstrip() for s in lines[i : i + len(context)]] == [
-            s.rstrip() for s in context
-        ]:
+        if [s.rstrip() for s in lines[i : i + len(context)]] == [s.rstrip() for s in context]:
             return i, 1
     # Fine, Strip is ok too.
     for i in range(start, len(lines)):
-        if [s.strip() for s in lines[i : i + len(context)]] == [
-            s.strip() for s in context
-        ]:
+        if [s.strip() for s in lines[i : i + len(context)]] == [s.strip() for s in context]:
             return i, 100
     return -1, 0
 
 
-def find_context(
-    lines: list[str], context: list[str], start: int, eof: bool
-) -> tuple[int, int]:
+def find_context(lines: list[str], context: list[str], start: int, eof: bool) -> tuple[int, int]:
     if eof:
         new_index, fuzz = find_context_core(lines, context, len(lines) - len(context))
         if new_index != -1:
@@ -357,9 +347,7 @@ def find_context(
     return find_context_core(lines, context, start)
 
 
-def peek_next_section(
-    lines: list[str], index: int
-) -> tuple[list[str], list[Chunk], int, bool]:
+def peek_next_section(lines: list[str], index: int) -> tuple[list[str], list[Chunk], int, bool]:
     old: list[str] = []
     del_lines: list[str] = []
     ins_lines: list[str] = []
@@ -434,11 +422,7 @@ def peek_next_section(
 
 def text_to_patch(text: str, orig: dict[str, str]) -> tuple[Patch, int]:
     lines = text.strip().split("\n")
-    if (
-        len(lines) < 2
-        or not lines[0].startswith("*** Begin Patch")
-        or lines[-1] != "*** End Patch"
-    ):
+    if len(lines) < 2 or not lines[0].startswith("*** Begin Patch") or lines[-1] != "*** End Patch":
         raise DiffError("Invalid patch text")
 
     parser = Parser(
@@ -502,13 +486,9 @@ def patch_to_commit(patch: Patch, orig: dict[str, str]) -> Commit:
     commit = Commit()
     for path, action in patch.actions.items():
         if action.type == ActionType.DELETE:
-            commit.changes[path] = FileChange(
-                type=ActionType.DELETE, old_content=orig[path]
-            )
+            commit.changes[path] = FileChange(type=ActionType.DELETE, old_content=orig[path])
         elif action.type == ActionType.ADD:
-            commit.changes[path] = FileChange(
-                type=ActionType.ADD, new_content=action.new_file
-            )
+            commit.changes[path] = FileChange(type=ActionType.ADD, new_content=action.new_file)
         elif action.type == ActionType.UPDATE:
             new_content = _get_updated_file(text=orig[path], action=action, path=path)
             commit.changes[path] = FileChange(
@@ -567,9 +547,7 @@ class ApplyPatchTool(BaseTool):
     def __init__(self, workspace_manager: WorkspaceManager):
         self.workspace_manager = workspace_manager
 
-    def should_confirm_execute(
-        self, tool_input: dict[str, Any]
-    ) -> ToolConfirmationDetails | bool:
+    def should_confirm_execute(self, tool_input: dict[str, Any]) -> ToolConfirmationDetails | bool:
         """Determine if patch execution should be confirmed."""
         patch_input = tool_input.get("input", "")
         return ToolConfirmationDetails(
@@ -624,9 +602,7 @@ class ApplyPatchTool(BaseTool):
         patch_input = tool_input.get("input")
 
         if not patch_input:
-            return ToolResult(
-                llm_content="ERROR: 'input' parameter is required", is_error=True
-            )
+            return ToolResult(llm_content="ERROR: 'input' parameter is required", is_error=True)
 
         try:
             result_msg, commit, fuzz = process_patch(
@@ -662,9 +638,7 @@ class ApplyPatchTool(BaseTool):
 
             return ToolResult(
                 llm_content=result_msg,
-                user_display_content=(
-                    user_display_content if user_display_content else None
-                ),
+                user_display_content=(user_display_content if user_display_content else None),
                 is_error=False,
             )
 
@@ -673,9 +647,7 @@ class ApplyPatchTool(BaseTool):
         except FileSystemValidationError as e:
             return ToolResult(llm_content=f"ERROR: {str(e)}", is_error=True)
         except Exception as e:
-            return ToolResult(
-                llm_content=f"ERROR: Unexpected error: {str(e)}", is_error=True
-            )
+            return ToolResult(llm_content=f"ERROR: Unexpected error: {str(e)}", is_error=True)
 
     async def execute_mcp_wrapper(
         self,

@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 

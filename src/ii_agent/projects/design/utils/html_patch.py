@@ -1028,11 +1028,7 @@ def _apply_move_change_by_design_ids(
     if not target_span_after_removal:
         return html, False
 
-    insert_at = (
-        target_span_after_removal[0]
-        if mode == "before"
-        else target_span_after_removal[1]
-    )
+    insert_at = target_span_after_removal[0] if mode == "before" else target_span_after_removal[1]
     updated = removed[:insert_at] + a_block + removed[insert_at:]
     return updated, True
 

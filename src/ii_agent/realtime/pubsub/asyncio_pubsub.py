@@ -78,9 +78,7 @@ class AsyncIOPubSub:
         if self._running:
             return
         self._running = True
-        self._task = asyncio.create_task(
-            self._dispatch(), name="pubsub:global"
-        )
+        self._task = asyncio.create_task(self._dispatch(), name="pubsub:global")
 
     async def stop(self) -> None:
         """Cancel the dispatch task."""

@@ -6,7 +6,7 @@ import io
 import uuid as _uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -192,9 +192,7 @@ def _make_storage_mock() -> MagicMock:
     storage.signed_urls_batch = AsyncMock(
         side_effect=lambda paths, **kw: [f"signed://{p}" for p in paths]
     )
-    storage.signed_upload_url = AsyncMock(
-        side_effect=lambda path, ct, **kw: f"upload://{path}"
-    )
+    storage.signed_upload_url = AsyncMock(side_effect=lambda path, ct, **kw: f"upload://{path}")
     storage.exists = AsyncMock(return_value=False)
     storage.write = AsyncMock(return_value="path")
     storage.write_from_url = AsyncMock(side_effect=lambda url, path, ct=None: path)
@@ -692,9 +690,7 @@ class TestResolveSignedUrls:
     @pytest.mark.asyncio
     async def test_returns_http_url_as_is(self):
         repo = FakeFileRepo()
-        repo.files["f-1"] = _make_file(
-            id="f-1", storage_path="https://example.com/image.png"
-        )
+        repo.files["f-1"] = _make_file(id="f-1", storage_path="https://example.com/image.png")
         storage = _make_storage_mock()
         svc = _make_service(file_repo=repo, storage=storage)
 
@@ -755,22 +751,16 @@ class TestResolveSignedUrlByPath:
     @pytest.mark.asyncio
     async def test_returns_http_url_as_is(self):
         svc = _make_service()
-        result = await svc.resolve_signed_url_by_path(
-            None, "https://example.com/file.png"
-        )
+        result = await svc.resolve_signed_url_by_path(None, "https://example.com/file.png")
         assert result == "https://example.com/file.png"
 
     @pytest.mark.asyncio
     async def test_resolves_via_asset_row_when_found(self):
         repo = FakeFileRepo()
-        repo.files["f-1"] = _make_file(
-            id="f-1", storage_path="users/u1/uploads/test.txt"
-        )
+        repo.files["f-1"] = _make_file(id="f-1", storage_path="users/u1/uploads/test.txt")
         svc = _make_service(file_repo=repo)
 
-        result = await svc.resolve_signed_url_by_path(
-            None, "users/u1/uploads/test.txt"
-        )
+        result = await svc.resolve_signed_url_by_path(None, "users/u1/uploads/test.txt")
         assert result == "signed://users/u1/uploads/test.txt"
 
     @pytest.mark.asyncio
@@ -778,9 +768,7 @@ class TestResolveSignedUrlByPath:
         storage = _make_storage_mock()
         svc = _make_service(storage=storage)
 
-        result = await svc.resolve_signed_url_by_path(
-            None, "orphaned/path/file.txt"
-        )
+        result = await svc.resolve_signed_url_by_path(None, "orphaned/path/file.txt")
         assert result == "signed://orphaned/path/file.txt"
         storage.signed_url.assert_called_once()
 
@@ -797,8 +785,6 @@ class TestResolveSignedUrlByPath:
         storage = _make_storage_mock()
         svc = _make_service(file_repo=repo, storage=storage)
 
-        result = await svc.resolve_signed_url_by_path(
-            None, "users/u1/uploads/cached.txt"
-        )
+        result = await svc.resolve_signed_url_by_path(None, "users/u1/uploads/cached.txt")
         assert result == "cached://still-good"
         storage.signed_url.assert_not_called()

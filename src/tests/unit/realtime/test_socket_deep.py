@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -11,7 +11,6 @@ pytest.skip("Tested module was removed during refactoring", allow_module_level=T
 from ii_agent.realtime.session_store import (
     MemorySessionStore,
     RedisSessionStore,
-    SessionStore,
 )
 
 

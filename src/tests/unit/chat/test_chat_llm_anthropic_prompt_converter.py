@@ -6,7 +6,6 @@ import json
 from typing import Any, List
 from unittest.mock import MagicMock
 
-import pytest
 
 from ii_agent.chat.types import (
     ArrayResultContent,

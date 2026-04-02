@@ -158,9 +158,7 @@ async def copy_skill_to_sandbox(
     elif path_resolver.is_user_content(storage_uri):
         # Custom skill from GCS
         if storage is None:
-            raise ValueError(
-                f"Storage client required for GCS-based skill: {storage_uri}"
-            )
+            raise ValueError(f"Storage client required for GCS-based skill: {storage_uri}")
         zip_content = await download_skill_zip_from_gcs(storage, storage_uri)
     else:
         # Legacy: absolute local path
@@ -172,9 +170,7 @@ async def copy_skill_to_sandbox(
 
     # Create target directory and extract
     await sandbox.run_command(f"mkdir -p {sandbox_skill_dir}", user="root")
-    await sandbox.run_command(
-        f"unzip -o {zip_path_in_sandbox} -d {sandbox_skill_dir}", user="root"
-    )
+    await sandbox.run_command(f"unzip -o {zip_path_in_sandbox} -d {sandbox_skill_dir}", user="root")
 
     # Fix permissions so the sandbox user can read the files
     await sandbox.run_command(f"chown -R user:user {sandbox_skill_dir}", user="root")

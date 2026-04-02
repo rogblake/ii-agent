@@ -36,17 +36,13 @@ class SandboxStatusHandler(BaseCommandHandler[SandboxStatusContent]):
 
         async with get_db_session_local() as db:
             try:
-                sandbox = await sandbox_service.get_sandbox_for_session(
-                    db, session_info.id
-                )
+                sandbox = await sandbox_service.get_sandbox_for_session(db, session_info.id)
                 if sandbox:
                     sandbox_info = await sandbox.get_info()
                     status = sandbox_info.status.value
                     vscode_url = sandbox_info.vscode_url
             except Exception as e:
-                logger.error(
-                    f"Failed to get sandbox status for session {session_info.id}: {e}"
-                )
+                logger.error(f"Failed to get sandbox status for session {session_info.id}: {e}")
                 status = SandboxStatus.ERROR.value
 
         # Normalise status to the Literal expected by the event model

@@ -15,11 +15,10 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
 import pytest
 from functools import partial
 from typing import Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 pytestmark = pytest.mark.unit
 

@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.config.settings import Settings, get_settings
-from ii_agent.core.logger import logger
+from ii_agent.core.config.settings import Settings
 
-from ii_agent.projects.databases.utils import extract_db_url
 from ii_agent.projects.exceptions import ProjectNotFoundError
 from ii_agent.projects.repository import ProjectRepository
 from ii_agent.projects.secrets.utils import _decrypt_secrets_payload, _encrypt_secrets_payload

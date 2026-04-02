@@ -96,9 +96,7 @@ class TemplateReferenceModeStrategy(BaseModeStrategy):
         if not self._template_preview_url:
             return ""
 
-        template_name = (
-            f"{self._template_name}" if self._template_name else "the selected template"
-        )
+        template_name = f"{self._template_name}" if self._template_name else "the selected template"
         return (
             "\n\n[Template Style Reference]\n"
             f"A style reference image from {template_name} is attached in this message. "

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import io
 import pytest
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -32,7 +31,6 @@ from ii_agent.content.storybook.voice_service import (
 from ii_agent.content.storybook.schemas import (
     StorybookDetail,
     StorybookPageInfo,
-    StorybookVoiceOverResponse,
 )
 
 pytestmark = pytest.mark.unit

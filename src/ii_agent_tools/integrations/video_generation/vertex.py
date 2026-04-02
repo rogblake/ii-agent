@@ -223,9 +223,9 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                 "allow_all": "ALLOW_ALL",
                 "allow_adult": "ALLOW_ADULT",
             }
-           # config_kwargs["personGeneration"] = person_gen_map.get(
-           #     person_generation, "ALLOW_ALL"
-           # )
+        # config_kwargs["personGeneration"] = person_gen_map.get(
+        #     person_generation, "ALLOW_ALL"
+        # )
 
         # Add seed for reproducibility (Veo 3.x only)
         if seed is not None and "veo-3" in model_name:
@@ -248,7 +248,9 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                 ref_images_list.append(ref_image)
             if ref_images_list:
                 config_kwargs["referenceImages"] = ref_images_list
-                logger.info(f"[VertexVideoGeneration] Using {len(ref_images_list)} reference images")
+                logger.info(
+                    f"[VertexVideoGeneration] Using {len(ref_images_list)} reference images"
+                )
 
         config = types.GenerateVideosConfig(**config_kwargs)
 
@@ -275,7 +277,9 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
         # Handle done=None or done=False - both mean not complete
         while operation.done is not True:
             if elapsed_time >= max_wait_time_seconds:
-                raise TimeoutError(f"Video generation timed out after {max_wait_time_seconds} seconds")
+                raise TimeoutError(
+                    f"Video generation timed out after {max_wait_time_seconds} seconds"
+                )
             await asyncio.sleep(polling_interval_seconds)
             elapsed_time += polling_interval_seconds
             logger.debug(f"[VertexVideoGeneration] Polling... (elapsed: {elapsed_time}s)")
@@ -299,21 +303,22 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
 
             # Get video bytes - SDK may use different attribute names
             # Try both camelCase and snake_case
-            video_bytes = (
-                getattr(video, 'videoBytes', None) or
-                getattr(video, 'video_bytes', None)
-            )
+            video_bytes = getattr(video, "videoBytes", None) or getattr(video, "video_bytes", None)
 
             # If no direct bytes, try to download from URI
             if not video_bytes:
-                video_uri = getattr(video, 'uri', None)
+                video_uri = getattr(video, "uri", None)
                 if video_uri:
                     video_bytes = await self._download_video(video_uri)
 
             if not video_bytes:
                 # Log video object attributes for debugging
-                video_attrs = {k: type(v).__name__ for k, v in vars(video).items() if not k.startswith('_')}
-                raise RuntimeError(f"Video generation succeeded but no video data returned. Video attrs: {video_attrs}")
+                video_attrs = {
+                    k: type(v).__name__ for k, v in vars(video).items() if not k.startswith("_")
+                }
+                raise RuntimeError(
+                    f"Video generation succeeded but no video data returned. Video attrs: {video_attrs}"
+                )
 
             # Upload video to GCS
             public_url, storage_path, file_name, video_size = await self._upload_video(
@@ -380,14 +385,16 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                 "[VertexVideoGeneration] end_frame provided - using frame interpolation instead of extension"
             )
             # Extract last frame from source video and use frame interpolation
-            start_frame_from_video = await self._extract_last_frame_from_video(video_uri, user_id=user_id)
+            start_frame_from_video = await self._extract_last_frame_from_video(
+                video_uri, user_id=user_id
+            )
             if start_frame_from_video:
                 # Generate final segment with frame interpolation
                 final_segment = await self.generate_video(
                     prompt=prompt,
                     model_name=model_name,
                     aspect_ratio="16:9",  # Frame interpolation requires 16:9
-                    duration_seconds=8,    # Frame interpolation requires 8s
+                    duration_seconds=8,  # Frame interpolation requires 8s
                     audio_included=generate_audio,
                     start_frame=start_frame_from_video,
                     end_frame=end_frame,
@@ -397,7 +404,9 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
 
                 if final_segment.url:
                     # Concatenate source video + final segment
-                    concatenated = await self._concatenate_videos(video_uri, final_segment.url, user_id=user_id)
+                    concatenated = await self._concatenate_videos(
+                        video_uri, final_segment.url, user_id=user_id
+                    )
                     if concatenated:
                         return concatenated
                     else:
@@ -412,7 +421,9 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
 
         # Generate output path for extended video
         file_id = str(uuid.uuid4())
-        output_blob_name = path_resolver.user_file(user_id, "video", f"extended-{file_id[:8]}", "mp4")
+        output_blob_name = path_resolver.user_file(
+            user_id, "video", f"extended-{file_id[:8]}", "mp4"
+        )
         output_gcs_uri = f"gs://{self.output_bucket}/{output_blob_name}"
 
         # Build config for extension
@@ -431,9 +442,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                 "allow_all": "ALLOW_ALL",
                 "allow_adult": "ALLOW_ADULT",
             }
-            config_kwargs["personGeneration"] = person_gen_map.get(
-                person_generation, "ALLOW_ALL"
-            )
+            config_kwargs["personGeneration"] = person_gen_map.get(person_generation, "ALLOW_ALL")
 
         config = types.GenerateVideosConfig(**config_kwargs)
 
@@ -493,21 +502,22 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                 blob = self.bucket.blob(output_blob_name)
                 if blob.exists():
                     video_bytes = blob.download_as_bytes()
-                    logger.debug(f"[VertexVideoGeneration] Video found at outputGcsUri: {output_blob_name}, size={len(video_bytes)}")
+                    logger.debug(
+                        f"[VertexVideoGeneration] Video found at outputGcsUri: {output_blob_name}, size={len(video_bytes)}"
+                    )
             except Exception as e:
                 logger.debug(f"[VertexVideoGeneration] outputGcsUri file not found or error: {e}")
 
             # If outputGcsUri didn't work, try to get from video response
             if not video_bytes:
                 # Try direct bytes from response
-                video_bytes = (
-                    getattr(video, 'videoBytes', None) or
-                    getattr(video, 'video_bytes', None)
+                video_bytes = getattr(video, "videoBytes", None) or getattr(
+                    video, "video_bytes", None
                 )
 
                 # If no direct bytes, try to download from URI
                 if not video_bytes:
-                    video_uri_from_response = getattr(video, 'uri', None)
+                    video_uri_from_response = getattr(video, "uri", None)
                     if video_uri_from_response:
                         video_bytes = await self._download_video(video_uri_from_response)
 
@@ -638,10 +648,14 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
 
             # Get video duration first
             probe_cmd = [
-                "ffprobe", "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
-                video_path
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                video_path,
             ]
 
             def _run_probe():
@@ -657,12 +671,17 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
             seek_time = max(0, duration - 0.1)
 
             extract_cmd = [
-                "ffmpeg", "-y",
-                "-ss", str(seek_time),
-                "-i", video_path,
-                "-vframes", "1",
-                "-q:v", "2",
-                frame_path
+                "ffmpeg",
+                "-y",
+                "-ss",
+                str(seek_time),
+                "-i",
+                video_path,
+                "-vframes",
+                "1",
+                "-q:v",
+                "2",
+                frame_path,
             ]
 
             def _run_extract():
@@ -687,6 +706,7 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
 
                 # Clean up temp files
                 import os
+
                 os.unlink(video_path)
                 os.unlink(frame_path)
 
@@ -742,12 +762,17 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
 
                 # Concatenate using ffmpeg
                 concat_cmd = [
-                    "ffmpeg", "-y",
-                    "-f", "concat",
-                    "-safe", "0",
-                    "-i", concat_list_path,
-                    "-c", "copy",
-                    output_path
+                    "ffmpeg",
+                    "-y",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    concat_list_path,
+                    "-c",
+                    "copy",
+                    output_path,
                 ]
 
                 def _run_concat():
@@ -765,7 +790,9 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                         video_bytes = f.read()
 
                     file_id = str(uuid.uuid4())[:8]
-                    blob_name = path_resolver.user_file(user_id, "video", f"concat-{file_id}", "mp4")
+                    blob_name = path_resolver.user_file(
+                        user_id, "video", f"concat-{file_id}", "mp4"
+                    )
                     blob = self.bucket.blob(blob_name)
                     blob.cache_control = "public, max-age=31536000"
                     blob.upload_from_file(BytesIO(video_bytes), content_type="video/mp4")
@@ -773,7 +800,9 @@ class VertexVideoGenerationClient(BaseVideoGenerationClient):
                     if self.custom_domain:
                         public_url = f"https://{self.custom_domain}/{blob_name}"
                     else:
-                        public_url = f"https://storage.googleapis.com/{self.output_bucket}/{blob_name}"
+                        public_url = (
+                            f"https://storage.googleapis.com/{self.output_bucket}/{blob_name}"
+                        )
 
                     return public_url, blob_name, len(video_bytes)
 

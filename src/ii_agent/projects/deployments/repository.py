@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Optional
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +11,6 @@ from ii_agent.projects.deployments.models import ProjectDeployment
 
 
 class DeploymentsRepository(BaseRepository[ProjectDeployment]):
-
     model = ProjectDeployment
 
     async def get_latest_deployment(

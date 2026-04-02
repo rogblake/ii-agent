@@ -68,9 +68,7 @@ class MinIOProvider(StorageProvider):
         """Map S3Error to domain exceptions."""
         code = exc.code
         if code in ("NoSuchKey", "NoSuchBucket"):
-            raise StorageObjectNotFoundError(
-                f"Object '{path}' not found."
-            ) from exc
+            raise StorageObjectNotFoundError(f"Object '{path}' not found.") from exc
         if code in ("AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch"):
             raise StoragePermissionError(str(exc)) from exc
         raise exc
@@ -79,9 +77,7 @@ class MinIOProvider(StorageProvider):
     # StorageProvider interface
     # ------------------------------------------------------------------
 
-    async def write(
-        self, path: str, content: BinaryIO, content_type: str | None = None
-    ) -> str:
+    async def write(self, path: str, content: BinaryIO, content_type: str | None = None) -> str:
         def _upload() -> str:
             content.seek(0)
             data = content.read()
@@ -191,9 +187,7 @@ class MinIOProvider(StorageProvider):
 
         return await self._run_sync(_copy)
 
-    async def signed_download_url(
-        self, path: str, expiry_seconds: int = 3600
-    ) -> str:
+    async def signed_download_url(self, path: str, expiry_seconds: int = 3600) -> str:
         def _sign() -> str:
             return self._client.presigned_get_object(
                 self._bucket_name,

@@ -1,7 +1,6 @@
 """Unit tests for Composio connector tool."""
 
 import json
-from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -143,9 +142,7 @@ class TestGetActions:
         tool = make_composio_tool()
         tool._actions = [{"name": "GMAIL_LIST", "description": "List", "parameters": {}}]
 
-        with patch(
-            "ii_agent.agents.tools.connectors.composio.ComposioCacheService"
-        ) as MockCache:
+        with patch("ii_agent.agents.tools.connectors.composio.ComposioCacheService") as MockCache:
             MockCache.get_toolkit_actions = AsyncMock()
             await tool._get_actions()
             MockCache.get_toolkit_actions.assert_not_called()
@@ -158,9 +155,7 @@ class TestGetActions:
         tool = make_composio_tool()
         cached = {"actions": [{"name": "GMAIL_LIST", "description": "List", "parameters": {}}]}
 
-        with patch(
-            "ii_agent.agents.tools.connectors.composio.ComposioCacheService"
-        ) as MockCache:
+        with patch("ii_agent.agents.tools.connectors.composio.ComposioCacheService") as MockCache:
             MockCache.get_toolkit_actions = AsyncMock(return_value=cached)
             await tool._get_actions()
 
@@ -179,9 +174,7 @@ class TestGetActions:
         mock_action.description = "Send email"
 
         with (
-            patch(
-                "ii_agent.agents.tools.connectors.composio.ComposioCacheService"
-            ) as MockCache,
+            patch("ii_agent.agents.tools.connectors.composio.ComposioCacheService") as MockCache,
             patch(
                 "ii_agent.agents.tools.connectors.composio.get_default_tools",
                 return_value=[],

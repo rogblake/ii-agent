@@ -49,9 +49,7 @@ class PathResolver:
 
     # ── User content ──
 
-    def user_file(
-        self, user_id: uuid.UUID, asset_type: str, file_id: str, ext: str
-    ) -> str:
+    def user_file(self, user_id: uuid.UUID, asset_type: str, file_id: str, ext: str) -> str:
         """Path for any user file, organized by content type.
 
         ``asset_type`` accepts :class:`~ii_agent.files.types.AssetType`
@@ -60,9 +58,7 @@ class PathResolver:
         folder = _TYPE_FOLDERS.get(asset_type, _DEFAULT_FOLDER)
         return f"users/{user_id}/{folder}/{file_id}.{ext}"
 
-    def user_avatar(
-        self, user_id: uuid.UUID, file_id: str, ext: str
-    ) -> str:
+    def user_avatar(self, user_id: uuid.UUID, file_id: str, ext: str) -> str:
         return f"users/{user_id}/avatars/{file_id}.{ext}"
 
     def user_skill(self, user_id: uuid.UUID, skill_name: str) -> str:
@@ -70,9 +66,7 @@ class PathResolver:
 
     # ── Content ──
 
-    def content_template(
-        self, category: str, filename: str, ext: str
-    ) -> str:
+    def content_template(self, category: str, filename: str, ext: str) -> str:
         return f"content/templates/{category}/{filename}.{ext}"
 
     def slide_asset(self, content_hash: str, ext: str) -> str:
@@ -101,9 +95,7 @@ class PathResolver:
         """Prefix for a user's media files (images, videos, audio)."""
         return f"users/{user_id}/media/"
 
-    def user_type_prefix(
-        self, user_id: uuid.UUID, asset_type: str
-    ) -> str:
+    def user_type_prefix(self, user_id: uuid.UUID, asset_type: str) -> str:
         """Prefix for a user's files of a given type."""
         folder = _TYPE_FOLDERS.get(asset_type, _DEFAULT_FOLDER)
         return f"users/{user_id}/{folder}/"

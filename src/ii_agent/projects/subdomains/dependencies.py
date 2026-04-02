@@ -58,9 +58,7 @@ def get_kv_service() -> CloudflareKVService:
         config = CloudflareKVConfig.from_env()
         return CloudflareKVService(config)
     except ValueError as e:
-        raise SubdomainServiceUnavailableError(
-            f"Subdomain service not configured: {str(e)}"
-        ) from e
+        raise SubdomainServiceUnavailableError(f"Subdomain service not configured: {str(e)}") from e
 
 
 CloudflareKVServiceDep = Annotated[CloudflareKVService, Depends(get_kv_service)]

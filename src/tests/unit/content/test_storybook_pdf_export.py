@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import io
 from datetime import datetime, timezone
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from PIL import Image

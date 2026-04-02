@@ -14,12 +14,8 @@ import httpx
 import pytest
 
 from ii_agent.chat.media.services.composite_image_service import (
-    DEFAULT_HEIGHT,
     DEFAULT_PIXELS,
-    DEFAULT_WIDTH,
-    FLEX_DIRECTION_MAP,
     RESOLUTION_PIXELS,
-    TextPosition,
     _calculate_dimensions,
     _escape_html,
     _generate_html,

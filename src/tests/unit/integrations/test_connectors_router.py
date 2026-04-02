@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import sys
-from typing import Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 
 # The package __init__.py re-exports the APIRouter instance as ``router``,
 # which shadows the ``router.py`` *module* when Python resolves dotted

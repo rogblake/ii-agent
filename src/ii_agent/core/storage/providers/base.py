@@ -8,9 +8,7 @@ class StorageProvider(abc.ABC):
     """Abstract storage provider. All methods async except public_url."""
 
     @abc.abstractmethod
-    async def write(
-        self, path: str, content: BinaryIO, content_type: str | None = None
-    ) -> str:
+    async def write(self, path: str, content: BinaryIO, content_type: str | None = None) -> str:
         """Upload content. Returns the storage path."""
 
     @abc.abstractmethod
@@ -40,9 +38,7 @@ class StorageProvider(abc.ABC):
         """Server-side copy. Returns dest path."""
 
     @abc.abstractmethod
-    async def signed_download_url(
-        self, path: str, expiry_seconds: int = 3600
-    ) -> str:
+    async def signed_download_url(self, path: str, expiry_seconds: int = 3600) -> str:
         """Generate signed download URL."""
 
     @abc.abstractmethod

@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import base64
-import json
-from typing import AsyncIterator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-import pytest
 
 from ii_agent.chat.llm.gemini import (
     GeminiProvider,
@@ -25,9 +22,7 @@ from ii_agent.chat.types import (
     Message,
     MessageRole,
     ReasoningContent,
-    RunResponseEvent,
     TextContent,
-    ToolCall,
 )
 from ii_agent.core.config.llm_config import LLMConfig
 

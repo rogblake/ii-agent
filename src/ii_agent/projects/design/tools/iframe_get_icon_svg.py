@@ -51,7 +51,9 @@ class DesignModeIframeAIGetIconSvgTool(BaseTool):
             svg_inner = None
 
         if svg_inner:
-            return ToolResponse(output=JsonResultContent(value={"name": name, "svg_inner": svg_inner}))
+            return ToolResponse(
+                output=JsonResultContent(value={"name": name, "svg_inner": svg_inner})
+            )
 
         try:
             suggestions = lucide_catalog.list_icons(query=name, limit=15)

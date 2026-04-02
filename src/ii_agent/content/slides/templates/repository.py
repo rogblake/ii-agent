@@ -14,9 +14,7 @@ class SlideTemplateRepository:
 
     async def get_by_id(self, db: AsyncSession, template_id: str) -> Optional[Dict[str, Any]]:
         """Get slide template by ID."""
-        result = await db.execute(
-            select(SlideTemplate).where(SlideTemplate.id == template_id)
-        )
+        result = await db.execute(select(SlideTemplate).where(SlideTemplate.id == template_id))
         template = result.scalar_one_or_none()
 
         if template:
@@ -29,11 +27,11 @@ class SlideTemplateRepository:
 
         return None
 
-    async def get_full_by_id(self, db: AsyncSession, template_id: str) -> Optional[SlideTemplateInfo]:
+    async def get_full_by_id(
+        self, db: AsyncSession, template_id: str
+    ) -> Optional[SlideTemplateInfo]:
         """Get full slide template by ID including timestamps."""
-        result = await db.execute(
-            select(SlideTemplate).where(SlideTemplate.id == template_id)
-        )
+        result = await db.execute(select(SlideTemplate).where(SlideTemplate.id == template_id))
         template = result.scalar_one_or_none()
 
         if template:

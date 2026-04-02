@@ -30,7 +30,9 @@ class AppleCredentialRepository(BaseRepository[AppleCredential]):
         )
         return result.scalar_one_or_none()
 
-    async def get_latest_by_user(self, db: AsyncSession, user_id: uuid.UUID) -> AppleCredential | None:
+    async def get_latest_by_user(
+        self, db: AsyncSession, user_id: uuid.UUID
+    ) -> AppleCredential | None:
         result = await db.execute(
             select(AppleCredential)
             .where(AppleCredential.user_id == user_id)

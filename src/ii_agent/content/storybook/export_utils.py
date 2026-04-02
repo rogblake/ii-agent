@@ -125,13 +125,17 @@ def prepare_pages_for_export(
                         resolution=resolution,
                         page_number=export_page_num,
                     )
-                    export_pages.append((export_page_num, combined_html, combined_width, combined_height))
+                    export_pages.append(
+                        (export_page_num, combined_html, combined_width, combined_height)
+                    )
                 export_page_num += 1
                 i += 2
                 continue
 
         if current_page.html_content:
-            export_pages.append((export_page_num, current_page.html_content, base_width, base_height))
+            export_pages.append(
+                (export_page_num, current_page.html_content, base_width, base_height)
+            )
             export_page_num += 1
 
         i += 1

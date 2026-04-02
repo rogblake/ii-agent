@@ -26,39 +26,30 @@ class Storybook(Base):
     __tablename__ = "storybooks"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE")
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     version: Mapped[int] = mapped_column(BigInteger, default=1)
     root_storybook_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("storybooks.id", ondelete="SET NULL"),
-        nullable=True
+        UUID(as_uuid=True), ForeignKey("storybooks.id", ondelete="SET NULL"), nullable=True
     )
     parent_storybook_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("storybooks.id", ondelete="SET NULL"),
-        nullable=True
+        UUID(as_uuid=True), ForeignKey("storybooks.id", ondelete="SET NULL"), nullable=True
     )
     style_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     aspect_ratio: Mapped[str] = mapped_column(String, nullable=False, default="1:1")
     resolution: Mapped[str] = mapped_column(String, nullable=False, default="1K")
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
         TimestampColumn,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )
 
     # Relationships
-    session: Mapped["Session"] = relationship(
-        "Session",
-        back_populates="storybooks"
-    )
+    session: Mapped["Session"] = relationship("Session", back_populates="storybooks")
     page_links: Mapped[list["StorybookPageLink"]] = relationship(
         "StorybookPageLink",
         back_populates="storybook",
@@ -138,17 +129,14 @@ class StorybookPage(Base):
     html_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     text_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     audio_link: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    page_metadata: Mapped[Optional[dict]] = mapped_column(
-        "metadata", JSONB, nullable=True
-    )
+    page_metadata: Mapped[Optional[dict]] = mapped_column("metadata", JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
         TimestampColumn,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )
 
     # Relationships
@@ -158,6 +146,4 @@ class StorybookPage(Base):
         cascade="all, delete-orphan",
     )
 
-    __table_args__ = (
-        Index("idx_storybook_pages_page_number", "page_number"),
-    )
+    __table_args__ = (Index("idx_storybook_pages_page_number", "page_number"),)

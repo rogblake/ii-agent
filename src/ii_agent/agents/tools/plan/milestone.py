@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from ii_agent.realtime.pubsub import AsyncIOPubSub as EventStream
     from ii_agent.sessions.schemas import SessionInfo
 
+
 class MilestoneTool(BaseAgentTool):
     """V1 Tool for submitting project plans with milestones.
 
@@ -147,9 +148,7 @@ class MilestoneTool(BaseAgentTool):
         from ii_agent.core.container import get_app_container
 
         session_uuid = (
-            _uuid.UUID(self.session_id)
-            if isinstance(self.session_id, str)
-            else self.session_id
+            _uuid.UUID(self.session_id) if isinstance(self.session_id, str) else self.session_id
         )
 
         plan_content = {
@@ -177,9 +176,7 @@ class MilestoneTool(BaseAgentTool):
                     content=plan_content,
                 )
 
-                await event_service.save_event(
-                    db, session_id=session_uuid, event=plan_event
-                )
+                await event_service.save_event(db, session_id=session_uuid, event=plan_event)
                 await db.commit()
 
         # Emit plan generated event to clients

@@ -92,7 +92,9 @@ class StorybookPNGExporter:
             browser = await p.chromium.launch(headless=True)
             try:
                 for page_num, html_content, page_width, page_height in export_pages:
-                    logger.info(f"Converting export page {page_num} to PNG ({page_width}x{page_height})")
+                    logger.info(
+                        f"Converting export page {page_num} to PNG ({page_width}x{page_height})"
+                    )
 
                     context = await browser.new_context(
                         viewport={"width": page_width, "height": page_height},
@@ -171,7 +173,9 @@ class StorybookPNGExporter:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             try:
-                for index, (page_num, html_content, page_width, page_height) in enumerate(export_pages, 1):
+                for index, (page_num, html_content, page_width, page_height) in enumerate(
+                    export_pages, 1
+                ):
                     yield {
                         "type": "progress",
                         "message": f"Converting page {page_num}",
@@ -227,9 +231,7 @@ class StorybookPNGExporter:
         zip_base64 = base64.b64encode(zip_bytes).decode("utf-8")
 
         storybook_id = storybook.id
-        filename = (
-            f"{storybook.name.replace(' ', '_')}_{storybook_id[:8]}-pages.zip"
-        )
+        filename = f"{storybook.name.replace(' ', '_')}_{storybook_id[:8]}-pages.zip"
 
         yield {
             "type": "complete",

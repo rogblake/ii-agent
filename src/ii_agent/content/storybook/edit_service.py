@@ -330,12 +330,8 @@ class StorybookEditService:
         )
 
         # 1. Check credits up-front
-        estimated_cost = float(
-            DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD * estimated_voice_pages
-        )
-        has_credits = await self._credit_service.has_sufficient_credits(
-            db, user_id, estimated_cost
-        )
+        estimated_cost = float(DEFAULT_STORYBOOK_VOICE_PAGE_RESERVE_USD * estimated_voice_pages)
+        has_credits = await self._credit_service.has_sufficient_credits(db, user_id, estimated_cost)
         if not has_credits:
             raise InsufficientCreditsError(
                 available_credits=0.0,

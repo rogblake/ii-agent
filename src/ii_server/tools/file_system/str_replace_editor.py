@@ -179,9 +179,7 @@ def _view_file(path: Path, view_range: Optional[List[int]] = None) -> str:
     return _truncate_output(output)
 
 
-def _view_directory(
-    path: Path, depth: int = 0, max_depth: int = DIRECTORY_DEPTH
-) -> List[str]:
+def _view_directory(path: Path, depth: int = 0, max_depth: int = DIRECTORY_DEPTH) -> List[str]:
     """Recursively list directory contents up to specified depth."""
     items = []
 
@@ -314,9 +312,7 @@ def _perform_insert(file_path: Path, insert_line: int, new_str: str) -> str:
         if len(EDIT_HISTORY[str(file_path)]) > MAX_HISTORY_PER_FILE:
             EDIT_HISTORY[str(file_path)].pop(0)
 
-        return (
-            f"Text has been successfully inserted at line {insert_line} in {file_path}."
-        )
+        return f"Text has been successfully inserted at line {insert_line} in {file_path}."
     except Exception as e:
         return f"ERROR: Failed to write to file {file_path}: {str(e)}"
 
@@ -350,10 +346,8 @@ class StrReplaceEditorTool(BaseTool):
     input_schema = INPUT_SCHEMA
     read_only = False
 
-    # add 
-    def __init__(
-        self, workspace_manager: WorkspaceManager, use_short_description: bool = False
-    ):
+    # add
+    def __init__(self, workspace_manager: WorkspaceManager, use_short_description: bool = False):
         self.workspace_manager = workspace_manager
         self.description = SHORT_DESCRIPTION if use_short_description else DESCRIPTION
 
@@ -364,13 +358,9 @@ class StrReplaceEditorTool(BaseTool):
 
         # Validate required parameters
         if not command:
-            return ToolResult(
-                llm_content="ERROR: 'command' parameter is required", is_error=True
-            )
+            return ToolResult(llm_content="ERROR: 'command' parameter is required", is_error=True)
         if not path_str:
-            return ToolResult(
-                llm_content="ERROR: 'path' parameter is required", is_error=True
-            )
+            return ToolResult(llm_content="ERROR: 'path' parameter is required", is_error=True)
 
         # Validate path with workspace manager
         try:
@@ -393,9 +383,7 @@ class StrReplaceEditorTool(BaseTool):
             elif command == "undo_edit":
                 return await self._handle_undo(path)
             else:
-                return ToolResult(
-                    llm_content=f"ERROR: Unknown command '{command}'", is_error=True
-                )
+                return ToolResult(llm_content=f"ERROR: Unknown command '{command}'", is_error=True)
         except Exception as e:
             return ToolResult(llm_content=f"ERROR: {str(e)}", is_error=True)
 
@@ -416,9 +404,7 @@ class StrReplaceEditorTool(BaseTool):
 
         return ToolResult(llm_content=content, is_error=content.startswith("ERROR:"))
 
-    async def _handle_create(
-        self, path: Path, tool_input: dict[str, Any]
-    ) -> ToolResult:
+    async def _handle_create(self, path: Path, tool_input: dict[str, Any]) -> ToolResult:
         """Handle create command."""
         file_text = tool_input.get("file_text")
 
@@ -464,9 +450,7 @@ class StrReplaceEditorTool(BaseTool):
                 is_error=True,
             )
 
-    async def _handle_str_replace(
-        self, path: Path, tool_input: dict[str, Any]
-    ) -> ToolResult:
+    async def _handle_str_replace(self, path: Path, tool_input: dict[str, Any]) -> ToolResult:
         """Handle str_replace command."""
         old_str = tool_input.get("old_str")
         new_str = tool_input.get("new_str")
@@ -479,17 +463,13 @@ class StrReplaceEditorTool(BaseTool):
 
         # Check if file exists
         if not path.exists() or not path.is_file():
-            return ToolResult(
-                llm_content=f"ERROR: File {path} does not exist", is_error=True
-            )
+            return ToolResult(llm_content=f"ERROR: File {path} does not exist", is_error=True)
 
         result = _perform_str_replace(path, old_str, new_str)
 
         return ToolResult(llm_content=result, is_error=result.startswith("ERROR:"))
 
-    async def _handle_insert(
-        self, path: Path, tool_input: dict[str, Any]
-    ) -> ToolResult:
+    async def _handle_insert(self, path: Path, tool_input: dict[str, Any]) -> ToolResult:
         """Handle insert command."""
         insert_line = tool_input.get("insert_line")
         new_str = tool_input.get("new_str")
@@ -508,9 +488,7 @@ class StrReplaceEditorTool(BaseTool):
 
         # Check if file exists
         if not path.exists() or not path.is_file():
-            return ToolResult(
-                llm_content=f"ERROR: File {path} does not exist", is_error=True
-            )
+            return ToolResult(llm_content=f"ERROR: File {path} does not exist", is_error=True)
 
         result = _perform_insert(path, insert_line, new_str)
 
@@ -520,9 +498,7 @@ class StrReplaceEditorTool(BaseTool):
         """Handle undo_edit command."""
         # Check if file exists
         if not path.exists() or not path.is_file():
-            return ToolResult(
-                llm_content=f"ERROR: File {path} does not exist", is_error=True
-            )
+            return ToolResult(llm_content=f"ERROR: File {path} does not exist", is_error=True)
 
         result = _perform_undo(path)
 

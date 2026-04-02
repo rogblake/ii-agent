@@ -25,7 +25,9 @@ class ProjectRepository(BaseRepository[Project]):
         )
         return result.scalar_one_or_none()
 
-    async def get_by_id_and_user(self, db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> Optional[Project]:
+    async def get_by_id_and_user(
+        self, db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID
+    ) -> Optional[Project]:
         """Get a project by ID for a specific user."""
         result = await db.execute(
             select(Project).where(
@@ -48,7 +50,9 @@ class ProjectRepository(BaseRepository[Project]):
         )
         return result.scalars().first()
 
-    async def get_by_session_and_user(self, db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID) -> Optional[Project]:
+    async def get_by_session_and_user(
+        self, db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID
+    ) -> Optional[Project]:
         """Get the most recent project for a session owned by user."""
         result = await db.execute(
             select(Project)
@@ -61,18 +65,18 @@ class ProjectRepository(BaseRepository[Project]):
         )
         return result.scalars().first()
 
-    async def get_owner_user_id(self, db: AsyncSession, project_id: uuid.UUID) -> Optional[uuid.UUID]:
+    async def get_owner_user_id(
+        self, db: AsyncSession, project_id: uuid.UUID
+    ) -> Optional[uuid.UUID]:
         """Get the owner user_id for a project."""
-        result = await db.execute(
-            select(Project.user_id).where(Project.id == project_id)
-        )
+        result = await db.execute(select(Project.user_id).where(Project.id == project_id))
         return result.scalar_one_or_none()
 
-    async def update_production_url(self, db: AsyncSession, project_id: uuid.UUID, production_url: str) -> None:
+    async def update_production_url(
+        self, db: AsyncSession, project_id: uuid.UUID, production_url: str
+    ) -> None:
         """Update a project's production_url."""
-        result = await db.execute(
-            select(Project).where(Project.id == project_id)
-        )
+        result = await db.execute(select(Project).where(Project.id == project_id))
         project = result.scalar_one_or_none()
         if project:
             project.production_url = production_url

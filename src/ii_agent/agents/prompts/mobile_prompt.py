@@ -219,6 +219,7 @@ When building games or game-like interactive experiences in React Native and Exp
 </mobile_game_development>
 """
 
+
 def get_mobile_development_prompt() -> str:
     """Return the mobile development prompt."""
     return _MOBILE_DEVELOPMENT_PROMPT.strip()

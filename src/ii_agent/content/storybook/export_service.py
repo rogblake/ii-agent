@@ -25,7 +25,9 @@ class StorybookExportService:
         self, db: AsyncSession, storybook_id: str
     ) -> Optional[bytes]:
         """Download a storybook as PDF."""
-        storybook = await self._storybook_service.get_storybook_detail(db, storybook_id, include_pages=True)
+        storybook = await self._storybook_service.get_storybook_detail(
+            db, storybook_id, include_pages=True
+        )
         if not storybook or not storybook.pages:
             return None
         return await self._pdf_exporter.download_storybook_as_pdf(storybook)
@@ -34,7 +36,9 @@ class StorybookExportService:
         self, db: AsyncSession, storybook_id: str
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Download a storybook as PDF with progress updates."""
-        storybook = await self._storybook_service.get_storybook_detail(db, storybook_id, include_pages=True)
+        storybook = await self._storybook_service.get_storybook_detail(
+            db, storybook_id, include_pages=True
+        )
         if not storybook or not storybook.pages:
             yield {"type": "error", "message": "Storybook not found or has no pages"}
             return
@@ -45,7 +49,9 @@ class StorybookExportService:
         self, db: AsyncSession, storybook_id: str, page_number: int
     ) -> Optional[bytes]:
         """Download a single storybook page as PDF."""
-        storybook = await self._storybook_service.get_storybook_detail(db, storybook_id, include_pages=True)
+        storybook = await self._storybook_service.get_storybook_detail(
+            db, storybook_id, include_pages=True
+        )
         if not storybook or not storybook.pages:
             return None
         return await self._pdf_exporter.download_storybook_page_as_pdf(storybook, page_number)
@@ -54,7 +60,9 @@ class StorybookExportService:
         self, db: AsyncSession, storybook_id: str, page_number: int
     ) -> Optional[bytes]:
         """Download a single storybook page as PNG."""
-        storybook = await self._storybook_service.get_storybook_detail(db, storybook_id, include_pages=True)
+        storybook = await self._storybook_service.get_storybook_detail(
+            db, storybook_id, include_pages=True
+        )
         if not storybook or not storybook.pages:
             return None
         return await self._png_exporter.download_storybook_page_as_png(storybook, page_number)
@@ -63,7 +71,9 @@ class StorybookExportService:
         self, db: AsyncSession, storybook_id: str
     ) -> Optional[bytes]:
         """Download all storybook pages as a ZIP of PNGs."""
-        storybook = await self._storybook_service.get_storybook_detail(db, storybook_id, include_pages=True)
+        storybook = await self._storybook_service.get_storybook_detail(
+            db, storybook_id, include_pages=True
+        )
         if not storybook or not storybook.pages:
             return None
         return await self._png_exporter.download_storybook_as_png_zip(storybook)
@@ -72,7 +82,9 @@ class StorybookExportService:
         self, db: AsyncSession, storybook_id: str
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Download all storybook pages as a ZIP of PNGs with progress updates."""
-        storybook = await self._storybook_service.get_storybook_detail(db, storybook_id, include_pages=True)
+        storybook = await self._storybook_service.get_storybook_detail(
+            db, storybook_id, include_pages=True
+        )
         if not storybook or not storybook.pages:
             yield {"type": "error", "message": "Storybook not found or has no pages"}
             return

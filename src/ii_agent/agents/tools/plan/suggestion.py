@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from ii_agent.realtime.pubsub import AsyncIOPubSub as EventStream
     from ii_agent.sessions.schemas import SessionInfo
 
+
 class PlanModificationSuggestionsTool(BaseAgentTool):
     """V1 Tool for submitting plan modification suggestions.
 

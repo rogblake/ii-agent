@@ -160,9 +160,7 @@ async def verify_api_key(
                 "path": request.url.path,
             },
         )
-        raise HTTPException(
-            status_code=401, detail="Invalid authorization header format"
-        )
+        raise HTTPException(status_code=401, detail="Invalid authorization header format")
 
 
 @async_lru_cache

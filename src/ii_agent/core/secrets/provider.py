@@ -72,6 +72,7 @@ class GCPSecretProvider(SecretProvider):
         if self._client is None:
             try:
                 from google.cloud import secretmanager
+
                 self._client = secretmanager.SecretManagerServiceClient()
             except ImportError:
                 raise ImportError(

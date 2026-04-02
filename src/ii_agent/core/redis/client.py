@@ -28,11 +28,11 @@ def _resolve_redis_settings(redis_settings: Optional[RedisSettings] = None) -> R
     if redis_settings is not None:
         return redis_settings
     from ii_agent.core.config.settings import get_settings
+
     return get_settings().redis
 
 
 def _create_redis_client(redis_settings: RedisSettings) -> Optional[Redis]:
-
     kwargs: dict[str, Any] = {
         "encoding": "utf-8",
         "retry_on_error": [ConnectionError, TimeoutError],
@@ -95,7 +95,9 @@ def _create_session_manager(redis_settings: RedisSettings) -> Optional[AsyncRedi
     )
 
 
-def get_session_manager(redis_settings: Optional[RedisSettings] = None) -> Optional[AsyncRedisManager]:
+def get_session_manager(
+    redis_settings: Optional[RedisSettings] = None,
+) -> Optional[AsyncRedisManager]:
     """Get the Socket.IO Redis session manager singleton."""
     global _session_manager
     if _session_manager is None:

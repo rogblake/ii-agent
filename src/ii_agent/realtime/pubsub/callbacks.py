@@ -7,7 +7,6 @@ import logging
 from typing import Any
 
 import socketio
-from sqlalchemy.exc import IntegrityError
 
 from ii_agent.core.db import get_db_session_local
 from ii_agent.realtime.events.app_events import BaseEvent, UserMessageEvent
@@ -79,6 +78,4 @@ class SioCallbackHandler(EventCallbackHandler):
         try:
             await self.sio.emit(self.SIO_EVENT, payload, room=room)
         except Exception:
-            logger.exception(
-                "Failed to emit %s.%s to room %s", event.group, event.name, room
-            )
+            logger.exception("Failed to emit %s.%s to room %s", event.group, event.name, room)

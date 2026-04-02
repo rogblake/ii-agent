@@ -64,10 +64,7 @@ class AdvancedModeStrategy(BaseModeStrategy):
 
         # Combine all parts
         if advanced_parts:
-            return (
-                "\n\n[ADVANCED MODE - Image Generation Context]\n"
-                + "\n\n".join(advanced_parts)
-            )
+            return "\n\n[ADVANCED MODE - Image Generation Context]\n" + "\n\n".join(advanced_parts)
 
         return ""
 

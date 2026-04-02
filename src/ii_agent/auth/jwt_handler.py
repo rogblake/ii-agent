@@ -46,8 +46,7 @@ class JWTHandler:
         payload = {
             "user_id": str(user_id),
             "type": "refresh",
-            "exp": datetime.now(timezone.utc)
-            + timedelta(days=self.refresh_token_expire_days),
+            "exp": datetime.now(timezone.utc) + timedelta(days=self.refresh_token_expire_days),
             "iat": datetime.now(timezone.utc),
         }
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)

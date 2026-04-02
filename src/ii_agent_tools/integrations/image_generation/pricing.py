@@ -4,7 +4,7 @@ This module centralizes all pricing information for different models and provide
 Adding a new model is as simple as adding a new entry to the appropriate pricing dictionary.
 """
 
-from typing import Dict, Any
+from typing import Dict
 from dataclasses import dataclass
 
 

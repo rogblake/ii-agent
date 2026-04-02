@@ -13,8 +13,7 @@ Covers:
 from __future__ import annotations
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
-from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 pytestmark = pytest.mark.unit
 
@@ -630,9 +629,7 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch(
-            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
-        ):
+        with patch("ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert len(tools) == 2
@@ -653,9 +650,7 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch(
-            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
-        ):
+        with patch("ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert len(tools) == 0
@@ -668,9 +663,7 @@ class TestMCPToolLoader:
         mock_client.__aenter__ = AsyncMock(side_effect=ConnectionError("Cannot connect"))
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch(
-            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
-        ):
+        with patch("ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert tools == []
@@ -695,9 +688,7 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch(
-            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
-        ):
+        with patch("ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp", mcp_server_id="server-1")
 
         assert len(tools) == 1
@@ -724,9 +715,7 @@ class TestMCPToolLoader:
         mock_client.transport = MagicMock()
         mock_client.transport.close = AsyncMock()
 
-        with patch(
-            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
-        ):
+        with patch("ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             tools = await load_tools_from_mcp("http://localhost:8080/mcp")
 
         assert len(tools) == 1
@@ -748,9 +737,7 @@ class TestMCPToolLoader:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.transport = outer_transport
 
-        with patch(
-            "ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client
-        ):
+        with patch("ii_agent.agents.tools.mcp.mcp_tool_loader.Client", return_value=mock_client):
             await load_tools_from_mcp("http://localhost:8080/mcp")
 
         inner_transport.close.assert_called_once()

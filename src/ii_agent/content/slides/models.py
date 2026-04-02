@@ -26,31 +26,26 @@ class SlideContent(Base):
     __tablename__ = "slide_contents"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE")
     )
     presentation_name: Mapped[str] = mapped_column(String, nullable=False)
     slide_number: Mapped[int] = mapped_column(BigInteger, nullable=False)
     slide_title: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    slide_content: Mapped[str] = mapped_column(String, nullable=False)  # Store HTML content as string
-    slide_metadata: Mapped[Optional[dict]] = mapped_column(
-        "metadata", JSONB, nullable=True
-    )
+    slide_content: Mapped[str] = mapped_column(
+        String, nullable=False
+    )  # Store HTML content as string
+    slide_metadata: Mapped[Optional[dict]] = mapped_column("metadata", JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
         TimestampColumn,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )
 
     # Relationships
-    session: Mapped["Session"] = relationship(
-        "Session",
-        back_populates="slide_contents"
-    )
+    session: Mapped["Session"] = relationship("Session", back_populates="slide_contents")
 
     # Add indexes for efficient queries
     __table_args__ = (
@@ -76,8 +71,7 @@ class SlideVersion(Base):
     __tablename__ = "slide_versions"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE")
     )
     presentation_name: Mapped[str] = mapped_column(String, nullable=False)
     slide_number: Mapped[int] = mapped_column(BigInteger, nullable=False)
@@ -85,14 +79,10 @@ class SlideVersion(Base):
     # Version chain (like storybook versioning)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
     root_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("slide_versions.id", ondelete="SET NULL"),
-        nullable=True
+        UUID(as_uuid=True), ForeignKey("slide_versions.id", ondelete="SET NULL"), nullable=True
     )
     parent_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("slide_versions.id", ondelete="SET NULL"),
-        nullable=True
+        UUID(as_uuid=True), ForeignKey("slide_versions.id", ondelete="SET NULL"), nullable=True
     )
 
     # Content
@@ -107,15 +97,11 @@ class SlideVersion(Base):
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
 
     # Relationships
-    session: Mapped["Session"] = relationship(
-        "Session",
-        back_populates="slide_versions"
-    )
+    session: Mapped["Session"] = relationship("Session", back_populates="slide_versions")
     parent: Mapped[Optional["SlideVersion"]] = relationship(
         "SlideVersion",
         foreign_keys=[parent_version_id],
@@ -148,9 +134,7 @@ class SlideTemplate(Base):
 
     slide_template_name: Mapped[str] = mapped_column(String, nullable=False)
     slide_content: Mapped[str] = mapped_column(String, nullable=False)
-    slide_template_images: Mapped[Optional[List[str]]] = mapped_column(
-        ARRAY(String), nullable=True
-    )
+    slide_template_images: Mapped[Optional[List[str]]] = mapped_column(ARRAY(String), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TimestampColumn,
         nullable=False,
@@ -162,6 +146,4 @@ class SlideTemplate(Base):
         onupdate=func.now(),
     )
 
-    __table_args__ = (
-        Index("idx_slide_templates_name", "slide_template_name"),
-    )
+    __table_args__ = (Index("idx_slide_templates_name", "slide_template_name"),)

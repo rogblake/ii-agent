@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -802,7 +802,7 @@ class TestBackfillFromClassName:
         ctx = _make_element_context(className=class_name, tagName="div")
         change = _make_style_change(element_context=ctx)
 
-        search_output = f"/workspace/src/App.tsx:1: content\n"
+        search_output = "/workspace/src/App.tsx:1: content\n"
         sandbox = MagicMock()
         sandbox.run_command = AsyncMock(return_value=search_output)
         sandbox.read_file = AsyncMock(return_value=content)

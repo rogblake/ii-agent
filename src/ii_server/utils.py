@@ -3,9 +3,7 @@ from fastmcp import Client, FastMCP
 from ii_server.tools.mcp_tool import MCPTool
 
 
-async def load_tools_from_mcp(
-    transport: FastMCP | str | Dict, timeout: int = 60
-) -> list[MCPTool]:
+async def load_tools_from_mcp(transport: FastMCP | str | Dict, timeout: int = 60) -> list[MCPTool]:
     """Load tools from an MCP (Model Context Protocol) server.
 
     This function establishes a connection to an MCP server, retrieves all available tools,

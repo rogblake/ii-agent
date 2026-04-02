@@ -12,7 +12,6 @@ from typing import Optional
 from ii_agent.core.db.base import Base, TimestampColumn
 
 
-
 class MediaTemplate(Base):
     """ORM model for the media_templates table (templates, mini-tools, genres)."""
 

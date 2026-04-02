@@ -7,7 +7,6 @@ from ii_agent_tools.integrations.fal_ai import (
     build_fal_image_payload,
     extract_cost,
     extract_first_media_asset,
-    infer_file_name,
     infer_mime_type,
     persist_fal_media_asset,
     resolve_fal_image_application,

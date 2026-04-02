@@ -252,8 +252,6 @@ class TestWellKnownRouterEndpoints:
     @pytest.fixture(autouse=True)
     def client(self):
         from ii_agent.core.dependencies import SettingsDep
-        from fastapi import Depends
-        from typing import Annotated
 
         app = FastAPI()
         mock_settings = _make_settings(mcp_api_url="https://mcp.test.com")

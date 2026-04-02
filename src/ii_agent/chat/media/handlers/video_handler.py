@@ -305,16 +305,16 @@ class VideoMediaHandler(BaseMediaHandler):
                 f"\n• The prompt for extensions should describe how the scene CONTINUES"
                 f"\n• Resolution: Extensions use 720p (API limitation)"
                 + (
-                    f"\n• END FRAME: User provided end frame - set is_final_segment=True on last extension"
+                    "\n• END FRAME: User provided end frame - set is_final_segment=True on last extension"
                     if has_end
                     else ""
                 )
                 + (
-                    f"\n• START FRAME: User's start frame is applied automatically to Step 1"
+                    "\n• START FRAME: User's start frame is applied automatically to Step 1"
                     if has_start
                     else ""
                 )
-                + f"\n\nSTART NOW: Call generate_video with your prompt for Step 1!]"
+                + "\n\nSTART NOW: Call generate_video with your prompt for Step 1!]"
                 + f"{storybook_hint}"
                 + f"{audio_hint}"
                 + f"{frame_hint}"

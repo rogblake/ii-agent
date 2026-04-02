@@ -18,6 +18,7 @@ from ii_agent.realtime.handlers.query import UserQueryHandler
 from ii_agent.agents.prompts.research_to_website_prompt import format_fork_user_message
 from ii_agent.core.logger import logger
 
+
 class StartForkHandler(BaseCommandHandler[StartForkContent]):
     """Handler for starting forked sessions.
 
@@ -27,7 +28,12 @@ class StartForkHandler(BaseCommandHandler[StartForkContent]):
 
     _content_type = StartForkContent
 
-    def __init__(self, pubsub: AsyncIOPubSub, query_handler: UserQueryHandler, container: ApplicationContainer) -> None:
+    def __init__(
+        self,
+        pubsub: AsyncIOPubSub,
+        query_handler: UserQueryHandler,
+        container: ApplicationContainer,
+    ) -> None:
         super().__init__(pubsub=pubsub, container=container)
         self._query_handler = query_handler
 

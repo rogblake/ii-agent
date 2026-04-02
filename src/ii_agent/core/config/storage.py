@@ -98,15 +98,9 @@ class StorageSettings(BaseSettings):
         """Validate required fields for the selected provider."""
         if self.provider == "gcs":
             if not self.project_id:
-                raise ValueError(
-                    "GCS project ID is required. Set STORAGE_PROJECT_ID."
-                )
+                raise ValueError("GCS project ID is required. Set STORAGE_PROJECT_ID.")
             if not self.bucket_name:
-                raise ValueError(
-                    "GCS bucket name is required. Set STORAGE_BUCKET_NAME."
-                )
+                raise ValueError("GCS bucket name is required. Set STORAGE_BUCKET_NAME.")
         elif self.provider == "minio":
             if not self.bucket_name:
-                raise ValueError(
-                    "MinIO bucket name is required. Set STORAGE_BUCKET_NAME."
-                )
+                raise ValueError("MinIO bucket name is required. Set STORAGE_BUCKET_NAME.")

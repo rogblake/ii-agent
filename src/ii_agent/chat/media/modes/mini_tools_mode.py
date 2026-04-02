@@ -54,7 +54,11 @@ class MiniToolsModeStrategy(BaseModeStrategy):
 
         if target_id:
             try:
-                template = await get_app_container().media_template_service.get_media_template_by_id(db_session, target_id)
+                template = (
+                    await get_app_container().media_template_service.get_media_template_by_id(
+                        db_session, target_id
+                    )
+                )
 
                 if template:
                     target_name = target_name or template.name

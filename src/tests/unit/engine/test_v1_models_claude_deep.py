@@ -16,31 +16,22 @@ Covers deeper branches not tested by the existing test file:
 from __future__ import annotations
 
 import copy
-import json
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
 
 from ii_agent.agents.models.anthropic.claude import (
-    ROLE_MAP,
-    MCPServerConfiguration,
     Claude,
     _normalize_tool_definition,
-    format_tools_for_model,
     format_messages,
 )
 from ii_agent.agents.models.message import Message
-from ii_agent.agents.models.metrics import Metrics
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.exceptions import (
     ModelProviderError,
     ModelRateLimitError,
 )
-from ii_agent.files.media import Image, File
-from ii_agent.settings.llm import Provider
+from ii_agent.files.media import Image
 
 
 # ---------------------------------------------------------------------------
@@ -337,13 +328,6 @@ class TestClaudeParseProviderResponseDeep:
 class TestClaudeAinvokeStream:
     @pytest.mark.asyncio
     async def test_ainvoke_stream_yields_model_responses(self):
-        from anthropic.types import (
-            ContentBlockDeltaEvent,
-            ContentBlockStartEvent,
-            ContentBlockStopEvent,
-            MessageStopEvent,
-        )
-
         c = _make_claude(api_key="key")
 
         # Create mock streaming events
@@ -482,9 +466,7 @@ class TestClaudeGetAsyncClient:
         c = Claude()
         c.api_key = None
         c.async_client = None
-        with patch(
-            "ii_agent.agents.models.anthropic.claude.AsyncAnthropicClient"
-        ) as MockClient:
+        with patch("ii_agent.agents.models.anthropic.claude.AsyncAnthropicClient") as MockClient:
             mock_instance = MagicMock()
             mock_instance.is_closed.return_value = False
             MockClient.return_value = mock_instance
@@ -494,9 +476,7 @@ class TestClaudeGetAsyncClient:
     def test_creates_async_client_with_provided_api_key(self):
         c = Claude(api_key="provided_key")
         c.async_client = None
-        with patch(
-            "ii_agent.agents.models.anthropic.claude.AsyncAnthropicClient"
-        ) as MockClient:
+        with patch("ii_agent.agents.models.anthropic.claude.AsyncAnthropicClient") as MockClient:
             mock_instance = MagicMock()
             mock_instance.is_closed.return_value = False
             MockClient.return_value = mock_instance

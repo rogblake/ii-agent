@@ -74,6 +74,7 @@ class LLMConfig(BaseModel):
 
 class ResearcherAgentConfig(BaseModel):
     """Configuration for the researcher agent pipeline."""
+
     researcher: LLMConfig
     report_builder: LLMConfig
     final_report_builder: LLMConfig

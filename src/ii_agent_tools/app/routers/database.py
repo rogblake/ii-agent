@@ -21,6 +21,7 @@ class DatabaseConnectionRequest(BaseRequest):
 
 class DatabaseConnectionMetadata(BaseModel):
     """Metadata for auditing database connections."""
+
     host: str
     database_name: str
     original_database_name: str

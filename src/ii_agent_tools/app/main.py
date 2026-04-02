@@ -105,9 +105,7 @@ async def validate_configuration():
             web_visit_config.tavily_api_key,
         ]
     ):
-        logger.warning(
-            "No web visit API keys configured. Web visit will use BeautifulSoup only."
-        )
+        logger.warning("No web visit API keys configured. Web visit will use BeautifulSoup only.")
 
     # Validate storage configuration
     storage_config = settings.storage_config
@@ -146,12 +144,8 @@ async def validate_configuration():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the tool server")
-    parser.add_argument(
-        "--port", type=int, default=7000, help="Port to run the server on"
-    )
-    parser.add_argument(
-        "--workers", type=int, default=1, help="Number of worker processes"
-    )
+    parser.add_argument("--port", type=int, default=7000, help="Port to run the server on")
+    parser.add_argument("--workers", type=int, default=1, help="Number of worker processes")
     args = parser.parse_args()
 
     uvicorn.run(

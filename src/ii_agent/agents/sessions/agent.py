@@ -9,6 +9,7 @@ from ii_agent.agents.sessions.summary import SessionSummary
 from ii_agent.agents.models.message import Message
 from ii_agent.core.logger import logger
 
+
 @dataclass
 class AgentSession:
     """Agent Session that is stored in the database"""

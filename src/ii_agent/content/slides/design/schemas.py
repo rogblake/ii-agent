@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -12,6 +12,7 @@ from ii_agent.projects.design.schemas import StyleChange
 
 class SlideSyncChange(BaseModel):
     """A single design change to apply to a slide."""
+
     design_id: str
     type: str
     property: str
@@ -20,6 +21,7 @@ class SlideSyncChange(BaseModel):
 
 class SlideSyncBatchRequest(BaseModel):
     """Request to sync design changes to a single slide."""
+
     session_id: UUID
     presentation_name: str
     slide_number: int
@@ -28,6 +30,7 @@ class SlideSyncBatchRequest(BaseModel):
 
 class SlideSyncBatchResponse(BaseModel):
     """Response from slide sync batch."""
+
     success: bool
     processed: int = 0
     failed: int = 0
@@ -36,6 +39,7 @@ class SlideSyncBatchResponse(BaseModel):
 
 class SlideDeckSyncChange(BaseModel):
     """A single design change to apply to a slide in a deck."""
+
     slide_number: int
     design_id: str
     type: str
@@ -45,6 +49,7 @@ class SlideDeckSyncChange(BaseModel):
 
 class SlideDeckSyncBatchRequest(BaseModel):
     """Request to sync design changes across multiple slides."""
+
     session_id: UUID
     presentation_name: str
     changes: List[SlideDeckSyncChange] = Field(default_factory=list)
@@ -52,6 +57,7 @@ class SlideDeckSyncBatchRequest(BaseModel):
 
 class SlideDeckSyncBatchResponse(BaseModel):
     """Response from slide deck sync batch."""
+
     success: bool
     processed: int = 0
     failed: int = 0
@@ -60,12 +66,14 @@ class SlideDeckSyncBatchResponse(BaseModel):
 
 class SlideDeckSyncStateRequest(BaseModel):
     """Request body for syncing persisted slide design-mode changes."""
+
     session_id: UUID
     presentation_name: str
 
 
 class SlideDeckSyncStateResponse(BaseModel):
     """Response for syncing persisted slide design-mode changes."""
+
     success: bool
     applied: int
     total: int

@@ -56,9 +56,7 @@ def _parse_output_format(
     return codec, sample_rate, bitrate_kbps
 
 
-def estimate_audio_duration_seconds(
-    audio_size_bytes: int, output_format: str | None
-) -> float:
+def estimate_audio_duration_seconds(audio_size_bytes: int, output_format: str | None) -> float:
     """Estimate duration from byte size and output format.
 
     - If bitrate is provided (e.g. mp3_44100_128), use it.
@@ -91,9 +89,7 @@ def calculate_elevenlabs_cost(
     if price_per_minute <= 0:
         return 0.0
 
-    duration_seconds = estimate_audio_duration_seconds(
-        audio_size_bytes, output_format
-    )
+    duration_seconds = estimate_audio_duration_seconds(audio_size_bytes, output_format)
     if duration_seconds <= 0:
         return 0.0
 
@@ -125,7 +121,4 @@ def calculate_gemini_tts_cost(
     if input_price <= 0 and output_price <= 0:
         return 0.0
 
-    return (
-        input_tokens * input_price / 1_000_000
-        + output_tokens * output_price / 1_000_000
-    )
+    return input_tokens * input_price / 1_000_000 + output_tokens * output_price / 1_000_000

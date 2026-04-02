@@ -1,9 +1,11 @@
 """Composio SDK client singleton."""
+
 from typing import Optional
 from composio import Composio
 
 from ii_agent.core.config.settings import get_settings
 from ii_agent.core.logger import logger
+
 
 class ComposioClient:
     """Singleton wrapper around Composio SDK client."""
@@ -27,8 +29,7 @@ class ComposioClient:
             effective_key = api_key or get_settings().composio_api_key
             if not effective_key:
                 raise ValueError(
-                    "COMPOSIO_API_KEY not configured. "
-                    "Set COMPOSIO_API_KEY environment variable."
+                    "COMPOSIO_API_KEY not configured. Set COMPOSIO_API_KEY environment variable."
                 )
 
             logger.info("Initializing Composio client")

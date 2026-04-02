@@ -122,21 +122,13 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
         else:
             # Text-to-image generation
             if self.model and self.model_name.startswith("imagen"):
-                return await self._generate_with_imagen(
-                    prompt, aspect_ratio, user_id
-                )
-            return await self._generate_with_genai(
-                prompt, aspect_ratio, image_size, user_id
-            )
+                return await self._generate_with_imagen(prompt, aspect_ratio, user_id)
+            return await self._generate_with_genai(prompt, aspect_ratio, image_size, user_id)
 
     async def _download_image(self, url: str) -> tuple[bytes, str]:
         if url.startswith("gs://"):
             bucket_name, blob_name = url.replace("gs://", "").split("/", 1)
-            blob = (
-                storage.Client(project=self.project_id)
-                .bucket(bucket_name)
-                .blob(blob_name)
-            )
+            blob = storage.Client(project=self.project_id).bucket(bucket_name).blob(blob_name)
 
             def _download_sync() -> tuple[bytes, str]:
                 data = blob.download_as_bytes()
@@ -177,12 +169,8 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
             try:
                 image_bytes, mime_type = await self._download_image(image_url)
             except Exception as exc:
-                raise ImageGenerationError(
-                    f"Failed to download image {image_url}: {exc}"
-                ) from exc
-            image_parts.append(
-                types.Part.from_bytes(mime_type=mime_type, data=image_bytes)
-            )
+                raise ImageGenerationError(f"Failed to download image {image_url}: {exc}") from exc
+            image_parts.append(types.Part.from_bytes(mime_type=mime_type, data=image_bytes))
 
         image_parts.append(types.Part.from_text(text=prompt))
 
@@ -205,17 +193,13 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
 
         candidate = response.candidates[0]
         if candidate.finish_reason != types.FinishReason.STOP:
-            raise ImageGenerationError(
-                f"Image generation failed: {candidate.finish_reason}"
-            )
+            raise ImageGenerationError(f"Image generation failed: {candidate.finish_reason}")
 
         for part in candidate.content.parts:
             image = part.as_image() if hasattr(part, "as_image") else None
             if image:
                 image_bytes = image.image_bytes
-                url, storage_path, file_name = await self._upload_bytes(
-                    image_bytes, user_id
-                )
+                url, storage_path, file_name = await self._upload_bytes(image_bytes, user_id)
                 return ImageGenerationResult(
                     url=url,
                     mime_type=getattr(image, "mime_type", None) or "image/png",
@@ -226,9 +210,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
                 )
             if getattr(part, "inline_data", None) and part.inline_data.data:
                 image_bytes = part.inline_data.data
-                url, storage_path, file_name = await self._upload_bytes(
-                    image_bytes, user_id
-                )
+                url, storage_path, file_name = await self._upload_bytes(image_bytes, user_id)
                 return ImageGenerationResult(
                     url=url,
                     mime_type=part.inline_data.mime_type or "image/png",
@@ -380,17 +362,13 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
 
         candidate = response.candidates[0]
         if candidate.finish_reason != types.FinishReason.STOP:
-            raise ImageGenerationError(
-                f"Image generation failed: {candidate.finish_reason}"
-            )
+            raise ImageGenerationError(f"Image generation failed: {candidate.finish_reason}")
 
         for part in candidate.content.parts:
             image = part.as_image()
             if image:
                 image_bytes = image.image_bytes
-                url, storage_path, file_name = await self._upload_bytes(
-                    image_bytes, user_id
-                )
+                url, storage_path, file_name = await self._upload_bytes(image_bytes, user_id)
                 return ImageGenerationResult(
                     url=url,
                     mime_type="image/png",
@@ -402,9 +380,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
 
         raise ImageGenerationError("No image data returned from genai model")
 
-    async def _upload_bytes(
-        self, image_bytes: bytes, user_id: uuid.UUID
-    ) -> tuple[str, str, str]:
+    async def _upload_bytes(self, image_bytes: bytes, user_id: uuid.UUID) -> tuple[str, str, str]:
         """Upload image bytes to GCS and return (public_url, storage_path, file_name)."""
         file_id = str(uuid.uuid4())
         file_name = f"{file_id}.png"
@@ -439,9 +415,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
         blob = self.bucket.get_blob(blob_name)
         return blob.content_type
 
-    def _token_to_cost(
-        self, input_tokens_count: int, output_tokens_count: int
-    ) -> float:
+    def _token_to_cost(self, input_tokens_count: int, output_tokens_count: int) -> float:
         """Calculate cost for GenAI models.
 
         Pricing is now configured in pricing.py - see that file to add new models.
@@ -479,9 +453,7 @@ class VertexImageGenerationClient(BaseImageGenerationClient):
             return 0.0
 
         prompt_counts = self._usage_token_counts(usage_metadata.prompt_tokens_details)
-        candidate_counts = self._usage_token_counts(
-            usage_metadata.candidates_tokens_details
-        )
+        candidate_counts = self._usage_token_counts(usage_metadata.candidates_tokens_details)
 
         prompt_token_count = usage_metadata.prompt_token_count or 0
         candidate_token_count = usage_metadata.candidates_token_count

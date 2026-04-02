@@ -41,9 +41,7 @@ async def create_checkout_session(
             )
         )
     except BillingUnsupportedPlanError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)
-        ) from error
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
     except BillingConfigurationError as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)
@@ -81,9 +79,7 @@ async def stripe_webhook(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)
         ) from error
     except BillingServiceError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)
-        ) from error
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
     except stripe.error.StripeError as error:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -113,9 +109,7 @@ async def create_portal_session(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)
         ) from error
     except BillingServiceError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)
-        ) from error
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
     except stripe.error.StripeError as error:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

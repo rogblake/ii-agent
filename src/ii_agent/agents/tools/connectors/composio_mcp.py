@@ -17,6 +17,7 @@ from ii_agent.agents.factory.mcp.composio_mcp import ComposioMCPTool
 from ii_agent.integrations.connectors.composio import ComposioCacheService, ToolkitService
 from ii_agent.core.logger import logger
 
+
 async def load_composio_tools_for_user(
     user_id: str,
     composio_api_key: str,
@@ -63,36 +64,42 @@ async def load_composio_tools_for_user(
         # Load tools for each profile
         for profile in profiles:
             try:
-                logger.info(f"Loading tools for {profile.toolkit_name} (toolkit: {profile.toolkit_slug})")
+                logger.info(
+                    f"Loading tools for {profile.toolkit_name} (toolkit: {profile.toolkit_slug})"
+                )
 
                 # Get toolkit logo from cache/API
                 toolkit_logo = await toolkit_service.get_toolkit_icon(profile.toolkit_slug)
 
                 # Try to get actions from cache first
                 cached_data = await ComposioCacheService.get_toolkit_actions(profile.toolkit_slug)
-                
+
                 if cached_data and cached_data.get("actions"):
                     logger.debug(f"Using cached actions for toolkit {profile.toolkit_slug}")
                     actions = cached_data["actions"]
                 else:
-                    from ii_agent.integrations.connectors.composio.default_toolkit_tools import get_default_tools
+                    from ii_agent.integrations.connectors.composio.default_toolkit_tools import (
+                        get_default_tools,
+                    )
 
                     # Get actions from Composio SDK
-                    logger.debug(f"Fetching actions from Composio SDK for toolkit {profile.toolkit_slug}")
+                    logger.debug(
+                        f"Fetching actions from Composio SDK for toolkit {profile.toolkit_slug}"
+                    )
                     actions = composio_client.tools.get(
                         user_id=profile.composio_user_id,
                         toolkits=[profile.toolkit_slug],
-                        limit=1000
+                        limit=1000,
                     )
-                    
+
                     # Extract metadata
                     formatted_actions = []
                     categories = set()
                     default_tool_slugs = set(get_default_tools(profile.toolkit_slug))
-                    
+
                     # Get excepted actions for this toolkit
                     excepted_actions = ToolkitService.EXCEPT_TOOLKIT.get(profile.toolkit_slug, [])
-                    
+
                     for action in actions:
                         name, description, parameters = _extract_action_metadata(action)
 
@@ -100,23 +107,27 @@ async def load_composio_tools_for_user(
                         if name in excepted_actions:
                             logger.debug(f"Skipping excepted action: {name}")
                             continue
-                        
+
                         # Formatted action data for API response
                         # Extract category from action name
                         parts = name.split("_")
                         category = parts[1] if len(parts) > 1 else "OTHER"
                         categories.add(category)
-                        
-                        formatted_actions.append({
-                            'name': name,
-                            'description': description,
-                            'category': category,
-                            'read_only': 'read' in name.lower() or 'get' in name.lower() or 'list' in name.lower(),
-                            'display_name': name,
-                            'default_enabled': name in default_tool_slugs,
-                            "parameters": parameters,
-                        })
-                    
+
+                        formatted_actions.append(
+                            {
+                                "name": name,
+                                "description": description,
+                                "category": category,
+                                "read_only": "read" in name.lower()
+                                or "get" in name.lower()
+                                or "list" in name.lower(),
+                                "display_name": name,
+                                "default_enabled": name in default_tool_slugs,
+                                "parameters": parameters,
+                            }
+                        )
+
                     # Cache formatted actions
                     await ComposioCacheService.set_toolkit_actions(
                         profile.toolkit_slug,
@@ -127,7 +138,7 @@ async def load_composio_tools_for_user(
 
                 # Filter by enabled_tools if specified
                 enabled_tools = profile.enabled_tools if profile.enabled_tools else []
-                
+
                 if not enabled_tools:
                     return tools
                 # Create a lookup map of actions by name
@@ -135,7 +146,7 @@ async def load_composio_tools_for_user(
                 for action in actions:
                     action_name = _extract_action_metadata(action)[0]
                     actions_map[action_name] = action
-                
+
                 # Iterate through enabled_tools and find matching actions
                 for tool_name in enabled_tools:
                     if tool_name in actions_map:
@@ -151,7 +162,9 @@ async def load_composio_tools_for_user(
                         )
                         tools.append(tool)
                     else:
-                        logger.warning(f"Enabled tool '{tool_name}' not found in available actions for {profile.toolkit_name}")
+                        logger.warning(
+                            f"Enabled tool '{tool_name}' not found in available actions for {profile.toolkit_name}"
+                        )
 
                 logger.info(
                     f"Loaded {len([t for t in tools if hasattr(t, '_composio_action_slug') and profile.toolkit_slug in t._composio_action_slug])} "
@@ -161,7 +174,7 @@ async def load_composio_tools_for_user(
             except Exception as e:
                 logger.error(
                     f"Failed to load tools for profile {profile.id} ({profile.toolkit_name}): {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
 
     except Exception as e:
@@ -188,7 +201,7 @@ async def _get_action_display_name(action_name: str, composio_client: Composio) 
     # Fetch from Composio API
     try:
         raw_tool = composio_client.tools.get_raw_composio_tool_by_slug(action_name)
-        display_name = raw_tool.name if raw_tool and hasattr(raw_tool, 'name') else action_name
+        display_name = raw_tool.name if raw_tool and hasattr(raw_tool, "name") else action_name
 
         # Cache the display name
         await ComposioCacheService.set_action_display_name(action_name, display_name)
@@ -229,7 +242,7 @@ async def _convert_composio_action_to_mcp_tool(
     display_name = await _get_action_display_name(name, composio_client)
 
     # Determine if read-only based on action name
-    read_only = 'read' in name.lower() or 'get' in name.lower() or 'list' in name.lower()
+    read_only = "read" in name.lower() or "get" in name.lower() or "list" in name.lower()
 
     # Create ComposioMCPTool instance
     # When executed, this tool will use self.mcp_client to call the Composio MCP server
@@ -247,6 +260,7 @@ async def _convert_composio_action_to_mcp_tool(
 
     return tool
 
+
 def _to_dict(obj: Any) -> Dict[str, Any]:
     """Convert various object types to dictionary."""
     if isinstance(obj, dict):
@@ -257,31 +271,41 @@ def _to_dict(obj: Any) -> Dict[str, Any]:
         return obj.dict(exclude_none=True)
     return {"type": "object", "properties": {}}
 
+
 def _extract_action_metadata(action: Any) -> tuple[str, str, Dict[str, Any]]:
     """Handle action metadata whether returned as dict or SDK object."""
     if isinstance(action, dict):
         fn_data = action.get("function", {}) if isinstance(action.get("function"), dict) else {}
         name = fn_data.get("name") or action.get("name", "")
         description = fn_data.get("description") or action.get("description", "")
-        parameters = fn_data.get("parameters") or action.get("input_parameters") or action.get("parameters", {})
+        parameters = (
+            fn_data.get("parameters")
+            or action.get("input_parameters")
+            or action.get("parameters", {})
+        )
     else:
         fn = getattr(action, "function", None)
         name = getattr(fn, "name", "") or getattr(action, "name", "")
         description = getattr(fn, "description", "") or getattr(action, "description", "")
-        parameters = getattr(fn, "parameters", None) or getattr(action, "input_parameters", {}) or getattr(action, "parameters", {})
+        parameters = (
+            getattr(fn, "parameters", None)
+            or getattr(action, "input_parameters", {})
+            or getattr(action, "parameters", {})
+        )
 
     return name, description, _to_dict(parameters)
 
+
 async def resolve_tools(user_id: str, composio_api_key: str) -> List[ComposioMCPTool]:
     """Resolve all available Composio tools for a user.
-    
+
     This is a convenience function that wraps load_composio_tools_for_user()
     for use in tool resolution systems.
-    
+
     Args:
         user_id: User ID to resolve tools for
         composio_api_key: Composio API key
-        
+
     Returns:
         List of ComposioMCPTool instances available for the user
     """

@@ -100,9 +100,7 @@ def _db_page_to_display_page(db_page_number: int, separate_page_mode: bool) -> i
 class StorybookService:
     """Service for storybook CRUD, queries, and generation response building."""
 
-    def __init__(
-        self, *, repo: StorybookRepository, config: Settings
-    ) -> None:
+    def __init__(self, *, repo: StorybookRepository, config: Settings) -> None:
         self._config = config
         self._repo = repo
 
@@ -297,9 +295,7 @@ class StorybookService:
         for page in storybook.pages or []:
             if not page.image_url:
                 continue
-            display_page = _db_page_to_display_page(
-                page.page_number, separate_page_mode
-            )
+            display_page = _db_page_to_display_page(page.page_number, separate_page_mode)
             image_pages.append(
                 StorybookProgressPage(page_number=display_page, image_url=page.image_url)
             )
@@ -334,9 +330,7 @@ class StorybookService:
             next_page = min(completed_pages + 1, total_pages)
             generating_pages = [next_page] if next_page > 0 else []
 
-        current_page = (
-            min(completed_pages + 1, total_pages) if total_pages else completed_pages
-        )
+        current_page = min(completed_pages + 1, total_pages) if total_pages else completed_pages
         error_message = generation.get("error_message")
 
         if status == "completed":
@@ -344,13 +338,9 @@ class StorybookService:
             for page in storybook.pages or []:
                 if not page.image_url:
                     continue
-                display_page = _db_page_to_display_page(
-                    page.page_number, separate_page_mode
-                )
+                display_page = _db_page_to_display_page(page.page_number, separate_page_mode)
                 result_pages.append(
-                    StorybookResultPage(
-                        page_number=display_page, image_url=page.image_url or ""
-                    )
+                    StorybookResultPage(page_number=display_page, image_url=page.image_url or "")
                 )
             return StorybookResultResponse(
                 storybook_id=storybook.id,

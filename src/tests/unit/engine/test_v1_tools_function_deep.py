@@ -13,10 +13,9 @@ Focuses on uncovered paths:
 from __future__ import annotations
 
 import pytest
-from typing import Optional, List
+from typing import Optional
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
-from functools import partial
 
 from ii_agent.agents.tools.function import Function, FunctionCall, FunctionExecutionResult
 
@@ -31,7 +30,7 @@ def make_function(name="test_func", **kwargs) -> Function:
 
 
 def make_base_agent_tool(name="my_tool", description="Tool desc") -> MagicMock:
-    from ii_agent.agents.tools.base import BaseAgentTool, ToolResult
+    from ii_agent.agents.tools.base import BaseAgentTool
 
     tool = MagicMock(spec=BaseAgentTool)
     tool.name = name
@@ -868,9 +867,11 @@ class TestFunctionCallBillingFinalizationDeep:
                 return BaseToolResult(llm_content="ok", cost=0.2)
 
         tool = _Tool()
-        tool.quote_cost = AsyncMock(return_value=SimpleNamespace(
-            cost_usd=0.2,
-        ))
+        tool.quote_cost = AsyncMock(
+            return_value=SimpleNamespace(
+                cost_usd=0.2,
+            )
+        )
         llm_billing = SimpleNamespace(
             deduct_tool_call=AsyncMock(return_value=1.0),
         )

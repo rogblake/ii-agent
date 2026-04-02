@@ -36,9 +36,7 @@ class WorkspaceManager:
             raise WorkspaceError(f"Workspace path `{workspace_path}` does not exist")
 
         if not workspace_path.is_dir():
-            raise WorkspaceError(
-                f"Workspace path `{workspace_path}` is not a directory"
-            )
+            raise WorkspaceError(f"Workspace path `{workspace_path}` is not a directory")
 
         self.workspace_path = workspace_path.resolve()
 
@@ -103,9 +101,7 @@ class WorkspaceManager:
             raise FileSystemValidationError(f"File `{file_path}` does not exist")
 
         if not os.path.isfile(file_path):
-            raise FileSystemValidationError(
-                f"Path `{file_path}` exists but is not a file"
-            )
+            raise FileSystemValidationError(f"Path `{file_path}` exists but is not a file")
 
     def validate_existing_directory_path(self, directory_path: str) -> None:
         """Validate that directory_path exists and is a directory.
@@ -116,9 +112,7 @@ class WorkspaceManager:
         self.validate_path(directory_path)
 
         if not os.path.exists(directory_path):
-            raise FileSystemValidationError(
-                f"Directory `{directory_path}` does not exist"
-            )
+            raise FileSystemValidationError(f"Directory `{directory_path}` does not exist")
 
         if not os.path.isdir(directory_path):
             raise FileSystemValidationError(

@@ -57,9 +57,7 @@ def create_video_generation_client(
     # If provider is specified, use that provider
     if provider == VideoGenerationProvider.GEMINI.value:
         if not settings.google_ai_studio_api_key:
-            raise ValueError(
-                "Gemini provider requires google_ai_studio_api_key"
-            )
+            raise ValueError("Gemini provider requires google_ai_studio_api_key")
         logger.info(
             "Using Google AI Studio (Gemini) for video generation",
             extra={"provider": provider},
@@ -71,9 +69,7 @@ def create_video_generation_client(
 
     if provider == VideoGenerationProvider.VERTEX.value:
         if not settings.gcp_project_id or not settings.gcp_location:
-            raise ValueError(
-                "Vertex AI provider requires gcp_project_id and gcp_location"
-            )
+            raise ValueError("Vertex AI provider requires gcp_project_id and gcp_location")
         logger.info(
             "Using Vertex AI for video generation",
             extra={"provider": provider},

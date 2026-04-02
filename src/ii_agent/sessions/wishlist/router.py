@@ -35,9 +35,7 @@ async def add_to_wishlist(
     db: DBSession,
 ) -> WishlistActionResponse:
     """Add a session to the current user's wishlist."""
-    success = await wishlist_service.add_to_wishlist(
-        db, current_user.id, session_id
-    )
+    success = await wishlist_service.add_to_wishlist(db, current_user.id, session_id)
 
     if not success:
         return WishlistActionResponse(
@@ -59,9 +57,7 @@ async def remove_from_wishlist(
     db: DBSession,
 ) -> WishlistActionResponse:
     """Remove a session from the current user's wishlist."""
-    success = await wishlist_service.remove_from_wishlist(
-        db, current_user.id, session_id
-    )
+    success = await wishlist_service.remove_from_wishlist(db, current_user.id, session_id)
 
     if not success:
         return WishlistActionResponse(

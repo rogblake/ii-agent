@@ -25,6 +25,7 @@ except ImportError:
             def __init__(self, settings=None):
                 pass
 
+
 load_dotenv()
 
 _tool_client: IIToolClient | None = None

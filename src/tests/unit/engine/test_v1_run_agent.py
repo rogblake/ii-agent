@@ -425,7 +425,6 @@ class TestRunOutput:
 
     def _make(self, **kwargs):
         from ii_agent.agents.runs.agent import RunOutput
-        from ii_agent.agents.runs.base import RunStatus
 
         defaults = dict(
             run_id="run-1",
@@ -533,8 +532,6 @@ class TestRunOutput:
         assert output.tools_awaiting_external_execution == []
 
     def test_add_member_run_appends(self):
-        from ii_agent.agents.runs.agent import RunOutput
-
         parent = self._make()
         child = self._make(run_id="child-run", delegated_from="TestAgent")
         parent.add_member_run(child)

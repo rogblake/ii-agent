@@ -45,9 +45,7 @@ class JinaWebVisitClient(BaseWebVisitClient):
                     cost=0.0,  # Jina cost calculation can be added here if needed
                 )
             else:
-                raise WebVisitError(
-                    f"Jina API returned status code {response.status_code}"
-                )
+                raise WebVisitError(f"Jina API returned status code {response.status_code}")
         except Exception as e:
             raise WebVisitError(f"Jina extraction error: {str(e)}")
 

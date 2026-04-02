@@ -1,8 +1,7 @@
 """Unit tests for the tool decorator."""
 
-import inspect
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from ii_agent.agents.tools.decorator import tool, _is_async_function
 

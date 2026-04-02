@@ -136,7 +136,9 @@ class FileService:
         assets = await self._file_repo.get_by_session_id(db, session_id)
         return [await self._to_file_data(a, db) for a in assets]
 
-    async def link_file_to_session(self, db: AsyncSession, file_id: uuid.UUID, session_id: uuid.UUID) -> bool:
+    async def link_file_to_session(
+        self, db: AsyncSession, file_id: uuid.UUID, session_id: uuid.UUID
+    ) -> bool:
         """Link a file to a session via SessionAsset."""
         asset = await self._file_repo.get_by_id(db, file_id)
         if not asset:

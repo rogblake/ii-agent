@@ -90,12 +90,55 @@ class CloudflareKVConfig:
 
 # Reserved subdomains that users cannot use
 RESERVED_SUBDOMAINS = {
-    "www", "api", "app", "admin", "mail", "email", "smtp", "pop", "imap",
-    "ftp", "ssh", "vpn", "proxy", "cdn", "static", "assets", "img", "images",
-    "js", "css", "fonts", "media", "video", "docs", "help", "support",
-    "status", "blog", "news", "shop", "store", "pay", "billing", "account",
-    "login", "auth", "oauth", "sso", "dashboard", "console", "panel",
-    "test", "dev", "staging", "prod", "production", "demo", "beta", "alpha",
+    "www",
+    "api",
+    "app",
+    "admin",
+    "mail",
+    "email",
+    "smtp",
+    "pop",
+    "imap",
+    "ftp",
+    "ssh",
+    "vpn",
+    "proxy",
+    "cdn",
+    "static",
+    "assets",
+    "img",
+    "images",
+    "js",
+    "css",
+    "fonts",
+    "media",
+    "video",
+    "docs",
+    "help",
+    "support",
+    "status",
+    "blog",
+    "news",
+    "shop",
+    "store",
+    "pay",
+    "billing",
+    "account",
+    "login",
+    "auth",
+    "oauth",
+    "sso",
+    "dashboard",
+    "console",
+    "panel",
+    "test",
+    "dev",
+    "staging",
+    "prod",
+    "production",
+    "demo",
+    "beta",
+    "alpha",
 }
 
 
@@ -195,7 +238,10 @@ class CloudflareKVService:
                 except Exception:
                     pass
                 return SubdomainResult(
-                    success=False, subdomain=subdomain, full_domain=full_domain, error=error_msg,
+                    success=False,
+                    subdomain=subdomain,
+                    full_domain=full_domain,
+                    error=error_msg,
                 )
 
             logger.info(f"Created subdomain route: {subdomain} -> {cloud_run_url}")
@@ -211,7 +257,10 @@ class CloudflareKVService:
         except Exception as e:
             logger.exception(f"Failed to create subdomain: {subdomain}")
             return SubdomainResult(
-                success=False, subdomain=subdomain, full_domain=full_domain, error=str(e),
+                success=False,
+                subdomain=subdomain,
+                full_domain=full_domain,
+                error=str(e),
             )
 
     async def update_subdomain(
@@ -231,7 +280,9 @@ class CloudflareKVService:
             "cloud_run_url": cloud_run_url,
             "project_id": project_id or (existing.get("project_id") if existing else None),
             "user_id": user_id or (existing.get("user_id") if existing else None),
-            "created_at": existing.get("created_at") if existing else datetime.now(timezone.utc).isoformat(),
+            "created_at": existing.get("created_at")
+            if existing
+            else datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -246,7 +297,10 @@ class CloudflareKVService:
             if response.status_code not in (200, 201):
                 error_msg = f"Failed to update KV: {response.status_code}"
                 return SubdomainResult(
-                    success=False, subdomain=subdomain, full_domain=full_domain, error=error_msg,
+                    success=False,
+                    subdomain=subdomain,
+                    full_domain=full_domain,
+                    error=error_msg,
                 )
 
             logger.info(f"Updated subdomain route: {subdomain} -> {cloud_run_url}")
@@ -262,7 +316,10 @@ class CloudflareKVService:
         except Exception as e:
             logger.exception(f"Failed to update subdomain: {subdomain}")
             return SubdomainResult(
-                success=False, subdomain=subdomain, full_domain=full_domain, error=str(e),
+                success=False,
+                subdomain=subdomain,
+                full_domain=full_domain,
+                error=str(e),
             )
 
     async def delete_subdomain(self, subdomain: str) -> SubdomainResult:
@@ -281,7 +338,10 @@ class CloudflareKVService:
             if response.status_code not in (200, 204):
                 error_msg = f"Failed to delete from KV: {response.status_code}"
                 return SubdomainResult(
-                    success=False, subdomain=subdomain, full_domain=full_domain, error=error_msg,
+                    success=False,
+                    subdomain=subdomain,
+                    full_domain=full_domain,
+                    error=error_msg,
                 )
 
             logger.info(f"Deleted subdomain route: {subdomain}")
@@ -296,7 +356,10 @@ class CloudflareKVService:
         except Exception as e:
             logger.exception(f"Failed to delete subdomain: {subdomain}")
             return SubdomainResult(
-                success=False, subdomain=subdomain, full_domain=full_domain, error=str(e),
+                success=False,
+                subdomain=subdomain,
+                full_domain=full_domain,
+                error=str(e),
             )
 
     async def get_subdomain(self, subdomain: str) -> SubdomainResult:
@@ -309,7 +372,9 @@ class CloudflareKVService:
 
             if not data:
                 return SubdomainResult(
-                    success=False, subdomain=subdomain, full_domain=full_domain,
+                    success=False,
+                    subdomain=subdomain,
+                    full_domain=full_domain,
                     error="Subdomain not found",
                 )
 
@@ -324,7 +389,10 @@ class CloudflareKVService:
         except Exception as e:
             logger.exception(f"Failed to get subdomain: {subdomain}")
             return SubdomainResult(
-                success=False, subdomain=subdomain, full_domain=full_domain, error=str(e),
+                success=False,
+                subdomain=subdomain,
+                full_domain=full_domain,
+                error=str(e),
             )
 
     async def check_availability(self, subdomain: str) -> tuple[bool, str | None]:
@@ -385,7 +453,7 @@ class CloudflareKVService:
 
             return subdomains, total_count
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to list subdomains")
             return [], 0
 

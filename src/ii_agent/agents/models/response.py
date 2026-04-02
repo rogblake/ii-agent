@@ -32,7 +32,7 @@ class ToolExecution:
 
     # Display metadata (for frontend rendering)
     display_name: Optional[str] = None  # Human-readable name for the tool
-    tool_logo: Optional[str] = None     # URL for tool icon/logo
+    tool_logo: Optional[str] = None  # URL for tool icon/logo
 
     # If True, the agent will stop executing after this tool call.
     stop_after_tool_call: bool = False
@@ -72,6 +72,7 @@ class ToolExecution:
         # Handle BaseToolResult for serialization
         if self.result is not None:
             from pydantic import BaseModel
+
             if isinstance(self.result, BaseModel):
                 _dict["result"] = self.result.model_dump(mode="json", exclude_none=True)
         return _dict
@@ -145,7 +146,9 @@ class ModelResponse:
 
     is_delta: bool = False
 
-    delta_status: Optional[Literal["reasoning_started", "content_started", "reasoning_done", "content_done"]] = None
+    delta_status: Optional[
+        Literal["reasoning_started", "content_started", "reasoning_done", "content_done"]
+    ] = None
 
     citations: Optional[Citations] = None
 

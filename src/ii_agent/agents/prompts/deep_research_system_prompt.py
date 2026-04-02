@@ -6,7 +6,6 @@ comprehensive markdown research reports.
 """
 
 from datetime import datetime
-import platform
 
 
 DEEP_RESEARCH_SYSTEM_PROMPT = """\
@@ -599,6 +598,7 @@ CRITICAL - SEQUENTIAL WRITING PROCESS: Do NOT write the entire report in a singl
 
 Now begin your research. Be thorough, be accurate, and produce an exceptional PDF report.
 """
+
 
 def get_deep_research_prompt() -> str:
     """Get the Deep Research agent system prompt with current date and platform."""

@@ -1,7 +1,5 @@
 """Unit tests for chat/media/utils/ - PromptBuilder static methods."""
 
-import pytest
-
 from ii_agent.chat.media.utils.prompt_builder import PromptBuilder
 
 

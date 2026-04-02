@@ -1,9 +1,5 @@
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
-import uuid
-import asyncio
 
-from ii_agent.core.db import get_db_session_local
 from ii_agent.files.media import Audio, Image
 from ii_agent.agents.models.message import Citations
 from ii_agent.agents.models.response import ToolExecution
@@ -387,7 +383,6 @@ def create_run_content_delta_event(
     content: Optional[Any] = None,
     content_type: Optional[str] = None,
 ) -> RunContentDeltaEvent:
-
     return RunContentDeltaEvent(
         session_id=from_run_response.session_id,
         agent_id=from_run_response.agent_id,  # type: ignore

@@ -5,15 +5,11 @@ from typing import BinaryIO
 # Abstract Object Storage Interface
 class BaseStorage(ABC):
     @abstractmethod
-    async def write(
-        self, content: BinaryIO, path: str, content_type: str | None = None
-    ):
+    async def write(self, content: BinaryIO, path: str, content_type: str | None = None):
         pass
 
     @abstractmethod
-    async def write_from_url(
-        self, url: str, path: str, content_type: str | None = None
-    ) -> str:
+    async def write_from_url(self, url: str, path: str, content_type: str | None = None) -> str:
         pass
 
     @abstractmethod

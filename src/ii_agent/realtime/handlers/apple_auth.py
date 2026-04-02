@@ -26,7 +26,7 @@ from ii_agent.integrations.mobile.apple import (
     AppleSessionExpiredError,
     FastlaneAuthClient,
     AppleCredentials,
-    AppleAuthState
+    AppleAuthState,
 )
 from ii_agent.realtime.handlers.base import (
     BaseCommandHandler,
@@ -58,9 +58,7 @@ class AppleAuthLoginHandler(BaseCommandHandler[AppleAuthLoginContent]):
     def get_command_type(self) -> CommandType:
         return CommandType.APPLE_AUTH_LOGIN
 
-    async def handle(
-        self, content: AppleAuthLoginContent, session_info: SessionInfo
-    ) -> None:
+    async def handle(self, content: AppleAuthLoginContent, session_info: SessionInfo) -> None:
         """Handle Apple ID login request.
 
         Content:
@@ -151,9 +149,7 @@ class AppleAuthLoginHandler(BaseCommandHandler[AppleAuthLoginContent]):
                 error_code=ErrorCode.UNEXPECTED_ERROR,
             )
 
-    async def _send_auth_status(
-        self, session_id: uuid.UUID, status: str, message: str
-    ) -> None:
+    async def _send_auth_status(self, session_id: uuid.UUID, status: str, message: str) -> None:
         """Send authentication status event."""
         await self.send_event(
             AppleAuthStatusEvent(
@@ -164,9 +160,7 @@ class AppleAuthLoginHandler(BaseCommandHandler[AppleAuthLoginContent]):
             )
         )
 
-    async def _send_2fa_required(
-        self, session_id: uuid.UUID, message: str
-    ) -> None:
+    async def _send_2fa_required(self, session_id: uuid.UUID, message: str) -> None:
         """Send 2FA required event."""
         await self.send_event(
             Apple2FARequiredEvent(
@@ -176,9 +170,7 @@ class AppleAuthLoginHandler(BaseCommandHandler[AppleAuthLoginContent]):
             )
         )
 
-    async def _send_team_selection(
-        self, session_id: uuid.UUID, teams: list
-    ) -> None:
+    async def _send_team_selection(self, session_id: uuid.UUID, teams: list) -> None:
         """Send team selection event."""
         await self.send_event(
             AppleTeamSelectionEvent(
@@ -204,9 +196,7 @@ class AppleAuth2FAHandler(BaseCommandHandler[AppleAuth2FAContent]):
     def get_command_type(self) -> CommandType:
         return CommandType.APPLE_AUTH_2FA
 
-    async def handle(
-        self, content: AppleAuth2FAContent, session_info: SessionInfo
-    ) -> None:
+    async def handle(self, content: AppleAuth2FAContent, session_info: SessionInfo) -> None:
         """Handle 2FA code verification.
 
         Content:
@@ -216,9 +206,7 @@ class AppleAuth2FAHandler(BaseCommandHandler[AppleAuth2FAContent]):
 
         try:
             # Get stored credential
-            credential = await AppleCredentials.get_user_credential(
-                session_info.user_id
-            )
+            credential = await AppleCredentials.get_user_credential(session_info.user_id)
 
             if not credential:
                 await self._send_error_event(
@@ -240,6 +228,7 @@ class AppleAuth2FAHandler(BaseCommandHandler[AppleAuth2FAContent]):
 
             # Deserialize session
             from ii_agent.integrations.mobile.apple.types import AppleSession
+
             session = AppleSession.model_validate(session_data)
 
             # Get stored password (needed for fastlane 2FA)
@@ -317,9 +306,7 @@ class AppleAuth2FAHandler(BaseCommandHandler[AppleAuth2FAContent]):
                 error_code=ErrorCode.UNEXPECTED_ERROR,
             )
 
-    async def _send_auth_status(
-        self, session_id: uuid.UUID, status: str, message: str
-    ) -> None:
+    async def _send_auth_status(self, session_id: uuid.UUID, status: str, message: str) -> None:
         """Send authentication status event."""
         await self.send_event(
             AppleAuthStatusEvent(
@@ -330,9 +317,7 @@ class AppleAuth2FAHandler(BaseCommandHandler[AppleAuth2FAContent]):
             )
         )
 
-    async def _send_team_selection(
-        self, session_id: uuid.UUID, teams: list
-    ) -> None:
+    async def _send_team_selection(self, session_id: uuid.UUID, teams: list) -> None:
         """Send team selection event."""
         await self.send_event(
             AppleTeamSelectionEvent(
@@ -358,9 +343,7 @@ class AppleAuthSelectTeamHandler(BaseCommandHandler[AppleAuthSelectTeamContent])
     def get_command_type(self) -> CommandType:
         return CommandType.APPLE_AUTH_SELECT_TEAM
 
-    async def handle(
-        self, content: AppleAuthSelectTeamContent, session_info: SessionInfo
-    ) -> None:
+    async def handle(self, content: AppleAuthSelectTeamContent, session_info: SessionInfo) -> None:
         """Handle team selection.
 
         Content:
@@ -370,9 +353,7 @@ class AppleAuthSelectTeamHandler(BaseCommandHandler[AppleAuthSelectTeamContent])
 
         try:
             # Get stored credential
-            credential = await AppleCredentials.get_user_credential(
-                session_info.user_id
-            )
+            credential = await AppleCredentials.get_user_credential(session_info.user_id)
 
             if not credential:
                 await self._send_error_event(
@@ -412,12 +393,11 @@ class AppleAuthSelectTeamHandler(BaseCommandHandler[AppleAuthSelectTeamContent])
 
             # Update session with selected team
             from ii_agent.integrations.mobile.apple.types import AppleSession, AppleTeam
+
             session = AppleSession.model_validate(session_data)
 
             # Reconstruct teams from available_teams
-            session.teams = [
-                AppleTeam.model_validate(t) for t in available_teams
-            ]
+            session.teams = [AppleTeam.model_validate(t) for t in available_teams]
 
             session = await self.auth_client.select_team(session, team_id)
 
@@ -487,9 +467,7 @@ class AppleCheckAuthHandler(BaseCommandHandler[AppleCheckAuthContent]):
     def get_command_type(self) -> CommandType:
         return CommandType.APPLE_CHECK_AUTH
 
-    async def handle(
-        self, content: AppleCheckAuthContent, session_info: SessionInfo
-    ) -> None:
+    async def handle(self, content: AppleCheckAuthContent, session_info: SessionInfo) -> None:
         """Check if user has valid Apple credentials stored.
 
         Returns information about existing auth state so frontend can skip
@@ -497,15 +475,11 @@ class AppleCheckAuthHandler(BaseCommandHandler[AppleCheckAuthContent]):
         """
         try:
             # Get stored credential - first try active session
-            credential = await AppleCredentials.get_active_session(
-                session_info.user_id
-            )
+            credential = await AppleCredentials.get_active_session(session_info.user_id)
 
             # If no active session, check if we have any credential (for expo token)
             if not credential:
-                credential = await AppleCredentials.get_user_credential(
-                    session_info.user_id
-                )
+                credential = await AppleCredentials.get_user_credential(session_info.user_id)
 
             session_uuid = session_info.id
 
@@ -514,7 +488,9 @@ class AppleCheckAuthHandler(BaseCommandHandler[AppleCheckAuthContent]):
             app_specific_password = None
             if credential:
                 expo_token = AppleCredentials.get_decrypted_expo_token(credential)
-                app_specific_password = AppleCredentials.get_decrypted_app_specific_password(credential)
+                app_specific_password = AppleCredentials.get_decrypted_app_specific_password(
+                    credential
+                )
 
             if not credential:
                 # No credential found at all
@@ -543,7 +519,9 @@ class AppleCheckAuthHandler(BaseCommandHandler[AppleCheckAuthContent]):
                         "has_expo_token": bool(expo_token),
                         "expo_token": expo_token,
                         "has_app_specific_password": bool(app_specific_password),
-                        "apple_id": credential.apple_id if credential.apple_id != "pending" else None,
+                        "apple_id": credential.apple_id
+                        if credential.apple_id != "pending"
+                        else None,
                         "team_name": credential.team_name,
                         "message": "Please log in with your Apple ID.",
                     },
@@ -578,9 +556,7 @@ class SaveExpoTokenHandler(BaseCommandHandler[SaveExpoTokenContent]):
     def get_command_type(self) -> CommandType:
         return CommandType.SAVE_EXPO_TOKEN
 
-    async def handle(
-        self, content: SaveExpoTokenContent, session_info: SessionInfo
-    ) -> None:
+    async def handle(self, content: SaveExpoTokenContent, session_info: SessionInfo) -> None:
         """Save the Expo access token for the user.
 
         Content:

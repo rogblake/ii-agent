@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from ii_agent.core.logger import logger
 
+
 def is_origin_union_type(origin: Any) -> bool:
     import sys
 

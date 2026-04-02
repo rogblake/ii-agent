@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 
 from ii_agent.projects.design.utils.html_patch import (
     _find_opening_tag_bounds_by_xpath,

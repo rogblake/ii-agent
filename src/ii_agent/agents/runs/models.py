@@ -47,9 +47,7 @@ class AgentRunMessage(Base):
         nullable=True,
     )
     model_id: Mapped[str] = mapped_column(String, nullable=False)
-    status: Mapped[RunStatus] = mapped_column(
-        String, nullable=False, default=RunStatus.RUNNING
-    )
+    status: Mapped[RunStatus] = mapped_column(String, nullable=False, default=RunStatus.RUNNING)
     run_input: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     messages: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     metrics: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)

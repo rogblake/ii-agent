@@ -21,24 +21,18 @@ class SessionWishlist(Base):
     __tablename__ = "session_wishlists"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE")
     )
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="session_wishlists")
-    session: Mapped["Session"] = relationship(
-        "Session",
-        back_populates="wishlisted_by"
-    )
+    session: Mapped["Session"] = relationship("Session", back_populates="wishlisted_by")
 
     # Add composite unique index to prevent duplicate wishlist entries
     __table_args__ = (

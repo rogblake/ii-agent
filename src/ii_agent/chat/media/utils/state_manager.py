@@ -31,9 +31,7 @@ class AdvancedModeStateManager:
             AdvancedModeState with enabled flag and references
         """
         # Fetch session metadata
-        result = await db_session.execute(
-            select(Session).where(Session.id == session_id)
-        )
+        result = await db_session.execute(select(Session).where(Session.id == session_id))
         session = result.scalar_one_or_none()
 
         if not session:
@@ -49,9 +47,7 @@ class AdvancedModeStateManager:
             db_session=db_session, references=raw_refs
         )
 
-        return AdvancedModeState(
-            enabled=enabled, references=references
-        )
+        return AdvancedModeState(enabled=enabled, references=references)
 
     @staticmethod
     async def update_state(
@@ -73,15 +69,11 @@ class AdvancedModeStateManager:
             Updated AdvancedModeState
         """
         serialized_refs = (
-            [ref.model_dump(exclude_none=True) for ref in references]
-            if references
-            else []
+            [ref.model_dump(exclude_none=True) for ref in references] if references else []
         )
 
         # Fetch session
-        result = await db_session.execute(
-            select(Session).where(Session.id == session_id)
-        )
+        result = await db_session.execute(select(Session).where(Session.id == session_id))
         session = result.scalar_one_or_none()
 
         if not session:

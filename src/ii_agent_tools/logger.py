@@ -14,9 +14,7 @@ from typing import Optional
 
 # Use project directory for logs by default instead of /app/log
 DEFAULT_LOG_DIR = Path.cwd() / "logs"
-LOG_FILE_PATH = Path(
-    os.environ.get("II_TOOL_LOG_FILE", str(DEFAULT_LOG_DIR / "app.log"))
-)
+LOG_FILE_PATH = Path(os.environ.get("II_TOOL_LOG_FILE", str(DEFAULT_LOG_DIR / "app.log")))
 LOG_LEVEL = os.environ.get("II_TOOL_LOG_LEVEL", "INFO").upper()
 LOG_FORMAT = os.environ.get(
     "II_TOOL_LOG_FORMAT",
@@ -32,9 +30,7 @@ _CONFIGURED = False
 class RequestIdFilter(logging.Filter):
     """Inject request_id from the context into every log record."""
 
-    def filter(
-        self, record: logging.LogRecord
-    ) -> bool:  # pragma: no cover - simple passthrough
+    def filter(self, record: logging.LogRecord) -> bool:  # pragma: no cover - simple passthrough
         record.request_id = _REQUEST_ID_CTX.get("-")
         return True
 
@@ -75,9 +71,7 @@ class SensitiveDataFilter(logging.Filter):
                     filtered_arg = arg
                     for pattern, replacement, *flags in self.PATTERNS:
                         flag = flags[0] if flags else 0
-                        filtered_arg = re.sub(
-                            pattern, replacement, filtered_arg, flags=flag
-                        )
+                        filtered_arg = re.sub(pattern, replacement, filtered_arg, flags=flag)
                     filtered_args.append(filtered_arg)
                 else:
                     # Keep non-string args as-is (int, float, etc.)

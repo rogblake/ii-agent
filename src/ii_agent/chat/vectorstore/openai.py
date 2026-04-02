@@ -54,11 +54,11 @@ class OpenAIVectorStore(VectorStore):
         """Lazy-init the OpenAI client from the DB system config."""
         if self._client is None:
             async with get_db_session_local() as db:
-                self._llm_config = await get_system_model_config_from_db(
-                    db, model_id="default"
-                )
+                self._llm_config = await get_system_model_config_from_db(db, model_id="default")
             self._client = AsyncOpenAI(
-                api_key=self._llm_config.api_key.get_secret_value() if self._llm_config.api_key else "",
+                api_key=self._llm_config.api_key.get_secret_value()
+                if self._llm_config.api_key
+                else "",
                 base_url=self._llm_config.base_url or None,
             )
         return self._client
@@ -118,12 +118,8 @@ class OpenAIVectorStore(VectorStore):
         """
         try:
             async with get_db_session_local() as db_session:
-                vector_store = await self._get_or_create_vector_store(
-                    db_session, user_id
-                )
-                result = await db_session.execute(
-                    select(FileAsset).where(FileAsset.id == file_id)
-                )
+                vector_store = await self._get_or_create_vector_store(db_session, user_id)
+                result = await db_session.execute(select(FileAsset).where(FileAsset.id == file_id))
                 file_upload = result.scalar_one_or_none()
 
             if not file_upload:
@@ -163,9 +159,7 @@ class OpenAIVectorStore(VectorStore):
             return 1
 
         except Exception as e:
-            logger.error(
-                f"Failed to add file {file_id} to vector store for user {user_id}: {e}"
-            )
+            logger.error(f"Failed to add file {file_id} to vector store for user {user_id}: {e}")
             return 0
 
     async def add_files_batch(
@@ -189,9 +183,7 @@ class OpenAIVectorStore(VectorStore):
             file_uploads = []
             async with get_db_session_local() as db_session:
                 # Get or create vector store first
-                vector_store = await self._get_or_create_vector_store(
-                    db_session, user_id
-                )
+                vector_store = await self._get_or_create_vector_store(db_session, user_id)
 
                 # Get all file upload records from database in one query
                 result = await db_session.execute(
@@ -222,9 +214,7 @@ class OpenAIVectorStore(VectorStore):
                     get_storage().read, file_upload.storage_path
                 )
                 if not file_content:
-                    logger.warning(
-                        f"Failed to read file {file_upload.id} from storage, skipping"
-                    )
+                    logger.warning(f"Failed to read file {file_upload.id} from storage, skipping")
                     continue
 
                 # Upload to OpenAI Files API
@@ -289,9 +279,7 @@ class OpenAIVectorStore(VectorStore):
             ]
 
         except Exception as e:
-            logger.error(
-                f"Failed to add files batch to vector store for user {user_id}: {e}"
-            )
+            logger.error(f"Failed to add files batch to vector store for user {user_id}: {e}")
             return []
 
     async def delete(
@@ -321,9 +309,7 @@ class OpenAIVectorStore(VectorStore):
             await client.vector_stores.delete(vector_store.vector_store_id)
             logger.info(f"Deleted vector store from provider for user {user_id}")
         except Exception as e:
-            logger.warning(
-                f"Failed to delete vector store from provider (may not exist): {e}"
-            )
+            logger.warning(f"Failed to delete vector store from provider (may not exist): {e}")
 
         # Delete from database
         await db_session.delete(vector_store)
@@ -350,9 +336,7 @@ class OpenAIVectorStore(VectorStore):
         try:
             async with get_db_session_local() as db_session:
                 # Get or create vector store
-                vector_store = await self._get_or_create_vector_store(
-                    db_session, user_id
-                )
+                vector_store = await self._get_or_create_vector_store(db_session, user_id)
 
             # Use OpenAI Responses API with file_search tool
             client = await self._get_client()
@@ -407,9 +391,7 @@ class OpenAIVectorStore(VectorStore):
 
                             results.append(result)
 
-            logger.info(
-                f"Search completed for user {user_id}, found {len(results)} results"
-            )
+            logger.info(f"Search completed for user {user_id}, found {len(results)} results")
             return results
 
         except Exception as e:
@@ -481,9 +463,7 @@ class OpenAIVectorStore(VectorStore):
         now = datetime.now(timezone.utc)
         return now >= vector_store.expires_at - timedelta(minutes=self.BUFFER_EXPIRY_MINUTES)
 
-    async def _check_vector_store_expired_on_provider(
-        self, vector_store_id: str
-    ) -> bool:
+    async def _check_vector_store_expired_on_provider(self, vector_store_id: str) -> bool:
         """Check if vector store is expired or about to expire on OpenAI."""
         try:
             client = await self._get_client()
@@ -558,14 +538,10 @@ class OpenAIVectorStore(VectorStore):
             db_session.add(db_vector_store)
             await db_session.commit()
 
-            logger.info(
-                f"Saved vector store {vector_store_id} to database for user {user_id}"
-            )
+            logger.info(f"Saved vector store {vector_store_id} to database for user {user_id}")
             return db_vector_store
         except Exception as e:
-            logger.error(
-                f"Failed to save vector store {vector_store_id} to database: {e}"
-            )
+            logger.error(f"Failed to save vector store {vector_store_id} to database: {e}")
             await db_session.rollback()
             raise
 

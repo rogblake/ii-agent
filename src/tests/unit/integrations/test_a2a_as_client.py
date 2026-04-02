@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import os
 from types import SimpleNamespace
-from types import SimpleNamespace
-from typing import Any, Dict, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -42,7 +40,7 @@ def _make_part(text: str):
 
 def _make_message(text: str = "Hello"):
     """Create a minimal A2A Message."""
-    from a2a.types import Message, Role
+    from a2a.types import Role
 
     from a2a.client.helpers import create_text_message_object
 
@@ -522,7 +520,7 @@ class TestBuildMessage:
 
 class TestHydrateExtensionConfig:
     def test_populates_extension_definitions(self):
-        from a2a.types import AgentCard, AgentCapabilities, AgentExtension
+        from a2a.types import AgentExtension
 
         client = _make_client()
         ext = AgentExtension(uri="urn:ext.a", required=True, params={"metadata_key": "ext_a"})
@@ -639,7 +637,7 @@ class TestIterExtensionModels:
 
     def test_message_returns_list_with_message(self):
         from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-        from a2a.types import Message, Role
+        from a2a.types import Role
         from a2a.client.helpers import create_text_message_object
 
         msg = create_text_message_object(role=Role.agent, content="hi")
@@ -714,8 +712,6 @@ class TestCallAgent:
         from a2a.client.helpers import create_text_message_object
         from a2a.types import Role
 
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
 
         async def _stream_payload():
@@ -735,8 +731,6 @@ class TestCallAgent:
 
     @pytest.mark.asyncio
     async def test_call_agent_no_payload_is_error(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
 
         async def _empty_stream():
@@ -767,8 +761,6 @@ class TestStreamAgent:
         from a2a.client.helpers import create_text_message_object
         from a2a.types import Role
 
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
 
         async def _stream_payload():
@@ -793,8 +785,6 @@ class TestStreamAgent:
 
     @pytest.mark.asyncio
     async def test_stream_agent_exception_is_propagated(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
 
         async def _stream_payload():
@@ -823,8 +813,6 @@ class TestStreamAgent:
 class TestAgentCardAndClientCache:
     @pytest.mark.asyncio
     async def test_get_agent_card_uses_cache_when_set(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         cached = MagicMock(name="cached-card")
         client._agent_card = cached
@@ -833,8 +821,6 @@ class TestAgentCardAndClientCache:
 
     @pytest.mark.asyncio
     async def test_get_agent_card_fetches_and_caches_card(self):
-        from ii_agent.integrations.a2a.as_client import A2ACardResolver, IIAgentA2AClient
-
         client = _make_client()
         client._agent_card = None
         client._get_http_client = AsyncMock(return_value=MagicMock())
@@ -861,12 +847,6 @@ class TestAgentCardAndClientCache:
 
     @pytest.mark.asyncio
     async def test_get_client_reuses_cached_transport(self):
-        from ii_agent.integrations.a2a.as_client import (
-            ClientConfig,
-            ClientFactory,
-            IIAgentA2AClient,
-        )
-
         client = _make_client()
         client._get_http_client = AsyncMock(return_value=MagicMock(name="httpx"))
         mock_agent_card = MagicMock(name="card")
@@ -897,7 +877,6 @@ class TestExtensionHelpers:
     @pytest.mark.asyncio
     async def test_apply_extension_metadata_defaults_populates_context(self):
         from a2a.types import AgentExtension
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
 
         client = _make_client()
         client._extension_definitions = {
@@ -927,8 +906,6 @@ class TestExtensionHelpers:
         assert ii_agent_metadata["session_id"] == "session-1"
 
     def test_capture_server_extensions_from_payload_sets_summary(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         context = ClientCallContext()
         payload = MagicMock(metadata={"extensions": {"active": ["ext-a"]}})
@@ -938,8 +915,6 @@ class TestExtensionHelpers:
         assert "snapshot" not in state
 
     def test_capture_extensions_snapshot_uses_existing_snapshot(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         client._last_response_extensions = {"active": ["ext-b"]}
         context = ClientCallContext()
@@ -951,8 +926,6 @@ class TestExtensionHelpers:
         assert snapshot == {"requested": ["ext-b"]}
 
     def test_capture_extensions_snapshot_uses_server_summary(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         context = ClientCallContext()
         context.state = {
@@ -963,8 +936,6 @@ class TestExtensionHelpers:
         assert snapshot == {"active": ["ext-c"]}
 
     def test_capture_extensions_snapshot_returns_last_response_when_no_live_state(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         client._last_response_extensions = {"active": ["ext-last"]}
         context = ClientCallContext()
@@ -976,8 +947,6 @@ class TestExtensionHelpers:
 
 class TestStreamExtensionsFlow:
     def test_synchronize_stream_extensions_with_tuple_payload(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         context = ClientCallContext()
         context.state = {
@@ -992,8 +961,6 @@ class TestStreamExtensionsFlow:
         assert update.metadata == {"extensions": {"active": ["ext-a"], "requested": ["ext-a"]}}
 
     def test_synchronize_stream_extensions_without_summary_is_noop(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         context = ClientCallContext()
         context.state = {}
@@ -1006,7 +973,7 @@ class TestStreamExtensionsFlow:
 
 class TestPayloadTextExtraction:
     def test_extract_text_from_payload_from_task_status_update(self):
-        from a2a.types import Message, Role, TaskStatusUpdateEvent
+        from a2a.types import Role, TaskStatusUpdateEvent
         from a2a.client.helpers import create_text_message_object
         from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
 
@@ -1020,7 +987,7 @@ class TestPayloadTextExtraction:
         assert result == "status text"
 
     def test_extract_text_from_task_history_fallback(self):
-        from a2a.types import Message, Role
+        from a2a.types import Role
         from a2a.client.helpers import create_text_message_object
         from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
 
@@ -1043,8 +1010,6 @@ class TestPayloadTextExtraction:
 
 class TestResponseExtensionsStorage:
     def test_store_response_extensions_handles_requested_and_missing(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         context = ClientCallContext()
         context.state = {
@@ -1062,8 +1027,6 @@ class TestResponseExtensionsStorage:
         assert client.get_last_response_extensions() == result["extensions"]
 
     def test_store_response_extensions_with_no_state_returns_none(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         context = ClientCallContext()
         client._last_response_extensions = {}
@@ -1076,8 +1039,6 @@ class TestResponseExtensionsStorage:
 class TestHttpClient:
     @pytest.mark.asyncio
     async def test_get_http_client_reuses_open_client(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         client._httpx_client = MagicMock()
         client._httpx_client.is_closed = False
@@ -1086,8 +1047,6 @@ class TestHttpClient:
 
     @pytest.mark.asyncio
     async def test_get_http_client_creates_new_client_on_missing(self):
-        from ii_agent.integrations.a2a.as_client import IIAgentA2AClient
-
         client = _make_client()
         client._httpx_client = MagicMock()
         client._httpx_client.is_closed = True

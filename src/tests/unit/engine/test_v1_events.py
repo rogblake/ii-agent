@@ -4,8 +4,7 @@ Tests cover all create_*_event() factory functions and handle_event().
 Each factory maps fields from a RunOutput to a specific event dataclass.
 """
 
-from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -843,8 +842,6 @@ class TestCreateRunOutputContentEvent:
         assert event.model_provider_data == {"usage": {"tokens": 100}}
 
     def test_references_from_run_output(self, mock_run_output):
-        from ii_agent.agents.models.message import MessageReferences
-
         refs = [MessageReferences(query="q")]
         mock_run_output.references = refs
         event = create_run_output_content_event(mock_run_output)

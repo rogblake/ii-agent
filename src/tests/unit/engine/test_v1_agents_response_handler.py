@@ -1,16 +1,18 @@
 """Unit tests for ResponseHandler."""
 
 from typing import Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
 
-pytest.skip("ii_agent.agents.runs.response_handler was removed during refactoring", allow_module_level=True)
+pytest.skip(
+    "ii_agent.agents.runs.response_handler was removed during refactoring", allow_module_level=True
+)
 
 from ii_agent.agents.runs.response_handler import ResponseHandler
 from ii_agent.agents.models.metrics import Metrics
-from ii_agent.agents.models.response import ModelResponse, ModelResponseEvent
+from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.runs.agent import RunOutput
 from ii_agent.agents.runs.messages import RunMessages
 from ii_agent.agents.models.message import Message

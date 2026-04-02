@@ -15,7 +15,6 @@ from ii_agent.agents.runs.agent import (
     RunCompletedEvent,
 )
 from ii_agent.agents.runs.base import RunStatus
-from ii_agent.agents.runs.events import create_run_cancelled_event
 from ii_agent.sessions.schemas import SessionResponse
 
 pytestmark = pytest.mark.unit

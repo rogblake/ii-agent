@@ -36,7 +36,9 @@ def build_a2a_agents_prompt(tool_args: Optional[Dict[str, Any]] = None) -> str:
         else:
             url = config
             display_name = name
-            description = f"Specialized {name} agent (description will be loaded from agent card when used)"
+            description = (
+                f"Specialized {name} agent (description will be loaded from agent card when used)"
+            )
 
         prompt_lines.append(f"- **{display_name}** ({url}): {description}")
 

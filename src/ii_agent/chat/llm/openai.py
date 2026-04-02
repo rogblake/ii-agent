@@ -733,7 +733,9 @@ class OpenAIProvider(LLMClient):
 
         return ContainerFile(container_id=container_id, files=file_objects)
 
-    async def _get_files_within_session(self, session_id: uuid.UUID, container_id: str) -> ContainerFile:
+    async def _get_files_within_session(
+        self, session_id: uuid.UUID, container_id: str
+    ) -> ContainerFile:
         async with get_db_session_local() as db_session:
             now = datetime.now(timezone.utc)
             result = await db_session.execute(

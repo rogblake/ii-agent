@@ -1,5 +1,4 @@
-"""Business logic for Nano Banana design mode.
-"""
+"""Business logic for Nano Banana design mode."""
 
 from __future__ import annotations
 

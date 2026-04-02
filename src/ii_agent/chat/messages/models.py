@@ -22,9 +22,7 @@ class ChatMessage(Base):
 
     __tablename__ = "chat_messages"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="CASCADE"),
@@ -33,9 +31,7 @@ class ChatMessage(Base):
     role: Mapped[str] = mapped_column(
         String, nullable=False
     )  # "user", "assistant", "system", or "tool"
-    content: Mapped[dict] = mapped_column(
-        JSONB, nullable=False
-    )  # List of ContentPart objects
+    content: Mapped[dict] = mapped_column(JSONB, nullable=False)  # List of ContentPart objects
     usage: Mapped[Optional[dict]] = mapped_column(
         JSONB, nullable=True
     )  # Usage statistics (prompt_tokens, completion_tokens, etc.)
@@ -43,9 +39,7 @@ class ChatMessage(Base):
         BigInteger, nullable=True
     )  # Total accumulated tokens
     model: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    tools: Mapped[Optional[dict]] = mapped_column(
-        JSONB, nullable=True
-    )  # Tools used in the message
+    tools: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)  # Tools used in the message
     message_metadata: Mapped[Optional[dict]] = mapped_column(
         "metadata", JSONB, nullable=True
     )  # General message metadata
@@ -89,8 +83,7 @@ class ChatSummary(Base):
     __tablename__ = "chat_summaries"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE")
     )
 
     # Summary content
@@ -107,14 +100,11 @@ class ChatSummary(Base):
 
     # Chaining for recursive compression
     parent_summary_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("chat_summaries.id"),
-        nullable=True
+        UUID(as_uuid=True), ForeignKey("chat_summaries.id"), nullable=True
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
 
     # Indexes

@@ -40,7 +40,9 @@ class PromptBuilder:
 
         # Calculate image indices for each type
         if subject_refs:
-            subject_indices = list(range(current_image_index, current_image_index + len(subject_refs)))
+            subject_indices = list(
+                range(current_image_index, current_image_index + len(subject_refs))
+            )
             image_index_map["subject"] = subject_indices
             current_image_index += len(subject_refs)
 
@@ -84,9 +86,8 @@ class PromptBuilder:
             )
 
         if ref_descriptions:
-            guidance_text = (
-                "=== REFERENCE IMAGES (Attached below in order) ===\n\n"
-                + "\n\n".join(ref_descriptions)
+            guidance_text = "=== REFERENCE IMAGES (Attached below in order) ===\n\n" + "\n\n".join(
+                ref_descriptions
             )
         else:
             guidance_text = ""
@@ -140,11 +141,15 @@ class PromptBuilder:
 
         checklist_items = []
         if subject_refs:
-            checklist_items.append("□ Subject from SUBJECT reference is clearly visible and recognizable")
+            checklist_items.append(
+                "□ Subject from SUBJECT reference is clearly visible and recognizable"
+            )
         if scene_refs:
             checklist_items.append("□ Background matches the SCENE reference environment")
         if style_refs:
-            checklist_items.append("□ Artistic style matches STYLE reference (colors, technique, mood)")
+            checklist_items.append(
+                "□ Artistic style matches STYLE reference (colors, technique, mood)"
+            )
             checklist_items.append("□ NO content/subjects from STYLE reference appear in output")
 
         checklist_str = "\n".join(checklist_items) if checklist_items else ""

@@ -16,7 +16,6 @@ from ii_agent.chat.types import (
 )
 from ii_agent.chat.messages.service import MessageService
 from ii_agent.chat.messages.models import ChatSummary
-from ii_agent.sessions.models import Session
 from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.chat.llm import LLMProviderFactory
 from ii_agent.chat.prompts.context_prompts import PREVIOUS_SUMMARY, SUMMARY_PROMPT
@@ -99,9 +98,7 @@ class ContextWindowManager:
         # Collapse council messages: replace council member outputs with synthesis-only text
         context = cls._collapse_council_messages(context)
 
-        logger.info(
-            f"Loaded context: summary={'Yes' if summary else 'No'}"
-        )
+        logger.info(f"Loaded context: summary={'Yes' if summary else 'No'}")
 
         return context
 
@@ -122,9 +119,7 @@ class ContextWindowManager:
 
         Only called if context grows too large mid-execution.
         """
-        max_context = CONTEXT_WINDOWS.get(
-            llm_config.model, CONTEXT_WINDOWS["__default__"]
-        )
+        max_context = CONTEXT_WINDOWS.get(llm_config.model, CONTEXT_WINDOWS["__default__"])
         threshold = int(max_context * cls.EMERGENCY_THRESHOLD)
 
         # Calculate total tokens
@@ -133,9 +128,7 @@ class ContextWindowManager:
         if total_tokens < threshold:
             return messages
 
-        logger.warning(
-            f"Emergency compression: {total_tokens} tokens exceeds {threshold}"
-        )
+        logger.warning(f"Emergency compression: {total_tokens} tokens exceeds {threshold}")
 
         # Get parent summary
         parent_summary = await cls._get_active_summary(db_session, session_id)
@@ -143,7 +136,7 @@ class ContextWindowManager:
         ### Determine what to summarize
         ## sum_0 + [(u1, a1), (u2, a2)] < threshold        ---> continue
         ## sum_0 + [(u1, a1), (u2, a2), (u3)] > threshold  ---> summarize
-        ## => _____  sum_1  ________  + (u3) 
+        ## => _____  sum_1  ________  + (u3)
 
         # Find last user message - keep from there onwards
         last_user_idx = cls._find_last_user_message(messages)
@@ -151,7 +144,7 @@ class ContextWindowManager:
             last_user_idx = len(messages) // 2
 
         if parent_summary:
-            messages_to_summarize = messages[1:last_user_idx] # Skip summary message at index 0
+            messages_to_summarize = messages[1:last_user_idx]  # Skip summary message at index 0
         else:
             messages_to_summarize = messages[:last_user_idx]
 
@@ -159,7 +152,7 @@ class ContextWindowManager:
 
         if not messages_to_summarize:
             return messages
-        
+
         # Create new summary
         new_summary = await cls.create_chained_summary(
             db_session=db_session,
@@ -214,9 +207,7 @@ class ContextWindowManager:
         This is the MAIN summarization checkpoint.
         Called after assistant response is saved.
         """
-        max_context = CONTEXT_WINDOWS.get(
-            llm_config.model, CONTEXT_WINDOWS["__default__"]
-        )
+        max_context = CONTEXT_WINDOWS.get(llm_config.model, CONTEXT_WINDOWS["__default__"])
         threshold = int(max_context * cls.SUMMARIZATION_THRESHOLD)
 
         # 1. Load active summary
@@ -253,14 +244,12 @@ class ContextWindowManager:
             logger.info("Under threshold, no summarization needed")
             return
 
-        logger.info(
-            f"Threshold exceeded ({total_tokens}/{threshold}), creating summary"
-        )
+        logger.info(f"Threshold exceeded ({total_tokens}/{threshold}), creating summary")
 
         ### 5. Determine what to summarize
         ## sum_0 + [(u1, a1), (u2, a2)] < threshold             ---> continue
         ## sum_0 + [(u1, a1), (u2, a2), (u3 + a3)] > threshold  ---> summarize
-        ## => _____  sum_1  ________  + (u3 + a3) 
+        ## => _____  sum_1  ________  + (u3 + a3)
 
         # Find last user message - keep from there onwards
         last_user_idx = cls._find_last_user_message(all_messages)
@@ -378,8 +367,7 @@ class ContextWindowManager:
                 continue
 
             has_council_parts = any(
-                isinstance(p, (CouncilMemberOutput, CouncilSynthesis))
-                for p in msg.parts
+                isinstance(p, (CouncilMemberOutput, CouncilSynthesis)) for p in msg.parts
             )
             if not has_council_parts:
                 collapsed.append(msg)
@@ -432,6 +420,8 @@ class ContextWindowManager:
 ## SummarizationService
 #######
 """Service for generating conversation summaries using LLM."""
+
+
 class SummarizationService:
     """Generate LLM-based summaries for chat context."""
 

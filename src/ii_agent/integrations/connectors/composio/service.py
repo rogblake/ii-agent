@@ -170,13 +170,19 @@ class ComposioService:
     ) -> Optional[ComposioProfile]:
         return await self._repo.get_by_id_and_user(db, profile_id, user_id)
 
-    async def enable_profile(self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    async def enable_profile(
+        self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID
+    ) -> bool:
         return await self._repo.update_status(db, profile_id, user_id, "enable")
 
-    async def disable_profile(self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    async def disable_profile(
+        self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID
+    ) -> bool:
         return await self._repo.update_status(db, profile_id, user_id, "disable")
 
-    async def delete_profile(self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    async def delete_profile(
+        self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID
+    ) -> bool:
         return await self._repo.delete(db, profile_id, user_id)
 
     async def update_enabled_tools(
@@ -228,7 +234,9 @@ class ComposioService:
             },
         }
 
-    async def sync_to_mcp_settings(self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID):
+    async def sync_to_mcp_settings(
+        self, db: AsyncSession, profile_id: uuid.UUID, user_id: uuid.UUID
+    ):
         """Sync Composio profile to MCP settings for agent consumption."""
         from ii_agent.settings.mcp.schemas import (
             MCPServersConfig,
@@ -494,7 +502,11 @@ class ComposioService:
 
     async def get_toolkit_actions(self, toolkit_slug: str):
         """Get available actions for a toolkit with categories."""
-        cached_actions = await self._cache_service.get_toolkit_actions(toolkit_slug) if self._cache_service else None
+        cached_actions = (
+            await self._cache_service.get_toolkit_actions(toolkit_slug)
+            if self._cache_service
+            else None
+        )
         if cached_actions and cached_actions.get("actions"):
             cached_actions["actions"] = [
                 {k: v for k, v in action.items() if k != "parameters"}

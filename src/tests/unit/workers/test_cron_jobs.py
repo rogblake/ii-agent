@@ -6,18 +6,15 @@ and the CRON_JOBS constant.
 
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from ii_agent.workers.cron.cron_jobs import (
     CRON_JOBS,
     CronJobSpec,
-    CronJobStatus,
     _run_job,
     install_all_jobs,
-    main,
     run_all_jobs,
 )
 

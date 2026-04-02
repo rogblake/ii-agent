@@ -19,9 +19,7 @@ async def list_slide_templates(
     template_service: SlideTemplateServiceDep,
     db: DBSession,
     page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(
-        20, ge=1, le=100, description="Number of templates per page"
-    ),
+    page_size: int = Query(20, ge=1, le=100, description="Number of templates per page"),
     search: Optional[str] = Query(None, description="Search in template names"),
 ):
     """Get paginated list of slide templates."""

@@ -170,9 +170,7 @@ class CreditUsageHandler(EventCallbackHandler):
         from model_config.pricing). Falls back to hardcoded defaults only when
         the event carries no pricing.
         """
-        pricing = event.pricing or PricingInfo.get_default_pricing(
-            event.model_id, event.provider
-        )
+        pricing = event.pricing or PricingInfo.get_default_pricing(event.model_id, event.provider)
 
         input_cost = (
             Decimal(event.input_tokens)

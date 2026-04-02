@@ -356,7 +356,10 @@ class ImageGenerationTool(BaseTool):
                     file_data.content_type and file_data.content_type.startswith("image/")
                 ) or (
                     file_data.storage_path
-                    and ("/generated/" in file_data.storage_path or "/uploads/" in file_data.storage_path)
+                    and (
+                        "/generated/" in file_data.storage_path
+                        or "/uploads/" in file_data.storage_path
+                    )
                 )
                 if is_image:
                     image_file_ids.append(str(file_data.id))
@@ -367,4 +370,3 @@ class ImageGenerationTool(BaseTool):
         except Exception as e:
             logger.error(f"Error fetching session images: {e}", exc_info=True)
             return []
-

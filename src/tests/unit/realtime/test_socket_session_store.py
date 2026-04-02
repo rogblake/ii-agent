@@ -11,7 +11,6 @@ pytest.skip("Tested module was removed during refactoring", allow_module_level=T
 from ii_agent.realtime.session_store import (
     MemorySessionStore,
     RedisSessionStore,
-    SessionStore,
     create_session_store,
 )
 

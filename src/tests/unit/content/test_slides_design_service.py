@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -20,9 +19,7 @@ from ii_agent.content.slides.design.schemas import (
 from ii_agent.projects.design.exceptions import (
     DesignSessionAccessDeniedError,
     DesignSessionNotFoundError,
-    DesignValidationError,
 )
-from ii_agent.projects.design.models import DesignSyncCounters
 
 
 # ---------------------------------------------------------------------------

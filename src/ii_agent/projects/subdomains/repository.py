@@ -18,30 +18,30 @@ class SubdomainRepository(BaseRepository[ProjectCustomDomain]):
 
     model = ProjectCustomDomain
 
-    async def get_by_project_id(self, db: AsyncSession, project_id: uuid.UUID) -> Optional[ProjectCustomDomain]:
+    async def get_by_project_id(
+        self, db: AsyncSession, project_id: uuid.UUID
+    ) -> Optional[ProjectCustomDomain]:
         """Get a custom domain by project ID."""
         result = await db.execute(
-            select(ProjectCustomDomain).where(
-                ProjectCustomDomain.project_id == project_id
-            )
+            select(ProjectCustomDomain).where(ProjectCustomDomain.project_id == project_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_subdomain(self, db: AsyncSession, subdomain: str) -> Optional[ProjectCustomDomain]:
+    async def get_by_subdomain(
+        self, db: AsyncSession, subdomain: str
+    ) -> Optional[ProjectCustomDomain]:
         """Get a custom domain by subdomain name."""
         result = await db.execute(
-            select(ProjectCustomDomain).where(
-                ProjectCustomDomain.subdomain == subdomain
-            )
+            select(ProjectCustomDomain).where(ProjectCustomDomain.subdomain == subdomain)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_full_domain(self, db: AsyncSession, full_domain: str) -> Optional[ProjectCustomDomain]:
+    async def get_by_full_domain(
+        self, db: AsyncSession, full_domain: str
+    ) -> Optional[ProjectCustomDomain]:
         """Get a custom domain by full domain URL."""
         result = await db.execute(
-            select(ProjectCustomDomain).where(
-                ProjectCustomDomain.full_domain == full_domain
-            )
+            select(ProjectCustomDomain).where(ProjectCustomDomain.full_domain == full_domain)
         )
         return result.scalar_one_or_none()
 

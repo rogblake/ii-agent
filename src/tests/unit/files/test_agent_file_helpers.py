@@ -15,9 +15,7 @@ class FakeSessionRepo:
 
 
 @pytest.mark.asyncio
-async def test_prepare_agent_files_splits_images_and_files(
-    settings_factory, monkeypatch
-):
+async def test_prepare_agent_files_splits_images_and_files(settings_factory, monkeypatch):
     service = FileService(
         file_repo=FakeFileRepo(),
         session_repo=FakeSessionRepo(),

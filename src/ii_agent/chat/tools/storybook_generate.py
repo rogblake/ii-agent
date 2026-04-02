@@ -153,10 +153,9 @@ class StorybookGenerationTool(BaseTool):
             return self._user_id
         from sqlalchemy import select
         from ii_agent.sessions.models import Session
+
         async with get_db_session_local() as db:
-            result = await db.execute(
-                select(Session).where(Session.id == self.session_id)
-            )
+            result = await db.execute(select(Session).where(Session.id == self.session_id))
             session = result.scalar_one()
             self._user_id = session.user_id
         return self._user_id

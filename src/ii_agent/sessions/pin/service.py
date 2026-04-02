@@ -9,7 +9,7 @@ from typing import List
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.sessions.exceptions import SessionNotFoundError
 from ii_agent.sessions.repository import SessionRepository
 from ii_agent.sessions.pin.models import SessionPin
@@ -51,7 +51,9 @@ class SessionPinService:
             if p.session is not None and not p.session.is_deleted
         ]
 
-    async def pin_session(self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
+    async def pin_session(
+        self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID
+    ) -> bool:
         """Pin a session for the user.
 
         Returns True if pinned successfully, False if already pinned.
@@ -76,7 +78,9 @@ class SessionPinService:
             # savepoint is rolled back, the outer session stays valid.
             return False
 
-    async def unpin_session(self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
+    async def unpin_session(
+        self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID
+    ) -> bool:
         """Unpin a session for the user.
 
         Returns True if unpinned, False if not found.

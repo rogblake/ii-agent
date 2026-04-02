@@ -286,14 +286,17 @@ class Settings(BaseSettings):
         # If it's a JSON string (from env var), parse it
         if isinstance(v, str):
             import json
+
             v = json.loads(v)
         if not isinstance(v, list):
             return v
         # Validate each entry through ModelConfigEntry
         from ii_agent.settings.llm.schemas import ModelConfigEntry
+
         return [
             ModelConfigEntry.model_validate(entry).model_dump()
-            if isinstance(entry, dict) else entry
+            if isinstance(entry, dict)
+            else entry
             for entry in v
         ]
 

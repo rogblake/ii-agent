@@ -25,9 +25,7 @@ def create_voice_generation_client(
         provider_class = get_provider(provider)
         if provider_class is None:
             available = list_providers()
-            raise ValueError(
-                f"Unknown provider '{provider}'. Available providers: {available}"
-            )
+            raise ValueError(f"Unknown provider '{provider}'. Available providers: {available}")
         return _create_client(provider, provider_class, settings, model_name)
 
     if settings.elevenlabs_api_key:

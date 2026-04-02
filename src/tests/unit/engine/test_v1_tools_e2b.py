@@ -1,6 +1,5 @@
 """Unit tests for E2B sandbox tool."""
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 
 import pytest

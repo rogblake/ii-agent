@@ -126,9 +126,7 @@ def _verify_state(value: str) -> bool:
 
 
 def _make_pkce_pair() -> tuple[str, str]:
-    code_verifier = (
-        base64.urlsafe_b64encode(secrets.token_bytes(40)).rstrip(b"=").decode("ascii")
-    )
+    code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(40)).rstrip(b"=").decode("ascii")
     digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
     code_challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
     return code_verifier, code_challenge
@@ -149,7 +147,9 @@ def _sanitize_return_to(value: Optional[str]) -> tuple[Optional[str], Optional[s
 def _make_token_payload(user_id: str, email: str, role: str) -> dict:
     """Build the JWT token payload dict for a user."""
     access_token = jwt_handler.create_access_token(
-        user_id=user_id, email=email, role=role,
+        user_id=user_id,
+        email=email,
+        role=role,
     )
     refresh_token = jwt_handler.create_refresh_token(user_id=user_id)
     return {
@@ -160,9 +160,7 @@ def _make_token_payload(user_id: str, email: str, role: str) -> dict:
     }
 
 
-async def _exchange_code_for_token(
-    code: str, code_verifier: Optional[str]
-) -> Dict[str, Any]:
+async def _exchange_code_for_token(code: str, code_verifier: Optional[str]) -> Dict[str, Any]:
     settings = get_settings()
     data = {
         "grant_type": "authorization_code",
@@ -196,8 +194,7 @@ async def _fetch_userinfo_if_enabled(
             )
         if discovery_resp.status_code != 200:
             raise BadGatewayError(
-                f"Discovery fetch failed: {discovery_resp.status_code} "
-                f"{discovery_resp.text}"
+                f"Discovery fetch failed: {discovery_resp.status_code} {discovery_resp.text}"
             )
         url = discovery_resp.json().get("userinfo_endpoint")
         if not url:
@@ -330,7 +327,9 @@ async def ii_callback(
     )
 
     token_payload = _make_token_payload(
-        str(user_stored.id), str(user_stored.email), str(user_stored.role),
+        str(user_stored.id),
+        str(user_stored.email),
+        str(user_stored.role),
     )
 
     request.session.pop(II_STATE_SESSION_KEY, None)
@@ -403,9 +402,7 @@ async def google_callback(
                 params["error_description"] = error_description
 
             query_string = urlencode(params)
-            frontend_callback_url = (
-                f"{frontend_url}/google-drive-callback?{query_string}"
-            )
+            frontend_callback_url = f"{frontend_url}/google-drive-callback?{query_string}"
 
             return RedirectResponse(url=frontend_callback_url, status_code=302)
 
@@ -442,7 +439,9 @@ async def google_callback(
     )
 
     token_payload = _make_token_payload(
-        str(user_stored.id), str(user_stored.email), str(user_stored.role),
+        str(user_stored.id),
+        str(user_stored.email),
+        str(user_stored.role),
     )
 
     return TokenResponse(
@@ -457,7 +456,6 @@ async def reader_user_me(
     db: DBSession,
     current_user: CurrentUser,
 ) -> UserPublic:
-
     return UserPublic(
         id=str(current_user.id),
         email=str(current_user.email),

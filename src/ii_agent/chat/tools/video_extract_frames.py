@@ -53,10 +53,9 @@ class ExtractFramesTool(BaseTool):
             return self._user_id
         from sqlalchemy import select
         from ii_agent.sessions.models import Session
+
         async with get_db_session_local() as db:
-            result = await db.execute(
-                select(Session).where(Session.id == self.session_id)
-            )
+            result = await db.execute(select(Session).where(Session.id == self.session_id))
             session = result.scalar_one()
             self._user_id = session.user_id
         return self._user_id
@@ -74,7 +73,7 @@ class ExtractFramesTool(BaseTool):
 
             tool_settings = ToolClientSettings()
             video_config = tool_settings.video_generate_config
-            return getattr(video_config, 'custom_domain', None)
+            return getattr(video_config, "custom_domain", None)
         except Exception as e:
             logger.warning(f"[EXTRACT_FRAMES] Failed to load custom domain: {e}")
             return None
@@ -84,7 +83,9 @@ class ExtractFramesTool(BaseTool):
         try:
             parsed = urlparse(url)
             if parsed.scheme not in ("https", "http"):
-                logger.warning(f"[EXTRACT_FRAMES] Rejected URL with invalid scheme: {parsed.scheme}")
+                logger.warning(
+                    f"[EXTRACT_FRAMES] Rejected URL with invalid scheme: {parsed.scheme}"
+                )
                 return False
             host = parsed.netloc.lower()
             for trusted in self.TRUSTED_DOMAINS:
@@ -136,36 +137,26 @@ class ExtractFramesTool(BaseTool):
             positions = params.get("positions", [])
 
             if not video_url:
-                return ToolResponse(
-                    output=ErrorTextContent(value="No video URL provided")
-                )
+                return ToolResponse(output=ErrorTextContent(value="No video URL provided"))
 
             if not positions:
-                return ToolResponse(
-                    output=ErrorTextContent(value="No positions specified")
-                )
+                return ToolResponse(output=ErrorTextContent(value="No positions specified"))
 
             logger.debug(f"[EXTRACT_FRAMES] Extracting frames at: {positions}")
 
         except (json.JSONDecodeError, KeyError) as e:
             logger.error(f"[EXTRACT_FRAMES] Invalid tool input: {e}")
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Invalid tool input: {e}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Invalid tool input: {e}"))
 
         try:
             extracted_frames = await self._extract_frames(video_url, positions)
 
             if not extracted_frames:
-                return ToolResponse(
-                    output=ErrorTextContent(value="Failed to extract any frames")
-                )
+                return ToolResponse(output=ErrorTextContent(value="Failed to extract any frames"))
 
             result_parts = []
             for frame in extracted_frames:
-                result_parts.append(
-                    FileUrlContentPart(url=frame["url"], mime_type="image/png")
-                )
+                result_parts.append(FileUrlContentPart(url=frame["url"], mime_type="image/png"))
 
             frame_summary = ", ".join(f"{f['position']}" for f in extracted_frames)
             result_parts.append(
@@ -175,19 +166,13 @@ class ExtractFramesTool(BaseTool):
                 )
             )
 
-            return ToolResponse(
-                output=ArrayResultContent(value=result_parts)
-            )
+            return ToolResponse(output=ArrayResultContent(value=result_parts))
 
         except Exception as e:
             logger.error(f"[EXTRACT_FRAMES] Frame extraction failed: {e}", exc_info=True)
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Frame extraction failed: {str(e)}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Frame extraction failed: {str(e)}"))
 
-    async def _extract_frames(
-        self, video_url: str, positions: list[str]
-    ) -> list[dict]:
+    async def _extract_frames(self, video_url: str, positions: list[str]) -> list[dict]:
         """Extract frames at specified positions from a video."""
         extracted_frames = []
 
@@ -199,7 +184,9 @@ class ExtractFramesTool(BaseTool):
             async with httpx.AsyncClient(timeout=120) as client:
                 response = await client.get(video_url)
                 if response.status_code != 200:
-                    logger.error(f"[EXTRACT_FRAMES] Failed to download video: {response.status_code}")
+                    logger.error(
+                        f"[EXTRACT_FRAMES] Failed to download video: {response.status_code}"
+                    )
                     return []
 
             video_content = response.content
@@ -215,9 +202,14 @@ class ExtractFramesTool(BaseTool):
             def _get_duration() -> float:
                 try:
                     probe_cmd = [
-                        "ffprobe", "-v", "error", "-show_entries",
-                        "format=duration", "-of", "default=noprint_wrappers=1:nokey=1",
-                        str(video_path)
+                        "ffprobe",
+                        "-v",
+                        "error",
+                        "-show_entries",
+                        "format=duration",
+                        "-of",
+                        "default=noprint_wrappers=1:nokey=1",
+                        str(video_path),
                     ]
                     result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
                     return float(result.stdout.strip())
@@ -236,15 +228,21 @@ class ExtractFramesTool(BaseTool):
                 frame_path = temp_dir / f"frame_{position.replace(':', '_')}.png"
 
                 def _extract_single_frame(
-                    seek: float = seek_time,
-                    vpath: Path = video_path,
-                    fpath: Path = frame_path
+                    seek: float = seek_time, vpath: Path = video_path, fpath: Path = frame_path
                 ) -> bool:
                     try:
                         cmd = [
-                            "ffmpeg", "-y", "-ss", str(seek),
-                            "-i", str(vpath), "-vframes", "1",
-                            "-q:v", "2", str(fpath)
+                            "ffmpeg",
+                            "-y",
+                            "-ss",
+                            str(seek),
+                            "-i",
+                            str(vpath),
+                            "-vframes",
+                            "1",
+                            "-q:v",
+                            "2",
+                            str(fpath),
                         ]
                         result = subprocess.run(cmd, capture_output=True, timeout=60)
                         return fpath.exists()
@@ -261,6 +259,7 @@ class ExtractFramesTool(BaseTool):
 
             def _cleanup():
                 import shutil
+
                 shutil.rmtree(temp_dir, ignore_errors=True)
 
             await anyio.to_thread.run_sync(_cleanup)
@@ -269,8 +268,9 @@ class ExtractFramesTool(BaseTool):
 
         except Exception as e:
             logger.error(f"[EXTRACT_FRAMES] Extraction failed: {e}", exc_info=True)
-            if 'temp_dir' in locals() and temp_dir.exists():
+            if "temp_dir" in locals() and temp_dir.exists():
                 import shutil
+
                 await anyio.to_thread.run_sync(lambda: shutil.rmtree(temp_dir, ignore_errors=True))
             return []
 

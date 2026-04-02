@@ -8,12 +8,10 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.config.settings import Settings, get_settings
-from ii_agent.core.logger import logger
+from ii_agent.core.config.settings import Settings
 
 from ii_agent.projects.repository import ProjectRepository
 from ii_agent.projects.deployments.repository import DeploymentsRepository
-from ii_agent.projects.subdomains.exceptions import SubdomainNotFoundError
 from ii_agent.projects.subdomains.models import ProjectCustomDomain
 from ii_agent.projects.subdomains.repository import SubdomainRepository
 from ii_agent.projects.subdomains.schemas import CustomDomainResponse
@@ -103,9 +101,7 @@ class SubdomainService:
             return False
 
         # Revert production_url to the latest deployment URL
-        deployment = await self._deployments_repo.get_latest_deployment(
-            db, project_id=project_id
-        )
+        deployment = await self._deployments_repo.get_latest_deployment(db, project_id=project_id)
         if deployment and deployment.deployment_url:
             await self._project_repo.update_production_url(
                 db, project_id, deployment.deployment_url
@@ -155,7 +151,9 @@ class SubdomainService:
             return None
         return CustomDomainResponse.model_validate(domain)
 
-    async def get_project_owner_user_id(self, db: AsyncSession, project_id: uuid.UUID) -> Optional[uuid.UUID]:
+    async def get_project_owner_user_id(
+        self, db: AsyncSession, project_id: uuid.UUID
+    ) -> Optional[uuid.UUID]:
         """Get the owner user_id for a project."""
         return await self._project_repo.get_owner_user_id(db, project_id)
 

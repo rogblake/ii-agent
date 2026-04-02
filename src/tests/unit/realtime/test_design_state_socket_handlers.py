@@ -13,17 +13,11 @@ from ii_agent.projects.design.schemas import (
     DesignStateResponse,
     StyleChange,
 )
-from ii_agent.realtime.events.app_events import BaseEvent, SystemNotificationEvent
+from ii_agent.realtime.events.app_events import BaseEvent
 from ii_agent.realtime.handlers.design_get_state import DesignGetStateHandler
 from ii_agent.realtime.handlers.design_save_state import DesignSaveStateHandler
 from ii_agent.realtime.handlers.design_sync_state import DesignSyncStateHandler
 from ii_agent.realtime.handlers.slide_deck_sync_state import SlideDeckSyncStateHandler
-from ii_agent.realtime.schemas import (
-    DesignGetStateContent,
-    DesignSaveStateContent,
-    DesignSyncStateContent,
-    SlideDeckSyncStateContent,
-)
 from ii_agent.sessions.schemas import SessionInfo
 from ii_agent.projects.design.schemas import SyncStateResponse
 
@@ -108,7 +102,11 @@ async def test_design_get_state_handler_emits_loaded_response():
         _db_cm,
     ):
         await handler.dispatch(
-            {"command": "design_get_state", "session_id": str(session_info.id), "request_id": "req-1"},
+            {
+                "command": "design_get_state",
+                "session_id": str(session_info.id),
+                "request_id": "req-1",
+            },
             session_info,
         )
 
@@ -136,7 +134,11 @@ async def test_design_get_state_handler_emits_failure_on_service_error():
         _db_cm,
     ):
         await handler.dispatch(
-            {"command": "design_get_state", "session_id": str(session_info.id), "request_id": "req-2"},
+            {
+                "command": "design_get_state",
+                "session_id": str(session_info.id),
+                "request_id": "req-2",
+            },
             session_info,
         )
 

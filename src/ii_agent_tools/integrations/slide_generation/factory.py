@@ -29,6 +29,5 @@ def create_slide_generation_client(
         return GeminiSlideGenerationClient(config=settings)
 
     raise ValueError(
-        "No slide generation provider configured. "
-        "Please set GEMINI_API_KEY environment variable."
+        "No slide generation provider configured. Please set GEMINI_API_KEY environment variable."
     )

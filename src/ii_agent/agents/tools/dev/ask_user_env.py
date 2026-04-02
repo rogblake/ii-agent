@@ -96,6 +96,7 @@ class AskUserEnvTool(BaseAgentTool):
 
         try:
             import uuid as _uuid
+
             container = get_app_container()
 
             if not user_id:

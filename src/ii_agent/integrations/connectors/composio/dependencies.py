@@ -17,7 +17,9 @@ def get_composio_profile_repository() -> ComposioProfileRepository:
     return ComposioProfileRepository()
 
 
-ComposioProfileRepositoryDep = Annotated[ComposioProfileRepository, Depends(get_composio_profile_repository)]
+ComposioProfileRepositoryDep = Annotated[
+    ComposioProfileRepository, Depends(get_composio_profile_repository)
+]
 
 
 # ==================== Service Dependencies ====================

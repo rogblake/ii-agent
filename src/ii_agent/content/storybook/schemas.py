@@ -12,13 +12,9 @@ class StorybookPageBase(BaseModel):
 
     page_number: int = Field(..., description="Page number (1-indexed)", ge=1)
     image_url: Optional[str] = Field(None, description="URL to the generated image")
-    image_prompt: Optional[str] = Field(
-        None, description="Prompt used to generate the image"
-    )
+    image_prompt: Optional[str] = Field(None, description="Prompt used to generate the image")
     text_content: Optional[str] = Field(None, description="Narrative text content")
-    text_position: str = Field(
-        "none", description="Position of text (left/right/top/bottom/none)"
-    )
+    text_position: str = Field("none", description="Position of text (left/right/top/bottom/none)")
     text_percentage: int = Field(
         30, description="Percentage of page for text (20-30)", ge=0, le=100
     )
@@ -27,12 +23,8 @@ class StorybookPageBase(BaseModel):
 class StorybookPageCreate(StorybookPageBase):
     """Model for creating a storybook page."""
 
-    audio_link: Optional[str] = Field(
-        None, description="Public URL to generated audio narration"
-    )
-    html_content: Optional[str] = Field(
-        None, description="Pre-generated HTML for rendering"
-    )
+    audio_link: Optional[str] = Field(None, description="Public URL to generated audio narration")
+    html_content: Optional[str] = Field(None, description="Pre-generated HTML for rendering")
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="Additional metadata"
     )
@@ -190,9 +182,7 @@ class DesignChange(BaseModel):
     """Design change tracking model for storybook editing."""
 
     designId: str = Field(..., description="Element's data-design-id attribute")
-    type: str = Field(
-        ..., description="Change type: 'style', 'text', 'attribute', or 'move'"
-    )
+    type: str = Field(..., description="Change type: 'style', 'text', 'attribute', or 'move'")
     property: str = Field(..., description="CSS property, 'textContent', 'icon', etc.")
     value: Dict[str, Optional[str]] = Field(
         ..., description="Change value with 'from' and 'to' keys"
@@ -201,9 +191,7 @@ class DesignChange(BaseModel):
     elementContext: Optional[Dict[str, Any]] = Field(
         None, description="Full element snapshot for context"
     )
-    groupId: Optional[str] = Field(
-        None, description="Group ID for multi-step operations"
-    )
+    groupId: Optional[str] = Field(None, description="Group ID for multi-step operations")
     groupLabel: Optional[str] = Field(None, description="Human-readable group label")
 
 
@@ -223,9 +211,7 @@ class SaveEditsRequest(BaseModel):
     """Request model for saving storybook edits."""
 
     storybook_id: UUID = Field(..., description="ID of the storybook being edited")
-    page_changes: List[PageChanges] = Field(
-        ..., description="Changes for each modified page"
-    )
+    page_changes: List[PageChanges] = Field(..., description="Changes for each modified page")
 
 
 class SaveEditsResponse(BaseModel):
@@ -241,12 +227,8 @@ class VersionInfo(BaseModel):
 
     id: UUID = Field(..., description="Storybook ID for this version")
     version: int = Field(..., description="Version number")
-    created_at: Optional[datetime] = Field(
-        None, description="When this version was created"
-    )
-    is_current: bool = Field(
-        ..., description="Whether this is the current/latest version"
-    )
+    created_at: Optional[datetime] = Field(None, description="When this version was created")
+    is_current: bool = Field(..., description="Whether this is the current/latest version")
 
 
 class VersionHistoryResponse(BaseModel):
@@ -299,9 +281,7 @@ class AIGenerateBackgroundRequest(BaseModel):
     """Request model for AI background image generation."""
 
     storybook_id: UUID = Field(..., description="ID of the storybook being edited")
-    prompt: str = Field(
-        ..., description="Text prompt describing the background to generate"
-    )
+    prompt: str = Field(..., description="Text prompt describing the background to generate")
     page_image_url: Optional[str] = Field(
         None, description="URL of the current page image for extending"
     )
@@ -328,16 +308,12 @@ class AIRegenerateImageRequest(BaseModel):
     reference_image_url: Optional[str] = Field(
         None, description="Reference image URL for style guidance"
     )
-    scene_text: Optional[str] = Field(
-        None, description="Scene text to include for context"
-    )
+    scene_text: Optional[str] = Field(None, description="Scene text to include for context")
     text_position: Optional[str] = Field(
         None,
         description="Text position for layout context: left, right, top, bottom, separate_page, none",
     )
-    text_percentage: Optional[int] = Field(
-        None, description="Text percentage for layout context"
-    )
+    text_percentage: Optional[int] = Field(None, description="Text percentage for layout context")
 
 
 class AIRegenerateImageResponse(BaseModel):

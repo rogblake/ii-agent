@@ -5,25 +5,96 @@ from __future__ import annotations
 from enum import StrEnum
 
 
-_IMAGE_EXTS = frozenset({
-    "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico",
-    "tiff", "tif", "heic", "heif", "avif",
-})
-_VIDEO_EXTS = frozenset({
-    "mp4", "mov", "avi", "mkv", "webm", "flv", "wmv", "m4v", "3gp",
-})
-_AUDIO_EXTS = frozenset({
-    "mp3", "wav", "ogg", "flac", "aac", "m4a", "wma", "opus",
-})
-_DOCUMENT_EXTS = frozenset({
-    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
-    "txt", "csv", "rtf", "odt", "ods", "odp",
-})
-_CODE_EXTS = frozenset({
-    "py", "js", "ts", "jsx", "tsx", "html", "css", "json", "yaml",
-    "yml", "xml", "sh", "bash", "sql", "go", "rs", "java", "kt",
-    "swift", "c", "cpp", "h", "hpp", "rb", "php", "md", "tex",
-})
+_IMAGE_EXTS = frozenset(
+    {
+        "png",
+        "jpg",
+        "jpeg",
+        "gif",
+        "webp",
+        "svg",
+        "bmp",
+        "ico",
+        "tiff",
+        "tif",
+        "heic",
+        "heif",
+        "avif",
+    }
+)
+_VIDEO_EXTS = frozenset(
+    {
+        "mp4",
+        "mov",
+        "avi",
+        "mkv",
+        "webm",
+        "flv",
+        "wmv",
+        "m4v",
+        "3gp",
+    }
+)
+_AUDIO_EXTS = frozenset(
+    {
+        "mp3",
+        "wav",
+        "ogg",
+        "flac",
+        "aac",
+        "m4a",
+        "wma",
+        "opus",
+    }
+)
+_DOCUMENT_EXTS = frozenset(
+    {
+        "pdf",
+        "doc",
+        "docx",
+        "xls",
+        "xlsx",
+        "ppt",
+        "pptx",
+        "txt",
+        "csv",
+        "rtf",
+        "odt",
+        "ods",
+        "odp",
+    }
+)
+_CODE_EXTS = frozenset(
+    {
+        "py",
+        "js",
+        "ts",
+        "jsx",
+        "tsx",
+        "html",
+        "css",
+        "json",
+        "yaml",
+        "yml",
+        "xml",
+        "sh",
+        "bash",
+        "sql",
+        "go",
+        "rs",
+        "java",
+        "kt",
+        "swift",
+        "c",
+        "cpp",
+        "h",
+        "hpp",
+        "rb",
+        "php",
+        "md",
+        "tex",
+    }
+)
 
 
 class AssetType(StrEnum):

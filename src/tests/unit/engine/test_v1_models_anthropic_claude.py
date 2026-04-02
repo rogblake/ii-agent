@@ -19,7 +19,6 @@ Tests cover:
 """
 
 import json
-from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -34,7 +33,6 @@ from ii_agent.agents.models.anthropic.claude import (
     format_messages,
 )
 from ii_agent.agents.models.message import Message
-from ii_agent.agents.models.metrics import Metrics
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.exceptions import (
     ModelProviderError,

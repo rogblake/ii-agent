@@ -32,9 +32,7 @@ class SlideContentProcessor:
         # Session-level cache: {content_hash: permanent_url}
         self.url_cache = url_cache if url_cache is not None else {}
 
-    async def process_html_content(
-        self, html_content: str, slide_file_path: str
-    ) -> str:
+    async def process_html_content(self, html_content: str, slide_file_path: str) -> str:
         """
         Process HTML content to replace local file paths with permanent URLs.
 
@@ -68,17 +66,13 @@ class SlideContentProcessor:
                         continue
 
                     # Convert local path to permanent URL
-                    permanent_url = await self._upload_and_get_url(
-                        file_path, slide_file_path
-                    )
+                    permanent_url = await self._upload_and_get_url(file_path, slide_file_path)
 
                     if permanent_url:
                         # Replace the file path with permanent URL
                         old_reference = match.group(0)
                         new_reference = old_reference.replace(file_path, permanent_url)
-                        modified_content = modified_content.replace(
-                            old_reference, new_reference
-                        )
+                        modified_content = modified_content.replace(old_reference, new_reference)
                         logger.info(f"Replaced {file_path} with {permanent_url}")
 
             return modified_content
@@ -94,9 +88,7 @@ class SlideContentProcessor:
             or path.startswith("#")  # Fragment links
         )
 
-    async def _upload_and_get_url(
-        self, file_path: str, slide_file_path: str
-    ) -> Optional[str]:
+    async def _upload_and_get_url(self, file_path: str, slide_file_path: str) -> Optional[str]:
         """
         Upload a file from sandbox and get its permanent URL with efficient caching.
 
@@ -117,9 +109,7 @@ class SlideContentProcessor:
 
             # Try to read file content from sandbox
             try:
-                file_content_bytes = await self.sandbox.download_file(
-                    resolved_path, format="bytes"
-                )
+                file_content_bytes = await self.sandbox.download_file(resolved_path, format="bytes")
                 if not file_content_bytes:
                     logger.warning(f"File not found in sandbox: {resolved_path}")
                     return None
@@ -158,9 +148,7 @@ class SlideContentProcessor:
             if permanent_url:
                 # Cache the result
                 self.url_cache[content_hash] = permanent_url
-                logger.info(
-                    f"Uploaded {resolved_path} to {storage_path}, URL: {permanent_url}"
-                )
+                logger.info(f"Uploaded {resolved_path} to {storage_path}, URL: {permanent_url}")
 
             return permanent_url
 
@@ -168,9 +156,7 @@ class SlideContentProcessor:
             logger.error(f"Failed to upload file {file_path}: {e}")
             return None
 
-    def _resolve_sandbox_file_path(
-        self, file_path: str, slide_file_path: str
-    ) -> Optional[str]:
+    def _resolve_sandbox_file_path(self, file_path: str, slide_file_path: str) -> Optional[str]:
         """
         Resolve a file path to sandbox absolute path, relative to slide location.
 
@@ -199,9 +185,7 @@ class SlideContentProcessor:
             logger.error(f"Error resolving sandbox file path {file_path}: {e}")
             return None
 
-    def _generate_storage_path_from_content(
-        self, content_hash: str, local_path: Path
-    ) -> str:
+    def _generate_storage_path_from_content(self, content_hash: str, local_path: Path) -> str:
         """
         Generate a storage path for the file based on content hash.
 
@@ -231,9 +215,7 @@ class SlideContentProcessor:
         """
         try:
             # Determine content type
-            content_type = (
-                mimetypes.guess_type(original_path)[0] or "application/octet-stream"
-            )
+            content_type = mimetypes.guess_type(original_path)[0] or "application/octet-stream"
 
             # Get upload signed URL
             upload_url = await self.storage.signed_upload_url(

@@ -23,7 +23,6 @@ class AppleAuthState(StrEnum):
     EXPIRED = "expired"
 
 
-
 class AppleCredential(Base):
     """Apple Developer credentials and session data for TestFlight deployment."""
 

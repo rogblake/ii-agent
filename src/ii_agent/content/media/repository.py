@@ -19,9 +19,7 @@ class MediaTemplateRepository(BaseRepository[MediaTemplate]):
 
     async def get_by_name(self, db: AsyncSession, name: str) -> Optional[MediaTemplate]:
         """Get a media template by its name."""
-        result = await db.execute(
-            select(MediaTemplate).where(MediaTemplate.name == name)
-        )
+        result = await db.execute(select(MediaTemplate).where(MediaTemplate.name == name))
         return result.scalar_one_or_none()
 
     async def list_templates(

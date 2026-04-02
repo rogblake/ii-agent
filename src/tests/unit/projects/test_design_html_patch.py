@@ -1,7 +1,5 @@
 """Unit tests for projects/design/utils/html_patch.py."""
 
-import pytest
-
 from ii_agent.projects.design.utils.html_patch import (
     _extract_closing_tag_name,
     _extract_opening_tag_name,

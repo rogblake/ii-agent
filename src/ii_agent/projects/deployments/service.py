@@ -11,7 +11,7 @@ from ii_agent.projects.deployments.models import ProjectDeployment
 from ii_agent.projects.deployments.repository import DeploymentsRepository
 from ii_agent.projects.deployments.schemas import ProjectDeploymentResponse
 from ii_agent.projects.deployments.types import DeploymentStatus
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.projects.exceptions import ProjectNotFoundError
 from ii_agent.projects.repository import ProjectRepository
 

@@ -256,21 +256,22 @@ class GeminiVideoGenerationClient(BaseVideoGenerationClient):
 
             # Get video bytes - SDK may use different attribute names
             # Try both camelCase and snake_case
-            video_bytes = (
-                getattr(video, 'videoBytes', None) or
-                getattr(video, 'video_bytes', None)
-            )
+            video_bytes = getattr(video, "videoBytes", None) or getattr(video, "video_bytes", None)
 
             # If no direct bytes, try to download from URI
             if not video_bytes:
-                video_uri = getattr(video, 'uri', None)
+                video_uri = getattr(video, "uri", None)
                 if video_uri:
                     video_bytes = await self._download_video(video_uri)
 
             if not video_bytes:
                 # Log video object attributes for debugging
-                video_attrs = {k: type(v).__name__ for k, v in vars(video).items() if not k.startswith('_')}
-                raise RuntimeError(f"Video generation succeeded but no video data returned. Video attrs: {video_attrs}")
+                video_attrs = {
+                    k: type(v).__name__ for k, v in vars(video).items() if not k.startswith("_")
+                }
+                raise RuntimeError(
+                    f"Video generation succeeded but no video data returned. Video attrs: {video_attrs}"
+                )
 
             # Upload to GCS and get public URL
             public_url, storage_path, file_name, video_size = await self._upload_video(
@@ -279,9 +280,7 @@ class GeminiVideoGenerationClient(BaseVideoGenerationClient):
 
             # Get mime type - try both naming conventions
             mime_type = (
-                getattr(video, 'mimeType', None) or
-                getattr(video, 'mime_type', None) or
-                "video/mp4"
+                getattr(video, "mimeType", None) or getattr(video, "mime_type", None) or "video/mp4"
             )
 
             return VideoGenerationResult(

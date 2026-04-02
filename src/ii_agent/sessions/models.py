@@ -20,12 +20,12 @@ if TYPE_CHECKING:
     from ii_agent.settings.llm.models import ModelSetting
     from ii_agent.projects.models import Project
     from ii_agent.realtime.events.models import ApplicationEvent
-    from ii_agent.files.models import FileAsset
     from ii_agent.content.slides.models import SlideContent, SlideVersion
     from ii_agent.content.storybook.models import Storybook
     from ii_agent.sessions.wishlist.models import SessionWishlist
     from ii_agent.sessions.pin.models import SessionPin
     from ii_agent.projects.databases.models import ProjectDatabase
+
 
 class Session(Base):
     """Database model for agent sessions."""

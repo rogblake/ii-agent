@@ -435,7 +435,6 @@ _redis_client: Redis | None = None
 
 
 def _create_redis_client(settings: Settings) -> Redis:
-
     kwargs: dict[str, Any] = {
         "encoding": "utf-8",
         "retry_on_error": [ConnectionError, TimeoutError],
@@ -478,7 +477,5 @@ def create_entity_cache(namespace: str = "default", ttl: int = 3600) -> EntityCa
     been initialised earlier in the application lifecycle.
     """
     if _redis_client is not None:
-        return RedisEntityCache(
-            redis_client=_redis_client, namespace=namespace, default_ttl=ttl
-        )
+        return RedisEntityCache(redis_client=_redis_client, namespace=namespace, default_ttl=ttl)
     return MemoryEntityCache(namespace=namespace)

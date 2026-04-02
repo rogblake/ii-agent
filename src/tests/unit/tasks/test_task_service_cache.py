@@ -40,9 +40,7 @@ class TestRunTaskServiceCache:
         log_repo = AsyncMock()
         cache = MemoryEntityCache(namespace="tasks")
         config = MagicMock()
-        svc = RunTaskService(
-            task_repo=task_repo, log_repo=log_repo, cache=cache, config=config
-        )
+        svc = RunTaskService(task_repo=task_repo, log_repo=log_repo, cache=cache, config=config)
         return svc, task_repo, log_repo, cache
 
     @pytest.mark.asyncio

@@ -20,17 +20,15 @@ class SessionRepository(BaseRepository[Session]):
 
     async def get_by_id(self, db: AsyncSession, entity_id: uuid.UUID) -> Optional[Session]:
         """Get a session by its ID."""
-        result = await db.execute(
-            select(Session).where(Session.id == entity_id)
-        )
+        result = await db.execute(select(Session).where(Session.id == entity_id))
         return result.scalar_one_or_none()
 
-    async def get_by_id_with_project(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[Session]:
+    async def get_by_id_with_project(
+        self, db: AsyncSession, session_id: uuid.UUID
+    ) -> Optional[Session]:
         """Get a session by ID with project eagerly loaded."""
         result = await db.execute(
-            select(Session)
-            .options(selectinload(Session.project))
-            .where(Session.id == session_id)
+            select(Session).options(selectinload(Session.project)).where(Session.id == session_id)
         )
         return result.scalar_one_or_none()
 
@@ -51,9 +49,7 @@ class SessionRepository(BaseRepository[Session]):
 
     async def get_by_workspace(self, db: AsyncSession, workspace_dir: str) -> Optional[Session]:
         """Get a session by its workspace directory."""
-        result = await db.execute(
-            select(Session).where(Session.workspace_dir == workspace_dir)
-        )
+        result = await db.execute(select(Session).where(Session.workspace_dir == workspace_dir))
         return result.scalar_one_or_none()
 
     async def get_public_by_id(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[Session]:
@@ -76,11 +72,11 @@ class SessionRepository(BaseRepository[Session]):
 
     # ==================== Query Operations ====================
 
-    async def get_model_setting_id(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[uuid.UUID]:
+    async def get_model_setting_id(
+        self, db: AsyncSession, session_id: uuid.UUID
+    ) -> Optional[uuid.UUID]:
         """Get the LLM setting ID for a session."""
-        result = await db.execute(
-            select(Session.model_setting_id).where(Session.id == session_id)
-        )
+        result = await db.execute(select(Session.model_setting_id).where(Session.id == session_id))
         return result.scalar_one_or_none()
 
     async def get_user_sessions(
@@ -150,5 +146,3 @@ class SessionRepository(BaseRepository[Session]):
             )
         )
         return list(result.scalars().all())
-
-

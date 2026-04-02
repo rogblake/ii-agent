@@ -15,9 +15,7 @@ SKIP_LOGGING_PATHS = [
 ]
 
 
-async def request_tracing_middleware(
-    request: Request, call_next: Callable
-) -> Response:
+async def request_tracing_middleware(request: Request, call_next: Callable) -> Response:
     """Middleware for request tracing with automatic context injection.
 
     Sets up logging context (request_id, user_id if available) that is
@@ -29,9 +27,7 @@ async def request_tracing_middleware(
 
     # Get request ID from upstream or generate new one
     request_id = (
-        request.headers.get("x-request-id")
-        or request.headers.get("x-span-id")
-        or str(uuid.uuid4())
+        request.headers.get("x-request-id") or request.headers.get("x-span-id") or str(uuid.uuid4())
     )
 
     # Store in request state for response headers

@@ -40,9 +40,7 @@ async def seed_admin_llm_settings() -> None:
                 ModelSetting.config_type == "system",
             )
         )
-        existing = {
-            (s.model_id, s.provider): s for s in result.scalars().all()
-        }
+        existing = {(s.model_id, s.provider): s for s in result.scalars().all()}
         logger.info(f"Found {len(existing)} existing system LLM settings")
 
         added = 0
@@ -56,12 +54,15 @@ async def seed_admin_llm_settings() -> None:
             encrypted_api_key = "empty"
             if entry.get("api_key"):
                 from ii_agent.core.secrets.encryption import encryption_manager
+
                 encrypted_api_key = encryption_manager.encrypt(entry["api_key"])
 
             pricing_raw = entry.get("pricing")
             pricing_dict = (
-                pricing_raw.model_dump() if hasattr(pricing_raw, "model_dump") else pricing_raw
-            ) if pricing_raw else None
+                (pricing_raw.model_dump() if hasattr(pricing_raw, "model_dump") else pricing_raw)
+                if pricing_raw
+                else None
+            )
 
             setting = existing.get((model_id, provider))
 

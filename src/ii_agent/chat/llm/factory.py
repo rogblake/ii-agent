@@ -75,8 +75,7 @@ class LLMProviderFactory:
 
         supported = ", ".join(t.value for t in cls._provider_registry.keys())
         raise ValueError(
-            f"Unsupported provider: {provider.value}. "
-            f"Supported providers: {supported}"
+            f"Unsupported provider: {provider.value}. Supported providers: {supported}"
         )
 
     @classmethod
@@ -130,9 +129,7 @@ class LLMProviderFactory:
             )
             ```
         """
-        logger.info(
-            f"Registering provider {provider_class.__name__} for {provider.value}"
-        )
+        logger.info(f"Registering provider {provider_class.__name__} for {provider.value}")
         cls._provider_registry[provider] = provider_class
 
     @classmethod

@@ -22,9 +22,7 @@ class BeautifulSoupWebVisitClient(BaseWebVisitClient):
         """Extract content from a webpage using BeautifulSoup."""
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url, timeout=aiohttp.ClientTimeout(total=10)
-                ) as response:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     response.raise_for_status()
                     html_content = await response.text()
                     encoding = response.charset or "utf-8"

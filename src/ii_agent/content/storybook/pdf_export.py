@@ -51,7 +51,9 @@ class StorybookPDFExporter:
             browser = await p.chromium.launch(headless=True)
             try:
                 for page_num, html_content, page_width, page_height in export_pages:
-                    logger.info(f"Converting export page {page_num} to PDF ({page_width}x{page_height})")
+                    logger.info(
+                        f"Converting export page {page_num} to PDF ({page_width}x{page_height})"
+                    )
 
                     context = await browser.new_context(
                         viewport={"width": page_width, "height": page_height}
@@ -98,9 +100,7 @@ class StorybookPDFExporter:
         logger.info("Compressing PDF content streams...")
         for pg in pdf_writer.pages:
             pg.compress_content_streams()
-        pdf_writer.compress_identical_objects(
-            remove_identicals=True, remove_orphans=True
-        )
+        pdf_writer.compress_identical_objects(remove_identicals=True, remove_orphans=True)
 
         output = io.BytesIO()
         pdf_writer.write(output)
@@ -146,7 +146,9 @@ class StorybookPDFExporter:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             try:
-                for index, (page_num, html_content, page_width, page_height) in enumerate(export_pages, 1):
+                for index, (page_num, html_content, page_width, page_height) in enumerate(
+                    export_pages, 1
+                ):
                     yield {
                         "type": "progress",
                         "message": f"Converting page {page_num}",
@@ -221,9 +223,7 @@ class StorybookPDFExporter:
 
         for pg in pdf_writer.pages:
             pg.compress_content_streams()
-        pdf_writer.compress_identical_objects(
-            remove_identicals=True, remove_orphans=True
-        )
+        pdf_writer.compress_identical_objects(remove_identicals=True, remove_orphans=True)
 
         output = io.BytesIO()
         pdf_writer.write(output)
@@ -270,9 +270,7 @@ class StorybookPDFExporter:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             try:
-                context = await browser.new_context(
-                    viewport={"width": width, "height": height}
-                )
+                context = await browser.new_context(viewport={"width": width, "height": height})
                 page = await context.new_page()
                 try:
                     await page.wait_for_load_state("domcontentloaded")
@@ -305,9 +303,7 @@ class StorybookPDFExporter:
         compress_pdf_images(pdf_writer, quality=75, max_dimension=1920)
         for pdf_page in pdf_writer.pages:
             pdf_page.compress_content_streams()
-        pdf_writer.compress_identical_objects(
-            remove_identicals=True, remove_orphans=True
-        )
+        pdf_writer.compress_identical_objects(remove_identicals=True, remove_orphans=True)
 
         output = io.BytesIO()
         pdf_writer.write(output)
@@ -396,9 +392,7 @@ def compress_pdf_images(
                         continue
 
                     try:
-                        img = Image.frombytes(
-                            mode, (width, height), data[:expected_size]
-                        )
+                        img = Image.frombytes(mode, (width, height), data[:expected_size])
                     except Exception:
                         continue
 
@@ -406,12 +400,8 @@ def compress_pdf_images(
                     ratio = max_dimension / max(img.width, img.height)
                     new_width = int(img.width * ratio)
                     new_height = int(img.height * ratio)
-                    img = img.resize(
-                        (new_width, new_height), Image.Resampling.LANCZOS
-                    )
-                    logger.debug(
-                        f"Resized image from {width}x{height} to {new_width}x{new_height}"
-                    )
+                    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    logger.debug(f"Resized image from {width}x{height} to {new_width}x{new_height}")
 
                 if img.mode == "CMYK":
                     img = img.convert("RGB")
@@ -419,20 +409,14 @@ def compress_pdf_images(
                     img = img.convert("RGB")
 
                 output_buffer = io.BytesIO()
-                img.save(
-                    output_buffer, format="JPEG", quality=quality, optimize=True
-                )
+                img.save(output_buffer, format="JPEG", quality=quality, optimize=True)
                 compressed_data = output_buffer.getvalue()
 
                 if len(compressed_data) < len(data):
                     obj._data = compressed_data
                     obj[NameObject("/Filter")] = NameObject("/DCTDecode")
-                    obj[NameObject("/Width")] = (
-                        width if img.width == width else img.width
-                    )
-                    obj[NameObject("/Height")] = (
-                        height if img.height == height else img.height
-                    )
+                    obj[NameObject("/Width")] = width if img.width == width else img.width
+                    obj[NameObject("/Height")] = height if img.height == height else img.height
                     obj[NameObject("/BitsPerComponent")] = 8
                     obj[NameObject("/ColorSpace")] = NameObject(
                         "/DeviceGray" if img.mode == "L" else "/DeviceRGB"

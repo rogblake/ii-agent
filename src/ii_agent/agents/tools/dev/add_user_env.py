@@ -124,9 +124,7 @@ class AddUserEnvTool(BaseAgentTool):
                     is_error=True,
                 )
 
-            user_uuid = (
-                user_id if isinstance(user_id, uuid.UUID) else uuid.UUID(str(user_id))
-            )
+            user_uuid = user_id if isinstance(user_id, uuid.UUID) else uuid.UUID(str(user_id))
 
             # Sync DATABASE_URL to ProjectDatabases table if provided
             database_url = secrets_dict.get("DATABASE_URL")

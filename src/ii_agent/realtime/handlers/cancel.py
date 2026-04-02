@@ -34,9 +34,7 @@ class CancelHandler(BaseCommandHandler[CancelContent]):
         async with get_db_session_local() as db:
             last_task = await svc.get_last_by_session_id(db, session.id)
             if not last_task:
-                await self._send_error_event(
-                    session.id, message="Task Run not found"
-                )
+                await self._send_error_event(session.id, message="Task Run not found")
                 return
 
             if last_task.status not in [RunStatus.RUNNING, RunStatus.PAUSED]:
@@ -46,9 +44,7 @@ class CancelHandler(BaseCommandHandler[CancelContent]):
                 )
                 return
 
-            await svc.transition_status(
-                db, task_id=last_task.id, to_status=RunStatus.ABORTING
-            )
+            await svc.transition_status(db, task_id=last_task.id, to_status=RunStatus.ABORTING)
             await db.commit()
 
         run_id = last_task.id

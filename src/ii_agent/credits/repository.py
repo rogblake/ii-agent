@@ -22,22 +22,14 @@ from ii_agent.sessions.models import Session
 class CreditBalanceRepository(BaseRepository[CreditBalance]):
     model = CreditBalance
 
-    async def get_by_user_id(
-        self, db: AsyncSession, user_id: uuid.UUID
-    ) -> Optional[CreditBalance]:
-        result = await db.execute(
-            select(CreditBalance).where(CreditBalance.user_id == user_id)
-        )
+    async def get_by_user_id(self, db: AsyncSession, user_id: uuid.UUID) -> Optional[CreditBalance]:
+        result = await db.execute(select(CreditBalance).where(CreditBalance.user_id == user_id))
         return result.scalar_one_or_none()
 
-    async def get_for_update(
-        self, db: AsyncSession, user_id: uuid.UUID
-    ) -> Optional[CreditBalance]:
+    async def get_for_update(self, db: AsyncSession, user_id: uuid.UUID) -> Optional[CreditBalance]:
         """SELECT ... FOR UPDATE — serializes concurrent mutations."""
         result = await db.execute(
-            select(CreditBalance)
-            .where(CreditBalance.user_id == user_id)
-            .with_for_update()
+            select(CreditBalance).where(CreditBalance.user_id == user_id).with_for_update()
         )
         return result.scalar_one_or_none()
 
@@ -84,9 +76,9 @@ class CreditTransactionRepository(BaseRepository[CreditTransaction]):
         ).label("credits")
 
         bonus_sum = func.coalesce(
-            func.sum(
-                cast(CreditTransaction.amount, Numeric(18, 6))
-            ).filter(CreditTransaction.credit_type == CreditType.BONUS),
+            func.sum(cast(CreditTransaction.amount, Numeric(18, 6))).filter(
+                CreditTransaction.credit_type == CreditType.BONUS
+            ),
             0,
         ).label("bonus_credits")
 
@@ -148,9 +140,8 @@ class CreditTransactionRepository(BaseRepository[CreditTransaction]):
     ) -> tuple[list[CreditTransaction], int]:
         """Paginated transactions for a specific session."""
 
-        base_filter = (
-            (CreditTransaction.user_id == user_id)
-            & (CreditTransaction.session_id == session_id)
+        base_filter = (CreditTransaction.user_id == user_id) & (
+            CreditTransaction.session_id == session_id
         )
 
         total = (
@@ -176,9 +167,7 @@ class CreditTransactionRepository(BaseRepository[CreditTransaction]):
     ) -> Decimal:
         """Sum of all deductions in a session (returned as positive)."""
         q = select(
-            func.coalesce(
-                func.sum(cast(CreditTransaction.amount, Numeric(18, 6))), 0
-            )
+            func.coalesce(func.sum(cast(CreditTransaction.amount, Numeric(18, 6))), 0)
         ).where(
             (CreditTransaction.user_id == user_id)
             & (CreditTransaction.session_id == session_id)
@@ -199,9 +188,7 @@ class CreditTransactionRepository(BaseRepository[CreditTransaction]):
 
         base_filter = CreditTransaction.user_id == user_id
         if transaction_type:
-            base_filter = base_filter & (
-                CreditTransaction.transaction_type == transaction_type
-            )
+            base_filter = base_filter & (CreditTransaction.transaction_type == transaction_type)
 
         total = (
             await db.execute(

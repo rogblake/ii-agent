@@ -8,7 +8,6 @@ from typing import Annotated, TypeAlias
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.dependencies import DBSession
 from ii_agent.core.dependencies import SettingsDep

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from types import SimpleNamespace
 from datetime import datetime, timezone
 
 from ii_agent.content.storybook.router import _format_content_disposition

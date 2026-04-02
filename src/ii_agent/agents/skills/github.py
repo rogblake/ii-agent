@@ -73,9 +73,7 @@ def sanitize_skill_name(name: str) -> str:
 
     # Additional security check: ensure no path traversal patterns remain
     if ".." in truncated or "/" in truncated or "\\" in truncated:
-        raise ValidationError(
-            f"Skill name '{name}' contains invalid path characters"
-        )
+        raise ValidationError(f"Skill name '{name}' contains invalid path characters")
 
     logger.info(f"[GitHub] Sanitized skill name: '{name}' -> '{truncated}'")
     return truncated
@@ -284,7 +282,9 @@ class GitHubDownloadService:
         # SECURITY: Sanitize skill name to prevent path traversal attacks
         # This converts the name to a safe slug (lowercase, alphanumeric, hyphens only)
         sanitized_name = sanitize_skill_name(raw_name.strip())
-        logger.info(f"[GitHub] Using sanitized skill name: '{sanitized_name}' (original: '{raw_name.strip()}')")
+        logger.info(
+            f"[GitHub] Using sanitized skill name: '{sanitized_name}' (original: '{raw_name.strip()}')"
+        )
 
         properties = SkillProperties(
             name=sanitized_name,
@@ -350,8 +350,7 @@ class GitHubDownloadService:
             elif item["type"] == "dir":
                 # Recursively get subdirectory contents
                 subdir_url = (
-                    f"https://api.github.com/repos/{owner}/{repo}"
-                    f"/contents/{full_path}?ref={branch}"
+                    f"https://api.github.com/repos/{owner}/{repo}/contents/{full_path}?ref={branch}"
                 )
 
                 try:
@@ -370,9 +369,7 @@ class GitHubDownloadService:
                     )
                 except httpx.HTTPError as e:
                     logger.warning(f"Failed to fetch subdirectory {full_path}: {e}")
-                    raise GitHubDownloadError(
-                        f"Failed to fetch subdirectory {full_path}: {e}"
-                    )
+                    raise GitHubDownloadError(f"Failed to fetch subdirectory {full_path}: {e}")
 
     async def close(self) -> None:
         """Close the HTTP client."""

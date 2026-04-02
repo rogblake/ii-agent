@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from ii_agent.sessions.models import Session
 
 
-
 class ProjectDatabase(Base):
     """Database connections for projects. One-to-many with sessions."""
 

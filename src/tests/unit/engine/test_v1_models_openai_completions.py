@@ -14,9 +14,7 @@ Tests cover:
 - OpenAIChat ainvoke happy path
 """
 
-import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -27,7 +25,6 @@ from ii_agent.agents.models.openai.completions import (
     _format_file_for_message,
 )
 from ii_agent.agents.models.message import Message
-from ii_agent.agents.models.metrics import Metrics
 from ii_agent.agents.models.response import ModelResponse
 from ii_agent.agents.exceptions import (
     ModelAuthenticationError,

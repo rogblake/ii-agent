@@ -110,9 +110,7 @@ def _get_key_from_env() -> str:
     if env_key:
         return env_key
 
-    password = os.getenv(
-        "ENCRYPTION_PASSWORD", "default-password-change-in-production"
-    ).encode()
+    password = os.getenv("ENCRYPTION_PASSWORD", "default-password-change-in-production").encode()
     salt = os.getenv("ENCRYPTION_SALT", "default-salt").encode()
 
     kdf = PBKDF2HMAC(

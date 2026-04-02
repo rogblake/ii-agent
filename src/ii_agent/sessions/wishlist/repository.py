@@ -16,7 +16,9 @@ class WishlistRepository(BaseRepository[SessionWishlist]):
 
     model = SessionWishlist
 
-    async def get_user_wishlists(self, db: AsyncSession, user_id: uuid.UUID) -> List[SessionWishlist]:
+    async def get_user_wishlists(
+        self, db: AsyncSession, user_id: uuid.UUID
+    ) -> List[SessionWishlist]:
         """Get all wishlist items for a user with session eager-loaded."""
         result = await db.execute(
             select(SessionWishlist)

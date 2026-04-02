@@ -56,10 +56,9 @@ class ConcatenateVideosTool(BaseTool):
             return self._user_id
         from sqlalchemy import select
         from ii_agent.sessions.models import Session
+
         async with get_db_session_local() as db:
-            result = await db.execute(
-                select(Session).where(Session.id == self.session_id)
-            )
+            result = await db.execute(select(Session).where(Session.id == self.session_id))
             session = result.scalar_one()
             self._user_id = session.user_id
         return self._user_id
@@ -77,7 +76,7 @@ class ConcatenateVideosTool(BaseTool):
 
             tool_settings = ToolClientSettings()
             video_config = tool_settings.video_generate_config
-            return getattr(video_config, 'custom_domain', None)
+            return getattr(video_config, "custom_domain", None)
         except Exception as e:
             logger.warning(f"[CONCAT_VIDEO] Failed to load custom domain: {e}")
             return None
@@ -129,7 +128,15 @@ class ConcatenateVideosTool(BaseTool):
                         "type": "string",
                         "description": "Type of transition effect: 'fade', 'wipeleft', 'wiperight', 'slideright', 'slideleft' (default: 'fade')",
                         "default": "fade",
-                        "enum": ["fade", "wipeleft", "wiperight", "slideright", "slideleft", "circlecrop", "dissolve"],
+                        "enum": [
+                            "fade",
+                            "wipeleft",
+                            "wiperight",
+                            "slideright",
+                            "slideleft",
+                            "circlecrop",
+                            "dissolve",
+                        ],
                     },
                 },
             },
@@ -144,9 +151,7 @@ class ConcatenateVideosTool(BaseTool):
             transition_type = params.get("transition_type", "fade")
 
             if not video_urls:
-                return ToolResponse(
-                    output=ErrorTextContent(value="No video URLs provided")
-                )
+                return ToolResponse(output=ErrorTextContent(value="No video URLs provided"))
 
             if len(video_urls) == 1:
                 return ToolResponse(
@@ -162,17 +167,13 @@ class ConcatenateVideosTool(BaseTool):
 
         except (json.JSONDecodeError, KeyError) as e:
             logger.error(f"[CONCAT_VIDEO] Invalid tool input: {e}")
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Invalid tool input: {e}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Invalid tool input: {e}"))
 
         try:
             result = await self._concatenate_videos(video_urls, crossfade_duration, transition_type)
 
             if not result:
-                return ToolResponse(
-                    output=ErrorTextContent(value="Video concatenation failed")
-                )
+                return ToolResponse(output=ErrorTextContent(value="Video concatenation failed"))
 
             if result.get("error"):
                 error_msg = result["error"]
@@ -219,12 +220,18 @@ class ConcatenateVideosTool(BaseTool):
 
     async def _get_video_duration(self, video_path: Path) -> float:
         """Get video duration in seconds using ffprobe."""
+
         def _probe() -> float:
             try:
                 cmd = [
-                    "ffprobe", "-v", "error", "-show_entries",
-                    "format=duration", "-of", "default=noprint_wrappers=1:nokey=1",
-                    str(video_path)
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-show_entries",
+                    "format=duration",
+                    "-of",
+                    "default=noprint_wrappers=1:nokey=1",
+                    str(video_path),
                 ]
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
                 return float(result.stdout.strip())
@@ -236,13 +243,20 @@ class ConcatenateVideosTool(BaseTool):
 
     async def _has_audio_stream(self, video_path: Path) -> bool:
         """Check if video has an audio stream using ffprobe."""
+
         def _probe() -> bool:
             try:
                 cmd = [
-                    "ffprobe", "-v", "error", "-select_streams", "a",
-                    "-show_entries", "stream=codec_type",
-                    "-of", "default=noprint_wrappers=1:nokey=1",
-                    str(video_path)
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-select_streams",
+                    "a",
+                    "-show_entries",
+                    "stream=codec_type",
+                    "-of",
+                    "default=noprint_wrappers=1:nokey=1",
+                    str(video_path),
                 ]
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
                 return "audio" in result.stdout.strip().lower()
@@ -261,11 +275,14 @@ class ConcatenateVideosTool(BaseTool):
         chunk_size: int = 64 * 1024,
     ) -> tuple[Path, bool, str | None]:
         """Stream download video to disk without loading entire file into memory."""
+
         async def _do_download() -> tuple[Path, bool, str | None]:
             try:
                 async with client.stream("GET", url, follow_redirects=True) as response:
                     if response.status_code != 200:
-                        logger.error(f"[CONCAT_VIDEO] Stream response status: {response.status_code}")
+                        logger.error(
+                            f"[CONCAT_VIDEO] Stream response status: {response.status_code}"
+                        )
                         return (dest, False, f"HTTP {response.status_code}")
                     async with await anyio.open_file(dest, "wb") as f:
                         async for chunk in response.aiter_bytes(chunk_size=chunk_size):
@@ -333,6 +350,7 @@ class ConcatenateVideosTool(BaseTool):
     ) -> Optional[dict]:
         """Concatenate video URLs into a single video using ffmpeg with crossfade transitions."""
         try:
+
             def _make_temp_dir() -> Path:
                 return Path(tempfile.mkdtemp(prefix="video_concat_", dir="/tmp"))
 
@@ -346,11 +364,15 @@ class ConcatenateVideosTool(BaseTool):
                 )
 
             if failed_downloads:
-                logger.error(f"[CONCAT_VIDEO] {len(failed_downloads)} of {len(video_urls)} downloads failed: {failed_downloads}")
+                logger.error(
+                    f"[CONCAT_VIDEO] {len(failed_downloads)} of {len(video_urls)} downloads failed: {failed_downloads}"
+                )
                 await self._cleanup_temp_files(temp_dir, video_paths)
                 return {
                     "error": f"Failed to download {len(failed_downloads)} of {len(video_urls)} video segments",
-                    "failed_segments": [f"Segment {idx}: {reason}" for idx, reason in failed_downloads],
+                    "failed_segments": [
+                        f"Segment {idx}: {reason}" for idx, reason in failed_downloads
+                    ],
                 }
 
             if len(video_paths) < 2:
@@ -370,7 +392,9 @@ class ConcatenateVideosTool(BaseTool):
 
             all_have_audio = all(has_audio_list)
             if not all_have_audio:
-                logger.info("[CONCAT_VIDEO] Not all videos have audio streams, will produce video-only output")
+                logger.info(
+                    "[CONCAT_VIDEO] Not all videos have audio streams, will produce video-only output"
+                )
 
             def _run_ffmpeg_crossfade() -> bool:
                 try:
@@ -389,10 +413,10 @@ class ConcatenateVideosTool(BaseTool):
                             input_v_a = "[0:v]"
                         else:
                             input_v_a = f"[v{i}]"
-                        input_v_b = f"[{i+1}:v]"
+                        input_v_b = f"[{i + 1}:v]"
 
                         if i < len(video_paths) - 2:
-                            output_v = f"[v{i+1}]"
+                            output_v = f"[v{i + 1}]"
                         else:
                             output_v = "[vout]"
 
@@ -405,10 +429,10 @@ class ConcatenateVideosTool(BaseTool):
                                 input_a_a = "[0:a]"
                             else:
                                 input_a_a = f"[a{i}]"
-                            input_a_b = f"[{i+1}:a]"
+                            input_a_b = f"[{i + 1}:a]"
 
                             if i < len(video_paths) - 2:
-                                output_a = f"[a{i+1}]"
+                                output_a = f"[a{i + 1}]"
                             else:
                                 output_a = "[aout]"
 
@@ -423,30 +447,55 @@ class ConcatenateVideosTool(BaseTool):
 
                     if all_have_audio:
                         cmd = [
-                            "ffmpeg", "-y",
+                            "ffmpeg",
+                            "-y",
                             *input_args,
-                            "-filter_complex", filter_complex,
-                            "-map", "[vout]", "-map", "[aout]",
-                            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-                            "-c:a", "aac", "-b:a", "192k",
-                            str(output_path)
+                            "-filter_complex",
+                            filter_complex,
+                            "-map",
+                            "[vout]",
+                            "-map",
+                            "[aout]",
+                            "-c:v",
+                            "libx264",
+                            "-preset",
+                            "fast",
+                            "-crf",
+                            "23",
+                            "-c:a",
+                            "aac",
+                            "-b:a",
+                            "192k",
+                            str(output_path),
                         ]
                     else:
                         cmd = [
-                            "ffmpeg", "-y",
+                            "ffmpeg",
+                            "-y",
                             *input_args,
-                            "-filter_complex", filter_complex,
-                            "-map", "[vout]",
-                            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                            "-filter_complex",
+                            filter_complex,
+                            "-map",
+                            "[vout]",
+                            "-c:v",
+                            "libx264",
+                            "-preset",
+                            "fast",
+                            "-crf",
+                            "23",
                             "-an",
-                            str(output_path)
+                            str(output_path),
                         ]
 
-                    logger.debug(f"[CONCAT_VIDEO] Running ffmpeg with crossfade (audio={all_have_audio})")
+                    logger.debug(
+                        f"[CONCAT_VIDEO] Running ffmpeg with crossfade (audio={all_have_audio})"
+                    )
 
                     result = subprocess.run(cmd, capture_output=True, timeout=600)
                     if result.returncode != 0:
-                        logger.error(f"[CONCAT_VIDEO] ffmpeg crossfade failed: {result.stderr.decode()}")
+                        logger.error(
+                            f"[CONCAT_VIDEO] ffmpeg crossfade failed: {result.stderr.decode()}"
+                        )
                         return _run_ffmpeg_simple_concat()
                     return output_path.exists()
                 except Exception as e:
@@ -464,23 +513,43 @@ class ConcatenateVideosTool(BaseTool):
 
                     if all_have_audio:
                         cmd = [
-                            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-                            "-i", str(concat_file),
-                            "-c", "copy",
-                            str(output_path)
+                            "ffmpeg",
+                            "-y",
+                            "-f",
+                            "concat",
+                            "-safe",
+                            "0",
+                            "-i",
+                            str(concat_file),
+                            "-c",
+                            "copy",
+                            str(output_path),
                         ]
                     else:
                         cmd = [
-                            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-                            "-i", str(concat_file),
-                            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                            "ffmpeg",
+                            "-y",
+                            "-f",
+                            "concat",
+                            "-safe",
+                            "0",
+                            "-i",
+                            str(concat_file),
+                            "-c:v",
+                            "libx264",
+                            "-preset",
+                            "fast",
+                            "-crf",
+                            "23",
                             "-an",
-                            str(output_path)
+                            str(output_path),
                         ]
 
                     result = subprocess.run(cmd, capture_output=True, timeout=300)
                     if result.returncode != 0:
-                        logger.error(f"[CONCAT_VIDEO] ffmpeg simple concat failed: {result.stderr.decode()}")
+                        logger.error(
+                            f"[CONCAT_VIDEO] ffmpeg simple concat failed: {result.stderr.decode()}"
+                        )
                         return False
                     return output_path.exists()
                 except Exception as e:
@@ -544,8 +613,10 @@ class ConcatenateVideosTool(BaseTool):
 
         except Exception as e:
             logger.error(f"[CONCAT_VIDEO] Concatenation failed: {e}", exc_info=True)
-            if 'temp_dir' in locals() and temp_dir.exists():
-                await self._cleanup_temp_files(temp_dir, video_paths if 'video_paths' in locals() else [])
+            if "temp_dir" in locals() and temp_dir.exists():
+                await self._cleanup_temp_files(
+                    temp_dir, video_paths if "video_paths" in locals() else []
+                )
             return {"url": video_urls[0]} if video_urls else None
 
     async def _cleanup_temp_files(

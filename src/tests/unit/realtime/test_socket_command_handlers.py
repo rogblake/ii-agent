@@ -22,7 +22,7 @@ from ii_agent.realtime.handlers.base import (
     BaseCommandHandler,
     CommandType,
 )
-from ii_agent.realtime.events import ApplicationEvent, ErrorCode, EventGroup, EventType, SystemEvent
+from ii_agent.realtime.events import ErrorCode, EventGroup, EventType, SystemEvent
 
 
 # ---------------------------------------------------------------------------

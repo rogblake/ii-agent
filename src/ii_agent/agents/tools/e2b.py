@@ -9,6 +9,7 @@ from e2b_code_interpreter import AsyncSandbox
 from ii_agent.agents.tools.toolkit import Toolkit
 from ii_agent.core.logger import logger
 
+
 class E2BTools(Toolkit):
     def __init__(
         self,

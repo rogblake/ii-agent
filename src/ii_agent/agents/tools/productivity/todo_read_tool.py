@@ -54,7 +54,9 @@ class TodoReadTool(BaseAgentTool):
             )
 
         async with get_db_session_local() as db:
-            session = await get_app_container().session_service.get_session_by_id(db, self._session_id)
+            session = await get_app_container().session_service.get_session_by_id(
+                db, self._session_id
+            )
             if not session:
                 return ToolResult(
                     llm_content="Session not found for todo list.",

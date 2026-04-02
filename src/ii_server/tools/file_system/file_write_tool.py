@@ -49,9 +49,7 @@ class FileWriteTool(BaseTool):
     def __init__(self, workspace_manager: WorkspaceManager):
         self.workspace_manager = workspace_manager
 
-    def should_confirm_execute(
-        self, tool_input: dict[str, Any]
-    ) -> ToolConfirmationDetails | bool:
+    def should_confirm_execute(self, tool_input: dict[str, Any]) -> ToolConfirmationDetails | bool:
         return ToolConfirmationDetails(
             type="edit",
             message=f"Write file {tool_input['file_path']} with the following content:\n{tool_input['content']}",

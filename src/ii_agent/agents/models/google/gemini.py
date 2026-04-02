@@ -55,6 +55,7 @@ except ImportError:
         "`google-genai` not installed or not at the latest version. Please install it using `pip install -U google-genai`"
     )
 
+
 def _normalize_function_definition(tool: Any) -> Optional[Dict[str, Any]]:
     """Convert Function objects or dicts into a standard dict representation."""
 
@@ -809,7 +810,9 @@ class Gemini(Model):
                     # First, handle files with sandbox paths (append as text)
                     file_paths = [str(f.filepath) for f in message.files if f.filepath]
                     if file_paths:
-                        files_text = "\n\nAttached files:\n" + "\n".join(f" - {p}" for p in file_paths)
+                        files_text = "\n\nAttached files:\n" + "\n".join(
+                            f" - {p}" for p in file_paths
+                        )
                         message_parts.append(Part.from_text(text=files_text))
 
                     # Then, handle files with content (for file upload/embedding)
@@ -1368,8 +1371,7 @@ class Gemini(Model):
     def _has_usage_metadata(self, response_delta: GenerateContentResponse) -> bool:
         """Check if response contains usage metadata."""
         return (
-            hasattr(response_delta, "usage_metadata")
-            and response_delta.usage_metadata is not None
+            hasattr(response_delta, "usage_metadata") and response_delta.usage_metadata is not None
         )
 
     def __deepcopy__(self, memo):

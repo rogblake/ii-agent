@@ -18,14 +18,13 @@ import pytest
 
 pytest.skip("Tested module was removed during refactoring", allow_module_level=True)
 
-from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 from ii_agent.agents.runs.response_handler import ResponseHandler
 from ii_agent.agents.tools.manager import ToolManager
 from ii_agent.agents.models.response import ModelResponse, ModelResponseEvent, ToolExecution
-from ii_agent.agents.runs.agent import RunOutput, RunEvent, RunInput
+from ii_agent.agents.runs.agent import RunOutput, RunInput
 from ii_agent.agents.runs.messages import RunMessages
 from ii_agent.agents.models.message import Message
 
@@ -508,7 +507,6 @@ class TestHandleModelResponseChunkDeep:
 
     def test_audio_content_base64_decoded(self):
         import base64
-        from ii_agent.files.media import Audio as AudioMedia
 
         handler = self._make_handler()
         run_output = make_run_output()

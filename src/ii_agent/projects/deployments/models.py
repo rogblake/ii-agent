@@ -34,7 +34,9 @@ class ProjectDeployment(Base):
 
     # === Existing fields (kept for backward compatibility) ===
     environment: Mapped[str] = mapped_column(String, nullable=False)
-    deployment_status: Mapped[DeploymentStatus] = mapped_column(String, nullable=False, default=DeploymentStatus.PENDING)
+    deployment_status: Mapped[DeploymentStatus] = mapped_column(
+        String, nullable=False, default=DeploymentStatus.PENDING
+    )
     deployment_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     started_at: Mapped[Optional[datetime]] = mapped_column(TimestampColumn, nullable=True)
     deployed_at: Mapped[Optional[datetime]] = mapped_column(TimestampColumn, nullable=True)

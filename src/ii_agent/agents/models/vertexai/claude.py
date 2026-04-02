@@ -18,6 +18,7 @@ except ImportError as e:
         "`anthropic` not installed. Please install it with `pip install anthropic`"
     ) from e
 
+
 @dataclass
 class Claude(AnthropicClaude):
     """

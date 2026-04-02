@@ -92,18 +92,12 @@ class ChatFileProcessor:
                     f"\n✓ {len(processed_files.large_file_ids)} large file(s) - in vector store for search:"
                 )
                 for info in processed_files.large_file_info:
-                    file_info_lines.append(
-                        f"  - {info['file_name']} ({info['size_kb']}KB)"
-                    )
+                    file_info_lines.append(f"  - {info['file_name']} ({info['size_kb']}KB)")
 
             if processed_files.skipped_files:
-                file_info_lines.append(
-                    f"\n⚠ {len(processed_files.skipped_files)} file(s) skipped:"
-                )
+                file_info_lines.append(f"\n⚠ {len(processed_files.skipped_files)} file(s) skipped:")
                 for skipped in processed_files.skipped_files:
-                    file_info_lines.append(
-                        f"  - {skipped['file_name']}: {skipped['reason']}"
-                    )
+                    file_info_lines.append(f"  - {skipped['file_name']}: {skipped['reason']}")
 
             user_text = llm_content
             file_info_text = user_text + "\n\n" + "\n".join(file_info_lines)

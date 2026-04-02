@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import uuid
 from dataclasses import asdict, dataclass, field
 from time import time
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
 
 from pydantic import BaseModel
 from ii_agent.settings.llm import Provider

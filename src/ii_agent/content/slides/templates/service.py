@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.content.slides.templates.repository import SlideTemplateRepository
 from ii_agent.content.slides.templates.schemas import SlideTemplateCreate, SlideTemplateInfo
 
@@ -61,17 +61,13 @@ class SlideTemplateService:
 
 
 # Backward-compatible module-level functions for non-DI callers
-async def get_slide_template_by_id(
-    db: AsyncSession, template_id: str
-) -> Optional[Dict[str, Any]]:
+async def get_slide_template_by_id(db: AsyncSession, template_id: str) -> Optional[Dict[str, Any]]:
     """Get slide template by ID (backward-compatible wrapper)."""
     repo = SlideTemplateRepository()
     return await repo.get_by_id(db, template_id)
 
 
-async def get_slide_template_content_by_id(
-    db: AsyncSession, template_id: str
-) -> Optional[Any]:
+async def get_slide_template_content_by_id(db: AsyncSession, template_id: str) -> Optional[Any]:
     """Get only the slide content for a template by ID (backward-compatible wrapper)."""
     template = await get_slide_template_by_id(db, template_id)
     return template["slide_content"] if template else None

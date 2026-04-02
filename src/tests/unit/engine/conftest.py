@@ -7,6 +7,7 @@ InteractionEvent from google.genai.interactions, but the source
 file interactions.py tries to import it. We inject a compatible replacement
 so the source module can be imported for testing.
 """
+
 from __future__ import annotations
 
 import sys

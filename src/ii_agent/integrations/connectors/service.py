@@ -7,7 +7,7 @@ from typing import Optional, Dict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.integrations.connectors.models import Connector, ConnectorType
 from ii_agent.integrations.connectors.repository import ConnectorRepository
 

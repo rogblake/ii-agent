@@ -67,9 +67,7 @@ async def download_slides(
     slide_service: SlideServiceDep,
     db: DBSession,
     session_id: str = Query(..., description="Session ID"),
-    presentation_name: Optional[str] = Query(
-        None, description="Specific presentation to download"
-    ),
+    presentation_name: Optional[str] = Query(None, description="Specific presentation to download"),
 ):
     """Download slides as PDF for authenticated users."""
 
@@ -101,17 +99,13 @@ async def download_slides_with_progress(
     slide_service: SlideServiceDep,
     db: DBSession,
     session_id: str = Query(..., description="Session ID"),
-    presentation_name: Optional[str] = Query(
-        None, description="Specific presentation to download"
-    ),
+    presentation_name: Optional[str] = Query(None, description="Specific presentation to download"),
 ):
     """Download slides as PDF with progress updates via Server-Sent Events."""
 
     async def generate_progress():
         try:
-            async for (
-                progress_data
-            ) in slide_service.download_session_slides_as_pdf_with_progress(
+            async for progress_data in slide_service.download_session_slides_as_pdf_with_progress(
                 db,
                 session_id=session_id,
                 user_id=current_user.id,
@@ -161,15 +155,12 @@ async def download_public_slides(
     slide_service: SlideServiceDep,
     db: DBSession,
     session_id: str = Query(..., description="Session ID"),
-    presentation_name: Optional[str] = Query(
-        None, description="Specific presentation to download"
-    ),
+    presentation_name: Optional[str] = Query(None, description="Specific presentation to download"),
 ):
     """Download slides as PDF from a public session."""
 
     pdf_bytes = await slide_service.download_public_session_slides_as_pdf(
-        db,
-        session_id=session_id, presentation_name=presentation_name
+        db, session_id=session_id, presentation_name=presentation_name
     )
 
     if not pdf_bytes:
@@ -192,9 +183,7 @@ async def download_public_slides_with_progress(
     slide_service: SlideServiceDep,
     db: DBSession,
     session_id: str = Query(..., description="Session ID"),
-    presentation_name: Optional[str] = Query(
-        None, description="Specific presentation to download"
-    ),
+    presentation_name: Optional[str] = Query(None, description="Specific presentation to download"),
 ):
     """Download public slides as PDF with progress updates via Server-Sent Events."""
 

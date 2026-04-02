@@ -39,7 +39,6 @@ class Metrics:
     # Any additional metrics
     additional_metrics: Optional[dict] = None
 
-
     def to_dict(self) -> Dict[str, Any]:
         metrics_dict = asdict(self)
         # Remove the timer util if present

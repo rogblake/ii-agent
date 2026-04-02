@@ -43,9 +43,7 @@ async def get_credit_usage(
     per_page: int = Query(20, ge=1, le=100),
 ) -> CreditUsageResponse:
     """Get credit usage aggregated by session."""
-    return await credit_service.get_usage_by_session(
-        db, current_user.id, page, per_page
-    )
+    return await credit_service.get_usage_by_session(db, current_user.id, page, per_page)
 
 
 @router.get("/usage/{session_id}", response_model=SessionUsageDetailResponse)

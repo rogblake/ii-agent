@@ -137,12 +137,8 @@ class SessionForkService:
                 constraint,
             )
             if "model_setting_id" in constraint or "model_settings" in constraint:
-                raise SessionValidationError(
-                    f"Invalid model_setting_id: {model_setting_id}"
-                ) from e
-            raise SessionValidationError(
-                f"Failed to create forked session: {constraint}"
-            ) from e
+                raise SessionValidationError(f"Invalid model_setting_id: {model_setting_id}") from e
+            raise SessionValidationError(f"Failed to create forked session: {constraint}") from e
 
         if shared_sandbox is not None:
             try:

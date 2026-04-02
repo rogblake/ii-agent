@@ -11,7 +11,6 @@ from ii_agent.content.slides.dependencies import SlideRepositoryDep
 from ii_agent.settings.llm import Provider
 from ii_agent.core.config.llm_config import LLMConfig
 from ii_agent.core.config.nano_banana import NanoBananaConfig
-from ii_agent.core.config.settings import get_settings
 from ii_agent.core.dependencies import SettingsDep
 from ii_agent.sessions.dependencies import SessionRepositoryDep
 

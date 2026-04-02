@@ -10,9 +10,9 @@ import httpx
 from pydantic import BaseModel
 
 from ii_agent.agents.exceptions import ModelProviderError
-from ii_agent.files.media import Audio, Image
+from ii_agent.files.media import Image
 from ii_agent.agents.models.base import Model
-from ii_agent.agents.models.message import Citations, Message, UrlCitation
+from ii_agent.agents.models.message import Message
 from ii_agent.agents.models.metrics import Metrics
 from ii_agent.settings.llm import Provider
 from ii_agent.agents.models.response import ModelResponse
@@ -32,7 +32,7 @@ try:
         ContentDelta,
         Usage,
         ContentStop,
-        Interaction
+        Interaction,
     )
     from google.genai.types import (
         Part,
@@ -669,7 +669,9 @@ class GeminiInteractions(Model):
                 if message.files:
                     file_paths = [str(f.filepath) for f in message.files if f.filepath]
                     if file_paths:
-                        files_text = "\n\nAttached files:\n" + "\n".join(f" - {p}" for p in file_paths)
+                        files_text = "\n\nAttached files:\n" + "\n".join(
+                            f" - {p}" for p in file_paths
+                        )
                         message_parts.append({"type": "text", "text": files_text})
 
             # Create the formatted message
@@ -718,9 +720,7 @@ class GeminiInteractions(Model):
                 )
             )
 
-    def _parse_provider_response(
-        self, interaction: Interaction, **kwargs
-    ) -> ModelResponse:
+    def _parse_provider_response(self, interaction: Interaction, **kwargs) -> ModelResponse:
         """
         Parse the Gemini Interactions API response into a ModelResponse.
 

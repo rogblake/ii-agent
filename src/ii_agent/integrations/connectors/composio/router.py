@@ -5,7 +5,7 @@ path-parameter capture of literal segments.
 """
 
 import uuid
-from typing import Optional, List
+from typing import Optional
 
 from fastapi import APIRouter, Query, Request as HTTPRequest
 
@@ -28,7 +28,9 @@ from ii_agent.integrations.connectors.composio.schemas import (
     SyncProfileResponse,
     UpdateProfileToolsRequest,
 )
-from ii_agent.integrations.connectors.composio.connected_account_service import ConnectedAccountService
+from ii_agent.integrations.connectors.composio.connected_account_service import (
+    ConnectedAccountService,
+)
 
 router = APIRouter(prefix="/composio", tags=["composio"])
 

@@ -51,8 +51,18 @@ async def test_prepare_agent_files_returns_typed_image_and_file() -> None:
 
     svc.get_files_by_ids_and_update_session = AsyncMock(
         return_value=[
-            _file_response(file_id=img_id, name="photo.png", url="https://cdn/photo.png", content_type="image/png"),
-            _file_response(file_id=file_id, name="doc.pdf", url="https://cdn/doc.pdf", content_type="application/pdf"),
+            _file_response(
+                file_id=img_id,
+                name="photo.png",
+                url="https://cdn/photo.png",
+                content_type="image/png",
+            ),
+            _file_response(
+                file_id=file_id,
+                name="doc.pdf",
+                url="https://cdn/doc.pdf",
+                content_type="application/pdf",
+            ),
         ]
     )
 
@@ -103,7 +113,10 @@ async def test_prepare_agent_files_empty_file_ids() -> None:
 
     db = AsyncMock()
     images, files = await svc.prepare_agent_files(
-        db, file_ids=[], user_id=uuid.uuid4(), session_id=uuid.uuid4(),
+        db,
+        file_ids=[],
+        user_id=uuid.uuid4(),
+        session_id=uuid.uuid4(),
     )
 
     assert images == []

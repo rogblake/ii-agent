@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
 
 from ii_agent.projects.design.source_mapping_sync._mutations import (
     _apply_delete_change_by_design_id,

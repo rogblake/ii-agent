@@ -1,6 +1,4 @@
-"""Lightweight LLM helper utilities.
-
-"""
+"""Lightweight LLM helper utilities."""
 
 from __future__ import annotations
 
@@ -12,7 +10,6 @@ import logging
 from ii_agent.chat.base import LLMClient
 from ii_agent.chat.types import (
     ContentPart,
-    FinishReason,
     Message,
     MessageRole,
     TextContent,

@@ -48,9 +48,7 @@ async def check_and_deduct_storybook_credits(
     if amount <= 0:
         return
 
-    has_credits = await credit_service.has_sufficient_credits(
-        db, scope.user_id, amount
-    )
+    has_credits = await credit_service.has_sufficient_credits(db, scope.user_id, amount)
     if not has_credits:
         raise InsufficientCreditsError(
             available_credits=0.0,

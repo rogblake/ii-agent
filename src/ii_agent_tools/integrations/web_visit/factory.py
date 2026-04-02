@@ -66,9 +66,7 @@ def create_web_visit_client(
     if client_type == "firecrawl":
         if not firecrawl_key:
             next_client = _get_next_available_client("firecrawl")
-            logger.warning(
-                "FireCrawl API key not found. Falling back to %s client", next_client
-            )
+            logger.warning("FireCrawl API key not found. Falling back to %s client", next_client)
         else:
             logger.info("Using FireCrawl Client")
             return FireCrawlWebVisitClient(api_key=firecrawl_key)
@@ -76,9 +74,7 @@ def create_web_visit_client(
     if client_type == "gemini":
         if not gemini_key:
             next_client = _get_next_available_client("gemini")
-            logger.warning(
-                "Gemini API key not found. Falling back to %s client", next_client
-            )
+            logger.warning("Gemini API key not found. Falling back to %s client", next_client)
         else:
             logger.info("Using Gemini Client")
             return GeminiWebVisitClient(api_key=gemini_key)
@@ -86,9 +82,7 @@ def create_web_visit_client(
     if client_type == "jina":
         if not jina_key:
             next_client = _get_next_available_client("jina")
-            logger.warning(
-                "Jina API key not found. Falling back to %s client", next_client
-            )
+            logger.warning("Jina API key not found. Falling back to %s client", next_client)
         else:
             logger.info("Using Jina Client")
             return JinaWebVisitClient(api_key=jina_key)
@@ -96,9 +90,7 @@ def create_web_visit_client(
     if client_type == "tavily":
         if not tavily_key:
             next_client = _get_next_available_client("tavily")
-            logger.warning(
-                "Tavily API key not found. Falling back to %s client", next_client
-            )
+            logger.warning("Tavily API key not found. Falling back to %s client", next_client)
         else:
             logger.info("Using Tavily Client")
             return TavilyWebVisitClient(api_key=tavily_key)

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from ii_agent.agents.tools.clients import _get_client
-from ii_agent.core.config.settings import Settings, get_settings
+from ii_agent.core.config.settings import Settings
 from ii_agent.core.storage.path_resolver import path_resolver
 from ii_agent.files.types import AssetType
 from ii_agent.content.media.constants import IMAGE_MINI_TOOLS_TYPE
@@ -76,7 +76,6 @@ class MediaTemplateService:
         self._storage = media_storage
         self._cache = cache or MemoryEntityCache(namespace="media_templates")
 
-
     async def get_media_template_by_id(
         self, db: AsyncSession, template_id: uuid.UUID
     ) -> Optional[MediaTemplateInfo]:
@@ -126,8 +125,7 @@ class MediaTemplateService:
             MediaTemplatesListResponse with templates list and pagination info.
         """
         cache_key = (
-            f"list:page={page}:size={page_size}"
-            f":search={search or ''}:type={media_type or ''}"
+            f"list:page={page}:size={page_size}:search={search or ''}:type={media_type or ''}"
         )
         cached = await self._cache.get(cache_key)
         if cached:
@@ -184,11 +182,13 @@ class MediaTemplateService:
             return [MediaTool(**tool) for tool in cached]
 
         result = await self.list_media_templates(
-            db, page=page, page_size=page_size, search=name, media_type=IMAGE_MINI_TOOLS_TYPE,
+            db,
+            page=page,
+            page_size=page_size,
+            search=name,
+            media_type=IMAGE_MINI_TOOLS_TYPE,
         )
-        media_tools = [
-            _map_template_to_media_tool(t.model_dump()) for t in result.templates
-        ]
+        media_tools = [_map_template_to_media_tool(t.model_dump()) for t in result.templates]
 
         await self._cache.set(cache_key, [tool.model_dump() for tool in media_tools])
         return media_tools
@@ -267,7 +267,9 @@ class MediaTemplateService:
                         session_id=session_id,
                     )
                 else:
-                    user_storage_path = path_resolver.user_file(user_id, AssetType.IMAGE, file_id, ext.lstrip("."))
+                    user_storage_path = path_resolver.user_file(
+                        user_id, AssetType.IMAGE, file_id, ext.lstrip(".")
+                    )
                     try:
                         await default_storage.write_from_url(
                             url,
@@ -316,6 +318,7 @@ class MediaTemplateService:
             created_at=template.created_at,
             updated_at=template.updated_at,
         )
+
 
 # Prompt prefixes for reference image generation by type
 REFERENCE_TYPE_PROMPTS = {

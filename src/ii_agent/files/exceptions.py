@@ -18,17 +18,12 @@ class FileUploadNotFoundError(NotFoundError):
         super().__init__(message)
 
 
-
 class FileAccessDeniedError(PermissionDeniedError):
     """Raised when a user does not have access to a file."""
 
     def __init__(self, file_id: str | None = None):
         self.file_id = file_id
-        msg = (
-            f"Access denied to file '{file_id}'"
-            if file_id
-            else "File access denied"
-        )
+        msg = f"Access denied to file '{file_id}'" if file_id else "File access denied"
         super().__init__(msg)
 
 

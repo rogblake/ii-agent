@@ -75,9 +75,7 @@ class BillingService:
     def _get_price_id(self, plan_id: str, billing_cycle: str) -> str:
         plan_prices = self._price_map.get(plan_id)
         if not plan_prices:
-            raise BillingUnsupportedPlanError(
-                f"Plan '{plan_id}' is not available for upgrade"
-            )
+            raise BillingUnsupportedPlanError(f"Plan '{plan_id}' is not available for upgrade")
         price_id = plan_prices.get(billing_cycle)
         if not price_id:
             raise BillingConfigurationError(
@@ -86,9 +84,7 @@ class BillingService:
             )
         return price_id
 
-    def _plan_cycle_from_price(
-        self, price_id: str | None
-    ) -> tuple[str, str] | None:
+    def _plan_cycle_from_price(self, price_id: str | None) -> tuple[str, str] | None:
         """Reverse-lookup: Stripe price ID → (plan_id, billing_cycle)."""
         if not price_id:
             return None
@@ -106,8 +102,7 @@ class BillingService:
 
         if base_url:
             success_url = (
-                success_url
-                or f"{base_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
+                success_url or f"{base_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
             )
             cancel_url = cancel_url or base_url
 
@@ -190,9 +185,7 @@ class BillingService:
 
         Returns ``None`` if the user does not exist.
         """
-        result = await db.execute(
-            select(User).where(User.id == user_id).with_for_update()
-        )
+        result = await db.execute(select(User).where(User.id == user_id).with_for_update())
         user = result.scalar_one_or_none()
         if not user:
             return None
@@ -206,9 +199,7 @@ class BillingService:
         if "customer_id" in updates:
             user.stripe_customer_id = updates["customer_id"]
         if "period_end" in updates:
-            user.subscription_current_period_end = self._to_datetime(
-                updates["period_end"]
-            )
+            user.subscription_current_period_end = self._to_datetime(updates["period_end"])
         return user
 
     async def _record_transaction(
@@ -232,16 +223,10 @@ class BillingService:
             .with_for_update()
         )
         if existing.scalar_one_or_none():
-            logger.debug(
-                "Billing transaction already exists for event %s", event_id
-            )
+            logger.debug("Billing transaction already exists for event %s", event_id)
             return
 
-        db.add(
-            BillingTransaction(
-                user_id=user_id, stripe_event_id=event_id, **values
-            )
-        )
+        db.add(BillingTransaction(user_id=user_id, stripe_event_id=event_id, **values))
         logger.info(
             "Stored billing transaction for user %s (event %s)",
             user_id,
@@ -257,47 +242,33 @@ class BillingService:
             return uuid.UUID(raw_user_id) if isinstance(raw_user_id, str) else raw_user_id
         return await self._lookup_user_by_customer_id(customer_id)
 
-    async def _lookup_user_by_customer_id(
-        self, customer_id: str | None
-    ) -> uuid.UUID | None:
+    async def _lookup_user_by_customer_id(self, customer_id: str | None) -> uuid.UUID | None:
         if not customer_id:
             return None
         async with get_db_session_local() as db:
-            result = await db.execute(
-                select(User.id).where(User.stripe_customer_id == customer_id)
-            )
+            result = await db.execute(select(User.id).where(User.stripe_customer_id == customer_id))
             row = result.first()
             return row[0] if row else None
 
-    async def _retrieve_subscription(
-        self, subscription_id: str | None
-    ) -> dict[str, Any] | None:
+    async def _retrieve_subscription(self, subscription_id: str | None) -> dict[str, Any] | None:
         if not subscription_id:
             return None
         self._ensure_api_key()
         try:
-            subscription = await run_in_threadpool(
-                stripe.Subscription.retrieve, subscription_id
-            )
+            subscription = await run_in_threadpool(stripe.Subscription.retrieve, subscription_id)
             return self._as_dict(subscription)
         except stripe.error.StripeError as exc:
-            logger.error(
-                "Failed to retrieve subscription %s: %s", subscription_id, exc
-            )
+            logger.error("Failed to retrieve subscription %s: %s", subscription_id, exc)
             return None
 
     # ------------------------------------------------------------------
     # Checkout session creation
     # ------------------------------------------------------------------
 
-    async def create_checkout_session(
-        self, params: CreateCheckoutParams
-    ) -> CheckoutResult:
+    async def create_checkout_session(self, params: CreateCheckoutParams) -> CheckoutResult:
         """Create a Stripe checkout session for the selected plan."""
         if params.plan_id == PlanId.FREE:
-            raise BillingUnsupportedPlanError(
-                "Free plan does not require checkout"
-            )
+            raise BillingUnsupportedPlanError("Free plan does not require checkout")
 
         self._ensure_api_key()
 
@@ -337,9 +308,7 @@ class BillingService:
     # Portal session
     # ------------------------------------------------------------------
 
-    async def create_portal_session(
-        self, params: CreatePortalParams
-    ) -> PortalResult:
+    async def create_portal_session(self, params: CreatePortalParams) -> PortalResult:
         """Create a Stripe billing portal session."""
         user = await self._get_user(params.user_id)
         if not user:
@@ -347,8 +316,7 @@ class BillingService:
 
         if not user.stripe_customer_id:
             raise BillingServiceError(
-                "Stripe customer not found for this account. "
-                "Complete a checkout first."
+                "Stripe customer not found for this account. Complete a checkout first."
             )
 
         portal_return_url = params.return_url or self._stripe.portal_return_url
@@ -367,8 +335,7 @@ class BillingService:
             )
         except stripe.error.StripeError as exc:
             raise BillingGatewayError(
-                f"Failed to create billing portal session: "
-                f"{exc.user_message or str(exc)}"
+                f"Failed to create billing portal session: {exc.user_message or str(exc)}"
             ) from exc
 
         url = getattr(session, "url", None)
@@ -381,26 +348,18 @@ class BillingService:
     # Webhook handling
     # ------------------------------------------------------------------
 
-    def construct_webhook_event(
-        self, payload: bytes, signature: str | None
-    ) -> stripe.Event:
+    def construct_webhook_event(self, payload: bytes, signature: str | None) -> stripe.Event:
         if not self._stripe.webhook_secret:
-            raise BillingConfigurationError(
-                "Stripe webhook secret is not configured"
-            )
+            raise BillingConfigurationError("Stripe webhook secret is not configured")
         if not signature:
             raise BillingServiceError("Missing Stripe signature header")
 
         self._ensure_api_key()
 
         try:
-            return stripe.Webhook.construct_event(
-                payload, signature, self._stripe.webhook_secret
-            )
+            return stripe.Webhook.construct_event(payload, signature, self._stripe.webhook_secret)
         except ValueError as exc:
-            raise BillingServiceError(
-                "Invalid Stripe webhook payload"
-            ) from exc
+            raise BillingServiceError("Invalid Stripe webhook payload") from exc
         except stripe.error.SignatureVerificationError as exc:
             raise BillingServiceError("Invalid Stripe signature") from exc
 
@@ -426,9 +385,7 @@ class BillingService:
     # Webhook event handlers (private)
     # ------------------------------------------------------------------
 
-    async def _handle_checkout_completed(
-        self, event_id: str | None, session_object: Any
-    ) -> None:
+    async def _handle_checkout_completed(self, event_id: str | None, session_object: Any) -> None:
         session_data = self._as_dict(session_object)
         metadata = session_data.get("metadata", {}) or {}
 
@@ -439,17 +396,13 @@ class BillingService:
         customer_id = session_data.get("customer")
 
         if not raw_user_id:
-            logger.warning(
-                "Checkout session %s missing user or plan metadata", event_id
-            )
+            logger.warning("Checkout session %s missing user or plan metadata", event_id)
             return
 
         user_id = uuid.UUID(raw_user_id) if isinstance(raw_user_id, str) else raw_user_id
 
         subscription = await self._retrieve_subscription(subscription_id)
-        status = (
-            subscription.get("status") if subscription else session_data.get("status")
-        )
+        status = subscription.get("status") if subscription else session_data.get("status")
 
         period_end: int | None = None
 
@@ -483,8 +436,7 @@ class BillingService:
                 )
 
             logger.info(
-                "Updated subscription for user %s via checkout completion: "
-                "plan=%s, status=%s",
+                "Updated subscription for user %s via checkout completion: plan=%s, status=%s",
                 user_id,
                 plan_id,
                 status,
@@ -505,9 +457,7 @@ class BillingService:
                 },
             )
 
-    async def _handle_invoice_paid(
-        self, event_id: str | None, invoice_object: Any
-    ) -> None:
+    async def _handle_invoice_paid(self, event_id: str | None, invoice_object: Any) -> None:
         invoice_data = self._as_dict(invoice_object)
         invoice_id = invoice_data.get("id")
         subscription_id = invoice_data.get("subscription")
@@ -526,9 +476,7 @@ class BillingService:
 
         user_id = await self._resolve_user_id(metadata, customer_id)
         if not user_id:
-            logger.warning(
-                "Invoice payment event %s missing user identification", event_id
-            )
+            logger.warning("Invoice payment event %s missing user identification", event_id)
             return
 
         if not plan_id:
@@ -544,9 +492,7 @@ class BillingService:
         amount_paid = invoice_data.get("amount_paid")
         status = invoice_data.get("status")
         period_end = subscription.get("current_period_end") if subscription else None
-        effective_status = (
-            subscription.get("status", status) if subscription else status
-        )
+        effective_status = subscription.get("status", status) if subscription else status
 
         updates: dict[str, Any] = {"status": effective_status}
         if plan_id:
@@ -563,9 +509,7 @@ class BillingService:
         async with get_db_session_local() as db:
             user = await self._update_user_subscription(db, user_id, updates)
             if not user:
-                raise BillingServiceError(
-                    f"User {user_id} not found for invoice event"
-                )
+                raise BillingServiceError(f"User {user_id} not found for invoice event")
 
             await self._record_transaction(
                 db,
@@ -577,11 +521,7 @@ class BillingService:
                     "stripe_subscription_id": subscription_id,
                     "stripe_invoice_id": invoice_id,
                     "stripe_payment_intent_id": invoice_data.get("payment_intent"),
-                    "amount": (
-                        (amount_paid or 0) / 100
-                        if amount_paid is not None
-                        else None
-                    ),
+                    "amount": ((amount_paid or 0) / 100 if amount_paid is not None else None),
                     "currency": invoice_data.get("currency"),
                     "plan_id": plan_id,
                     "billing_cycle": billing_cycle,
@@ -615,9 +555,9 @@ class BillingService:
             return
 
         status = subscription_data.get("status") or "canceled"
-        period_end = subscription_data.get(
-            "current_period_end"
-        ) or subscription_data.get("canceled_at")
+        period_end = subscription_data.get("current_period_end") or subscription_data.get(
+            "canceled_at"
+        )
 
         updates: dict[str, Any] = {
             "status": status,

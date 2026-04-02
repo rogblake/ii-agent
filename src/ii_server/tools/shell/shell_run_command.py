@@ -67,9 +67,7 @@ class ShellRunCommand(BaseTool):
         self.shell_manager = shell_manager
         self.workspace_manager = workspace_manager
 
-    def should_confirm_execute(
-        self, tool_input: dict[str, Any]
-    ) -> ToolConfirmationDetails | bool:
+    def should_confirm_execute(self, tool_input: dict[str, Any]) -> ToolConfirmationDetails | bool:
         return ToolConfirmationDetails(
             type="bash",
             message=f"{tool_input['description']} - command: {tool_input['command']}",
@@ -122,15 +120,11 @@ class ShellRunCommand(BaseTool):
             )
         except ShellCommandTimeoutError:
             current_output = self.shell_manager.get_session_output(session_name)
-            message = (
-                "Command timed out. Current view:\n\n"
-                f"{current_output.clean_output}."
-            )
+            message = f"Command timed out. Current view:\n\n{current_output.clean_output}."
             return ToolResult(
                 llm_content=self._truncate_llm_content(message),
                 user_display_content=(
-                    "Command timed out. Current view:\n\n"
-                    f"{current_output.ansi_output}."
+                    f"Command timed out. Current view:\n\n{current_output.ansi_output}."
                 ),
                 is_error=True,
             )

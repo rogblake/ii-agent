@@ -58,13 +58,9 @@ class RedisSessionStore(SessionStore):
             await self.redis_client.sadd(redis_key, sid)
             # Set TTL to 60 minutes (3600 seconds) for the key
             await self.redis_client.expire(redis_key, 3600)
-            logger.debug(
-                f"Added SID {sid} to session {session_uuid} in Redis with 60min TTL"
-            )
+            logger.debug(f"Added SID {sid} to session {session_uuid} in Redis with 60min TTL")
         except Exception as e:
-            logger.error(
-                f"Failed to add SID {sid} to session {session_uuid} in Redis: {e}"
-            )
+            logger.error(f"Failed to add SID {sid} to session {session_uuid} in Redis: {e}")
 
     async def remove_sid_from_session(self, session_uuid: str, sid: str) -> None:
         """Remove a SID from a session's SID set in Redis."""
@@ -85,9 +81,7 @@ class RedisSessionStore(SessionStore):
                     f"Refreshed TTL for session {session_uuid} with {remaining_sids} remaining SIDs"
                 )
         except Exception as e:
-            logger.error(
-                f"Failed to remove SID {sid} from session {session_uuid} in Redis: {e}"
-            )
+            logger.error(f"Failed to remove SID {sid} from session {session_uuid} in Redis: {e}")
 
     async def get_session_sids(self, session_uuid: str) -> Set[str]:
         """Get all SIDs for a session from Redis."""
@@ -96,9 +90,7 @@ class RedisSessionStore(SessionStore):
             sids = await self.redis_client.smembers(redis_key)
             return {sid.decode() if isinstance(sid, bytes) else sid for sid in sids}
         except Exception as e:
-            logger.error(
-                f"Failed to get SIDs for session {session_uuid} from Redis: {e}"
-            )
+            logger.error(f"Failed to get SIDs for session {session_uuid} from Redis: {e}")
             return set()
 
     async def get_all_session_sids(self) -> Dict[str, Set[str]]:
@@ -136,9 +128,7 @@ class RedisSessionStore(SessionStore):
             logger.debug(f"Session {session_uuid} has {count} SIDs, empty: {is_empty}")
             return is_empty
         except Exception as e:
-            logger.error(
-                f"Failed to check if session {session_uuid} is empty in Redis: {e}"
-            )
+            logger.error(f"Failed to check if session {session_uuid} is empty in Redis: {e}")
             return True  # Assume empty on error
 
 
@@ -216,9 +206,7 @@ class MemorySessionStore(SessionStore):
 
             sids = self._sessions.get(session_uuid, set())
             is_empty = len(sids) == 0
-            logger.debug(
-                f"Session {session_uuid} has {len(sids)} SIDs, empty: {is_empty}"
-            )
+            logger.debug(f"Session {session_uuid} has {len(sids)} SIDs, empty: {is_empty}")
             return is_empty
 
     async def _cleanup_after_ttl(self, session_uuid: str) -> None:
@@ -230,9 +218,7 @@ class MemorySessionStore(SessionStore):
                     del self._sessions[session_uuid]
                     if session_uuid in self._ttl_tasks:
                         del self._ttl_tasks[session_uuid]
-                    logger.info(
-                        f"TTL expired, cleaned up session {session_uuid} from memory"
-                    )
+                    logger.info(f"TTL expired, cleaned up session {session_uuid} from memory")
         except asyncio.CancelledError:
             # Task was cancelled (TTL refreshed), this is expected
             pass

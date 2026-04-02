@@ -113,13 +113,11 @@ def generate_storybook_page_html(
     width, height = _calculate_dimensions(aspect_ratio, resolution)
 
     # Normalize text position
-    text_pos: TextPosition = (
-        text_position if text_position in FLEX_DIRECTION_MAP else "none"
-    )
+    text_pos: TextPosition = text_position if text_position in FLEX_DIRECTION_MAP else "none"
 
     # Check if we have text
-    has_text = text_pos != "none" and text_percentage > 0 and bool(
-        text_content and text_content.strip()
+    has_text = (
+        text_pos != "none" and text_percentage > 0 and bool(text_content and text_content.strip())
     )
 
     if not has_text:
@@ -292,7 +290,7 @@ def _generate_composite_html(
             font-size: {base_font_size}px;
             line-height: 1.9;
             color: #2c3e50;
-            text-align: {'center' if is_vertical else 'left'};
+            text-align: {"center" if is_vertical else "left"};
             max-width: 100%;
             max-height: 100%;
             overflow-y: auto;
@@ -608,14 +606,14 @@ def update_html_text_content(html_content: str, new_text: str) -> str:
     """Update the text content in an existing HTML document."""
     escaped_text = _escape_html(new_text)
     pattern = r'(<div class="text-content"[^>]*>)(.*?)(</div>)'
-    replacement = rf'\1{escaped_text}\3'
+    replacement = rf"\1{escaped_text}\3"
     return re.sub(pattern, replacement, html_content, flags=re.DOTALL)
 
 
 def update_html_image_url(html_content: str, new_image_url: str) -> str:
     """Update the image URL in an existing HTML document."""
     pattern = r'(<img[^>]*src=")[^"]*(")'
-    replacement = rf'\1{new_image_url}\2'
+    replacement = rf"\1{new_image_url}\2"
     return re.sub(pattern, replacement, html_content)
 
 
@@ -664,38 +662,38 @@ def combine_html_pages_for_export(
     combined_height = image_height
 
     def extract_styles(html: str) -> str:
-        pattern = r'<style[^>]*>(.*?)</style>'
+        pattern = r"<style[^>]*>(.*?)</style>"
         matches = re.findall(pattern, html, flags=re.DOTALL)
-        return '\n'.join(matches)
+        return "\n".join(matches)
 
     def extract_body_content(html: str) -> str:
-        pattern = r'<body[^>]*>(.*?)</body>'
+        pattern = r"<body[^>]*>(.*?)</body>"
         match = re.search(pattern, html, flags=re.DOTALL)
         if match:
             return match.group(1).strip()
-        return ''
+        return ""
 
     def prefix_css_selectors(css: str, prefix: str) -> str:
-        css = re.sub(r'@import[^;]+;', '', css)
+        css = re.sub(r"@import[^;]+;", "", css)
         result = []
-        rules = re.split(r'(\})', css)
-        current_rule = ''
+        rules = re.split(r"(\})", css)
+        current_rule = ""
         for part in rules:
             current_rule += part
-            if part == '}':
-                match = re.match(r'\s*([^{]+)\{([^}]*)\}', current_rule, re.DOTALL)
+            if part == "}":
+                match = re.match(r"\s*([^{]+)\{([^}]*)\}", current_rule, re.DOTALL)
                 if match:
                     selector = match.group(1).strip()
                     body = match.group(2)
-                    if selector in ['html', 'body', 'html, body', '*']:
-                        current_rule = ''
+                    if selector in ["html", "body", "html, body", "*"]:
+                        current_rule = ""
                         continue
-                    selectors = [s.strip() for s in selector.split(',')]
-                    prefixed_selectors = [f'.{prefix} {s}' for s in selectors if s]
+                    selectors = [s.strip() for s in selector.split(",")]
+                    prefixed_selectors = [f".{prefix} {s}" for s in selectors if s]
                     if prefixed_selectors:
                         result.append(f"{', '.join(prefixed_selectors)} {{{body}}}")
-                current_rule = ''
-        return '\n'.join(result)
+                current_rule = ""
+        return "\n".join(result)
 
     image_styles = extract_styles(image_page_html)
     text_styles = extract_styles(text_page_html)

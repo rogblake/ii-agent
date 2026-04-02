@@ -66,7 +66,10 @@ class ChatMessageHistoryService:
     ) -> MessageHistoryResponse:
         """Fetch message history and build the API response with file attachments."""
         messages, has_more = await self.get_message_history(
-            db, session_id=session_id, limit=limit, before=before,
+            db,
+            session_id=session_id,
+            limit=limit,
+            before=before,
         )
 
         file_attach_map = await self._fetch_file_attachments(db, messages)

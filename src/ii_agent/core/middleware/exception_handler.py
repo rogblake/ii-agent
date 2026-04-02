@@ -11,9 +11,7 @@ from ii_agent.core.exceptions import IIAgentError, NotFoundException, Permission
 from ii_agent.core.logger import logger
 
 
-async def exception_logging_middleware(
-    request: Request, call_next: Callable
-) -> Response:
+async def exception_logging_middleware(request: Request, call_next: Callable) -> Response:
     """Middleware to handle and log unhandled exceptions."""
     try:
         return await call_next(request)
@@ -21,30 +19,22 @@ async def exception_logging_middleware(
         return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
     except Exception:
         logger.exception("Unhandled exception")
-        return JSONResponse(
-            status_code=500, content={"detail": "Internal Server Error"}
-        )
+        return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
 
-async def permission_exception_handler(
-    request: Request, exc: PermissionException
-) -> JSONResponse:
+async def permission_exception_handler(request: Request, exc: PermissionException) -> JSONResponse:
     """Exception handler for PermissionException."""
     logger.warning(f"Permission denied: {exc}")
     return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 
-async def not_found_exception_handler(
-    request: Request, exc: NotFoundException
-) -> JSONResponse:
+async def not_found_exception_handler(request: Request, exc: NotFoundException) -> JSONResponse:
     """Exception handler for NotFoundException."""
     logger.warning(f"Not found: {exc}")
     return JSONResponse(status_code=404, content={"detail": str(exc)})
 
 
-async def ii_agent_error_handler(
-    request: Request, exc: IIAgentError
-) -> JSONResponse:
+async def ii_agent_error_handler(request: Request, exc: IIAgentError) -> JSONResponse:
     """Exception handler for IIAgentError and subclasses."""
     logger.warning(f"IIAgentError: {exc}")
     return JSONResponse(

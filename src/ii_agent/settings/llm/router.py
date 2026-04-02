@@ -32,6 +32,7 @@ async def create_model_setting(
         user_id=current_user.id,
     )
 
+
 @router.get("", response_model=LLMModelList)
 async def list_available_models(
     current_user: CurrentUser,

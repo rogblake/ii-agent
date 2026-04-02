@@ -77,7 +77,9 @@ async def create_composite(
     effective_text_percentage = 0
     if has_text:
         if not 20 <= text_percentage <= 30:
-            logger.warning(f"text_percentage {text_percentage} outside recommended range 20-30, clamping")
+            logger.warning(
+                f"text_percentage {text_percentage} outside recommended range 20-30, clamping"
+            )
             effective_text_percentage = max(20, min(30, text_percentage))
         else:
             effective_text_percentage = text_percentage
@@ -130,14 +132,18 @@ async def _render_via_tool_server(
             result = response.json()
 
             if not result.get("success"):
-                raise RuntimeError(f"Tool server rendering failed: {result.get('error', 'Unknown error')}")
+                raise RuntimeError(
+                    f"Tool server rendering failed: {result.get('error', 'Unknown error')}"
+                )
 
             image_base64 = result.get("image_base64")
             if not image_base64:
                 raise RuntimeError("No image data returned from tool server")
 
             png_bytes = base64.b64decode(image_base64)
-            logger.info(f"[COMPOSITE] Successfully rendered PNG via tool server ({len(png_bytes)} bytes)")
+            logger.info(
+                f"[COMPOSITE] Successfully rendered PNG via tool server ({len(png_bytes)} bytes)"
+            )
             return png_bytes
 
     except httpx.HTTPError as e:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import io
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -387,7 +386,7 @@ class TestMCPSchemasR4:
         assert "codex-as-mcp" not in combined.mcpServers
 
     def test_mcp_setting_list_get_by_id(self):
-        from ii_agent.settings.mcp.schemas import MCPSettingList, MCPSettingInfo, MCPServersConfig
+        from ii_agent.settings.mcp.schemas import MCPSettingList, MCPSettingInfo
 
         setting = MagicMock(spec=MCPSettingInfo)
         setting.id = "target-id"
@@ -481,7 +480,6 @@ class TestLLMSchemasR4:
 
     def test_model_setting_info_with_key_with_azure_configs(self):
         from ii_agent.settings.llm.schemas import ModelSettingInfoWithKey, ModelParams
-        from ii_agent.core.config.llm_config import LLMConfig
 
         # Azure-specific settings are now stored in configs JSONB
         info = ModelSettingInfoWithKey(

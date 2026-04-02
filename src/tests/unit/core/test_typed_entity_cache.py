@@ -3,7 +3,6 @@
 Uses MemoryEntityCache as the backing store so no Redis is needed.
 """
 
-import asyncio
 import uuid
 from datetime import datetime, timezone
 from enum import StrEnum
@@ -86,9 +85,7 @@ def full_model(sample_id: uuid.UUID) -> FullModel:
 
 class TestTypedEntityCacheGet:
     @pytest.mark.asyncio
-    async def test_get_returns_none_on_miss(
-        self, typed_cache: TypedEntityCache[SimpleModel]
-    ):
+    async def test_get_returns_none_on_miss(self, typed_cache: TypedEntityCache[SimpleModel]):
         result = await typed_cache.get("nonexistent")
         assert result is None
 
@@ -272,9 +269,7 @@ class TestTypedEntityCacheDelegation:
         assert await typed_cache.exists("key1") is True
 
     @pytest.mark.asyncio
-    async def test_exists_false(
-        self, typed_cache: TypedEntityCache[SimpleModel]
-    ):
+    async def test_exists_false(self, typed_cache: TypedEntityCache[SimpleModel]):
         assert await typed_cache.exists("nonexistent") is False
 
     @pytest.mark.asyncio

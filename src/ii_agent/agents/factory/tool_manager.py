@@ -2,10 +2,17 @@
 
 from typing import Any, Dict, List, Optional
 
-from ii_agent.agents.factory.tools import COMMON_TOOLS, TOOL_CLASS_MAP, TOOL_CONFIRM_MAP, AgentConfigManager, AgentType
+from ii_agent.agents.factory.tools import (
+    COMMON_TOOLS,
+    TOOL_CLASS_MAP,
+    TOOL_CONFIRM_MAP,
+    AgentConfigManager,
+    AgentType,
+)
 from ii_agent.agents.factory.mcp import MCPTool
 from ii_agent.agents.tools.base import BaseAgentTool
 from ii_agent.core.logger import logger
+
 
 class AgentToolManager:
     """Manages tool selection and configuration for agents."""
@@ -97,7 +104,7 @@ class AgentToolManager:
                 input_schema=tool_class.input_schema,
                 read_only=tool_class.read_only,
                 display_name=tool_class.display_name,
-                requires_confirmation=requires_confirmation
+                requires_confirmation=requires_confirmation,
             )
         elif issubclass(tool_class, BaseAgentTool):
             return tool_class()

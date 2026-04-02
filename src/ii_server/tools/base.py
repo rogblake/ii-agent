@@ -60,9 +60,7 @@ class BaseTool(ABC):
     display_name: str
     metadata: Optional[Dict[str, Any]] = None  # e.g. for custom tool format
 
-    def should_confirm_execute(
-        self, tool_input: dict[str, Any]
-    ) -> ToolConfirmationDetails | bool:
+    def should_confirm_execute(self, tool_input: dict[str, Any]) -> ToolConfirmationDetails | bool:
         """
         Determine if the tool execution should be confirmed.
         In web application mode, the tool is executed without confirmation.

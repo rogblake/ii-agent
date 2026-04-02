@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -15,7 +15,7 @@ from ii_agent.agents.sandboxes.exceptions import (
     SandboxOperationError,
     SandboxTimeoutException,
 )
-from ii_agent.agents.sandboxes.schemas import SandboxFileInfo, SandboxStatus, FileUpload
+from ii_agent.agents.sandboxes.schemas import SandboxFileInfo, SandboxStatus
 
 
 # ---------------------------------------------------------------------------

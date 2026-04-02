@@ -108,9 +108,7 @@ def _resolve_provider(
             if settings.gcp_project_id and settings.gcp_location:
                 logger.info("Using Vertex AI for Imagen image generation")
                 return ImageGenerationProvider.VERTEX.value
-            raise ValueError(
-                "Imagen image generation requires Vertex AI configuration"
-            )
+            raise ValueError("Imagen image generation requires Vertex AI configuration")
 
         if settings.has_gemini_api_key():
             logger.info("Using Gemini API key for image generation")
@@ -141,9 +139,7 @@ def _resolve_provider(
 
     if _is_imagen_model(model_name):
         if not (settings.gcp_project_id and settings.gcp_location):
-            raise ValueError(
-                "Imagen image generation requires Vertex AI configuration"
-            )
+            raise ValueError("Imagen image generation requires Vertex AI configuration")
         logger.info("Using Vertex AI for Imagen image generation")
         return ImageGenerationProvider.VERTEX.value
 

@@ -12,14 +12,10 @@ logger = get_logger(__name__)
 
 class VoiceGenerationRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Text to synthesize")
-    voice_id: str | None = Field(
-        default=None, description="Provider-specific voice identifier"
-    )
+    voice_id: str | None = Field(default=None, description="Provider-specific voice identifier")
     provider: str | None = None
     model_name: str | None = Field(default=None, description="Provider model identifier")
-    output_format: str = Field(
-        default="mp3_44100_128", description="Output audio format"
-    )
+    output_format: str = Field(default="mp3_44100_128", description="Output audio format")
     voice_settings: Dict[str, Any] | None = None
     language_code: str | None = None
     seed: int | None = None

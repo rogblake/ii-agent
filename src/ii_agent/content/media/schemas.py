@@ -34,9 +34,7 @@ class MediaTool(BaseModel):
 
     id: str = Field(..., description="Tool identifier (kebab-case)")
     name: str = Field(..., description="Display name")
-    preview: Optional[str] = Field(
-        None, description="Preview image URL for this tool"
-    )
+    preview: Optional[str] = Field(None, description="Preview image URL for this tool")
     min_images: int = Field(1, description="Minimum number of images required")
     max_images: int = Field(1, description="Maximum number of images allowed")
 
@@ -44,6 +42,7 @@ class MediaTool(BaseModel):
 # =============================================================================
 # Media Templates Schemas
 # =============================================================================
+
 
 class MediaTemplateInfo(BaseModel):
     """Model for media template information."""
@@ -81,6 +80,7 @@ class MediaTemplatesListResponse(BaseModel):
 # Reference Image Schemas
 # =============================================================================
 
+
 class ReferenceImageRequest(BaseModel):
     """Request payload for reference image generation."""
 
@@ -104,6 +104,7 @@ class ReferenceImageResponse(BaseModel):
 # =============================================================================
 # Media Model Config Schemas (ported from legacy_media/media.py)
 # =============================================================================
+
 
 class MediaModelConfig(BaseModel):
     """Schema for a single media model configuration."""

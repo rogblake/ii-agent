@@ -9,8 +9,10 @@ from pydantic import BaseModel
 
 # ---- Request DTOs ----
 
+
 class ConnectToolkitRequest(BaseModel):
     """Request to connect a Composio toolkit."""
+
     profile_name: str
     initiation_fields: Optional[dict] = None
     use_custom_auth: bool = False
@@ -19,6 +21,7 @@ class ConnectToolkitRequest(BaseModel):
 
 class CompleteOAuthRequest(BaseModel):
     """Request to complete OAuth flow."""
+
     status: str
     connectedAccountId: str
     appName: str
@@ -26,13 +29,16 @@ class CompleteOAuthRequest(BaseModel):
 
 class UpdateProfileToolsRequest(BaseModel):
     """Request to update enabled tools for a profile."""
+
     enabled_tools: List[str] = []
 
 
 # ---- Response DTOs ----
 
+
 class ConnectToolkitResponse(BaseModel):
     """Response from toolkit connection."""
+
     success: bool
     profile_id: UUID
     redirect_url: str
@@ -42,6 +48,7 @@ class ConnectToolkitResponse(BaseModel):
 
 class ToolkitStatusResponse(BaseModel):
     """Toolkit connection status response."""
+
     status: str  # Values: 'enable', 'disable', 'disconnected', 'pending'
     connector_type: str
     toolkit_slug: str
@@ -50,12 +57,14 @@ class ToolkitStatusResponse(BaseModel):
 
 class ProfileMCPConfigResponse(BaseModel):
     """MCP configuration response."""
+
     mcpServers: dict
     metadata: dict
 
 
 class SyncProfileResponse(BaseModel):
     """Profile sync response."""
+
     success: bool
     mcp_setting_id: UUID
     message: str
@@ -63,6 +72,7 @@ class SyncProfileResponse(BaseModel):
 
 class ComposioProfileInfo(BaseModel):
     """Profile information returned to API."""
+
     id: UUID
     user_id: UUID
     profile_name: str

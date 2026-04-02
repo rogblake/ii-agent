@@ -65,9 +65,7 @@ async def log_requests_middleware(request: Request, call_next):
             "Unhandled exception during request",
             extra={"method": request.method, "path": request.url.path},
         )
-        response = JSONResponse(
-            status_code=500, content={"detail": "Internal server error"}
-        )
+        response = JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     duration_ms = (time.perf_counter() - start_time) * 1000
     logger.info(

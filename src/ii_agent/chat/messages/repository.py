@@ -81,9 +81,7 @@ class ChatMessageRepository:
                 .values(is_finished=False)
             )
             await db.flush()
-            logger.info(
-                f"Marked children as incomplete for message_id: {parent_message_id}"
-            )
+            logger.info(f"Marked children as incomplete for message_id: {parent_message_id}")
         except Exception as e:
             logger.error(f"Failed to mark messages as incomplete: {e}", exc_info=True)
 
@@ -119,9 +117,7 @@ class ChatMessageRepository:
 
     async def delete_by_session(self, db: AsyncSession, session_id: uuid.UUID) -> int:
         """Delete all messages in a session. Returns deleted count."""
-        result = await db.execute(
-            delete(ChatMessage).where(ChatMessage.session_id == session_id)
-        )
+        result = await db.execute(delete(ChatMessage).where(ChatMessage.session_id == session_id))
         await db.flush()
         return result.rowcount
 
@@ -152,7 +148,9 @@ class ChatMessageRepository:
         await db.flush()
         return result.rowcount
 
-    async def get_last_by_session(self, db: AsyncSession, session_id: uuid.UUID) -> Optional[ChatMessage]:
+    async def get_last_by_session(
+        self, db: AsyncSession, session_id: uuid.UUID
+    ) -> Optional[ChatMessage]:
         """Get the most recent message in a session."""
         result = await db.execute(
             select(ChatMessage)
@@ -193,7 +191,9 @@ class ChatMessageRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_recent(self, db: AsyncSession, session_id: uuid.UUID, limit: int) -> List[ChatMessage]:
+    async def get_recent(
+        self, db: AsyncSession, session_id: uuid.UUID, limit: int
+    ) -> List[ChatMessage]:
         """Get recent messages in chronological order."""
         result = await db.execute(
             select(ChatMessage)

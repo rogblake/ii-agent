@@ -1,7 +1,5 @@
 """Unit tests for projects/design/utils/deck_builder.py."""
 
-import pytest
-
 from ii_agent.projects.design.utils.deck_builder import (
     _extract_slide_head_and_body,
     _scope_css_for_slide,

@@ -12,7 +12,6 @@ Tests cover:
 
 import json
 from time import time
-from unittest.mock import MagicMock
 
 import pytest
 

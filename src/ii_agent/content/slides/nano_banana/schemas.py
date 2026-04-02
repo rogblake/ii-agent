@@ -1,7 +1,7 @@
 """Pydantic schemas (DTOs) for Nano Banana design mode endpoints."""
 
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field

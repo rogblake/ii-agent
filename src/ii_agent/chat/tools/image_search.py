@@ -48,9 +48,7 @@ class ImageSearchTool(BaseTool):
             params = json.loads(tool_call.input)
             query = params["query"]
         except (json.JSONDecodeError, KeyError) as e:
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Invalid tool input: {e}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Invalid tool input: {e}"))
 
         try:
             response = await self.tool_client.image_search(
@@ -66,6 +64,4 @@ class ImageSearchTool(BaseTool):
             )
 
         except Exception as e:
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Image search failed: {str(e)}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Image search failed: {str(e)}"))

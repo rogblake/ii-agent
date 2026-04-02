@@ -52,9 +52,7 @@ class WebVisitTool(BaseTool):
             url = params["url"]
             prompt = params.get("prompt")
         except (json.JSONDecodeError, KeyError) as e:
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Invalid tool input: {e}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Invalid tool input: {e}"))
 
         try:
             response = await self.tool_client.web_visit(url, prompt)
@@ -74,7 +72,5 @@ class WebVisitTool(BaseTool):
 
         except Exception as e:
             return ToolResponse(
-                output=ErrorTextContent(
-                    value=f"Failed to visit {url}: {str(e)}"
-                ),
+                output=ErrorTextContent(value=f"Failed to visit {url}: {str(e)}"),
             )

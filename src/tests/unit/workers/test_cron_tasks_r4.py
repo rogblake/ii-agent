@@ -2,13 +2,8 @@
 
 from __future__ import annotations
 
-import csv
-import io
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -58,7 +53,9 @@ class TestMonthlyFreeCredit:
             assert result == 250.0
 
 
-@pytest.mark.skip(reason="BillingCustomerService removed during refactoring — cron jobs need migration")
+@pytest.mark.skip(
+    reason="BillingCustomerService removed during refactoring — cron jobs need migration"
+)
 class TestRefreshFreeUserCredits:
     @pytest.mark.asyncio
     async def test_updates_users_with_none_subscription(self):
@@ -116,9 +113,7 @@ class TestRefreshFreeUserCredits:
                 "ii_agent.billing.credit_repository.CreditRepository",
                 return_value=MagicMock(),
             ),
-            patch(
-                "ii_agent.credits.service.CreditService", return_value=mock_credit_service
-            ),
+            patch("ii_agent.credits.service.CreditService", return_value=mock_credit_service),
         ):
             await refresh_free_user_credits()
 
@@ -183,9 +178,7 @@ class TestRefreshFreeUserCredits:
                 "ii_agent.billing.credit_repository.CreditRepository",
                 return_value=MagicMock(),
             ),
-            patch(
-                "ii_agent.credits.service.CreditService", return_value=mock_credit_service
-            ),
+            patch("ii_agent.credits.service.CreditService", return_value=mock_credit_service),
         ):
             await refresh_free_user_credits()
 
@@ -321,7 +314,6 @@ class TestAsUtc:
 
     def test_aware_datetime_converted_to_utc(self):
         from ii_agent.workers.cron.refresh_annual_subscription_credits import _as_utc
-        import pytz
 
         dt = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         result = _as_utc(dt)
@@ -393,7 +385,6 @@ class TestShouldRefresh:
     def test_returns_true_with_monthly_credits(self):
         from ii_agent.workers.cron.refresh_annual_subscription_credits import (
             _should_refresh,
-            REFRESH_METADATA_KEY,
         )
 
         now = datetime(2025, 7, 1, tzinfo=timezone.utc)
@@ -516,7 +507,7 @@ class TestCleanupLongRunningTasks:
 
 class TestStartScheduler:
     def test_scheduler_adds_jobs_and_starts(self):
-        from ii_agent.workers.cron.tasks import start_scheduler, scheduler
+        from ii_agent.workers.cron.tasks import start_scheduler
 
         mock_scheduler = MagicMock()
         mock_scheduler.running = False

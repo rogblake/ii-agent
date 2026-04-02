@@ -66,9 +66,7 @@ _KLING_VIDEO_V2V_REFERENCE_MODELS = {
 }
 _KLING_VIDEO_IMAGE_MODELS = _KLING_VIDEO_REFERENCE_MODELS
 _KLING_VIDEO_ALL_MODELS = (
-    _KLING_VIDEO_MODELS
-    | _KLING_VIDEO_REFERENCE_MODELS
-    | _KLING_VIDEO_V2V_REFERENCE_MODELS
+    _KLING_VIDEO_MODELS | _KLING_VIDEO_REFERENCE_MODELS | _KLING_VIDEO_V2V_REFERENCE_MODELS
 )
 _SEEDANCE_VIDEO_MODELS = {
     "fal-ai/bytedance/seedance/v1.5/pro/text-to-video",
@@ -311,9 +309,7 @@ def build_fal_video_payload(
 ) -> dict[str, Any]:
     normalized_application = application.strip().lower()
     reference_image_urls = _normalize_video_reference_image_urls(reference_images)
-    primary_reference_image_url = (
-        reference_image_urls[0] if reference_image_urls else None
-    )
+    primary_reference_image_url = reference_image_urls[0] if reference_image_urls else None
 
     if normalized_application in _GROK_VIDEO_TEXT_AND_IMAGE_MODELS:
         allow_auto_aspect_ratio = normalized_application in _GROK_VIDEO_IMAGE_MODELS
@@ -382,9 +378,7 @@ def build_fal_video_payload(
             # video-to-video/reference: requires video_url
             source_video_url = (provider_payload or {}).get("video_url") or ""
             if not source_video_url:
-                raise ValueError(
-                    f"fal video model '{application}' requires a source video URL"
-                )
+                raise ValueError(f"fal video model '{application}' requires a source video URL")
             payload["video_url"] = source_video_url
             if reference_image_urls:
                 payload["image_urls"] = reference_image_urls
@@ -402,8 +396,7 @@ def build_fal_video_payload(
                 payload["end_image_url"] = end_frame
             # Additional reference images beyond the start frame
             extra_ref_urls = [
-                u for u in reference_image_urls
-                if u != payload.get("start_image_url")
+                u for u in reference_image_urls if u != payload.get("start_image_url")
             ]
             if extra_ref_urls:
                 payload["image_urls"] = extra_ref_urls
@@ -509,9 +502,7 @@ def build_fal_voice_payload(
             voice_setting = payload.get("voice_setting")
             if isinstance(voice_setting, Mapping):
                 normalized_voice_setting = dict(voice_setting)
-                normalized_emotion = _normalize_minimax_emotion(
-                    voice_setting.get("emotion")
-                )
+                normalized_emotion = _normalize_minimax_emotion(voice_setting.get("emotion"))
                 if normalized_emotion:
                     normalized_voice_setting["emotion"] = normalized_emotion
                 else:
@@ -646,9 +637,7 @@ def _build_minimax_speech_payload(
             "speed": _coerce_float(voice_settings.get("speed")),
             "vol": _coerce_float(voice_settings.get("vol")),
             "pitch": _coerce_int(voice_settings.get("pitch")),
-            "emotion": _normalize_minimax_emotion(
-                voice_settings.get("emotion")
-            ),
+            "emotion": _normalize_minimax_emotion(voice_settings.get("emotion")),
         }
     )
     voice_modify = voice_settings.get("voice_modify")
@@ -661,9 +650,7 @@ def _build_minimax_speech_payload(
     return merge_payload(
         {
             "prompt": text,
-            "output_format": _coerce_non_empty_string(
-                voice_settings.get("result_output_format")
-            )
+            "output_format": _coerce_non_empty_string(voice_settings.get("result_output_format"))
             or "url",
             "language_boost": _resolve_minimax_language_boost(language_code),
             "english_normalization": voice_settings.get("english_normalization"),
@@ -673,9 +660,7 @@ def _build_minimax_speech_payload(
         {"pronunciation_dict": pronunciation_dict}
         if isinstance(pronunciation_dict, list)
         else None,
-        {"timber_weights": timber_weights}
-        if isinstance(timber_weights, list)
-        else None,
+        {"timber_weights": timber_weights} if isinstance(timber_weights, list) else None,
         {"audio_setting": dict(audio_setting)}
         if isinstance(audio_setting, Mapping) and audio_setting
         else None,
@@ -1487,18 +1472,14 @@ def resolve_fal_video_application(
         return "xai/grok-imagine-video/image-to-video"
     if normalized in _KLING_VIDEO_MODELS:
         has_source_video = bool(source_video and source_video.strip())
-        has_images = bool(
-            start_frame
-            or _normalize_video_reference_image_urls(reference_images)
-        )
+        has_images = bool(start_frame or _normalize_video_reference_image_urls(reference_images))
         if has_source_video:
             return "fal-ai/kling-video/o3/pro/video-to-video/reference"
         if has_images:
             return "fal-ai/kling-video/o3/pro/reference-to-video"
         return application
     if normalized in _SEEDANCE_VIDEO_MODELS and (
-        start_frame
-        or _normalize_video_reference_image_urls(reference_images)
+        start_frame or _normalize_video_reference_image_urls(reference_images)
     ):
         return "fal-ai/bytedance/seedance/v1.5/pro/image-to-video"
     if normalized in _SORA_VIDEO_MODELS and start_frame:

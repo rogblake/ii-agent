@@ -49,9 +49,7 @@ async def web_visit(
 ):
     """Visit a web page and extract content."""
     try:
-        result = await visit_service.visit(
-            request.url, request.prompt, request.service_type
-        )
+        result = await visit_service.visit(request.url, request.prompt, request.service_type)
     except Exception:
         logger.exception(
             "Failed to visit web page",
@@ -67,9 +65,7 @@ async def web_visit(
 
 
 class ResearcherVisitRequest(BaseRequest):
-    urls: List[str] = Field(
-        ..., min_length=1, max_length=10, description="List of URLs to visit"
-    )
+    urls: List[str] = Field(..., min_length=1, max_length=10, description="List of URLs to visit")
     query: str = Field(
         ...,
         min_length=1,
@@ -83,9 +79,7 @@ class ResearcherVisitRequest(BaseRequest):
         """Validate that all URLs have HTTP or HTTPS scheme."""
         for url in v:
             if not url.startswith(("http://", "https://")):
-                raise ValueError(
-                    f"Invalid URL scheme: {url}. Only HTTP and HTTPS URLs are allowed"
-                )
+                raise ValueError(f"Invalid URL scheme: {url}. Only HTTP and HTTPS URLs are allowed")
         return v
 
 

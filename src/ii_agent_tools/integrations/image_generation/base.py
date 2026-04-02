@@ -81,6 +81,4 @@ class BaseImageGenerationClient(ABC):
         ] = "1:1",
         **kwargs,
     ) -> ImageGenerationResult:
-        raise ImageGenerationError(
-            "Image-to-image generation is not supported by this provider"
-        )
+        raise ImageGenerationError("Image-to-image generation is not supported by this provider")

@@ -110,9 +110,7 @@ class CloudRunConfig:
         return cls(
             project_id=project_id,
             region=region,
-            source_bucket=os.environ.get(
-                "GCP_SOURCE_BUCKET", f"{project_id}-app-sources"
-            ),
+            source_bucket=os.environ.get("GCP_SOURCE_BUCKET", f"{project_id}-app-sources"),
             artifact_registry=artifact_registry,
             max_instances=int(os.environ.get("CLOUD_RUN_MAX_INSTANCES", "10")),
             min_instances=int(os.environ.get("CLOUD_RUN_MIN_INSTANCES", "0")),

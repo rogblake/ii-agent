@@ -55,9 +55,7 @@ class AppleAppSetupHandler(BaseCommandHandler[AppleAppSetupContent]):
     def get_command_type(self) -> CommandType:
         return CommandType.APPLE_APP_SETUP
 
-    async def handle(
-        self, content: AppleAppSetupContent, session_info: SessionInfo
-    ) -> None:
+    async def handle(self, content: AppleAppSetupContent, session_info: SessionInfo) -> None:
         """Handle app setup request.
 
         This registers the bundle ID and creates/verifies the iOS Distribution
@@ -84,9 +82,7 @@ class AppleAppSetupHandler(BaseCommandHandler[AppleAppSetupContent]):
 
         try:
             # Get authenticated credential
-            credential = await AppleCredentials.get_active_session(
-                session_info.user_id
-            )
+            credential = await AppleCredentials.get_active_session(session_info.user_id)
 
             if not credential:
                 await self._send_error_event(
@@ -204,7 +200,7 @@ class AppleAppSetupHandler(BaseCommandHandler[AppleAppSetupContent]):
                     await self._send_setup_status(
                         session_info.id,
                         status="app_created",
-                        message=f"Created app in App Store Connect",
+                        message="Created app in App Store Connect",
                         step=2,
                         total_steps=3,
                     )
@@ -213,7 +209,7 @@ class AppleAppSetupHandler(BaseCommandHandler[AppleAppSetupContent]):
                     await self._send_setup_status(
                         session_info.id,
                         status="app_exists",
-                        message=f"Using existing app in App Store Connect",
+                        message="Using existing app in App Store Connect",
                         step=2,
                         total_steps=3,
                     )
@@ -279,7 +275,9 @@ class AppleAppSetupHandler(BaseCommandHandler[AppleAppSetupContent]):
 
         except AppleSessionExpiredError:
             # Clear the stored credentials so user must re-authenticate
-            logger.warning(f"Session expired for user {session_info.user_id}, clearing stored credentials")
+            logger.warning(
+                f"Session expired for user {session_info.user_id}, clearing stored credentials"
+            )
             try:
                 await AppleCredentials.update_auth_state(
                     session_info.user_id,
@@ -299,11 +297,11 @@ class AppleAppSetupHandler(BaseCommandHandler[AppleAppSetupContent]):
 
             # Check if this is actually a session/auth expiration error
             is_auth_error = (
-                "session expired" in error_msg or
-                "re-authenticate" in error_msg or
-                "invalid username and password" in error_msg or
-                "authentication error" in error_msg or
-                "invalid credentials" in error_msg
+                "session expired" in error_msg
+                or "re-authenticate" in error_msg
+                or "invalid username and password" in error_msg
+                or "authentication error" in error_msg
+                or "invalid credentials" in error_msg
             )
 
             if is_auth_error:
@@ -413,18 +411,14 @@ class AppleListAppsHandler(BaseCommandHandler[AppleListAppsContent]):
     def get_command_type(self) -> CommandType:
         return CommandType.APPLE_LIST_APPS
 
-    async def handle(
-        self, content: AppleListAppsContent, session_info: SessionInfo
-    ) -> None:
+    async def handle(self, content: AppleListAppsContent, session_info: SessionInfo) -> None:
         """Handle list apps request.
 
         This lists all apps from App Store Connect for the authenticated user.
         """
         try:
             # Get authenticated credential
-            credential = await AppleCredentials.get_active_session(
-                session_info.user_id
-            )
+            credential = await AppleCredentials.get_active_session(session_info.user_id)
 
             if not credential:
                 await self._send_error_event(

@@ -16,9 +16,7 @@ class GCS(BaseStorage):
         self.project_id = project_id
         self.bucket_name = bucket_name
 
-    async def write(
-        self, content: BinaryIO, path: str, content_type: str | None = None
-    ):
+    async def write(self, content: BinaryIO, path: str, content_type: str | None = None):
         """Asynchronously writes content to a GCS blob."""
 
         async with Storage() as client:
@@ -33,9 +31,7 @@ class GCS(BaseStorage):
                 headers={"Content-Type": content_type} if content_type else None,
             )
 
-    async def write_from_url(
-        self, url: str, path: str, content_type: str | None = None
-    ):
+    async def write_from_url(self, url: str, path: str, content_type: str | None = None):
         """Asynchronously downloads a file from a URL and uploads it to GCS."""
 
         async with aiohttp.ClientSession() as session:
@@ -48,9 +44,7 @@ class GCS(BaseStorage):
                         self.bucket_name,
                         path,
                         response_content,
-                        headers={"Content-Type": content_type}
-                        if content_type
-                        else None,
+                        headers={"Content-Type": content_type} if content_type else None,
                     )
 
     async def write_from_local_path(

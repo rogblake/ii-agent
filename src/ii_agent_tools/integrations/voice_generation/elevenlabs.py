@@ -85,13 +85,9 @@ class ElevenLabsVoiceGenerationClient(BaseVoiceGenerationClient):
             convert_kwargs["model_id"] = model_name
 
         try:
-            audio_bytes = await anyio.to_thread.run_sync(
-                self._convert_sync, convert_kwargs
-            )
+            audio_bytes = await anyio.to_thread.run_sync(self._convert_sync, convert_kwargs)
         except Exception as e:
-            raise VoiceGenerationError(
-                f"ElevenLabs voice generation failed: {e}"
-            ) from e
+            raise VoiceGenerationError(f"ElevenLabs voice generation failed: {e}") from e
         content_type = "audio/mpeg"
 
         user_id = kwargs.get("user_id")
@@ -100,9 +96,7 @@ class ElevenLabsVoiceGenerationClient(BaseVoiceGenerationClient):
             user_id = metadata.get("user_id")
 
         if not self.bucket:
-            raise VoiceGenerationError(
-                "No GCS bucket configured for voice output"
-            )
+            raise VoiceGenerationError("No GCS bucket configured for voice output")
 
         public_url, storage_path, file_name = await self._upload_bytes(
             audio_bytes,
@@ -164,9 +158,7 @@ class ElevenLabsVoiceGenerationClient(BaseVoiceGenerationClient):
             if isinstance(chunk, (bytes, bytearray, memoryview)):
                 chunks.extend(chunk)
             else:
-                raise VoiceGenerationError(
-                    f"Unexpected audio chunk type: {type(chunk)}"
-                )
+                raise VoiceGenerationError(f"Unexpected audio chunk type: {type(chunk)}")
         return bytes(chunks)
 
     def _guess_extension(self, content_type: str) -> str:

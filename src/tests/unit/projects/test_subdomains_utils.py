@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import json
-import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -12,7 +11,6 @@ from ii_agent.projects.subdomains.utils import (
     RESERVED_SUBDOMAINS,
     CloudflareKVConfig,
     CloudflareKVService,
-    SubdomainResult,
     SubdomainStatus,
     validate_subdomain,
 )

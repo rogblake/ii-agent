@@ -17,9 +17,7 @@ class ConnectorRepository(BaseRepository[Connector]):
 
     async def get_by_user(self, db: AsyncSession, user_id: uuid.UUID) -> List[Connector]:
         """Get all connectors for a user."""
-        result = await db.execute(
-            select(Connector).where(Connector.user_id == user_id)
-        )
+        result = await db.execute(select(Connector).where(Connector.user_id == user_id))
         return list(result.scalars().all())
 
     async def get_by_user_and_type(

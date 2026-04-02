@@ -386,10 +386,7 @@ class SessionSummaryManager:
 
         return None
 
-    async def acreate_session_summary(
-        self,
-        session: "AgentSession"
-    ) -> Optional[SessionSummary]:
+    async def acreate_session_summary(self, session: "AgentSession") -> Optional[SessionSummary]:
         """Creates a summary of the session.
 
         Args:

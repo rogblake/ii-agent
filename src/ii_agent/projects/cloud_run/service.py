@@ -17,7 +17,7 @@ import re
 import time
 import tarfile
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 
 from ii_agent.projects.cloud_run.schemas import (
     CloudRunConfig,
@@ -132,16 +132,16 @@ class CloudRunPublisher:
 
             # 1. Prepare source with Dockerfile
             self._update_status(DeploymentStatus.UPLOADING, "Preparing source code...")
-            prepared_source = await prepare_source_with_dockerfile(
-                source_bytes, template_type
-            )
+            prepared_source = await prepare_source_with_dockerfile(source_bytes, template_type)
 
             # 2. Upload source to Cloud Storage
             self._update_status(DeploymentStatus.UPLOADING, "Uploading source code...")
             gcs_object = await self._upload_source(prepared_source, service_name)
 
             # 3. Build container image
-            self._update_status(DeploymentStatus.BUILDING, "Building container image (ETA 1-2 mins)...")
+            self._update_status(
+                DeploymentStatus.BUILDING, "Building container image (ETA 1-2 mins)..."
+            )
             build_result = await self._build_image(gcs_object, service_name, template_type)
             image_url = build_result["image_url"]
 
@@ -217,7 +217,7 @@ class CloudRunPublisher:
         except NotFound:
             logger.warning(f"Service not found: {service_name}")
             return True
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to delete service: {service_name}")
             raise
 
@@ -295,9 +295,7 @@ class CloudRunPublisher:
             buffer = io.BytesIO()
             with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
                 for file_path in source_dir.rglob("*"):
-                    if file_path.is_file() and not _should_exclude(
-                        file_path, source_dir
-                    ):
+                    if file_path.is_file() and not _should_exclude(file_path, source_dir):
                         arcname = file_path.relative_to(source_dir)
                         tar.add(file_path, arcname=arcname)
             return buffer.getvalue()
@@ -311,9 +309,7 @@ class CloudRunPublisher:
         blob = bucket.blob(blob_name)
 
         def _upload():
-            blob.upload_from_string(
-                source_bytes, content_type="application/gzip"
-            )
+            blob.upload_from_string(source_bytes, content_type="application/gzip")
 
         await asyncio.to_thread(_upload)
 
@@ -335,9 +331,7 @@ class CloudRunPublisher:
         image_url = f"{self.config.artifact_registry}/{service_name}:latest"
 
         # Get prebuilt base image for this template type (if available)
-        base_image = self.config.base_images.get(
-            template_type.value, "node:20-slim"
-        )
+        base_image = self.config.base_images.get(template_type.value, "node:20-slim")
 
         # Build arguments for passing base image to Dockerfile
         build_args = [f"BASE_IMAGE={base_image}"]
@@ -392,7 +386,7 @@ class CloudRunPublisher:
                         # Build with BuildKit and layer caching
                         docker build \
                             --progress=plain \
-                            {' '.join(docker_build_args)} \
+                            {" ".join(docker_build_args)} \
                             --cache-from {base_image} \
                             --cache-from {cache_image} \
                             -t {image_url} \
@@ -412,9 +406,7 @@ class CloudRunPublisher:
                     id="push",
                 ),
             ]
-            logger.info(
-                f"Using BuildKit with base image {base_image} for {service_name}"
-            )
+            logger.info(f"Using BuildKit with base image {base_image} for {service_name}")
 
         build = cloudbuild_v1.Build(
             source=cloudbuild_v1.Source(
@@ -469,7 +461,6 @@ class CloudRunPublisher:
         """Deploy container to Cloud Run."""
         from google.api_core.exceptions import NotFound
         from google.cloud import run_v2
-        from google.iam.v1 import policy_pb2
 
         parent = f"projects/{self.config.project_id}/locations/{self.config.region}"
         service_path = f"{parent}/services/{service_name}"
@@ -477,9 +468,7 @@ class CloudRunPublisher:
         # Build environment variables list
         env_list = []
         if env_vars:
-            env_list = [
-                run_v2.EnvVar(name=k, value=v) for k, v in env_vars.items()
-            ]
+            env_list = [run_v2.EnvVar(name=k, value=v) for k, v in env_vars.items()]
 
         # Use timestamp annotation to force Cloud Run to pull fresh image on each deploy
         deploy_timestamp = str(int(time.time()))
@@ -549,10 +538,8 @@ class CloudRunPublisher:
             ]
         )
 
-        await self.run_client.set_iam_policy(
-            request={"resource": service_path, "policy": policy}
-        )
-        logger.info(f"Enabled public access for service")
+        await self.run_client.set_iam_policy(request={"resource": service_path, "policy": policy})
+        logger.info("Enabled public access for service")
 
 
 # Convenience function for quick deployments

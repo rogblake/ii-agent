@@ -72,15 +72,17 @@ class RestartMobileServerTool(MCPTool):
             web_port = result.user_display_content.get("web_port", 8081)
             try:
                 # Expose the port to get public URL using sandbox
-                if hasattr(self, 'sandbox') and self.sandbox:
+                if hasattr(self, "sandbox") and self.sandbox:
                     web_preview_url = await self.sandbox.expose_port(web_port)
                     result.user_display_content["web_preview_url"] = web_preview_url
 
                     # Update the llm_content to include the web preview URL
                     if isinstance(result.llm_content, list) and len(result.llm_content) > 0:
                         first_content = result.llm_content[0]
-                        if hasattr(first_content, 'text'):
-                            updated_text = first_content.text + f"\n- **Web Preview URL:** `{web_preview_url}`"
+                        if hasattr(first_content, "text"):
+                            updated_text = (
+                                first_content.text + f"\n- **Web Preview URL:** `{web_preview_url}`"
+                            )
                             result.llm_content[0] = TextContent(type="text", text=updated_text)
                 else:
                     logger.warning("No sandbox available to expose port")

@@ -91,9 +91,7 @@ async def download_asset(
 ):
     """Download a file asset by ID with async streaming."""
     try:
-        return await file_service.get_file_stream(
-            db, asset_id, user_id=current_user.id
-        )
+        return await file_service.get_file_stream(db, asset_id, user_id=current_user.id)
     except FileAccessDeniedError:
         raise FileUploadNotFoundError("File not found or access denied")
 

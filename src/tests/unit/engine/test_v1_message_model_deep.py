@@ -18,19 +18,14 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import Any, Dict
 from unittest.mock import MagicMock
 
-import pytest
 
 from ii_agent.agents.models.message import (
     Citations,
-    DocumentCitation,
     Message,
-    MessageReferences,
     UrlCitation,
 )
-from ii_agent.agents.models.metrics import Metrics
 from ii_agent.files.media import Audio, File, Image, Video
 
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from uuid import UUID
@@ -63,9 +62,7 @@ class PricingInfo(BaseModel):
     )
 
     @classmethod
-    def get_default_pricing(
-        cls, model_id: str, provider: Provider | None = None
-    ) -> PricingInfo:
+    def get_default_pricing(cls, model_id: str, provider: Provider | None = None) -> PricingInfo:
         """Get default pricing for common models.
 
         Args:
@@ -442,5 +439,3 @@ class LLMModelList(BaseModel):
     """Response for listing all available models."""
 
     models: list[LLMModelInfo]
-
-

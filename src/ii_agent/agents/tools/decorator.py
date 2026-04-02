@@ -7,6 +7,8 @@ from ii_agent.core.logger import logger
 # Type variable for better type hints
 F = TypeVar("F", bound=Callable[..., Any])
 ToolConfig = TypeVar("ToolConfig", bound=Dict[str, Any])
+
+
 def _is_async_function(func: Callable) -> bool:
     """
     Check if a function is async, even when wrapped by decorators like @staticmethod.

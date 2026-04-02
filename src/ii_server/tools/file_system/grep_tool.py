@@ -69,9 +69,7 @@ def _run_ripgrep(
         cmd.extend([pattern, str(search_path)])
 
         # Execute ripgrep
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=COMMAND_TIMEOUT
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=COMMAND_TIMEOUT)
 
         if result.returncode == 1:
             # No matches found
@@ -88,9 +86,7 @@ def _run_ripgrep(
 
             # ripgrep output format: file:line_number:content
             parts = line.split(":", 2)
-            matches.append(
-                {"file_path": parts[0], "line_number": parts[1], "content": parts[2]}
-            )
+            matches.append({"file_path": parts[0], "line_number": parts[1], "content": parts[2]})
 
         return matches
 

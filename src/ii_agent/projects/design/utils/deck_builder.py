@@ -176,6 +176,4 @@ html, body {
         + "\n</div>\n"
     )
 
-    return (
-        f"<!doctype html><html><head>{head_html}</head><body>{body_html}</body></html>"
-    )
+    return f"<!doctype html><html><head>{head_html}</head><body>{body_html}</body></html>"

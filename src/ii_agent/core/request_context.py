@@ -60,9 +60,7 @@ class RequestContext:
 
 
 # Context variable storing the full request context
-_context_var: ContextVar[RequestContext] = ContextVar(
-    "request_context", default=RequestContext()
-)
+_context_var: ContextVar[RequestContext] = ContextVar("request_context", default=RequestContext())
 
 
 def generate_request_id() -> str:

@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import json
-from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any, Dict, Optional
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import SecretStr
@@ -16,9 +15,6 @@ from ii_agent.chat.types import (
     MessageRole,
     TextContent,
     ToolCall,
-    ToolResult,
-    TextResultContent,
-    FinishReason,
 )
 
 
@@ -543,7 +539,7 @@ class TestExtractContentPartFromMessage:
             return AnthropicProvider(config)
 
     def test_text_block_creates_text_content(self):
-        from anthropic.types import TextBlock, Message as AnthropicMessage
+        from anthropic.types import TextBlock
         from ii_agent.chat.types import TextContent
 
         provider = self._make_provider()
@@ -562,7 +558,6 @@ class TestExtractContentPartFromMessage:
 
     def test_tool_use_block_creates_tool_call(self):
         from anthropic.types import ToolUseBlock
-        from ii_agent.chat.types import ToolCall
 
         provider = self._make_provider()
         tool_block = MagicMock(spec=ToolUseBlock)

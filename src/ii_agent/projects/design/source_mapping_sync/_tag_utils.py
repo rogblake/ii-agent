@@ -16,6 +16,7 @@ def _extract_opening_tag_name(tag: str) -> Optional[str]:
         return None
     return (match.group("name") or "").strip() or None
 
+
 def _extract_closing_tag_name(tag: str) -> Optional[str]:
     if not isinstance(tag, str) or not tag:
         return None
@@ -23,6 +24,7 @@ def _extract_closing_tag_name(tag: str) -> Optional[str]:
     if not match:
         return None
     return (match.group("name") or "").strip() or None
+
 
 def _find_tag_end(text: str, start_index: int) -> Optional[int]:
     quote: Optional[str] = None
@@ -45,8 +47,10 @@ def _find_tag_end(text: str, start_index: int) -> Optional[int]:
         i += 1
     return None
 
+
 def _is_html_tag_name_for_design_mode(value: str) -> bool:
     return (value or "").strip().lower() in _DESIGN_MODE_HTML_TAG_NAMES
+
 
 def _tag_name_matches_for_design_mode(a: str, b: str) -> bool:
     if not a or not b:
@@ -57,9 +61,8 @@ def _tag_name_matches_for_design_mode(a: str, b: str) -> bool:
         return a.lower() == b.lower()
     return a == b
 
-def _find_matching_closing_tag_end(
-    content: str, start_index: int, tag_name: str
-) -> Optional[int]:
+
+def _find_matching_closing_tag_end(content: str, start_index: int, tag_name: str) -> Optional[int]:
     if not isinstance(content, str) or not content:
         return None
     if not isinstance(tag_name, str) or not tag_name:
@@ -103,6 +106,7 @@ def _find_matching_closing_tag_end(
 
     return None
 
+
 def _find_opening_tag_bounds_for_design_id(
     content: str, design_id: str
 ) -> Optional[tuple[int, int]]:
@@ -132,9 +136,8 @@ def _find_opening_tag_bounds_for_design_id(
             continue
         return tag_start, tag_end
 
-def _find_element_span_for_design_id(
-    content: str, design_id: str
-) -> Optional[tuple[int, int]]:
+
+def _find_element_span_for_design_id(content: str, design_id: str) -> Optional[tuple[int, int]]:
     bounds = _find_opening_tag_bounds_for_design_id(content, design_id)
     if not bounds:
         return None
@@ -153,6 +156,7 @@ def _find_element_span_for_design_id(
         return None
 
     return tag_start, closing_end + 1
+
 
 def _normalize_whitespace_for_match(value: str) -> str:
     return re.sub(r"\s+", " ", (value or "")).strip()

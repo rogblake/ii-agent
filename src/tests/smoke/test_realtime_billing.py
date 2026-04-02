@@ -1,5 +1,3 @@
-from types import SimpleNamespace
-
 import pytest
 
 from ii_agent.billing.exceptions import StripeConfigError

@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
-import pytest
 
 from ii_agent.workers.cron import refresh_annual_subscription_credits as annual_refresh
 

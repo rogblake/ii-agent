@@ -51,9 +51,7 @@ class DeploymentOrchestrationService:
     # ── Project resolution ───────────────────────────────────────────
 
     @staticmethod
-    def resolve_project_path(
-        project_path: str | None, session_info: SessionInfo
-    ) -> str | None:
+    def resolve_project_path(project_path: str | None, session_info: SessionInfo) -> str | None:
         """Normalize a project path relative to the session workspace."""
         if isinstance(project_path, str) and project_path.strip():
             project_path = project_path.strip()
@@ -126,9 +124,7 @@ class DeploymentOrchestrationService:
         project_path cannot be resolved.
         """
         cloud_run = provider == "cloud_run"
-        project_path = self.resolve_project_path(
-            content.get("project_path"), session_info
-        )
+        project_path = self.resolve_project_path(content.get("project_path"), session_info)
         if not project_path:
             return None
 
@@ -141,9 +137,7 @@ class DeploymentOrchestrationService:
                 project_name, session_info.id
             )
         else:
-            session_id_hash = hashlib.sha256(
-                str(session_info.id).encode()
-            ).hexdigest()[:8]
+            session_id_hash = hashlib.sha256(str(session_info.id).encode()).hexdigest()[:8]
             service_name = f"{project_name}-ii-{session_id_hash}"
 
         db_project_id: str | None = None
@@ -159,16 +153,14 @@ class DeploymentOrchestrationService:
                 db_project_id = project.id if project else None
 
                 if db_project_id:
-                    deployment_record = (
-                        await deployments_service.create_deployment(
-                            db,
-                            project_id=db_project_id,
-                            user_id=session_info.user_id,
-                            provider=provider,
-                            environment="production",
-                            source_path=project_path,
-                            snapshot_id=content.get("revision"),
-                        )
+                    deployment_record = await deployments_service.create_deployment(
+                        db,
+                        project_id=db_project_id,
+                        user_id=session_info.user_id,
+                        provider=provider,
+                        environment="production",
+                        source_path=project_path,
+                        snapshot_id=content.get("revision"),
                     )
                     deployment_id = deployment_record.id
                     logger.info(
@@ -304,9 +296,7 @@ class DeploymentOrchestrationService:
             return ""
         output = re.sub(r"(--token\s+)(\S+)", r"\1[REDACTED]", output)
         output = re.sub(r"(--token=)(\S+)", r"\1[REDACTED]", output)
-        output = re.sub(
-            r"(VERCEL_(?:ACCESS_)?TOKEN=)(\S+)", r"\1[REDACTED]", output
-        )
+        output = re.sub(r"(VERCEL_(?:ACCESS_)?TOKEN=)(\S+)", r"\1[REDACTED]", output)
         return output
 
     @classmethod
@@ -318,14 +308,10 @@ class DeploymentOrchestrationService:
     def extract_deployment_url(output: str, project_id: str) -> str:
         """Extract a deployment URL from Vercel output."""
         if output:
-            production_match = re.search(
-                r"Production:\s*(https://[^\s\]]+)", output, re.IGNORECASE
-            )
+            production_match = re.search(r"Production:\s*(https://[^\s\]]+)", output, re.IGNORECASE)
             if production_match:
                 return production_match.group(1)
-            vercel_match = re.search(
-                r"https://[^\s\]]+vercel\.app", output, re.IGNORECASE
-            )
+            vercel_match = re.search(r"https://[^\s\]]+vercel\.app", output, re.IGNORECASE)
             if vercel_match:
                 return vercel_match.group(0)
             generic_match = re.search(r"https://[^\s\]]+", output)

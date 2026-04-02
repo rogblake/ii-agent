@@ -128,9 +128,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
             image_bytes = base64.b64decode(image_data.b64_json)
         elif image_data.url:
             # If URL is returned, we need to download the image
-            async with httpx.AsyncClient(
-                follow_redirects=True, timeout=120.0
-            ) as http_client:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=120.0) as http_client:
                 resp = await http_client.get(image_data.url)
                 resp.raise_for_status()
                 image_bytes = resp.content
@@ -141,9 +139,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         storage_path = None
         file_name = None
         if self.bucket:
-            url, storage_path, file_name = await self._upload_bytes(
-                image_bytes, user_id
-            )
+            url, storage_path, file_name = await self._upload_bytes(image_bytes, user_id)
         elif image_data.url:
             url = image_data.url
         else:
@@ -167,11 +163,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         """Download image from URL (supports GCS and HTTP URLs)."""
         if url.startswith("gs://"):
             bucket_name, blob_name = url.replace("gs://", "").split("/", 1)
-            blob = (
-                storage.Client(project=self.project_id)
-                .bucket(bucket_name)
-                .blob(blob_name)
-            )
+            blob = storage.Client(project=self.project_id).bucket(bucket_name).blob(blob_name)
 
             def _download_sync() -> tuple[bytes, str]:
                 data = blob.download_as_bytes()
@@ -208,9 +200,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         **kwargs: Any,
     ) -> ImageGenerationResult:
         if not image_urls:
-            raise ImageGenerationError(
-                "At least one image URL is required for image editing"
-            )
+            raise ImageGenerationError("At least one image URL is required for image editing")
 
         size = ASPECT_RATIO_TO_SIZE.get(aspect_ratio, "1024x1024")
 
@@ -224,9 +214,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
                 filename = f"image_{idx}.{ext}"
                 image_files.append((filename, image_bytes, mime_type))
             except Exception as e:
-                raise ImageGenerationError(
-                    f"Failed to download image {image_url}: {e}"
-                ) from e
+                raise ImageGenerationError(f"Failed to download image {image_url}: {e}") from e
 
         try:
             # Use images.edit API with image files as tuples
@@ -248,9 +236,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         if image_data.b64_json:
             result_image_bytes = base64.b64decode(image_data.b64_json)
         elif image_data.url:
-            async with httpx.AsyncClient(
-                follow_redirects=True, timeout=120.0
-            ) as http_client:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=120.0) as http_client:
                 resp = await http_client.get(image_data.url)
                 resp.raise_for_status()
                 result_image_bytes = resp.content
@@ -261,9 +247,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         storage_path = None
         file_name = None
         if self.bucket:
-            url, storage_path, file_name = await self._upload_bytes(
-                result_image_bytes, user_id
-            )
+            url, storage_path, file_name = await self._upload_bytes(result_image_bytes, user_id)
         elif image_data.url:
             url = image_data.url
         else:
@@ -283,9 +267,7 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
             file_name=file_name,
         )
 
-    async def _upload_bytes(
-        self, image_bytes: bytes, user_id: uuid.UUID
-    ) -> tuple[str, str, str]:
+    async def _upload_bytes(self, image_bytes: bytes, user_id: uuid.UUID) -> tuple[str, str, str]:
         """Upload image bytes to GCS and return (public_url, storage_path, file_name)."""
         file_id = str(uuid.uuid4())
         file_name = f"{file_id}.png"
@@ -319,12 +301,8 @@ class OpenAIImageGenerationClient(BaseImageGenerationClient):
         output_details = getattr(usage, "output_tokens_details", None)
 
         # Input tokens
-        input_text_tokens = (
-            getattr(input_details, "text_tokens", 0) if input_details else 0
-        )
-        input_image_tokens = (
-            getattr(input_details, "image_tokens", 0) if input_details else 0
-        )
+        input_text_tokens = getattr(input_details, "text_tokens", 0) if input_details else 0
+        input_image_tokens = getattr(input_details, "image_tokens", 0) if input_details else 0
 
         # Output tokens - output_tokens_details is a dict
         if output_details and isinstance(output_details, dict):

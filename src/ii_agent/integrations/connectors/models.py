@@ -30,29 +30,20 @@ class Connector(Base):
     __tablename__ = "connectors"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
     connector_type: Mapped[ConnectorType] = mapped_column(String)
     access_token: Mapped[str] = mapped_column(String)
     refresh_token: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    token_expiry: Mapped[Optional[datetime]] = mapped_column(
-        TimestampColumn,
-        nullable=True
-    )
-    connector_metadata: Mapped[Optional[dict]] = mapped_column(
-        "metadata",
-        JSONB,
-        nullable=True
-    )
+    token_expiry: Mapped[Optional[datetime]] = mapped_column(TimestampColumn, nullable=True)
+    connector_metadata: Mapped[Optional[dict]] = mapped_column("metadata", JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        TimestampColumn,
-        default=lambda: datetime.now(timezone.utc)
+        TimestampColumn, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
         TimestampColumn,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )
 
     # Relationships
@@ -72,9 +63,7 @@ class ComposioProfile(Base):
     __tablename__ = "composio_profiles"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        index=True
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     profile_name: Mapped[str] = mapped_column(String, nullable=False)  # User-friendly name
     toolkit_slug: Mapped[str] = mapped_column(
@@ -117,6 +106,4 @@ class ComposioProfile(Base):
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="composio_profiles")
 
-    __table_args__ = (
-        UniqueConstraint("user_id", "profile_name", name="uq_composio_profile_name"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "profile_name", name="uq_composio_profile_name"),)

@@ -89,9 +89,7 @@ class SerpAPIWebSearchClient(BaseWebSearchClient):
         wait=wait_exponential(multiplier=1, min=1, max=8),
         retry=retry_if_exception_type((WebSearchProviderError, WebSearchNetworkError)),
     )
-    async def batch_search(
-        self, queries: List[str], max_results: int = 6
-    ) -> List[WebSearchResult]:
+    async def batch_search(self, queries: List[str], max_results: int = 6) -> List[WebSearchResult]:
         tasks = [self.search(query, max_results) for query in queries]
         results = await asyncio.gather(*tasks)
         return results

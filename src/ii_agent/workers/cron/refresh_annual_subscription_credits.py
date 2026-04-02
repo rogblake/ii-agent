@@ -89,8 +89,7 @@ async def refresh_annual_subscription_credits() -> None:
     # BillingCustomerService was removed during refactoring.
     # This cron job needs migration to use the new billing/credits modules.
     app_logger.warning(
-        "refresh_annual_subscription_credits skipped: "
-        "BillingCustomerService not yet migrated"
+        "refresh_annual_subscription_credits skipped: BillingCustomerService not yet migrated"
     )
     return
 
@@ -99,6 +98,7 @@ async def refresh_annual_subscription_credits() -> None:
         # TODO: obtain these services from the container once the billing
         # customer service is migrated to the new DDD structure.
         from ii_agent.core.container import get_app_container
+
         _container = get_app_container()
         billing_customer_service = _container.billing_service  # placeholder
         credit_service = _container.credit_service

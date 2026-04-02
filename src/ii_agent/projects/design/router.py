@@ -104,5 +104,3 @@ async def save_design_state(
         request=request,
         user_id=current_user.id,
     )
-
-

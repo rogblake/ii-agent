@@ -94,20 +94,24 @@ class StorybookVersionService:
                 if "image_prompt" in updates:
                     page_metadata["image_prompt"] = updates["image_prompt"]
 
-            new_pages.append(StorybookPage(
-                id=str(uuid.uuid4()),
-                page_number=page.page_number,
-                image_url=image_url,
-                html_content=html_content,
-                text_content=text_content,
-                audio_link=audio_link,
-                page_metadata=page_metadata,
-            ))
+            new_pages.append(
+                StorybookPage(
+                    id=str(uuid.uuid4()),
+                    page_number=page.page_number,
+                    image_url=image_url,
+                    html_content=html_content,
+                    text_content=text_content,
+                    audio_link=audio_link,
+                    page_metadata=page_metadata,
+                )
+            )
 
         if new_pages:
             await self._repo.create_pages_batch(db, new_pages, storybook_id=new_storybook.id)
 
-        return await self._storybook_service.get_storybook_detail(db, new_storybook.id, include_pages=True)
+        return await self._storybook_service.get_storybook_detail(
+            db, new_storybook.id, include_pages=True
+        )
 
     async def update_page_text(
         self,

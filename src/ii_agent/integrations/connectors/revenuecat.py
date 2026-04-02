@@ -626,10 +626,7 @@ class RevenueCatConnector(BaseConnector):
             response.raise_for_status()
             token_data = response.json()
             if token_data.get("error"):
-                raise ValueError(
-                    token_data.get("error_description")
-                    or token_data["error"]
-                )
+                raise ValueError(token_data.get("error_description") or token_data["error"])
             return token_data
 
 

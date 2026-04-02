@@ -75,9 +75,7 @@ class ShellInit(BaseTool):
             ShellInvalidSessionNameError,
             TmuxSessionExists,
         ) as e:
-            return ToolResult(
-                llm_content=f"Error initializing session: {e}", is_error=True
-            )
+            return ToolResult(llm_content=f"Error initializing session: {e}", is_error=True)
 
     async def execute_mcp_wrapper(
         self,

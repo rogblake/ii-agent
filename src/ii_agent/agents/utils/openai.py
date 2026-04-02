@@ -59,11 +59,7 @@ def _process_image_path(
         raise IsADirectoryError(f"Image path is not a file: {image_path}")
 
     # Use caller-provided mime_type, then mimetypes.guess_type, then default
-    mime_type = (
-        image_mime_type
-        or mimetypes.guess_type(path)[0]
-        or "image/jpeg"
-    )
+    mime_type = image_mime_type or mimetypes.guess_type(path)[0] or "image/jpeg"
     # Also derive format from file extension for HEIC detection fallback
     ext_format = image_format or path.suffix.lstrip(".").lower() or None
     try:
@@ -71,8 +67,12 @@ def _process_image_path(
             image_bytes = image_file.read()
 
             # Convert HEIC/HEIF to JPEG since providers don't support them
-            if is_heic_format(image_format=ext_format, mime_type=mime_type, image_bytes=image_bytes):
-                image_bytes, mime_type = convert_heic_to_jpeg(image_bytes, max_size=_OPENAI_IMAGE_LIMIT)
+            if is_heic_format(
+                image_format=ext_format, mime_type=mime_type, image_bytes=image_bytes
+            ):
+                image_bytes, mime_type = convert_heic_to_jpeg(
+                    image_bytes, max_size=_OPENAI_IMAGE_LIMIT
+                )
 
             base64_image = base64.b64encode(image_bytes).decode("utf-8")
             image_url = f"data:{mime_type};base64,{base64_image}"
@@ -85,9 +85,7 @@ def _process_image_path(
 def _process_image_url(image_url: str) -> Dict[str, Any]:
     """Process image (base64 or URL)."""
 
-    if image_url.startswith("data:image") or image_url.startswith(
-        ("http://", "https://")
-    ):
+    if image_url.startswith("data:image") or image_url.startswith(("http://", "https://")):
         return {"type": "input_image", "image_url": image_url}
     else:
         raise ValueError("Image URL must start with 'data:image' or 'http(s)://'.")
@@ -102,7 +100,9 @@ def process_image(image: Image) -> Optional[Dict[str, Any]]:
             if is_heic_format(image_format=image.format, mime_type=image.mime_type, url=image.url):
                 content_bytes = image.get_content_bytes()
                 if content_bytes:
-                    jpeg_bytes, mime_type = convert_heic_to_jpeg(content_bytes, max_size=_OPENAI_IMAGE_LIMIT)
+                    jpeg_bytes, mime_type = convert_heic_to_jpeg(
+                        content_bytes, max_size=_OPENAI_IMAGE_LIMIT
+                    )
                     b64 = base64.b64encode(jpeg_bytes).decode("utf-8")
                     image_payload = {
                         "type": "input_image",
@@ -137,8 +137,6 @@ def process_image(image: Image) -> Optional[Dict[str, Any]]:
         logger(f"An unexpected error occurred while processing image: {str(e)}")
         # Depending on policy, you might want to return None or re-raise
         return None  # Return None for unexpected errors as well, preventing crashes
-
-
 
 
 def images_to_message(images: Sequence[Image]) -> List[Dict[str, Any]]:

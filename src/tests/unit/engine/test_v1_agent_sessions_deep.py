@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-from typing import Any, Dict, Optional
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from ii_agent.agents.sessions.agent import AgentSession
 
@@ -129,17 +126,13 @@ class TestAgentSessionFromDict:
         assert session.user_id == "u-1"
 
     def test_deserializes_run_messages_as_list_of_run_outputs(self):
-        from ii_agent.agents.runs.agent import RunOutput
-
         run_data = {"id": "r-1", "status": "completed"}
         data = {
             "session_id": "s-1",
             "user_id": "u-1",
             "run_messages": [run_data],
         }
-        with patch(
-            "ii_agent.agents.sessions.agent.RunOutput.from_dict"
-        ) as mock_from_dict:
+        with patch("ii_agent.agents.sessions.agent.RunOutput.from_dict") as mock_from_dict:
             mock_from_dict.return_value = MagicMock()
             session = AgentSession.from_dict(data)
         assert session is not None
@@ -161,16 +154,12 @@ class TestAgentSessionFromDict:
         assert session.runs[0] is mock_run
 
     def test_deserializes_summary_from_dict(self):
-        from ii_agent.agents.sessions.summary import AgentSummary
-
         data = {
             "session_id": "s-1",
             "user_id": "u-1",
             "summary": {"total_runs": 3},
         }
-        with patch(
-            "ii_agent.agents.sessions.agent.AgentSummary.from_dict"
-        ) as mock_from_dict:
+        with patch("ii_agent.agents.sessions.agent.AgentSummary.from_dict") as mock_from_dict:
             mock_from_dict.return_value = MagicMock()
             session = AgentSession.from_dict(data)
         assert session is not None

@@ -27,6 +27,7 @@ from ii_agent.agents.runs.agent import RunOutput
 from ii_agent.agents.utils.http import get_default_async_client
 from ii_agent.core.logger import logger
 
+
 def _format_file_for_message(file: File) -> Optional[Dict[str, Any]]:
     """
     Add a document url, base64 encoded content or OpenAI file to a message.
@@ -160,7 +161,7 @@ class OpenAIChat(Model):
             "timeout": self.timeout,
             "max_retries": self.max_retries,
             "default_headers": self.default_headers,
-            "default_query": self.default_query
+            "default_query": self.default_query,
         }
 
         # Create client_params dict with non-None values
@@ -307,9 +308,7 @@ class OpenAIChat(Model):
         cleaned_dict = {k: v for k, v in model_dict.items() if v is not None}
         return cleaned_dict
 
-    def _format_message(
-        self, message: Message
-    ) -> Dict[str, Any]:
+    def _format_message(self, message: Message) -> Dict[str, Any]:
         """
         Format a message into the format expected by OpenAI.
 
@@ -386,7 +385,7 @@ class OpenAIChat(Model):
         response_format: Optional[Union[Dict, Type[BaseModel]]] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
-        run_response: Optional[RunOutput] = None
+        run_response: Optional[RunOutput] = None,
     ) -> ModelResponse:
         """
         Sends an asynchronous chat completion request to the OpenAI API.

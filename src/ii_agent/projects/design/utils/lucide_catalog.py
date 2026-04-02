@@ -8,9 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional
 
-_ICON_NODE_RE = re.compile(
-    r"(?:const|var)\s+__iconNode\s*=\s*(\[[\s\S]*?\]);", re.MULTILINE
-)
+_ICON_NODE_RE = re.compile(r"(?:const|var)\s+__iconNode\s*=\s*(\[[\s\S]*?\]);", re.MULTILINE)
 
 
 def _normalize_icon_name(name: str) -> str:
@@ -144,11 +142,7 @@ def _icon_node_to_svg_inner(icon_node: List) -> Optional[str]:
             if key == "key" or not isinstance(key, str) or value is None:
                 continue
             value_str = str(value) if not isinstance(value, str) else value
-            escaped = (
-                value_str.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-            )
+            escaped = value_str.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             attrs[_camel_to_kebab(key)] = escaped
         attr_str = "".join(f' {k}="{v}"' for k, v in attrs.items())
         parts.append(f"<{tag}{attr_str} />")

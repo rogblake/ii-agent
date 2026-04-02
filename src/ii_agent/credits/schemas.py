@@ -6,7 +6,6 @@ Field names match the frontend TypeScript types in ``frontend/src/typings/user.t
 from __future__ import annotations
 
 from datetime import datetime
-from decimal import Decimal
 from typing import Any, Optional
 from uuid import UUID
 

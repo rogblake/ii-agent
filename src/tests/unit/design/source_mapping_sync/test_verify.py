@@ -1,7 +1,5 @@
 """Tests for _verify.py."""
 
-import pytest
-
 from ii_agent.projects.design.source_mapping_sync._verify import (
     _extract_class_attr_from_outer_html,
     _extract_literal_class_attr_from_tag,

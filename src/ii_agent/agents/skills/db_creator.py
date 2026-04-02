@@ -13,6 +13,7 @@ from ii_agent.core.logger import logger
 if TYPE_CHECKING:
     from ii_agent.core.storage.service import StorageService as BaseStorage
 
+
 class DbSkillCreator(SkillCreator):
     """Database-backed skill creator.
 

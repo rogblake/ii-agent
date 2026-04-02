@@ -72,9 +72,7 @@ async def test_create_portal_session_requires_customer(settings_factory):
 
 
 @pytest.mark.asyncio
-async def test_create_checkout_session_uses_customer_from_user(
-    monkeypatch, settings_factory
-):
+async def test_create_checkout_session_uses_customer_from_user(monkeypatch, settings_factory):
     settings = settings_factory()
     service = BillingService(settings=settings)
 

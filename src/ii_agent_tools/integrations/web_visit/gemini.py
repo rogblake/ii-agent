@@ -54,12 +54,8 @@ class GeminiWebVisitClient(BaseWebVisitClient):
             logger.error(f"Gemini web visit error for {url}: {e}")
             raise WebVisitError(f"Failed to extract content from {url}: {str(e)}")
 
-    def _token_to_cost(
-        self, input_tokens_count: int, output_tokens_count: int
-    ) -> float:
-        return (
-            input_tokens_count * 0.3 / 1_000_000 + output_tokens_count * 2.5 / 1_000_000
-        )
+    def _token_to_cost(self, input_tokens_count: int, output_tokens_count: int) -> float:
+        return input_tokens_count * 0.3 / 1_000_000 + output_tokens_count * 2.5 / 1_000_000
 
     async def batch_extract(self, urls: List[str]) -> WebVisitResult:
         """Extract content from a webpage and compress it using Gemini with context compression."""

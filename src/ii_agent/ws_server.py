@@ -14,9 +14,7 @@ APP_IMPORT_PATH = "ii_agent.ws_server:app"
 def main():
     """Main entry point for the WebSocket server."""
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(
-        description="WebSocket Server for interacting with the Agent"
-    )
+    parser = argparse.ArgumentParser(description="WebSocket Server for interacting with the Agent")
     parser.add_argument(
         "--host",
         type=str,

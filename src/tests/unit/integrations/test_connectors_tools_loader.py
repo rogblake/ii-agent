@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 
 from ii_agent.integrations.connectors.tools_loader import load_connector_tools
 from ii_agent.integrations.connectors.models import ConnectorTypeEnum

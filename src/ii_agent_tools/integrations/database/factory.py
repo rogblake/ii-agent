@@ -28,32 +28,38 @@ logger = get_logger(__name__)
 
 class NeonDBError(Exception):
     """Base exception for NeonDB operations."""
+
     pass
 
 
 class NeonDBCapacityError(NeonDBError):
     """Raised when NeonDB capacity limits are reached."""
+
     pass
 
 
 class NeonDBConflictError(NeonDBError):
     """Raised when there's a conflict with ongoing operations."""
+
     pass
 
 
 class NeonDBResourceExistsError(NeonDBError):
     """Raised when a resource already exists."""
+
     pass
 
 
 class DatabaseConnections(TypedDict):
     """Connection strings for dev and prod environments."""
+
     dev: str
     prod: str
 
 
 class DatabaseConnectionResult(TypedDict):
     """Result of database connection creation with metadata for auditing."""
+
     # Connection details
     connection_string: str
     host: str
@@ -225,7 +231,7 @@ class PostgresDatabaseClient(DatabaseClient):
             if name.startswith(PROJECT_PREFIX):
                 try:
                     # Extract index from project_N
-                    index = int(name[len(PROJECT_PREFIX):])
+                    index = int(name[len(PROJECT_PREFIX) :])
                     p["_index"] = index
                     managed.append(p)
                 except ValueError:
@@ -280,16 +286,16 @@ class PostgresDatabaseClient(DatabaseClient):
                 return branch
         return None
 
-    async def _create_branch(self, project_id: str, branch_name: str, parent_branch_id: str) -> dict:
+    async def _create_branch(
+        self, project_id: str, branch_name: str, parent_branch_id: str
+    ) -> dict:
         """Create a new branch."""
         payload = {
             "branch": {
                 "name": branch_name,
                 "parent_id": parent_branch_id,
             },
-            "endpoints": [
-                {"type": "read_write"}
-            ]
+            "endpoints": [{"type": "read_write"}],
         }
         data = await self._api_request("POST", f"/projects/{project_id}/branches", json=payload)
         logger.info(f"Created branch '{branch_name}' in project {project_id}")
@@ -342,9 +348,7 @@ class PostgresDatabaseClient(DatabaseClient):
 
     async def _get_roles(self, project_id: str, branch_id: str) -> list[dict]:
         """Get all roles in a branch."""
-        data = await self._api_request(
-            "GET", f"/projects/{project_id}/branches/{branch_id}/roles"
-        )
+        data = await self._api_request("GET", f"/projects/{project_id}/branches/{branch_id}/roles")
         return data.get("roles", [])
 
     async def _create_role(
@@ -394,9 +398,7 @@ class PostgresDatabaseClient(DatabaseClient):
                 "type": "read_write",
             }
         }
-        data = await self._api_request(
-            "POST", f"/projects/{project_id}/endpoints", json=payload
-        )
+        data = await self._api_request("POST", f"/projects/{project_id}/endpoints", json=payload)
         logger.info(f"Created endpoint for branch {branch_id}")
         return data["endpoint"]
 
@@ -523,6 +525,7 @@ class PostgresDatabaseClient(DatabaseClient):
             raise ValueError(NEON_DB_KEY_ERROR_MSG)
 
         import time
+
         start_time = time.perf_counter()
 
         safe_db_name = self._sanitize_database_name(database_name)
@@ -569,7 +572,7 @@ class PostgresDatabaseClient(DatabaseClient):
                     "project_name": project_name,
                     "is_new_project": is_new_project,
                     "databases_in_project": databases_in_project,
-                }
+                },
             )
 
             time_taken_ms = int((time.perf_counter() - start_time) * 1000)
@@ -625,12 +628,14 @@ class PostgresDatabaseClient(DatabaseClient):
             # Create database in dev branch
             # If this fails, we have an inconsistent state but the prod database is usable
             try:
-                dev_uri = await self._create_database_in_branch(project_id, dev_branch, safe_db_name)
+                dev_uri = await self._create_database_in_branch(
+                    project_id, dev_branch, safe_db_name
+                )
             except NeonDBError as e:
                 logger.error(
                     f"Failed to create dev database '{safe_db_name}' in project {project_id}. "
                     f"Prod database was created successfully. Error: {e}",
-                    extra={"database_name": safe_db_name, "project_id": project_id}
+                    extra={"database_name": safe_db_name, "project_id": project_id},
                 )
                 raise NeonDBError(
                     f"Partial failure: prod database created but dev database failed. "
@@ -640,7 +645,7 @@ class PostgresDatabaseClient(DatabaseClient):
 
             logger.info(
                 f"Created database '{safe_db_name}' in project {project_id}",
-                extra={"database_name": safe_db_name, "project_id": project_id}
+                extra={"database_name": safe_db_name, "project_id": project_id},
             )
 
             return DatabaseConnections(dev=dev_uri, prod=prod_uri)
@@ -666,6 +671,7 @@ class RedisDatabaseClient(DatabaseClient):
     async def get_database_connection(self, database_name: str) -> DatabaseConnectionResult:
         """Get Redis connection (database_name is ignored, uses env var)."""
         import time
+
         start_time = time.perf_counter()
 
         if not os.getenv("REDIS_URL"):
@@ -699,6 +705,7 @@ class MySQLDatabaseClient(DatabaseClient):
     async def get_database_connection(self, database_name: str) -> DatabaseConnectionResult:
         """Get MySQL connection (database_name is ignored, uses env var)."""
         import time
+
         start_time = time.perf_counter()
 
         if not os.getenv("MYSQL_URL"):
@@ -725,9 +732,7 @@ class MySQLDatabaseClient(DatabaseClient):
         )
 
 
-def create_database_client(
-    database_type: str, setting: DatabaseConfig
-) -> DatabaseClient:
+def create_database_client(database_type: str, setting: DatabaseConfig) -> DatabaseClient:
     if database_type == "postgres":
         return PostgresDatabaseClient(setting)
     elif database_type == "redis":

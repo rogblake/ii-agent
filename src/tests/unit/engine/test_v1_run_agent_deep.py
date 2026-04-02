@@ -21,19 +21,9 @@ from ii_agent.agents.runs.agent import (
     RunInput,
     RunOutput,
     RunEvent,
-    RunCompletedEvent,
     RunPausedEvent,
-    RunCancelledEvent,
-    RunErrorEvent,
-    RunContentDeltaEvent,
-    RunContentEvent,
-    ReasoningCompletedEvent,
-    ReasoningDeltaEvent,
     ToolCallStartedEvent,
-    ToolCallCompletedEvent,
     SandboxInitializedEvent,
-    AgentSummaryCompletedEvent,
-    RunContinuedEvent,
     CustomEvent,
     run_output_event_from_dict,
     RUN_EVENT_TYPE_REGISTRY,
@@ -271,8 +261,6 @@ class TestRunOutputToDictDeep:
         assert "response_audio" in d
 
     def test_to_dict_serializes_citations(self):
-        from ii_agent.agents.models.message import Citations
-
         output = make_run_output()
         output.citations = MagicMock()
         output.citations.model_dump.return_value = {"items": []}

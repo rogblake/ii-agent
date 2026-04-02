@@ -85,5 +85,3 @@ async def slide_deck_sync_batch(
         request=request,
         user_id=str(current_user.id),
     )
-
-

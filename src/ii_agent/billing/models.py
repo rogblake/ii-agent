@@ -33,13 +33,9 @@ class BillingTransaction(Base):
     stripe_event_id: Mapped[str] = mapped_column(String, unique=True)
     stripe_object_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(
-        String, nullable=True
-    )
+    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     stripe_invoice_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    stripe_payment_intent_id: Mapped[Optional[str]] = mapped_column(
-        String, nullable=True
-    )
+    stripe_payment_intent_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     amount: Mapped[Optional[float]] = mapped_column(Numeric(18, 6), nullable=True)
     currency: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     plan_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)

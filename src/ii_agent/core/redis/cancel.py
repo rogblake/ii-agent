@@ -8,6 +8,7 @@ from redis.asyncio import Redis
 
 from ii_agent.core.logger import logger
 
+
 class RunCancelledException(Exception):
     """Exception raised when a run is cancelled."""
 
@@ -144,9 +145,7 @@ class RedisRunCancellationManager(BaseRunCancellationManager):
             # Set to "0" (not cancelled) with TTL
             await self._redis.setex(key, self.RUN_STATE_TTL, "0")
         except Exception as e:
-            logger.error(
-                f"Failed to register run {run_id} in Redis: {e}", exc_info=True
-            )
+            logger.error(f"Failed to register run {run_id} in Redis: {e}", exc_info=True)
 
     async def cancel_run(self, run_id: str) -> bool:
         """Cancel a run by marking it as cancelled.
@@ -226,6 +225,7 @@ def _create_cancellation_manager() -> BaseRunCancellationManager:
     try:
         from ii_agent.core.config.settings import get_settings
         from ii_agent.core.redis.client import get_redis_client
+
         redis_client = get_redis_client()
 
         if get_settings().redis.session_enabled:

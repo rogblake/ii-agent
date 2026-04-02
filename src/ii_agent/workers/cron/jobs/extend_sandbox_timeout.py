@@ -30,6 +30,7 @@ class SandboxTimeoutExtender:
             from ii_agent.agents.sandboxes.service import SandboxService
             from ii_agent.agents.sandboxes.repository import SandboxRepository
             from ii_agent.core.config.settings import get_settings
+
             sandbox_service = SandboxService(
                 config=get_settings(),
                 sandbox_repo=SandboxRepository(),
@@ -60,34 +61,28 @@ class SandboxTimeoutExtender:
         try:
             sandbox = await self._sandbox_service.get_sandbox_by_session_id(db, session.id)
             if not sandbox:
-                logger.warning(
-                    f"No sandbox found for session {session.id}"
-                )
+                logger.warning(f"No sandbox found for session {session.id}")
                 return False
 
             await sandbox.set_timeout(timeout_seconds)
 
             logger.info(
-                f"Extended timeout for sandbox (session: {session.id}) "
-                f"by {timeout_seconds} seconds"
+                f"Extended timeout for sandbox (session: {session.id}) by {timeout_seconds} seconds"
             )
             return True
 
         except Exception as e:
-            logger.error(
-                f"Failed to extend timeout for sandbox "
-                f"(session: {session.id}): {str(e)}"
-            )
+            logger.error(f"Failed to extend timeout for sandbox (session: {session.id}): {str(e)}")
             return False
 
     async def process_batch(
-        self, db: AsyncSession, sessions: List[Session], timeout_seconds: int = TIMEOUT_EXTENSION_SECONDS
+        self,
+        db: AsyncSession,
+        sessions: List[Session],
+        timeout_seconds: int = TIMEOUT_EXTENSION_SECONDS,
     ) -> tuple[int, int]:
         """Process a batch of sessions concurrently."""
-        tasks = [
-            self.extend_sandbox_timeout(db, session, timeout_seconds)
-            for session in sessions
-        ]
+        tasks = [self.extend_sandbox_timeout(db, session, timeout_seconds) for session in sessions]
         results = await asyncio.gather(*tasks)
 
         success_count = sum(1 for r in results if r)
@@ -132,8 +127,7 @@ class SandboxTimeoutExtender:
                     total_failure += failure
 
                     logger.info(
-                        f"Batch {i // BATCH_SIZE + 1}: "
-                        f"Success: {success}, Failure: {failure}"
+                        f"Batch {i // BATCH_SIZE + 1}: Success: {success}, Failure: {failure}"
                     )
 
                     # Small delay between batches to avoid overwhelming the system
@@ -166,12 +160,8 @@ class SandboxTimeoutExtender:
 
 async def main():
     """Main entry point for the cron job."""
-    parser = argparse.ArgumentParser(
-        description="Extend sandbox timeouts for permanent sessions"
-    )
-    parser.add_argument(
-        "--config-file", type=str, help="Path to configuration file", default=None
-    )
+    parser = argparse.ArgumentParser(description="Extend sandbox timeouts for permanent sessions")
+    parser.add_argument("--config-file", type=str, help="Path to configuration file", default=None)
 
     args = parser.parse_args()
 

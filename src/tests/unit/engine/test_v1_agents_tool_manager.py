@@ -1,6 +1,5 @@
 """Unit tests for ToolManager."""
 
-from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,10 +7,9 @@ import pytest
 pytest.skip("ii_agent.agents.tools.manager was removed during refactoring", allow_module_level=True)
 
 from ii_agent.agents.tools.manager import ToolManager
-from ii_agent.agents.tools.base import BaseAgentTool, ToolResult
+from ii_agent.agents.tools.base import BaseAgentTool
 from ii_agent.agents.tools.function import Function
 from ii_agent.agents.runs.agent import RunOutput
-from ii_agent.agents.runs.messages import RunMessages
 
 
 # ---------------------------------------------------------------------------

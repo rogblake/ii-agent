@@ -428,7 +428,6 @@ class TestGetUserSessions:
 class TestGetSessionEventsWithDetails:
     @pytest.mark.asyncio
     async def test_enriches_file_url_events(self):
-
         event_repo = FakeEventRepo()
         event_repo.events = [
             SimpleNamespace(
@@ -454,7 +453,6 @@ class TestGetSessionEventsWithDetails:
 
     @pytest.mark.asyncio
     async def test_non_file_url_events_not_modified(self):
-
         event_repo = FakeEventRepo()
         event_repo.events = [
             SimpleNamespace(

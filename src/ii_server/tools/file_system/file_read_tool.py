@@ -327,9 +327,7 @@ def _read_image_file(path: Path):
     return [image_content]
 
 
-def _truncate_text_content(
-    content: str, offset: Optional[int] = None, limit: Optional[int] = None
-):
+def _truncate_text_content(content: str, offset: Optional[int] = None, limit: Optional[int] = None):
     """Truncate text content with optional line range."""
     lines = content.split("\n")
 
@@ -342,9 +340,7 @@ def _truncate_text_content(
         return "[Empty file]"
 
     # Apply offset and limit
-    start_line = (
-        offset - 1 if offset is not None else 0
-    )  # offset starts at 1, need to subtract 1
+    start_line = offset - 1 if offset is not None else 0  # offset starts at 1, need to subtract 1
     effective_limit = limit if limit is not None else MAX_FILE_READ_LINES
     end_line = min(start_line + effective_limit, original_line_count)
 

@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import asyncio
 import pytest
-from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -45,9 +44,7 @@ def _make_agent(model=None, **kwargs):
         model = _make_model()
 
     with (
-        patch(
-            "ii_agent.agents.agent.ServiceContainer.create", return_value=MagicMock()
-        ),
+        patch("ii_agent.agents.agent.ServiceContainer.create", return_value=MagicMock()),
         patch(
             "ii_agent.agents.sandbox_provider.SandboxProvider.__init__",
             return_value=None,
@@ -111,9 +108,7 @@ class TestIIAgentPublicAPI:
     def test_set_id_uses_name_when_id_is_none(self):
         agent = _make_agent(name="MyAgent")
         agent.id = None
-        with patch(
-            "ii_agent.agents.agent.generate_id_from_name", return_value="myagent-id"
-        ):
+        with patch("ii_agent.agents.agent.generate_id_from_name", return_value="myagent-id"):
             agent.set_id()
         assert agent.id == "myagent-id"
 
@@ -600,7 +595,6 @@ class TestMessageBuilderGetRunMessages:
     @pytest.mark.asyncio
     async def test_uses_summary_instead_of_history_when_run_has_summary(self):
         from ii_agent.agents.models.builder import MessageBuilder
-        from ii_agent.agents.models.message import Message
         from ii_agent.agents.models.metrics import Metrics
 
         model = _make_model()

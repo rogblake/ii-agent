@@ -72,7 +72,6 @@ class DesignModeIframeAIPlanTool(BaseTool):
         return ToolResponse(output=JsonResultContent(value=payload))
 
 
-
 __all__ = [
     "DESIGN_MODE_IFRAME_AI_PLAN_TOOL_NAME",
     "DesignModeIframeAIPlanTool",

@@ -57,13 +57,9 @@ class ComposioProfileRepository(BaseRepository[ComposioProfile]):
         )
         return list(result.scalars().all())
 
-    async def get_user_mcp_server_id(
-        self, db: AsyncSession, user_id: uuid.UUID
-    ) -> Optional[str]:
+    async def get_user_mcp_server_id(self, db: AsyncSession, user_id: uuid.UUID) -> Optional[str]:
         result = await db.execute(
-            select(ComposioProfile.mcp_server_id)
-            .where(ComposioProfile.user_id == user_id)
-            .limit(1)
+            select(ComposioProfile.mcp_server_id).where(ComposioProfile.user_id == user_id).limit(1)
         )
         return result.scalar_one_or_none()
 
@@ -180,7 +176,5 @@ class ComposioProfileRepository(BaseRepository[ComposioProfile]):
         return result.rowcount > 0
 
     async def delete_by_id(self, db: AsyncSession, profile_id: uuid.UUID) -> bool:
-        result = await db.execute(
-            delete(ComposioProfile).where(ComposioProfile.id == profile_id)
-        )
+        result = await db.execute(delete(ComposioProfile).where(ComposioProfile.id == profile_id))
         return result.rowcount > 0

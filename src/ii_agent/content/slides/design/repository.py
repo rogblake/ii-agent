@@ -97,7 +97,9 @@ class SlideDesignRepository:
         design_mode = metadata.get("design_mode") if isinstance(metadata, dict) else None
         if not isinstance(design_mode, dict):
             return [], [], None
-        raw_changes = design_mode.get("changes") if isinstance(design_mode.get("changes"), list) else []
+        raw_changes = (
+            design_mode.get("changes") if isinstance(design_mode.get("changes"), list) else []
+        )
         raw_redo = (
             design_mode.get("redo_changes")
             if isinstance(design_mode.get("redo_changes"), list)

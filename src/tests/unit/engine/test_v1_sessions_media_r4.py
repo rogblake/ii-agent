@@ -12,10 +12,8 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
 import base64
 import pytest
-from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -286,7 +284,6 @@ class TestReconstructMediaFromDict:
 
     def test_reconstruct_image_from_dict_with_base64(self):
         from ii_agent.agents.utils.media import reconstruct_image_from_dict
-        from ii_agent.files.media import Image
 
         b64 = base64.b64encode(b"fake image data").decode("utf-8")
         result = reconstruct_image_from_dict({"content": b64, "mime_type": "image/jpeg"})

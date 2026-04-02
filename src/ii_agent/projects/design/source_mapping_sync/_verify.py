@@ -78,10 +78,7 @@ def _verify_design_mode_target_matches_context(
         # Only enforce tag name match when the source tag is a real HTML tag.
         # In TSX/JSX, design IDs may live on React components (e.g. <Button ...>, <motion.h1 ...>),
         # which render to lowercase DOM tags at runtime.
-        if (
-            _is_html_tag_name_for_design_mode(source_tag)
-            and source_tag.lower() != expected_tag
-        ):
+        if _is_html_tag_name_for_design_mode(source_tag) and source_tag.lower() != expected_tag:
             return False, f"tag_name_mismatch expected={expected_tag} got={source_tag}"
 
     anchors = _extract_anchor_snippets(ctx)
@@ -104,9 +101,7 @@ def _verify_design_mode_target_matches_context(
             _extract_class_attr_from_outer_html(getattr(ctx, "outerHTML", None)) or ""
         )
 
-    expected_tokens = (
-        _split_class_tokens(expected_class_name) if expected_class_name else []
-    )
+    expected_tokens = _split_class_tokens(expected_class_name) if expected_class_name else []
     source_class_literal = _extract_literal_class_attr_from_tag(tag)
     if expected_tokens and source_class_literal:
         source_tokens = set(_split_class_tokens(source_class_literal))

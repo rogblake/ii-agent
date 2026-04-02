@@ -1,7 +1,6 @@
 """Unit tests for A2A Agent Tool."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any, Dict
 
 import pytest
 

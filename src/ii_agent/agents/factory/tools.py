@@ -17,6 +17,7 @@ from ii_agent.agents.tools.dev import (
     RestartServerTool,
     GetServerStatusTool,
 )
+
 # Imported directly to avoid circular dependency (MCPTool subclasses)
 from ii_agent.agents.tools.dev.mobile_app_init import MobileAppInitTool
 from ii_agent.agents.tools.dev.restart_mobile_server import RestartMobileServerTool
@@ -445,7 +446,7 @@ AGENT_CONFIGS: Dict[AgentType, AgentConfig] = {
     AgentType.DEEP_RESEARCH: AgentConfig(
         agent_type=AgentType.DEEP_RESEARCH,
         description="Deep research agent for comprehensive investigation and analysis",
-        tool_config=RESEARCH_TOOL_CONFIG
+        tool_config=RESEARCH_TOOL_CONFIG,
     ),
     AgentType.FAST_RESEARCH: AgentConfig(
         agent_type=AgentType.FAST_RESEARCH,

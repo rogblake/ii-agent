@@ -32,8 +32,8 @@ class StorybookModeStrategy(BaseModeStrategy):
         """Build narrative generation guidance for storybook mode."""
         # Build page count instruction if provided
         page_count_instruction = ""
-        page_count = getattr(media_preferences, 'page_count', None)
-        if page_count and page_count != 'unlimited':
+        page_count = getattr(media_preferences, "page_count", None)
+        if page_count and page_count != "unlimited":
             # page_count represents content pages only (cover page is NOT counted)
             # Total scenes = 1 cover + page_count content pages
             total_scenes = int(page_count) + 1  # +1 for cover page
@@ -46,7 +46,7 @@ class StorybookModeStrategy(BaseModeStrategy):
 - DO NOT generate more or fewer scenes than {total_scenes}
 - The cover page does NOT count toward the {page_count} content pages
 """
-        elif page_count == 'unlimited':
+        elif page_count == "unlimited":
             page_count_instruction = """
 **UNLIMITED PAGES MODE:**
 - You have freedom to generate as many pages as needed for the story
@@ -64,13 +64,13 @@ class StorybookModeStrategy(BaseModeStrategy):
 
         # Build text position default if provided (skip 'none')
         text_position_note = ""
-        text_position = getattr(media_preferences, 'text_position', None)
+        text_position = getattr(media_preferences, "text_position", None)
         if text_position and text_position != "none":
             text_position_note = f"\n**DEFAULT TEXT POSITION: Use '{text_position}' as the default text_position unless the user specifies otherwise.**\n"
 
         # Build language instruction if provided
         language_instruction = ""
-        language = getattr(media_preferences, 'language', None)
+        language = getattr(media_preferences, "language", None)
         if language:
             language_instruction = (
                 f"\n\n*** CRITICAL LANGUAGE INSTRUCTION ***\n"
@@ -81,10 +81,14 @@ class StorybookModeStrategy(BaseModeStrategy):
 
         # Build genre instruction if provided
         genre_instruction = ""
-        genre = getattr(media_preferences, 'genre', None)
+        genre = getattr(media_preferences, "genre", None)
         if genre:
             try:
-                template = await get_app_container().media_template_service.get_media_template_by_name(db_session, genre)
+                template = (
+                    await get_app_container().media_template_service.get_media_template_by_name(
+                        db_session, genre
+                    )
+                )
                 if template and template.prompt:
                     genre_instruction = f"\n**GENRE STYLE GUIDE ({genre}):**\n{template.prompt}\n"
             except Exception:
@@ -92,10 +96,14 @@ class StorybookModeStrategy(BaseModeStrategy):
 
         # Build template instruction if provided (via template_id)
         template_instruction = ""
-        template_id = getattr(media_preferences, 'template_id', None)
+        template_id = getattr(media_preferences, "template_id", None)
         if template_id:
             try:
-                template = await get_app_container().media_template_service.get_media_template_by_id(db_session, template_id)
+                template = (
+                    await get_app_container().media_template_service.get_media_template_by_id(
+                        db_session, template_id
+                    )
+                )
                 if template and template.prompt:
                     template_instruction = (
                         f"\n\n**TEMPLATE INSTRUCTIONS ({template.name}):**\n"
@@ -107,7 +115,7 @@ class StorybookModeStrategy(BaseModeStrategy):
 
         # Build rich dialogue instruction if enabled
         rich_dialogue_instruction = ""
-        rich_dialogue = getattr(media_preferences, 'rich_dialogue', None)
+        rich_dialogue = getattr(media_preferences, "rich_dialogue", None)
         if rich_dialogue:
             rich_dialogue_instruction = """
 

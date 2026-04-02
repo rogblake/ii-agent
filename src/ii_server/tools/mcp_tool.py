@@ -52,13 +52,9 @@ class MCPTool(BaseTool):
         if type == "function":
             self.input_schema = input_schema
         else:
-            self.format = (
-                input_schema  # HACK: this way we can pass format as input_schemas
-            )
+            self.format = input_schema  # HACK: this way we can pass format as input_schemas
 
-    def should_confirm_execute(
-        self, tool_input: dict[str, Any]
-    ) -> ToolConfirmationDetails | bool:
+    def should_confirm_execute(self, tool_input: dict[str, Any]) -> ToolConfirmationDetails | bool:
         return ToolConfirmationDetails(
             type="mcp",
             message=f"Do you want to execute the MCP tool {self.name} with input {tool_input}?",
@@ -78,9 +74,7 @@ class MCPTool(BaseTool):
                 has_image_content = False
                 for mcp_result in mcp_results.content:
                     if mcp_result.type == "text":
-                        llm_content.append(
-                            TextContent(type="text", text=mcp_result.text)
-                        )
+                        llm_content.append(TextContent(type="text", text=mcp_result.text))
                     elif mcp_result.type == "image":
                         llm_content.append(
                             ImageContent(
@@ -103,22 +97,16 @@ class MCPTool(BaseTool):
                         "user_display_content"
                     )
                     is_error = mcp_results.structured_content.get("is_error")
-                    is_interrupted = mcp_results.structured_content.get(
-                        "is_interrupted", False
-                    )
+                    is_interrupted = mcp_results.structured_content.get("is_interrupted", False)
                     is_awaiting_response = mcp_results.structured_content.get(
                         "is_awaiting_response", False
                     )
                 # For external tools (like MCP) or internal tools that don't have a user_display_content
                 if not user_display_content:
                     if not has_image_content:
-                        user_display_content = "\n".join(
-                            [content.text for content in llm_content]
-                        )
+                        user_display_content = "\n".join([content.text for content in llm_content])
                     else:
-                        user_display_content = [
-                            content.model_dump() for content in llm_content
-                        ]
+                        user_display_content = [content.model_dump() for content in llm_content]
 
                 return ToolResult(
                     llm_content=llm_content,

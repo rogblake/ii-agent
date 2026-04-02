@@ -86,6 +86,7 @@ def _inject_signed_urls(
             if fid in url_map:
                 entry["signed_url"] = url_map[fid]
 
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
@@ -292,9 +293,7 @@ async def update_session(
     if payload.name is not None:
         await session_service.update_session_name(db, session_id, payload.name)
 
-    updated_session = await session_service.get_session_details(
-        db, session_id, current_user.id
-    )
+    updated_session = await session_service.get_session_details(db, session_id, current_user.id)
 
     if not updated_session:
         raise InternalError("Failed to fetch updated session")

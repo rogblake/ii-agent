@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 
 from ii_agent.chat.tools.github import GitHubTool
-from ii_agent.chat.types import ErrorTextContent, TextResultContent
+from ii_agent.chat.types import ErrorTextContent
 
 
 # ---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ from ii_agent.users.models import WaitlistEntry
 from ii_agent.users.repository import APIKeyRepository, UserRepository
 from ii_agent.users.waitlist_repository import WaitlistRepository
 from ii_agent.credits.repository import CreditBalanceRepository
+
 try:
     from ii_agent.billing.repository import BillingTransactionRepository
 except ImportError:
@@ -154,7 +155,9 @@ async def test_user_repository_uniqueness_conflict_rolls_back_savepoint(
     assert still_present.id == created.id
 
 
-@pytest.mark.skipif(BillingTransactionRepository is None, reason="BillingTransactionRepository removed")
+@pytest.mark.skipif(
+    BillingTransactionRepository is None, reason="BillingTransactionRepository removed"
+)
 async def test_billing_transaction_repository_create_lookup_and_conflict(
     db_session: AsyncSession,
     user_factory,
@@ -182,7 +185,6 @@ async def test_billing_transaction_repository_create_lookup_and_conflict(
                 stripe_event_id="evt_1",
                 status="paid",
             )
-
 
 
 async def test_waitlist_repository_case_insensitive_lookup(

@@ -6,7 +6,6 @@ from typing import Optional
 
 import requests as http_requests
 from google.auth import _helpers
-from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
@@ -172,9 +171,7 @@ class GoogleDriveConnector(BaseConnector):
         if "access_token" not in token_data:
             raise Exception("No access token in refresh response")
 
-        new_expiry = _helpers.utcnow() + timedelta(
-            seconds=token_data.get("expires_in", 3600)
-        )
+        new_expiry = _helpers.utcnow() + timedelta(seconds=token_data.get("expires_in", 3600))
 
         return ConnectorData(
             access_token=token_data["access_token"],
@@ -221,9 +218,7 @@ class GoogleDriveConnector(BaseConnector):
             )
 
             if revoke_response.status_code == 200:
-                logger.info(
-                    f"Successfully revoked Google Drive token for connector {connector.id}"
-                )
+                logger.info(f"Successfully revoked Google Drive token for connector {connector.id}")
                 return True
             else:
                 logger.warning(

@@ -50,9 +50,7 @@ class WebSearchTool(BaseTool):
             params = json.loads(tool_call.input)
             query = params["query"]
         except (json.JSONDecodeError, KeyError) as e:
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Invalid tool input: {e}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Invalid tool input: {e}"))
 
         try:
             response = await self.tool_client.web_search(query, max_results=MAX_RESULTS)
@@ -77,6 +75,4 @@ class WebSearchTool(BaseTool):
             )
 
         except Exception as e:
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Web search failed: {str(e)}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Web search failed: {str(e)}"))

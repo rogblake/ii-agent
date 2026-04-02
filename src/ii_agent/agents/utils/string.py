@@ -9,6 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from ii_agent.core.logger import logger
 
+
 def is_valid_uuid(uuid_str: str) -> bool:
     """
     Check if a string is a valid UUID

@@ -86,9 +86,7 @@ class StopConversationRequest(BaseModel):
 class StopConversationResponse(BaseModel):
     """Request to send a chat message."""
 
-    success: bool = Field(
-        ..., description="Whether the conversation was successfully stopped"
-    )
+    success: bool = Field(..., description="Whether the conversation was successfully stopped")
     last_message_id: Optional[UUID] = Field(
         None, description="ID of the last message in the conversation"
     )

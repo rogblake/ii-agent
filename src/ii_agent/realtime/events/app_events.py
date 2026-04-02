@@ -537,6 +537,7 @@ class ModelUsageEvent(BillingEvent):
     Published by the agent layer. Consumed by ``CreditUsageHandler``
     for credit deduction. Persisted for audit trail. Not broadcast to frontend.
     """
+
     setting_id: uuid.UUID
     name: Literal["billing.llm.usage"] = "billing.llm.usage"
     internal: bool = True

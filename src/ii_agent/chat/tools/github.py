@@ -34,7 +34,9 @@ class GitHubTool(BaseTool):
 
         if self.default_repository:
             base_description += f"\n\nDEFAULT REPOSITORY: {self.default_repository.get('full_name', 'N/A')} (branch: {self.default_repository.get('default_branch', 'main')}). "
-            base_description += "When owner/repo are not specified, this repository will be used automatically.\n\n"
+            base_description += (
+                "When owner/repo are not specified, this repository will be used automatically.\n\n"
+            )
 
         base_description += (
             "Available actions:\n"
@@ -202,9 +204,7 @@ class GitHubTool(BaseTool):
             params = json.loads(tool_call.input)
             action = params.get("action")
         except (json.JSONDecodeError, KeyError) as e:
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Invalid tool input: {e}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Invalid tool input: {e}"))
 
         # Apply default repository if owner/repo not specified
         if self.default_repository:
@@ -260,19 +260,13 @@ class GitHubTool(BaseTool):
                 elif action == "get_readme":
                     result = await self._get_readme(client, headers, params)
                 else:
-                    return ToolResponse(
-                        output=ErrorTextContent(value=f"Unknown action: {action}")
-                    )
+                    return ToolResponse(output=ErrorTextContent(value=f"Unknown action: {action}"))
 
-                return ToolResponse(
-                    output=TextResultContent(value=json.dumps(result, indent=2))
-                )
+                return ToolResponse(output=TextResultContent(value=json.dumps(result, indent=2)))
 
         except httpx.TimeoutException:
             return ToolResponse(
-                output=ErrorTextContent(
-                    value="GitHub API request timed out. Please try again."
-                )
+                output=ErrorTextContent(value="GitHub API request timed out. Please try again.")
             )
         except httpx.HTTPStatusError as e:
             error_msg = f"GitHub API error: {e.response.status_code}"
@@ -284,9 +278,7 @@ class GitHubTool(BaseTool):
                 error_msg = "Resource not found. Please check the repository/file path."
             return ToolResponse(output=ErrorTextContent(value=error_msg))
         except Exception as e:
-            return ToolResponse(
-                output=ErrorTextContent(value=f"Unexpected error: {str(e)}")
-            )
+            return ToolResponse(output=ErrorTextContent(value=f"Unexpected error: {str(e)}"))
 
     async def _list_repos(self, client: httpx.AsyncClient, headers: dict, params: dict) -> list:
         """List user's accessible repositories."""
@@ -409,6 +401,7 @@ class GitHubTool(BaseTool):
         # Handle file content
         if data.get("encoding") == "base64":
             import base64
+
             content = base64.b64decode(data["content"]).decode("utf-8")
         else:
             content = data.get("content", "")
@@ -523,14 +516,18 @@ class GitHubTool(BaseTool):
             "created_at": issue["created_at"],
         }
 
-    async def _create_issue_comment(self, client: httpx.AsyncClient, headers: dict, params: dict) -> dict:
+    async def _create_issue_comment(
+        self, client: httpx.AsyncClient, headers: dict, params: dict
+    ) -> dict:
         """Create a comment on an issue."""
         owner = params.get("owner")
         repo = params.get("repo")
         issue_number = params.get("issue_number")
         body = params.get("body")
         if not owner or not repo or not issue_number or not body:
-            raise ValueError("owner, repo, issue_number, and body are required for create_issue_comment")
+            raise ValueError(
+                "owner, repo, issue_number, and body are required for create_issue_comment"
+            )
 
         response = await client.post(
             f"{self._base_url}/repos/{owner}/{repo}/issues/{issue_number}/comments",
@@ -652,7 +649,9 @@ class GitHubTool(BaseTool):
             "created_at": pr["created_at"],
         }
 
-    async def _create_pr_comment(self, client: httpx.AsyncClient, headers: dict, params: dict) -> dict:
+    async def _create_pr_comment(
+        self, client: httpx.AsyncClient, headers: dict, params: dict
+    ) -> dict:
         """Create a comment on a pull request."""
         owner = params.get("owner")
         repo = params.get("repo")
@@ -678,7 +677,9 @@ class GitHubTool(BaseTool):
             "html_url": comment["html_url"],
         }
 
-    async def _create_pr_review(self, client: httpx.AsyncClient, headers: dict, params: dict) -> dict:
+    async def _create_pr_review(
+        self, client: httpx.AsyncClient, headers: dict, params: dict
+    ) -> dict:
         """Create a review on a pull request."""
         owner = params.get("owner")
         repo = params.get("repo")
@@ -715,7 +716,9 @@ class GitHubTool(BaseTool):
         files = params.get("files", [])
 
         if not owner or not repo or not branch or not message or not files:
-            raise ValueError("owner, repo, branch, message, and files are required for create_commit")
+            raise ValueError(
+                "owner, repo, branch, message, and files are required for create_commit"
+            )
 
         # Get the reference (branch)
         ref_response = await client.get(
@@ -757,12 +760,14 @@ class GitHubTool(BaseTool):
             blob_response.raise_for_status()
             blob_sha = blob_response.json()["sha"]
 
-            tree_items.append({
-                "path": path,
-                "mode": mode,
-                "type": "blob",
-                "sha": blob_sha,
-            })
+            tree_items.append(
+                {
+                    "path": path,
+                    "mode": mode,
+                    "type": "blob",
+                    "sha": blob_sha,
+                }
+            )
 
         # Create tree
         tree_response = await client.post(
@@ -937,6 +942,7 @@ class GitHubTool(BaseTool):
 
         # Decode content
         import base64
+
         content = base64.b64decode(data["content"]).decode("utf-8")
 
         return {

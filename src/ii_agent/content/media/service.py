@@ -6,7 +6,7 @@ import logging
 import mimetypes
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,9 +18,16 @@ from ii_agent.files.types import AssetType
 from ii_agent.content.media.constants import IMAGE_MINI_TOOLS_TYPE
 from ii_agent.content.media.models import MediaTemplate
 from ii_agent.content.media.repository import MediaTemplateRepository
-from ii_agent.content.media.schemas import MediaTemplateInfo, MediaTool, ReferenceImageResponse, get_image_limits
+from ii_agent.content.media.schemas import (
+    MediaTemplateInfo,
+    MediaTemplateListItem,
+    MediaTemplatesListResponse,
+    MediaTool,
+    ReferenceImageResponse,
+    get_image_limits,
+)
 from ii_agent.core.storage.providers.base import StorageProvider
-from ii_agent.core.redis.cache import EntityCache
+from ii_agent.core.redis.cache import EntityCache, MemoryEntityCache
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +69,13 @@ class MediaTemplateService:
         repo: MediaTemplateRepository,
         media_storage: StorageProvider,
         config: Settings,
-        cache: EntityCache,
+        cache: EntityCache | None = None,
     ) -> None:
         self._config = config
         self._repo = repo
         self._storage = media_storage
-        self._cache = cache
+        self._cache = cache or MemoryEntityCache(namespace="media_templates")
+
 
     async def get_media_template_by_id(
         self, db: AsyncSession, template_id: uuid.UUID
@@ -111,11 +119,11 @@ class MediaTemplateService:
         page_size: int = 20,
         search: Optional[str] = None,
         media_type: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> MediaTemplatesListResponse:
         """Get a paginated list of media templates.
 
         Returns:
-            Dictionary with templates list and pagination info.
+            MediaTemplatesListResponse with templates list and pagination info.
         """
         cache_key = (
             f"list:page={page}:size={page_size}"
@@ -123,7 +131,7 @@ class MediaTemplateService:
         )
         cached = await self._cache.get(cache_key)
         if cached:
-            return cached
+            return MediaTemplatesListResponse.model_validate(cached)
 
         result = await self._repo.list_templates(
             db,
@@ -139,25 +147,25 @@ class MediaTemplateService:
         previews = [t.preview for t in templates]
         public_urls = await _get_public_urls_parallel(self._storage, previews)
 
-        result_dict: Dict[str, Any] = {
-            "templates": [
-                {
-                    "id": t.id,
-                    "name": t.name,
-                    "type": t.type,
-                    "preview": url,
-                    "prompt": t.prompt,
-                }
+        response = MediaTemplatesListResponse(
+            templates=[
+                MediaTemplateListItem(
+                    id=str(t.id),
+                    name=t.name,
+                    type=t.type,
+                    preview=url,
+                    prompt=t.prompt,
+                )
                 for t, url in zip(templates, public_urls)
             ],
-            "total": result["total"],
-            "page": result["page"],
-            "page_size": result["page_size"],
-            "total_pages": result["total_pages"],
-        }
+            total=result["total"],
+            page=result["page"],
+            page_size=result["page_size"],
+            total_pages=result["total_pages"],
+        )
 
-        await self._cache.set(cache_key, result_dict)
-        return result_dict
+        await self._cache.set(cache_key, response.model_dump(mode="json"))
+        return response
 
     # -- Media tools (mini tools) ------------------------------------------
 
@@ -178,8 +186,9 @@ class MediaTemplateService:
         result = await self.list_media_templates(
             db, page=page, page_size=page_size, search=name, media_type=IMAGE_MINI_TOOLS_TYPE,
         )
-        templates = result.get("templates", [])
-        media_tools = [_map_template_to_media_tool(t) for t in templates]
+        media_tools = [
+            _map_template_to_media_tool(t.model_dump()) for t in result.templates
+        ]
 
         await self._cache.set(cache_key, [tool.model_dump() for tool in media_tools])
         return media_tools

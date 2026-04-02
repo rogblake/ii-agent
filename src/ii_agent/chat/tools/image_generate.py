@@ -136,7 +136,7 @@ class ImageGenerationTool(BaseTool):
             # Resolve user API key for tool server call
             async with get_db_session_local() as db:
                 session = await self._container.session_service.get_session_by_id(
-                    db, uuid.UUID(self.session_id)
+                    db, self.session_id
                 )
                 if not session:
                     raise RuntimeError("Session not found for image generation")

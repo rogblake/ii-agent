@@ -48,8 +48,8 @@ async def test_list_media_templates_resolves_public_preview_urls(
 
     result = await service.list_media_templates(db=None)
 
-    assert result["total"] == 1
-    assert result["templates"][0]["preview"] == "https://public.local/preview/image.png"
+    assert result.total == 1
+    assert result.templates[0].preview == "https://public.local/preview/image.png"
 
 
 @pytest.mark.asyncio

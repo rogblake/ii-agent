@@ -58,12 +58,13 @@ class MediaTemplateInfo(BaseModel):
 
 
 class MediaTemplateListItem(BaseModel):
-    """Model for media template list item (without full prompt)."""
+    """Model for media template list item."""
 
     id: str
     name: str
     type: str
     preview: Optional[str] = None
+    prompt: Optional[str] = None
 
 
 class MediaTemplatesListResponse(BaseModel):

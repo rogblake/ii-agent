@@ -1,7 +1,6 @@
 from typing import Any
 
 from ii_agent.agents.tools.base import BaseAgentTool, ToolResult
-from ii_agent.core.logger import logger
 
 NAME = "ask_user_select"
 DISPLAY_NAME = "Ask User to Select"
@@ -61,7 +60,9 @@ class AskUserSelectTool(BaseAgentTool):
     description = DESCRIPTION
     input_schema = INPUT_SCHEMA
     read_only = True
-    requires_confirmation = True
+    requires_confirmation = False
+    requires_user_input = True
+    user_input_fields = ["selected"]
     requires_sandbox = False
 
     async def execute(self, tool_input: dict[str, Any]) -> ToolResult:

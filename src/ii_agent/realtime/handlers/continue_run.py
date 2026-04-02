@@ -8,6 +8,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from ii_agent.agents.factory.agent import agent_factory
+from ii_agent.agents.models.response import ToolExecution
 from ii_agent.agents.sessions import AgentSessionStore
 from ii_agent.agents.types import AgentType
 from ii_agent.core.container import ApplicationContainer
@@ -34,6 +35,25 @@ class ContinueRunHandler(BaseCommandHandler[ContinueRunContent]):
 
     def get_command_type(self) -> CommandType:
         return CommandType.CONTINUE_RUN
+
+    @staticmethod
+    def _apply_user_input_to_tool(
+        tool: ToolExecution, user_input: dict[str, str], run_id: str
+    ) -> None:
+        """Persist user-provided values onto the paused tool execution."""
+        if tool.user_input_schema:
+            for field in tool.user_input_schema:
+                if field.name in user_input:
+                    field.value = user_input[field.name]
+                    logger.info(
+                        "User provided input for field '%s' in run %s",
+                        field.name,
+                        run_id,
+                    )
+
+        if tool.tool_args is None:
+            tool.tool_args = {}
+        tool.tool_args.update(user_input)
 
     async def handle(self, content: ContinueRunContent, session_info: SessionInfo) -> None:
         """Handle the continue_run command."""
@@ -81,6 +101,8 @@ class ContinueRunHandler(BaseCommandHandler[ContinueRunContent]):
             for _t in run_response.tools_requiring_confirmation:
                 if confirmed:
                     _t.confirmed = True
+                    if user_input:
+                        self._apply_user_input_to_tool(_t, user_input, run_id)
                     logger.info(f"User confirmed requirement for run {run_id}")
                 else:
                     _t.confirmed = False
@@ -89,13 +111,7 @@ class ContinueRunHandler(BaseCommandHandler[ContinueRunContent]):
             # Handle tools requiring user input
             for _t in run_response.tools_requiring_user_input:
                 if confirmed and user_input:
-                    if _t.user_input_schema:
-                        for field in _t.user_input_schema:
-                            if field.name in user_input:
-                                field.value = user_input[field.name]
-                                logger.info(
-                                    f"User provided input for field '{field.name}' in run {run_id}"
-                                )
+                    self._apply_user_input_to_tool(_t, user_input, run_id)
                     _t.answered = True
                 else:
                     _t.answered = False

@@ -20,6 +20,22 @@ pytestmark = pytest.mark.unit
 
 
 # ---------------------------------------------------------------------------
+# ask_user_select.py
+# ---------------------------------------------------------------------------
+
+
+class TestAskUserSelectTool:
+    def test_uses_user_input_for_selected_value(self):
+        from ii_agent.agents.tools.dev.ask_user_select import AskUserSelectTool
+
+        tool = AskUserSelectTool()
+
+        assert tool.requires_confirmation is False
+        assert tool.requires_user_input is True
+        assert tool.user_input_fields == ["selected"]
+
+
+# ---------------------------------------------------------------------------
 # SkillTool
 # ---------------------------------------------------------------------------
 

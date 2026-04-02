@@ -73,6 +73,10 @@ class CapturingEventStream:
                 result.append(e)
         return result
 
+    def events_of_type(self, event_name: str) -> list:
+        """Backward-compatible alias used by older handler tests."""
+        return self.events_of_name(event_name)
+
 
 def _base_kwargs(**overrides):
     return {
@@ -2015,9 +2019,7 @@ class TestContinueRunHandlerHandle:
 
         stream = CapturingEventStream()
         container = _mock_container()
-        with patch("ii_agent.realtime.handlers.continue_run.AgentFactory") as mock_factory:
-            mock_factory.return_value = MagicMock()
-            handler = ContinueRunHandler(pubsub=stream, container=container)
+        handler = ContinueRunHandler(pubsub=stream, container=container)
 
         session_info = _make_session_info()
         await handler.dispatch({"confirmed": True}, session_info)
@@ -2032,9 +2034,7 @@ class TestContinueRunHandlerHandle:
 
         stream = CapturingEventStream()
         container = _mock_container()
-        with patch("ii_agent.realtime.handlers.continue_run.AgentFactory") as mock_factory:
-            mock_factory.return_value = MagicMock()
-            handler = ContinueRunHandler(pubsub=stream, container=container)
+        handler = ContinueRunHandler(pubsub=stream, container=container)
 
         session_info = _make_session_info()
         run_id = str(uuid.uuid4())
@@ -2050,9 +2050,7 @@ class TestContinueRunHandlerHandle:
 
         stream = CapturingEventStream()
         container = _mock_container()
-        with patch("ii_agent.realtime.handlers.continue_run.AgentFactory") as mock_factory:
-            mock_factory.return_value = MagicMock()
-            handler = ContinueRunHandler(pubsub=stream, container=container)
+        handler = ContinueRunHandler(pubsub=stream, container=container)
 
         session_info = _make_session_info()
         run_id = str(uuid.uuid4())
@@ -2076,7 +2074,92 @@ class TestContinueRunHandlerHandle:
         from ii_agent.realtime.handlers.continue_run import ContinueRunHandler
         from ii_agent.realtime.handlers.base import CommandType
 
-        with patch("ii_agent.realtime.handlers.continue_run.AgentFactory") as mock_factory:
-            mock_factory.return_value = MagicMock()
-            handler = ContinueRunHandler(pubsub=CapturingEventStream(), container=_mock_container())
+        handler = ContinueRunHandler(pubsub=CapturingEventStream(), container=_mock_container())
         assert handler.get_command_type() == CommandType.CONTINUE_RUN
+
+    @pytest.mark.asyncio
+    async def test_merges_user_input_into_confirmed_tool_args(self):
+        from ii_agent.agents.models.response import ToolExecution
+        from ii_agent.agents.tools.base import UserInputField
+        from ii_agent.realtime.handlers.continue_run import ContinueRunHandler
+
+        stream = CapturingEventStream()
+        container = _mock_container()
+        llm_config = MagicMock()
+        llm_config.is_user_model.return_value = False
+        container.model_setting_service.resolve_config_by_setting_id = AsyncMock(
+            return_value=llm_config
+        )
+
+        handler = ContinueRunHandler(pubsub=stream, container=container)
+        handler.process_agent_event_stream = AsyncMock()
+        handler._create_skill_creator = MagicMock(return_value=None)
+
+        session_info = _make_session_info()
+        session_info.model_setting_id = uuid.uuid4()
+        run_id = str(uuid.uuid4())
+
+        tool = ToolExecution(
+            tool_call_id="call_1",
+            tool_name="ask_user_select",
+            tool_args={
+                "question": "Choose a database",
+                "options": [
+                    {"value": "default", "label": "Default"},
+                    {"value": "supabase", "label": "Supabase"},
+                ],
+                "selected": "",
+            },
+            requires_confirmation=True,
+            user_input_schema=[
+                UserInputField(
+                    name="selected",
+                    field_type=str,
+                    description="Selected option",
+                )
+            ],
+        )
+
+        run_response = MagicMock(
+            run_id=run_id,
+            tools=[tool],
+            tools_requiring_confirmation=[tool],
+            tools_requiring_user_input=[],
+        )
+
+        mock_store = MagicMock()
+        mock_store.get_by_run_id = AsyncMock(return_value=run_response)
+
+        mock_agent = MagicMock()
+        mock_agent.acontinue_run = MagicMock(return_value=object())
+
+        with (
+            patch("ii_agent.realtime.handlers.continue_run.AgentSessionStore") as mock_store_cls,
+            patch("ii_agent.realtime.handlers.continue_run.get_db_session_local", new=_noop_db_cm),
+            patch(
+                "ii_agent.realtime.handlers.continue_run.agent_factory.create_agent",
+                new=AsyncMock(return_value=mock_agent),
+            ),
+        ):
+            mock_store_cls.return_value = mock_store
+
+            await handler.dispatch(
+                {
+                    "run_id": run_id,
+                    "confirmed": True,
+                    "user_input": {"selected": "supabase"},
+                },
+                session_info,
+            )
+
+        assert tool.confirmed is True
+        assert tool.tool_args["selected"] == "supabase"
+        assert tool.user_input_schema is not None
+        assert tool.user_input_schema[0].value == "supabase"
+        mock_agent.acontinue_run.assert_called_once_with(
+            run_id=run_id,
+            updated_tools=[tool],
+            stream=True,
+            stream_events=True,
+        )
+        handler.process_agent_event_stream.assert_awaited_once()

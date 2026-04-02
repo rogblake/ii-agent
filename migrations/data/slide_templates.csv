@@ -1,0 +1,5556 @@
+"id","slide_template_name","slide_content","slide_template_images","created_at","updated_at"
+cc249d27-267a-44e1-9227-a02b24b310e2,Demo Template 1,"Successfully imported template 'SAGE Base Template' from template library
+
+**Template ID:** cc249d27-267a-44e1-9227-a02b24b310e2
+**Template contains:** 13 slides
+**Resolution:** 1280 x 720
+**Themes:** Business, Technology, Marketing
+**Styles:** Professional, Elegant, Minimalist, Modern
+
+# Template details
+
+## Template Page 1
+**Name:** Title Cover with Feature Highlight
+**Key:** title_cover_feature_highlight
+**Description:** This template features a bold, minimalist title area on the left, complemented by a dedicated feature or summary section on the right. The design emphasizes a strong visual hierarchy with a large, attention-grabbing title, strategic use of orange-themed geometric backgrounds, and a consistent branding header at the top. Ideal for opening presentations, setting the agenda, or introducing key topics while maintaining a professional and modern look.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Transforming Customer Relations</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #005430;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 20px 40px;
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: 'Roboto Mono', monospace;
+            position: relative;
+            z-index: 10;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 70px);
+            padding: 0 40px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .left-content {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .right-content {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-end;
+            text-align: right;
+            position: relative;
+            z-index: 10;
+        }
+
+        .title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 5rem;
+            line-height: 1.1;
+            color: white;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .subtitle {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            color: white;
+            line-height: 1.4;
+            position: relative;
+            z-index: 10;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(41, 165, 155, 0.45);
+            z-index: 1;
+        }
+
+        .circle-1 {
+            width: 500px;
+            height: 500px;
+            top: -100px;
+            right: -100px;
+            background-color: rgba(196, 154, 108, 0.45);
+        }
+
+        .circle-2 {
+            width: 300px;
+            height: 300px;
+            bottom: -50px;
+            right: 300px;
+        }
+
+        .circle-3 {
+            width: 400px;
+            height: 400px;
+            top: 200px;
+            right: 100px;
+            background-color: rgba(16, 52, 84, 0.45);
+        }
+    </style>
+</head>
+<body>
+<div class=""slide-container"">
+<!-- Background Circles -->
+<div class=""circle circle-1""></div>
+<div class=""circle circle-2""></div>
+<div class=""circle circle-3""></div>
+<!-- Header -->
+<div class=""header"">
+<div class=""header-left"">Sterling &amp; Partners</div>
+<div class=""header-center text-center"">03/15/2030</div>
+<div class=""header-right text-right"">@sterlingcx</div>
+</div>
+<!-- Content -->
+<div class=""content"">
+<div class=""left-content"">
+<h1 class=""title"">Transforming<br/>Customer<br/>Relations</h1>
+</div>
+<div class=""right-content"">
+<p class=""subtitle"">Building Exceptional<br/>Experiences Through<br/>Strategic Innovation &amp;<br/>Digital Excellence</p>
+</div>
+</div>
+</div>
+</body>
+</html>
+```
+
+## Template Page 2
+**Name:** Table of Contents with Numbered List
+**Key:** table_of_contents_numbered_list
+**Description:** This template features a spacious, left-aligned title block and a structured right-side area dedicated to a vertically arranged, numbered list of sections or agenda items. The layout provides clear navigational hierarchy, making it ideal for outlining main sections at the beginning of a presentation or summarizing key topics. The modern design uses bold sans-serif typography, warm orange geometric backgrounds, and a consistent top branding header, ensuring professional and visually cohesive organization for content overviews or structured summaries.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Table of Contents</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #005430;
+            position: relative;
+            overflow: hidden;
+            color: white;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 20px 40px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            z-index: 10;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 61px);
+            padding: 40px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            position: relative;
+            z-index: 10;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 6rem;
+            font-weight: bold;
+            line-height: 1.1;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .toc-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .toc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .toc-number {
+            font-weight: bold;
+            margin-left: 20px;
+            color: #D3B89C;
+            position: relative;
+            z-index: 10;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(0, 84, 48, 0.45);
+            z-index: 0;
+        }
+
+        .circle-1 {
+            width: 700px;
+            height: 700px;
+            top: 50%;
+            left: 25%;
+            transform: translate(-50%, -50%);
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            right: -100px;
+            background-color: rgba(195, 154, 108, 0.3);
+        }
+    </style>
+</head>
+<body>
+<div class=""slide-container"">
+<!-- Background Circles -->
+<div class=""circle circle-1""></div>
+<div class=""circle circle-2""></div>
+<!-- Header -->
+<div class=""header"">
+<div class=""header-left"">Sterling &amp; Partners</div>
+<div class=""header-center text-center"">03/15/2030</div>
+<div class=""header-right text-right"">@sterlingcx</div>
+</div>
+<!-- Content -->
+<div class=""content"">
+<div class=""left-content"">
+<h1 class=""title"">Table of<br/>Contents</h1>
+</div>
+<div class=""right-content"">
+<div class=""toc-list"">
+<div class=""toc-item"">
+<div>Introduction to Customer Experience</div>
+<div class=""toc-number"">01</div>
+</div>
+<div class=""toc-item"">
+<div>Understanding Customer Expectations</div>
+<div class=""toc-number"">02</div>
+</div>
+<div class=""toc-item"">
+<div>The Role of Personalization</div>
+<div class=""toc-number"">03</div>
+</div>
+<div class=""toc-item"">
+<div>Customer Journey Mapping</div>
+<div class=""toc-number"">04</div>
+</div>
+<div class=""toc-item"">
+<div>Key Touchpoints &amp; Strategies</div>
+<div class=""toc-number"">05</div>
+</div>
+<div class=""toc-item"">
+<div>The Impact of Technology on CX</div>
+<div class=""toc-number"">06</div>
+</div>
+<div class=""toc-item"">
+<div>Gathering &amp; Analyzing Customer Feedback</div>
+<div class=""toc-number"">07</div>
+</div>
+<div class=""toc-item"">
+<div>Resolving Customer Pain Points</div>
+<div class=""toc-number"">08</div>
+</div>
+<div class=""toc-item"">
+<div>Case Study: CX in Action</div>
+<div class=""toc-number"">09</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
+```
+
+## Template Page 3
+**Name:** Intro Overview with Dual Stat Blocks
+**Key:** intro_overview_dual_stat_blocks
+**Description:** This template features a bold, left-aligned introductory title area paired with a concise definition or overview paragraph. The right side prominently displays two horizontally arranged statistic or highlight blocks, each with an icon, large number, and supporting description. Circular geometric accents and generous white space create a clean, modern look. Ideal for opening sections, introductory summaries, or presenting paired key metrics at the start of a presentation. Consistent top branding ensures cohesion with the overall deck.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Introduction to Customer Experience</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet"">
+    <link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 15px 40px;
+            color: #005430;
+            border-bottom: 1px solid rgba(0, 84, 48, 0.2);
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 60px);
+            padding: 40px;
+        }
+
+        .left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding-right: 40px;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .title {
+            font-size: 5rem;
+            font-weight: bold;
+            line-height: 1.1;
+            color: #005430;
+            margin-bottom: 40px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            color: #333333;
+            line-height: 1.5;
+            margin-bottom: 40px;
+            max-width: 500px;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .stat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 50px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .stat-arrow {
+            width: 40px;
+            height: 40px;
+            background-color: #005430;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 15px;
+        }
+
+        .stat-arrow i {
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .stat-number {
+            font-size: 5rem;
+            font-weight: bold;
+            color: #005430;
+            margin-right: 20px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .stat-text {
+            font-size: 1rem;
+            color: #333333;
+            line-height: 1.4;
+            max-width: 300px;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(195, 154, 108, 0.3);
+            z-index: -1;
+        }
+
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            top: -150px;
+            right: -150px;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            left: 10%;
+        }
+
+        .header-left, .header-center, .header-right {
+            font-family: 'Roboto Mono', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Background Circles -->
+        <div class=""circle circle-1""></div>
+        <div class=""circle circle-2""></div>
+
+        <!-- Header -->
+        <div class=""header"">
+            <div class=""header-left"">Sterling &amp; Partners</div>
+            <div class=""header-center text-center"">03/15/2030</div>
+            <div class=""header-right text-right"">@sterlingcx</div>
+        </div>
+
+        <!-- Content -->
+        <div class=""content"">
+            <div class=""left-content"">
+                <h1 class=""title"">Introduction<br>to Customer<br>Experience</h1>
+
+                <p class=""description"">
+                    Customer experience (CX) is the sum of all interactions a customer has with a brand. A positive CX builds trust, increases retention, and drives revenue growth.
+                </p>
+            </div>
+
+            <div class=""right-content"">
+                <div class=""stat-container"">
+                    <div class=""stat-item"">
+                        <div class=""stat-arrow"">
+                            <i class=""fas fa-arrow-up""></i>
+                        </div>
+                        <div class=""stat-number"">86%</div>
+                        <div class=""stat-text"">
+                            of customers are willing to pay more for a better experience.
+                        </div>
+                    </div>
+
+                    <div class=""stat-item"">
+                        <div class=""stat-arrow"">
+                            <i class=""fas fa-arrow-up""></i>
+                        </div>
+                        <div class=""stat-number"">32%</div>
+                        <div class=""stat-text"">
+                            of customers switch to competitors due to poor customer experience.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 4
+**Name:** Priority Highlights with Circular Cluster
+**Key:** priority_highlights_circular_cluster
+**Description:** This template features a bold, left-aligned main title and concise descriptive section alongside a grouped cluster of circular highlight elements on the right. Each circle prominently displays a key point or feature, using varying sizes and orange gradients to create a clear sense of hierarchy and emphasis. The design is ideal for ranking priorities, showcasing top features, or clustering related concepts in a visually engaging manner. The layout maintains ample white space, modern sans-serif typography, geometric accents, and a consistent top branding strip for a polished, professional presentation.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"" data-theme=""light"" style=""><head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Understanding Customer Expectations</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet"">
+    <link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 15px 40px;
+            color: #005430;
+            border-bottom: 1px solid rgba(0, 84, 48, 0.2);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 60px);
+            padding: 40px;
+        }
+
+        .left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding-right: 40px;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 4.8rem;
+            line-height: 1.1;
+            color: #005430;
+            margin-bottom: 40px;
+        }
+
+        .subtitle {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.8rem;
+            color: #005430;
+            margin-bottom: 15px;
+        }
+
+        .description {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1rem;
+            color: #333333;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 500px;
+        }
+
+        .priority-circle {
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            position: absolute;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .priority-number {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .priority-text {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.2;
+            max-width: 80%;
+        }
+
+        .priority-1 {
+            width: 180px;
+            height: 180px;
+            background-color: #005430;
+            top: 5%;
+            right: 20%;
+        }
+
+        .priority-2 {
+            width: 200px;
+            height: 200px;
+            background-color: #29A59B;
+            bottom: 15%;
+            left: 5%;
+        }
+
+        .priority-3 {
+            width: 180px;
+            height: 180px;
+            background-color: #C49A6C;
+            color: #333333;
+            bottom: 10%;
+            right: 5%;
+        }
+
+        .priority-3 .priority-number {
+            color: #005430;
+        }
+
+        .priority-3 .priority-text {
+            color: #333333;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(195, 154, 108, 0.3);
+            z-index: 0;
+        }
+
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            top: -150px;
+            right: -150px;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            left: 10%;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Background Circles -->
+        <div class=""circle circle-1""></div>
+        <div class=""circle circle-2""></div>
+
+        <!-- Header -->
+        <div class=""header"">
+            <div class=""header-left"">Sterling &amp; Partners</div>
+            <div class=""header-center text-center"">03/15/2030</div>
+            <div class=""header-right text-right"">@sterlingcx</div>
+        </div>
+
+        <!-- Content -->
+        <div class=""content"">
+            <div class=""left-content"">
+                <h1 class=""title"">Understanding<br>Customer<br>Expectations</h1>
+
+                <h2 class=""subtitle"">Top 3<br>Customer Priorities</h2>
+
+                <p class=""description"">
+                    Customers expect seamless interactions, personalized
+                    services, and quick resolutions. Identifying these
+                    expectations helps businesses tailor their approach.
+                </p>
+            </div>
+
+            <div class=""right-content"">
+                <div class=""priority-circle priority-1"">
+                    <div class=""priority-number"">01.</div>
+                    <div class=""priority-text"">Speed &amp;<br>Convenience</div>
+                </div>
+
+                <div class=""priority-circle priority-2"">
+                    <div class=""priority-number"">02.</div>
+                    <div class=""priority-text"">Personalization</div>
+                </div>
+
+                <div class=""priority-circle priority-3"">
+                    <div class=""priority-number"">03.</div>
+                    <div class=""priority-text"">Consistency<br>Across<br>Channels</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body></html>
+```
+
+## Template Page 5
+**Name:** Data Spotlight with Dual Emphasis
+**Key:** data_spotlight_dual_emphasis
+**Description:** This template features a left-aligned bold title and introductory section, paired with a structured right column dedicated to data visualization and supporting insights. The right side is divided into multiple horizontally segmented areas for infographics, key metrics, or summary statistics, ensuring important numbers and highlights are easily accessible. The overall design leverages modern geometric shapes, strong hierarchical contrasts, and generous whitespace—ideal for showcasing key analytics, survey results, or attention-grabbing takeaways in a visually balanced format. Branding remains consistent at the top, maintaining a cohesive presentation identity.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>The Role of Personalization</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet"">
+    <link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 15px 40px;
+            color: #005430;
+            border-bottom: 1px solid rgba(0, 84, 48, 0.2);
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 60px);
+            padding: 40px;
+        }
+
+        .left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 40px;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 5rem;
+            font-weight: bold;
+            line-height: 1.1;
+            color: #005430;
+            margin-bottom: 30px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            color: #333333;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 500px;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .stat-divider {
+            height: 1px;
+            background-color: rgba(0, 84, 48, 0.2);
+            width: 100%;
+            margin: 30px 0;
+        }
+
+        .gauge-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .gauge {
+            width: 160px;
+            height: 80px;
+            position: relative;
+            margin-right: 20px;
+        }
+
+        .gauge-background {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: rgba(41, 165, 155, 0.45);
+            clip-path: polygon(0 80px, 160px 80px, 160px 0, 0 0);
+            position: absolute;
+        }
+
+        .gauge-fill {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: #005430;
+            clip-path: polygon(0 80px, 160px 80px, 160px 0, 0 0);
+            position: absolute;
+        }
+
+        .gauge-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -20%);
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .stat-text {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #005430;
+            margin-right: 20px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .stat-description {
+            font-size: 1rem;
+            color: #005430;
+            max-width: 300px;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(195, 154, 108, 0.3);
+            z-index: -1;
+        }
+
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            top: -150px;
+            left: -150px;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            top: 50%;
+            left: 20%;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Background Circles -->
+        <div class=""circle circle-1""></div>
+        <div class=""circle circle-2""></div>
+
+        <!-- Header -->
+        <div class=""header"">
+            <div class=""header-left"">Sterling &amp; Partners</div>
+            <div class=""header-center text-center"">03/15/2030</div>
+            <div class=""header-right text-right"">@sterlingcx</div>
+        </div>
+
+        <!-- Content -->
+        <div class=""content"">
+            <div class=""left-content"">
+                <h1 class=""title"">The Role of<br>Personalization</h1>
+            </div>
+            <div class=""right-content"">
+                <p class=""description"">
+                    Personalization makes customers feel valued, increasing engagement and loyalty. Using data-driven insights, businesses can create tailored experiences.
+                </p>
+
+                <div class=""stat-divider""></div>
+
+                <div class=""gauge-container"">
+                    <div class=""gauge"">
+                        <div class=""gauge-background""></div>
+                        <div class=""gauge-fill""></div>
+                        <div class=""gauge-text"">80%</div>
+                    </div>
+                    <div class=""stat-description"">
+                        of customers are willing to pay more for a better experience.
+                    </div>
+                </div>
+
+                <div class=""stat-divider""></div>
+
+                <div class=""gauge-container"">
+                    <div class=""stat-text"">10-15%</div>
+                    <div class=""stat-description"">
+                        of customers are willing to pay more for a better experience.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 6
+**Name:** Segmented Infographic with Descriptive Sidebar
+**Key:** segmented_infographic_descriptive_sidebar
+**Description:** This template features a visually prominent infographic or chart on the right, such as a multi-layered or segmented diagram, paired with a left-aligned vertical area dedicated to bold titles and supporting descriptive text. The design creates clear separation between visual data representation and explanatory content, making it ideal for illustrating multi-phase processes, lifecycle diagrams, or layered concepts. The structured branding header remains consistent at the top, and the overall look uses modern green and warm brown-themed colors, circular graphics, and clean sans-serif typography for high readability and professional impact.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"" data-theme=""light"" style=""><head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Customer Journey Mapping</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet"">
+    <link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"">
+    <link href=""https://fonts.googleapis.com/css2?family=DM+Serif+Display&amp;family=Roboto+Mono:wght@400;700&amp;display=swap"" rel=""stylesheet"">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 15px 40px;
+            color: #005430;
+            border-bottom: 1px solid rgba(0, 84, 48, 0.2);
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 60px);
+            padding: 40px;
+        }
+
+        .left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 40px;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .title {
+            font-size: 5rem;
+            font-weight: bold;
+            line-height: 1.1;
+            color: #005430;
+            margin-bottom: 30px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            color: #333333;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 500px;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .funnel-container {
+            position: relative;
+            width: 450px;
+            height: 450px;
+        }
+
+        .funnel-level {
+            position: absolute;
+            width: 100%;
+            transform-origin: center;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+        }
+
+        .funnel-segment {
+            width: 300px;
+            height: 80px;
+            background-color: #005430;
+            clip-path: polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 30px;
+        }
+
+        .level-1 {
+            top: 20%;
+            z-index: 5;
+        }
+
+        .level-1 .funnel-segment {
+            background-color: #D3B89C;
+            height: 60px;
+        }
+
+        .level-2 {
+            top: 35%;
+            z-index: 4;
+        }
+
+        .level-2 .funnel-segment {
+            background-color: #C49A6C;
+            height: 70px;
+        }
+
+        .level-3 {
+            top: 50%;
+            z-index: 3;
+        }
+
+        .level-3 .funnel-segment {
+            background-color: #29A59B;
+            height: 80px;
+        }
+
+        .level-4 {
+            top: 65%;
+            z-index: 2;
+        }
+
+        .level-4 .funnel-segment {
+            background-color: #005430;
+            height: 90px;
+            clip-path: polygon(0% 0%, 100% 0%, 95% 100%, 5% 100%);
+        }
+
+        .level-5 {
+            top: 85%;
+            z-index: 1;
+        }
+
+        .level-5 .funnel-segment {
+            background-color: #005430;
+            height: 100px;
+            clip-path: polygon(5% 0%, 95% 0%, 75% 100%, 25% 100%);
+            border-radius: 0 0 50% 50%;
+        }
+
+        .stage-label {
+            color: #005430;
+            font-weight: bold;
+            font-size: 1.2rem;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .funnel-line {
+            position: absolute;
+            height: 1px;
+            width: 100px;
+            background-color: #005430;
+            right: -70px;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(195, 154, 108, 0.3);
+            z-index: -1;
+        }
+
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            top: -150px;
+            right: -150px;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            left: 10%;
+        }
+    </style>
+</head>
+<body style="""">
+    <div class=""slide-container"">
+        <!-- Background Circles -->
+        <div class=""circle circle-1""></div>
+        <div class=""circle circle-2""></div>
+
+        <!-- Header -->
+        <div class=""header"">
+            <div class=""header-left"">Sterling &amp; Partners</div>
+            <div class=""header-center text-center"">03/15/2030</div>
+            <div class=""header-right text-right"">@sterlingcx</div>
+        </div>
+
+        <!-- Content -->
+        <div class=""content"">
+            <div class=""left-content"">
+                <h1 class=""title"">Customer<br>Journey<br>Mapping</h1>
+                <p class=""description"">
+                    Mapping the customer journey helps businesses identify friction points and improve touchpoints for a seamless experience.
+                </p>
+            </div>
+            <div class=""right-content"" style=""position: relative; transform: translate(-31.6384px, 7.23164px);"">
+                <div class=""funnel-container"">
+                    <div class=""funnel-level level-1"" style=""transform: translate(-3.61581px, -18.983px);"">
+
+                        <div class=""funnel-line"" style=""transform: translate(-240.452px, 2.71186px);""></div>
+                        <div class=""stage-label"">Awareness</div>
+                    </div>
+                    <div class=""funnel-level level-2"" style=""transform: translate(-3.61582px, -11.7514px);"">
+
+                        <div class=""funnel-line"" style=""transform: translate(-239.548px, 1.80791px);""></div>
+                        <div class=""stage-label"">Consideration</div>
+                    </div>
+                    <div class=""funnel-level level-3"" style=""transform: translate(-2.71186px, 8.13559px);"">
+
+                        <div class=""funnel-line"" style=""transform: translate(-237.74px, -0.903955px);""></div>
+                        <div class=""stage-label"">Purchase</div>
+                    </div>
+                    <div class=""funnel-level level-4"" style=""transform: translate(-3.61581px, 16.2712px);"">
+
+                        <div class=""funnel-line"" style=""transform: translate(-235.028px, 0px);""></div>
+                        <div class=""stage-label"">Post-Purchase</div>
+                    </div>
+                    <div class=""funnel-level level-5"" style=""transform: translate(-4.51977px, 6.32768px);"">
+
+                        <div class=""funnel-line"" style=""transform: translate(-233.22px, 0.903955px);""></div>
+                        <div class=""stage-label"">Advocacy</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body></html>
+
+```
+
+## Template Page 7
+**Name:** Horizontal Touchpoint Timeline
+**Key:** horizontal_touchpoint_timeline
+**Description:** This template features a large, left-aligned headline section with supporting text below, paired with a visually engaging horizontal sequence of connected rounded capsules to display key steps, stages, or touchpoints. Circular icons and number labels highlight progression, making it ideal for showcasing customer journeys, process steps, or sequential stages. The design leverages a clean, modern aesthetic with warm orange accents, geometric shapes, and a consistent top branding header, ensuring clarity and visual appeal for timelines or flow-based presentations.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"" data-theme=""light"" style=""><head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Key Touchpoints &amp; Engagement Strategies</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet"">
+    <link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 15px 40px;
+            color: #005430;
+            border-bottom: 1px solid rgba(0, 84, 48, 0.2);
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 60px);
+            padding: 40px;
+        }
+
+        .left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding-right: 40px;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .title {
+            font-size: 4.5rem;
+            font-weight: bold;
+            line-height: 1.1;
+            color: #005430;
+            margin-bottom: 60px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .subtitle {
+            font-size: 1.8rem;
+            color: #005430;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            color: #333333;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            max-width: 500px;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .strategy-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+            margin-top: 20px;
+        }
+
+        .strategy-row {
+            display: flex;
+            width: 100%;
+            gap: 20px;
+            position: relative;
+        }
+
+        .strategy-box {
+            border-radius: 30px;
+            padding: 25px 20px;
+            color: white;
+            text-align: center;
+            font-size: 1.2rem;
+            position: relative;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .strategy-box-1 {
+            background-color: #005430;
+            width: 100%;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .strategy-box-2 {
+            background-color: #29A59B;
+            width: calc(50% - 10px);
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .strategy-box-3 {
+            background-color: #C49A6C;
+            color: #333333;
+            width: calc(50% - 10px);
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .number-circle {
+            width: 36px;
+            height: 36px;
+            background-color: white;
+            color: #005430;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1rem;
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 2px solid #FFFFFF;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(195, 154, 108, 0.3);
+            z-index: -1;
+        }
+
+        .circle-1 {
+            width: 800px;
+            height: 800px;
+            top: -200px;
+            right: -200px;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            left: 10%;
+        }
+    </style>
+</head>
+<body style="""">
+    <div class=""slide-container"">
+        <!-- Background Circles -->
+        <div class=""circle circle-1""></div>
+        <div class=""circle circle-2""></div>
+
+        <!-- Header -->
+        <div class=""header"">
+            <div class=""header-left"">Sterling &amp; Partners</div>
+            <div class=""header-center text-center"">03/15/2030</div>
+            <div class=""header-right text-right"">@sterlingcx</div>
+        </div>
+
+        <!-- Content -->
+        <div class=""content"">
+            <div class=""left-content"">
+                <h1 class=""title"">Key Touchpoints &amp;<br>Engagement Strategies</h1>
+                <h2 class=""subtitle"">Engagement Best Practices:</h2>
+                <p class=""description"">
+                    A strong customer engagement strategy ensures satisfaction at every interaction. Key touchpoints include website experience, social media, and customer service.
+                </p>
+            </div>
+            <div class=""right-content"">
+                <div class=""strategy-container"">
+                    <div class=""strategy-row"">
+                        <div class=""strategy-box strategy-box-1"" style=""transform: translate(0px, -22.9153px);"">
+                            Proactive customer support
+                            <div class=""number-circle"" style=""transform: translate(-16.4991px, -8.24952px);"">01</div>
+                        </div>
+                    </div>
+                    <div class=""strategy-row"">
+                        <div class=""strategy-box strategy-box-2"">
+                            Personalized communication
+                            <div class=""number-circle"" style=""transform: translate(-17.4157px, -9.16613px);"">02</div>
+                        </div>
+                        <div class=""strategy-box strategy-box-3"">
+                            Omnichannel consistency
+                            <div class=""number-circle"" style=""transform: translate(-17.4156px, -9.16614px);"">03</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body></html>
+```
+
+## Template Page 8
+**Name:** Process Steps with Highlighted Actions
+**Key:** process_steps_highlighted_actions
+**Description:** This template features a balanced split layout with a bold section for the main header and supporting text on the left, and a vertical stack of accent-colored action boxes on the right to visually highlight sequential steps or process actions. The design uses clear hierarchies, generous white space, and color highlights to direct attention. Ideal for illustrating step-by-step processes, team workflows, or operational frameworks while maintaining a professional and visually engaging appearance. Consistent branding remains at the top with company, date, and social handle.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Resolving Customer Pain Points</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet"">
+    <link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 15px 40px;
+            color: #005430;
+            border-bottom: 1px solid rgba(0, 84, 48, 0.2);
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 60px);
+            padding: 40px;
+        }
+
+        .left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 40px;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 4.5rem;
+            line-height: 1.1;
+            color: #005430;
+            margin-bottom: 30px;
+        }
+
+        .subtitle {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.8rem;
+            color: #005430;
+            margin-bottom: 15px;
+        }
+
+        .description {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.1rem;
+            color: #333333;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            max-width: 500px;
+        }
+
+        .step-box {
+            font-family: 'Roboto Mono', monospace;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .step-box-1 {
+            background-color: #005430;
+        }
+
+        .step-box-2 {
+            background-color: #29A59B;
+        }
+
+        .step-box-3 {
+            background-color: #c49a6c;
+            color: #333333;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(211, 184, 156, 0.35);
+            z-index: -1;
+        }
+
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            top: -150px;
+            right: -150px;
+        }
+
+        .circle-2 {
+            width: 350px;
+            height: 350px;
+            bottom: -100px;
+            left: 50%;
+        }
+
+        .circle-3 {
+            width: 450px;
+            height: 450px;
+            top: 150px;
+            right: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Background Circles -->
+        <div class=""circle circle-1""></div>
+        <div class=""circle circle-2""></div>
+        <div class=""circle circle-3""></div>
+
+        <!-- Header -->
+        <div class=""header"">
+            <div class=""header-left"">Sterling &amp; Partners</div>
+            <div class=""header-center text-center"">03/15/2030</div>
+            <div class=""header-right text-right"">@sterlingcx</div>
+        </div>
+
+        <!-- Content -->
+        <div class=""content"">
+            <div class=""left-content"">
+                <h1 class=""title"">Resolving<br>Customer<br>Pain Points</h1>
+                <h2 class=""subtitle"">Steps to Resolve<br>Customer Pain Points:</h2>
+                <p class=""description"">Addressing customer concerns quickly and effectively enhances trust and brand reputation.</p>
+            </div>
+            <div class=""right-content"">
+                <div class=""step-box step-box-1"">Identify recurring issues</div>
+                <div class=""step-box step-box-2"">Improve processes based on feedback</div>
+                <div class=""step-box step-box-3"">Train employees to handle complaints professionally</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 9
+**Name:** Case Study Metrics with Split Columns
+**Key:** case_study_metrics_split_columns
+**Description:** This template organizes content into three visually balanced vertical columns centered beneath a large, bold header. Each column highlights a key metric or feature with a prominent icon, numerical value, and supporting descriptive text. The layout is ideal for summarizing case studies, presenting feature comparisons, or showcasing multiple data points in a clear, digestible manner. Consistent branding spans the top, and modern geometric backgrounds in warm orange tones add visual interest while maintaining a neat hierarchy and ample white space for readability.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Case Study: CX in Action</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet"">
+    <link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 15px 40px;
+            color: #005430;
+            border-bottom: 1px solid rgba(0, 84, 48, 0.2);
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .content {
+            padding: 40px;
+            height: calc(100% - 60px);
+        }
+
+        .title {
+            font-size: 4rem;
+            font-weight: bold;
+            line-height: 1.1;
+            color: #005430;
+            margin-bottom: 60px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .metrics-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 50px;
+        }
+
+        .metric-section {
+            flex: 1;
+            max-width: 380px;
+        }
+
+        .icon-circle {
+            width: 60px;
+            height: 60px;
+            background-color: #005430;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .icon-circle i {
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .metric-value {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #005430;
+            margin-bottom: 10px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .metric-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #005430;
+            margin-bottom: 15px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .metric-description {
+            font-size: 1rem;
+            color: #333333;
+            line-height: 1.5;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .result-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .arrow-container {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #005430;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .arrow-container i {
+            color: #005430;
+            font-size: 1.5rem;
+        }
+
+        .result-percentage {
+            font-size: 5rem;
+            font-weight: bold;
+            color: #005430;
+            margin-left: 20px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .result-text {
+            font-size: 1rem;
+            color: #333333;
+            line-height: 1.5;
+            max-width: 400px;
+            margin-left: 20px;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: #D3B89C;
+            z-index: -1;
+        }
+
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            top: -150px;
+            right: -150px;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            left: 10%;
+        }
+
+        .circle-3 {
+            width: 300px;
+            height: 300px;
+            top: 30%;
+            left: 40%;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Background Circles -->
+        <div class=""circle circle-1""></div>
+        <div class=""circle circle-2""></div>
+        <div class=""circle circle-3""></div>
+
+        <!-- Header -->
+        <div class=""header"">
+            <div class=""header-left"">Sterling &amp; Partners</div>
+            <div class=""header-center text-center"">03/15/2030</div>
+            <div class=""header-right text-right"">@sterlingcx</div>
+        </div>
+
+        <!-- Content -->
+        <div class=""content"">
+            <h1 class=""title"">Case Study: CX in Action</h1>
+
+            <div class=""metrics-container"">
+                <div class=""metric-section"">
+                    <div class=""icon-circle"">
+                        <i class=""fas fa-envelope""></i>
+                    </div>
+                    <div class=""metric-value"">3.2/5</div>
+                    <div class=""metric-title"">Before Improvement:</div>
+                    <div class=""metric-description"">
+                        A lengthy and complex checkout process leads to a high drop-off rate at the payment stage.
+                    </div>
+                </div>
+
+                <div class=""metric-section"">
+                    <div class=""icon-circle"">
+                        <i class=""fas fa-globe""></i>
+                    </div>
+                    <div class=""metric-value"">300,000<sup>+</sup></div>
+                    <div class=""metric-title"">After Improvement:</div>
+                    <div class=""metric-description"">
+                        A streamlined checkout with fewer steps and integrated multiple payment options.
+                    </div>
+                </div>
+            </div>
+
+            <div class=""result-container"">
+                <div class=""arrow-container"">
+                    <i class=""fas fa-arrow-right""></i>
+                </div>
+                <div class=""result-percentage"">25%</div>
+                <div class=""result-text"">
+                    reduction in abandoned carts and 18% increase in customer satisfaction resulted from a retail brand revamping its online checkout process.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 10
+**Name:** Segmented Arch Highlights with Descriptor List
+**Key:** segmented_arch_highlights_descriptor_list
+**Description:** This template features a left-aligned bold title with supporting descriptive text, complemented by a visually engaging set of horizontally arranged arch elements in the center-right. Each arch is paired with a concise descriptor, forming a segmented visual sequence ideal for highlighting main categories, feature pillars, or process stages. The design maintains a clean hierarchy with ample white space, modern sans-serif fonts, and warm orange tones. A consistent branded header appears at the top, making this template perfect for breaking down complex topics into distinct sections or showcasing key tech concepts in a visually memorable manner.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>The Impact of Technology on CX</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet"">
+    <link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 15px 40px;
+            color: #005430;
+            border-bottom: 1px solid rgba(0, 84, 48, 0.2);
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 60px);
+            padding: 40px;
+        }
+
+        .left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 20px;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 5rem;
+            font-weight: bold;
+            line-height: 1.1;
+            color: #005430;
+            margin-bottom: 40px;
+        }
+
+        .subtitle {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.8rem;
+            color: #005430;
+            font-weight: bold;
+            margin-bottom: 25px;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            color: #333333;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 500px;
+        }
+
+        .tech-container {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .tech-item {
+            display: flex;
+            width: 30%;
+            flex-direction: column;
+            padding-left: 15px;
+            border-left: 3px solid #005430;
+        }
+
+        .tech-title {
+            font-family: 'DM Serif Display', serif;
+            font-weight: bold;
+            color: #005430;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .tech-description {
+            color: #333333;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .arch-visual {
+            width: 550px;
+            height: 300px;
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .arch {
+            position: absolute;
+            border-radius: 300px 300px 0 0;
+            transform: rotate(180deg);
+        }
+
+        .arch-1 {
+            width: 180px;
+            height: 300px;
+            background-color: #005430;
+            left: 0;
+            z-index: 3;
+        }
+
+        .arch-2 {
+            width: 200px;
+            height: 300px;
+            background-color: #29A59B;
+            left: 175px;
+            z-index: 2;
+        }
+
+        .arch-3 {
+            width: 220px;
+            height: 300px;
+            background-color: #D3B89C;
+            left: 350px;
+            z-index: 1;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(0, 84, 48, 0.1);
+            z-index: -1;
+        }
+
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            top: -150px;
+            right: -150px;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            left: 10%;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Background Circles -->
+        <div class=""circle circle-1""></div>
+        <div class=""circle circle-2""></div>
+
+        <!-- Header -->
+        <div class=""header"">
+            <div class=""header-left"">Sterling &amp; Partners</div>
+            <div class=""header-center text-center"">03/15/2030</div>
+            <div class=""header-right text-right"">@sterlingcx</div>
+        </div>
+
+        <!-- Content -->
+        <div class=""content"">
+            <div class=""left-content"">
+                <h1 class=""title"">The Impact of<br>Technology<br>on CX</h1>
+
+                <h2 class=""subtitle"">Examples of CX<br>Technologies:</h2>
+
+                <p class=""description"">
+                    AI, chatbots, and automation improve efficiency while enhancing customer support experiences.
+                </p>
+
+                <div class=""tech-container"">
+                    <div class=""tech-item"">
+                        <div class=""tech-title"">AI-powered chatbots for 24/7 support</div>
+                    </div>
+
+                    <div class=""tech-item"">
+                        <div class=""tech-title"">CRM systems for personalized communication</div>
+                    </div>
+
+                    <div class=""tech-item"">
+                        <div class=""tech-title"">Data analytics for customer behavior insights</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class=""right-content"">
+                <div class=""arch-visual"">
+                    <div class=""arch arch-1""></div>
+                    <div class=""arch arch-2""></div>
+                    <div class=""arch arch-3""></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 11
+**Name:** Clustered Feature Circles with Stat Highlight
+**Key:** clustered_feature_circles_stat_highlight
+**Description:** This template features a dominant left-aligned section for the title and supporting text, complemented by a row of grouped circular feature callouts across the lower center. Each circle contains an icon and brief descriptor, visually organizing multiple options or categories. On the right, a large, vertically separated highlight area draws attention to a key statistic or metric, accompanied by explanatory text. The design leverages warm orange gradients, modern sans-serif fonts, generous white space, and a consistent branded header. Ideal for presenting grouped features, clustered benefits, or multi-part service highlights alongside a standout data point.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html data-theme=""light"" lang=""en"" style=""><head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Gathering &amp; Analyzing Customer Feedback</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 15px 40px;
+            color: #005430;
+            border-bottom: 1px solid rgba(0, 84, 48, 0.2);
+            font-family: 'Roboto Mono', monospace;
+            position: relative;
+            z-index: 10;
+        }
+
+        .content {
+            padding: 40px;
+            height: calc(100% - 60px);
+            position: relative;
+        }
+
+        .title {
+            font-size: 5rem;
+            font-weight: bold;
+            line-height: 1.1;
+            color: #005430;
+            margin-bottom: 30px;
+            max-width: 900px;
+            font-family: 'DM Serif Display', serif;
+            position: relative;
+            z-index: 10;
+        }
+
+        .description {
+            font-size: 1.2rem;
+            color: #333333;
+            line-height: 1.5;
+            margin-bottom: 50px;
+            max-width: 700px;
+            font-family: 'Roboto Mono', monospace;
+            position: relative;
+            z-index: 10;
+        }
+
+        .feedback-methods {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 50px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .feedback-circle {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            transition: transform 0.3s ease;
+            position: relative;
+            z-index: 10;
+        }
+
+        .feedback-circle:hover {
+            transform: scale(1.05);
+        }
+
+        .feedback-circle-1 {
+            background-color: #005430;
+        }
+
+        .feedback-circle-2 {
+            background-color: #29A59B;
+        }
+
+        .feedback-circle-3 {
+            background-color: #c49a6c;
+            color: #333333;
+        }
+
+        .feedback-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+
+        .feedback-text {
+            font-size: 1rem;
+            line-height: 1.3;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .stat-container {
+            display: flex;
+            align-items: center;
+            margin-top: 40px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .arrow-container {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #005430;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 30px;
+        }
+
+        .arrow-container i {
+            color: #005430;
+            font-size: 1.5rem;
+        }
+
+        .stat-percentage {
+            font-size: 5rem;
+            font-weight: bold;
+            color: #005430;
+            margin-right: 30px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .stat-description {
+            font-size: 1.1rem;
+            color: #333333;
+            line-height: 1.5;
+            max-width: 400px;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(211, 184, 156, 0.2);
+            z-index: -1;
+        }
+
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            top: -150px;
+            right: -150px;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            left: 10%;
+        }
+
+        .circle-3 {
+            width: 300px;
+            height: 300px;
+            top: 30%;
+            right: 40%;
+        }
+    </style>
+</head>
+<body style="""">
+<div class=""slide-container"">
+<!-- Background Circles -->
+<div class=""circle circle-1""></div>
+<div class=""circle circle-2""></div>
+<div class=""circle circle-3""></div>
+<!-- Header -->
+<div class=""header"">
+<div class=""header-left"">Sterling &amp; Partners</div>
+<div class=""header-center text-center"">03/15/2030</div>
+<div class=""header-right text-right"">@sterlingcx</div>
+</div>
+<!-- Content -->
+<div class=""content"">
+<h1 class=""title"">Gathering &amp; Analyzing<br/>Customer Feedback</h1>
+<p class=""description"">
+                Continuous feedback collection helps identify improvement areas and customer satisfaction levels.
+            </p>
+<div class=""feedback-methods"">
+<div class=""feedback-circle feedback-circle-1"">
+<i class=""fas fa-chart-bar feedback-icon""></i>
+<div class=""feedback-text"">
+                        Surveys &amp; Net Promoter Score (NPS)
+                    </div>
+</div>
+<div class=""feedback-circle feedback-circle-2"">
+<i class=""fas fa-share-alt feedback-icon""></i>
+<div class=""feedback-text"">
+                        Social media listening
+                    </div>
+</div>
+<div class=""feedback-circle feedback-circle-3"">
+<i class=""fas fa-comments feedback-icon""></i>
+<div class=""feedback-text"">
+                        Direct customer interviews
+                    </div>
+</div>
+</div>
+<div class=""stat-container"">
+<div class=""arrow-container"" style=""position: relative; z-index: 10; transform: translate(0px, -25.3107px);"">
+<i class=""fas fa-arrow-right""></i>
+</div>
+<div class=""stat-percentage"" style=""position: relative; z-index: 10; transform: translate(0px, -49.7175px);"">15%</div>
+<div class=""stat-description"" style=""position: relative; z-index: 10; transform: translate(0px, -40.678px);"">
+                    increase in customer retention was seen with a 10-point improvement in NPS score.
+                </div>
+</div>
+</div>
+</div>
+</body></html>
+```
+
+## Template Page 12
+**Name:** Conclusion Layout with Stacked Step Bars
+**Key:** conclusion_stacked_step_bars
+**Description:** This template features a spacious, left-aligned title section for main conclusions or wrap-up statements, paired with a visually engaging right column that displays a vertical stack of ascending bar-style boxes. Each bar is numbered and designed to highlight sequential best practices, steps, or recommendations with clear visual progression. The design emphasizes hierarchy with bold titles, warm orange gradients, and generous white space, making it ideal for summarizing key takeaways, action items, or process recaps. Consistent branding remains at the top for a cohesive, modern presentation style.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Conclusion & Best Practices</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet"">
+    <link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 15px 40px;
+            color: #005430;
+            border-bottom: 1px solid rgba(0, 84, 48, 0.2);
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 60px);
+            padding: 40px;
+        }
+
+        .left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 40px;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 5rem;
+            font-weight: bold;
+            line-height: 1.1;
+            color: #005430;
+            margin-bottom: 30px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            color: #333333;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 500px;
+        }
+
+        .best-practices-title {
+            font-size: 1.8rem;
+            color: #005430;
+            font-weight: bold;
+            margin-bottom: 25px;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .practices-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            height: 270px;
+        }
+
+        .practice-bar {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            width: 170px;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .practice-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            opacity: 0.7;
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .practice-text {
+            font-size: 1rem;
+            line-height: 1.3;
+        }
+
+        .practice-bar-1 {
+            background-color: #005430;
+            height: 150px;
+        }
+
+        .practice-bar-2 {
+            background-color: #29A59B;
+            height: 200px;
+        }
+
+        .practice-bar-3 {
+            background-color: #c49a6c;
+            color: #333333;
+            height: 250px;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(0, 84, 48, 0.1);
+            z-index: -1;
+        }
+
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            top: -150px;
+            right: -150px;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            left: 10%;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Background Circles -->
+        <div class=""circle circle-1""></div>
+        <div class=""circle circle-2""></div>
+
+        <!-- Header -->
+        <div class=""header"">
+            <div class=""header-left"">Sterling &amp; Partners</div>
+            <div class=""header-center text-center"">03/15/2030</div>
+            <div class=""header-right text-right"">@sterlingcx</div>
+        </div>
+
+        <!-- Content -->
+        <div class=""content"">
+            <div class=""left-content"">
+                <h1 class=""title"">Conclusion &<br>Best Practices</h1>
+            </div>
+            <div class=""right-content"">
+                <p class=""description"">
+                    Optimizing CX is a continuous effort. Businesses must adapt to changing customer needs while leveraging technology for seamless experiences.
+                </p>
+
+                <h2 class=""best-practices-title"">Best Practices:</h2>
+
+                <div class=""practices-container"">
+                    <div class=""practice-bar practice-bar-1"">
+                        <div class=""practice-number"">01</div>
+                        <div class=""practice-text"">Personalize customer interactions</div>
+                    </div>
+
+                    <div class=""practice-bar practice-bar-2"">
+                        <div class=""practice-number"">02</div>
+                        <div class=""practice-text"">Provide consistent support across channels</div>
+                    </div>
+
+                    <div class=""practice-bar practice-bar-3"">
+                        <div class=""practice-number"">03</div>
+                        <div class=""practice-text"">Use customer feedback to drive improvements</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 13
+**Name:** Contact Details with Emphasis Banner
+**Key:** contact_details_emphasis_banner
+**Description:** This template features an extra-large, bold central headline area dedicated to contact or follow-up details, occupying the majority of the slide for maximum emphasis. A smaller supporting section allows for additional text, such as contextual notes, acknowledgments, or next steps, displayed in the lower left. The branding header remains consistent at the top, while circular geometric patterns in warm orange tones serve as a visually cohesive background. The clean, minimalist design makes it ideal for end-of-presentation slides focusing on contact information, thank-you notes, or clear calls to action, ensuring key details are unmistakably visible to the audience.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Thank You &amp; Contact Information</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Roboto+Mono:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #005430;
+            position: relative;
+            overflow: hidden;
+            color: white;
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            padding: 20px 40px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: 'Roboto Mono', monospace;
+            position: relative;
+            z-index: 10;
+        }
+
+        .subtitle {
+            padding: 10px 40px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: 'Roboto Mono', monospace;
+            position: relative;
+            z-index: 10;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100% - 112px);
+            padding: 40px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            position: relative;
+            z-index: 10;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-end;
+            position: relative;
+            z-index: 10;
+        }
+
+        .title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 5.5rem;
+            line-height: 1.1;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .description {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 400px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .contact-section {
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .contact-label {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            color: #D3B89C;
+            position: relative;
+            z-index: 10;
+        }
+
+        .contact-info {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.8rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(0, 84, 48, 0.45);
+            z-index: -1;
+        }
+
+        .circle-1 {
+            width: 700px;
+            height: 700px;
+            top: -200px;
+            right: -200px;
+        }
+
+        .circle-2 {
+            width: 500px;
+            height: 500px;
+            bottom: -200px;
+            left: 10%;
+            background-color: rgba(41, 165, 155, 0.45);
+        }
+
+        .circle-3 {
+            width: 400px;
+            height: 400px;
+            top: 200px;
+            right: 25%;
+            background-color: rgba(51, 51, 51, 0.25);
+        }
+    </style>
+</head>
+<body>
+<div class=""slide-container"">
+<!-- Background Circles -->
+<div class=""circle circle-1""></div>
+<div class=""circle circle-2""></div>
+<div class=""circle circle-3""></div>
+<!-- Header -->
+<div class=""header"">
+<div class=""header-left"">Sterling &amp; Partners</div>
+<div class=""header-center text-center"">03/15/2030</div>
+<div class=""header-right text-right"">@sterlingcx</div>
+</div>
+<!-- Subtitle -->
+<div class=""subtitle"">
+            Let's Create Exceptional Customer Experiences.
+        </div>
+<!-- Content -->
+<div class=""content"">
+<div class=""left-content"">
+<h1 class=""title"">Thank You &amp;<br/>Contact Information</h1>
+<p class=""description"">
+                    Thank you for exploring customer experience optimization strategies with us! If you have any questions or would like to discuss further, feel free to reach out.
+                </p>
+</div>
+<div class=""right-content"">
+<div class=""contact-section"">
+<div class=""contact-label"">Mobile</div>
+<div class=""contact-info"">+1-555-849-2750</div>
+</div>
+<div class=""contact-section"">
+<div class=""contact-label"">Email</div>
+<div class=""contact-info"">contact@sterlingcx.com</div>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
+```
+
+## Design Style
+
+```
+---
+
+# Sterling & Partners Master Presentation Template
+**Comprehensive Design Specification**
+
+This document analyzes and codifies all visual, typographic, and layout standards based on the HTML/CSS master slides provided. Adherence to these guidelines is required for absolute visual consistency.
+
+---
+
+## 1. Typography Specifications
+
+### 1.1 Font Families
+- **Primary Heading:** `""DM Serif Display"", serif`
+- **Secondary/Body/Interface:** `""Roboto Mono"", monospace`
+- **Fallbacks:** Serif and monospace fallbacks as indicated.
+
+### 1.2 Font Sizes
+| Element Type            | Font Family           | Font Size      | Font Weight             | Line Height    | Letter Spacing      | Alignment              |
+|------------------------ |----------------------|----------------|-------------------------|---------------|---------------------|------------------------|
+| Main Title (Cover)      | DM Serif Display      | 5rem–6rem      | Normal/Bold (700)       | 1.1           | Normal              | Left, rarely centered  |
+| TOC Title               | DM Serif Display      | 6rem           | Bold                    | 1.1           | Normal              | Left                   |
+| Section Title (Content) | DM Serif Display      | 4.5rem–5rem    | Bold                    | 1.1           | Normal              | Left                   |
+| Slide Subtitle          | DM Serif Display      | 1.5–1.8rem     | Normal                  | 1.4–1.6        | Normal              | Left                   |
+| Body/Description        | Roboto Mono           | 1.0–1.1rem     | Regular (400)           | 1.5–1.6        | Normal              | Left                   |
+| TOC List/Labels         | Roboto Mono           | 1.2rem         | Bold (for numbers)      | 1.4            | Normal              | Left/Right split       |
+| Funnel/Stage Labels     | DM Serif Display      | 1.2rem         | Bold                    | 1.2            | Normal              | Inline right           |
+| Stat Numbers            | DM Serif Display      | 2.5rem–5rem    | Bold                    | 1.1            | Normal              | Inline left            |
+| Button/Step Boxes       | Roboto Mono           | 1.2rem         | Regular/Bold            | 1.2–1.4        | Normal              | Center                 |
+| Icon Circles            | FontAwesome           | 1.2rem         | Normal                  | n/a            | n/a                 | Center in circle       |
+
+### 1.3 Weight & Spacing Details
+- **Headings:** Bold or normal according to hierarchy
+- **Body/Descriptions:** Regular—never italic or light
+- **Line-height:** Headings 1.1, Body 1.5–1.6, Subheadings sometimes 1.4.
+- **Letter-spacing:** Default/normal throughout
+- **Alignment:**
+    - **Header bar:** Left, center, right
+    - **Main Title:** Left (consistently)
+    - **Body, description:** Left
+    - **Boxes, Steps:** Center-aligned within element
+    - **TOC:** Columns split between left and right
+
+---
+
+## 2. Color Palette
+
+### 2.1 Palette List (HEX values)
+| Name             | HEX        | Usage |
+|------------------|------------|------------------------------------------------------|
+| Deep Green       | `#005430`  | Cover/TOC BG, text, headings, steps, accents        |
+| Teal Green       | `#29A59B`  | Boxes, stats, icons, accents, backgrounds           |
+| Warm Brown       | `#C49A6C`  | Box, visual element accent, funnel, priority        |
+| Light Tan        | `#D3B89C`  | Funnel, backgrounds, accent                         |
+| Pale Tan         | `#E8D5C4`  | Background shapes/circles, accent numbers           |
+| Standard White   | `#FFFFFF`  | Content BG, text, circles, icons                    |
+| Dark Gray        | `#333333`  | Body text/descriptions                              |
+| Divider Gray     | `rgba(0,84,48,0.2)` or `#00543033` | Borders, lines        |
+| Transparent Tans | `rgba(195,154,108,0.3–0.5)`, `rgba(0,84,48,0.45)` | Decorative circles/shapes |
+| Shadow (Box)     | `rgba(0,0,0,0.1)` | Only for large circles (slight shadow effect)         |
+
+### 2.2 Usage Rules
+
+- **Backgrounds:** Slides 1 & 2: `#005430` (deep green). Others: `#FFFFFF`.
+- **Decorative BG Circles:** Always use tan tints/pale tan, 30% to 50% opacity.
+- **Heading/Text:** Deep green (`#005430`). Light tan (`#D3B89C`) only for special highlights (e.g., TOC numbers).
+- **Body/Description Text:** Dark gray (`#333333`).
+- **Dividers/Lines:** 20% opacity of deep green.
+- **Boxes/Steps:** Use gradient of green/brown shades (`#005430` → `#29A59B` → `#C49A6C`) for hierarchy. White text on colored BGs.
+- **Icon Circles, Stats:** Primary/Medium green backgrounds, white icons.
+- **Borders:** 1px solid, either white or light/transparent tan.
+- **Transparency:** Circles and certain backgrounds always feature alpha for depth; exact alpha matches slide sample (30% or 50%, as indicated above).
+- **No gradient fills** beyond transparencies.
+
+---
+
+## 3. Layout Grid and Spacing
+
+### 3.1 Global Margins
+- **Slide Canvas:** 1280px × 720px
+- **Main Margins**
+    - **Left/Right:** 40px from canvas edge on all slides
+    - **Top (incl. header):** 15–20px (header bar not less than 15px)
+    - **Bottom:** Content fills to the displayed height minus padding
+
+### 3.2 Padding
+- **Header Bar:** 15–20px vertically, 40px horizontally
+- **Content Area:** 40px padding on all four sides inside the main container, unless overridden
+- **Boxes/Stats/Buttons:** 20–30px padding, with larger paddings for vertical “step” boxes
+
+### 3.3 Grid System & Content Columns
+- **Grid:**
+    - Cover: Implied 3/5 left, 2/5 right split
+    - TOC: 1/2 left (title), 1/2 right (content)
+    - Content: Even 1/2 columns on most slides
+    - Header: 3-column grid (left, center, right header content)
+- **Gutters:** 40px between columns; 20px between boxed elements
+- **Alignment:**
+    - Left panel always aligned to left with padding
+    - Right panel (content, boxes, shapes) aligns right or floats in container
+
+---
+
+## 4. Visual Elements
+
+### 4.1 Images & Visual Style
+- **Charts/Illustrations only** (No photography introduced in any slide provided)
+    - Funnel diagrams, circle “priority” nodes, stat icons, custom gauge, colored boxes.
+
+### 4.2 Decorative Elements
+- **Circles:**
+    - Large, soft, colored, blurred-edge circles in tan tints for background depth.
+    - **Sizes:** 300–800px diameter.
+    - **Opacity:** 0.3–0.5 alpha.
+    - **Shape:** Always full circle, never outlined, soft edges.
+    - **Placement:** Anchored to slide corners or edges, not overlapping main content.
+- **Boxes:**
+    - Rounded (border-radius: 10–30px), solid fills in branded greens/browns.
+    - Padding: 20–30px; text centered.
+- **Lines/Dividers:**
+    - 1px, `#005430` @ 20% opacity
+- **Step/Strategy Circles:**
+    - Number or icon inside white circle, 36–40px; outlined (usually 2px solid white), centered/collapsed on bar or box.
+- **Funnel/Chart Construction:**
+    - Multiple stacked segments, green/brown gradient, clip-path to stylize, stage labels connected by lines.
+- **Gauge/Semi-circular Chart:**
+    - SVG/CSS, green fill to 80%; white stats centered inside.
+    - Circle backgrounds transparent tan/tint.
+- **No drop-shadows or overlays**, except very subtle shadow on certain circles.
+
+### 4.3 Icon Style
+- **FontAwesome** only, regular set (not thin/duotone).
+- **Size:** 1.2rem (fits 40px circle)
+- **Color:** Always white icon on green circle.
+
+### 4.4 Image Treatment
+- **No raster images.** No borders on images/charts unless described.
+- **Funnel and gauge graphics:** Only solid, geometric vector with flat colors from brand green/brown palette.
+
+---
+
+## 5. Slide-Specific Specifications
+
+### 5.1 Cover Slide
+- **Layout:**
+    - Left 3/5: Main title (multiline)
+    - Right 2/5: Subtitle (multiline)
+    - Header: Three-column, top (left: brand, center: date, right: handle)
+    - Circles:
+        - 500px top-right (pale tan, 50%),
+        - 400px mid-right (branded green, 50%),
+        - 300px lower-right (pale tan, 50%)
+- **Titles:** 5rem (90px) Left, 1.5rem (24px) Right
+- **Text alignment:**
+    - Main Title: Left
+    - Subtitle: Right, with right-aligned multiline text
+- **Unique:** Largest, multi-circle background cluster
+
+### 5.2 Table of Contents Slide
+- **Layout:**
+    - Split: Left (title), Right (vertical TOC list)
+    - Circles:
+        - 700px center-left background (medium green, 50%)
+        - 400px bottom-right (pale tan, 30%)
+    - TOC List: Flex column, 12px gap; numbers right-aligned in column, body left.
+    - TOC Numbers: `#D3B89C`, bold
+    - Title: 6rem (96px), bold
+- **Unique:** Numbers for TOC, two dominant green circles, right-heavy list for content
+
+### 5.3 Content Slides (Standard)
+- **Header:** All slides: 3-column, 15px top/bottom, 40px left/right
+- **Content Grid:** 2 equal columns (50%/50%)
+    - **Left:** Heading (5rem), subtitle (1.8rem), description (1.1rem), body left aligned
+    - **Right:** Visual element (chart, stat, boxes), always centered vertically and horizontally within right container
+    - **Spacing:** 40px padding on all four sides
+    - **Visual Patterns:** Circles in corners but never over text, always subtle
+- **Specific content elements example:**
+    - **Stats/Steps:** Large numerals (80–96px), icons/badges in circle (40px)
+    - **Circles:** 600px top-right, 400px lower-left, etc.
+
+#### 5.3a: Priority Circles Layout (e.g., Slide 4)
+- **3 floating circles:**
+    - 180–200px diameter
+    - Placed absolutely:
+        - Top right, bottom left, bottom right quadrants
+    - Z-order ensures correct stacking over background
+- **Inside Circle:**
+    - Number (2rem), text stack (0.9rem, 1.2 line-height, centered, never longer than 3 short lines)
+    - Colors: Priority 1: `#005430`, 2: `#29A59B`, 3: `#C49A6C`
+
+#### 5.3b: Funnel Diagram (Slide 6)
+- **450×450px area on right**
+- **Five segments:**
+    - Top: 60px/`#D3B89C`, Middle: 70px/`#C49A6C`, Next: 80px/`#29A59B`, Next: 90px/`#1A7A70` (polygon), Bottom: 100px/`#005430` (rounded ends polygon)
+    - All: width 300px (+ label & connector line right)
+    - Stage label: 1.2rem, bold, `#005430`
+    - Horizontal connector lines: 1px, `#005430`
+
+#### 5.3c: Step/Box Layout (Slide 8)
+- **Three stacked step boxes:**
+    - 100% width, 20px margin-bottom
+    - Colors: top `#005430`, middle `#29A59B`, bottom `#C49A6C`
+    - Text: centered, 1.2rem, white
+
+#### 5.3d: Strategy Row (Slide 7)
+- **Top row:** Full-width box (`#29A59B`)
+- **Second row:** Two half-width boxes
+    - left: `#005430`
+    - right: `#C49A6C`
+- **Number Circles:** White with green border/text, 36px; floats above each box - placed at horizontal center, vertically -18px
+- **Gap:** 20px between each box
+
+---
+
+## 6. Interactive Elements
+
+- **No hover states, dynamic animations, or transitions specified** in provided stylesheets or elements.
+- **No interactive color changes**—all colors and element states are static.
+- All elements intended to appear as static slide content for decks, not UI.
+
+---
+
+## 7. Design Rules & Patterns
+
+- **Grid always aligns to consistent 40px outer gutter.**
+- **All rounded corners and circles use *consistent proportional radii*:**
+    - Circles always fully round.
+    - Boxes: border-radius of 10px–30px depending on hierarchy.
+- **Consistent use of green/brown palette** for progressive hierarchy and emphasis.
+- **Body text never reverses out of dark backgrounds unless in a colored box** (white on green box), otherwise always dark text on white.
+- **Header strip always present:** fixed left/center/right layout, date always centered, brand left, handle right.
+- **Background circles:** Must never cover main text, always 30–50% opacity, always tan tints.
+- **All illustrations/diagrams must be vector, geometric, and use the prescribed color palette only.**
+- **Do not introduce drop shadows, patterns, or photographic elements.**
+- **Do not vary font sizes or weights from what is codified above.**
+- **Text never overlays directly on green backgrounds without sufficient contrast (white/green or green/white only).**
+- **Avoid horizontal scrolling or interactive states not found in static slides.**
+
+---
+
+# **Reference Summary Table**
+
+| Slide Type      | Layout Class     | BG Color          | Main Title           | Right Panel           | Visuals         | Special Notes                |
+|-----------------|-----------------|-------------------|----------------------|-----------------------|-----------------|------------------------------|
+| Cover           | 3/5 – 2/5 flex  | #005430           | 5rem left, white     | 1.5rem, right, white  | 3 circles, pale | Large circles (TR, MR, BR)   |
+| TOC             | 50%/50%         | #005430           | 6rem left, white     | TOC (1.2rem, right #) | 2 circles       | Right-heavy content          |
+| Content Std     | 2 col           | #FFFFFF           | 4.5–5rem, green      | Chart, stat, box      | 2–3 circles     | 1.1rem body, green accents   |
+| Priority Circles| 2 col           | #FFFFFF           | 4.8rem, green        | 3 floating circles    | 2 circles       | Circles: 180–200px, abs. pos |
+| Funnel          | 2 col           | #FFFFFF           | 5rem, green          | Funnel chart (5)      | 2 circles       | Stage label w/ connector     |
+| Step/Box        | 2 col           | #FFFFFF           | 4.5rem, green        | 3 step boxes          | 3 circles       | Centered, colored            |
+| Strategy Row    | 2 col           | #FFFFFF           | 4.5rem, green        | 3 strategy boxes      | 2 circles       | # circles over boxes         |
+
+---
+
+# **End of Specifications—All designers must adhere to these standards for guaranteed consistency.**
+```
+
+## Slide Template Image Prompt (for AI Image Generation)
+
+```
+No images found in template content
+```
+
+### Design Style Usage Instructions
+
+a) By default, please strictly follow this design style when creating slides.
+
+b) If users have special design requirements for this template, use the think tool first to reflect and output all modified style requirements as design specifications that must strictly followed before writing slides. Otherwise, parallel execution will cause style inconsistency due to inability to see adjacent slide styles.
+
+# To-do List
+
+- Use thinking tool to analyze font replacement requirements since template language and user language are inconsistent, determine which fonts should be used to replace current template fonts.
+
+- Use this template to create new slides with the same structure and design.
+
+# Next Step
+
+Add all todos to the to-do list using the todoWrite tool.
+
+","{https://storage.googleapis.com/ii-agent-public/slides/assets/cc249d27-267a-44e1-9227-a02b24b310e2/1.png,https://storage.googleapis.com/ii-agent-public/slides/assets/cc249d27-267a-44e1-9227-a02b24b310e2/2.png,https://storage.googleapis.com/ii-agent-public/slides/assets/cc249d27-267a-44e1-9227-a02b24b310e2/3.png,https://storage.googleapis.com/ii-agent-public/slides/assets/cc249d27-267a-44e1-9227-a02b24b310e2/4.png}",2025-10-16 23:18:37.368 +0700,
+"9f864586-94d6-4bfd-8d60-9fbfce63d315",Neon Galaxy,"**Template ID:** 9f864586-94d6-4bfd-8d60-9fbfce63d315\n**Template contains:** 9 slides\n**Resolution:** 1280 x 720\n**Themes:** Futuristic, Tech, Neon\n**Styles:** Bold, Dark, High-contrast
+
+# Template details
+
+## Template Page 1
+**Name:** Neon Cover Title
+**Key:** neon_cover_title
+**Description:** Centered hero title with supporting line and footer on a dark.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Neon Cover Title</title>
+<link href=""https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"" rel=""stylesheet""/>
+<style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            color: #ffffff;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 18px;
+            padding: 120px 160px;
+            background-image: url(""https://sfile.ii.inc/slide_templates/assets/slide-4/bg-slide-1.png"");
+            background-size: cover;
+            background-position: center;
+        }
+
+        .slide-container::before,
+        .slide-container::after {
+            content: """";
+            position: absolute;
+            width: 140%;
+            height: 140%;
+            left: -20%;
+            border-radius: 50%;
+            filter: blur(0);
+            opacity: 0.4;
+            mix-blend-mode: screen;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 76px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .subtitle {
+            margin: 0;
+            font-size: 36px;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+
+        .footer {
+            margin-top: 32px;
+            font-size: 22px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            position: fixed;
+            bottom: 64px;
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <h1 class=""title"">Lorem Ipsum</h1>
+        <p class=""subtitle"">Consectetur Adipiscing Elit</p>
+        <p class=""footer"">Sed Do Eiusmod</p>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 2
+**Name:** Two Column Intro With Orb
+**Key:** two_column_intro_orb
+**Description:** Text stack on the left with supporting paragraph balanced by a glowing digital orb illustration on the right.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Intro With Orb</title>
+<link href=""https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"" rel=""stylesheet""/>
+<style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #000121;
+            color: #ffffff;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            padding: 96px;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 72px;
+            overflow: hidden;
+        }
+
+        .text-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 24px;
+        }
+
+        .heading {
+            margin: 0;
+            font-size: 62px;
+            font-weight: 700;
+        }
+
+        .subheading {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 500;
+        }
+
+        .paragraph {
+            margin: 0;
+            font-size: 22px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.82);
+        }
+
+        .orb-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .orb {
+            width: 420px;
+            height: 420px;
+            border-radius: 50%;
+            background-image: url(""https://sfile.ii.inc/slide_templates/assets/slide-4/bg-slide-2.png"");
+            background-size: cover;
+            position: relative;
+        }
+
+
+        .caption {
+            position: absolute;
+            bottom: 24px;
+            font-size: 18px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.72);
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <section class=""text-column"">
+            <h1 class=""heading"">Lorem Ipsum</h1>
+            <p class=""subheading"">Consectetur Adipiscing Elit</p>
+            <p class=""paragraph"">
+                Tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.
+            </p>
+        </section>
+        <div class=""orb-wrapper"">
+            <div class=""orb""></div>
+            <span class=""caption"">Caption</span>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 3
+**Name:** Photo Feature With Copy
+**Key:** photo_feature_with_copy
+**Description:** Split layout pairing a full-height architectural photo with headline, lead copy, and supporting body text.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Photo Feature Copy</title>
+<link href=""https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"" rel=""stylesheet""/>
+<style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #000121;
+            color: #ffffff;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.05fr 0.95fr;
+            gap: 56px;
+            background:
+                radial-gradient(circle at 10% 24%, rgba(123, 70, 255, 0.36), transparent 60%),
+                linear-gradient(140deg, #050628 0%, #020114 100%);
+        }
+
+        .photo-panel {
+            width: 100%;
+            background-image: url(""https://sfile.ii.inc/slide_templates/assets/slide-4/bg-slide-3.png"");
+            background-size: cover;
+            background-position: center;
+            border-radius: 18px;
+            box-shadow: 0 30px 60px rgba(17, 14, 40, 0.55);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .text-column {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            justify-content: center;
+            padding: 48px;
+        }
+
+        .heading {
+            margin: 0;
+            font-size: 58px;
+            font-weight: 700;
+        }
+
+        .subheading {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.84);
+        }
+
+        .body-copy {
+            margin: 0;
+            font-size: 22px;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.82);
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <section class=""photo-panel""></section>
+        <section class=""text-column"">
+            <h1 class=""heading"">Lorem Ipsum</h1>
+            <p class=""subheading"">Consectetur Adipiscing Elit</p>
+            <p class=""body-copy"">
+                Tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+            </p>
+        </section>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 4
+**Name:** Statement Over Abstract Background
+**Key:** statement_over_abstract
+**Description:** Bold statement paragraph centered on a luminous tech background with subtle footer line.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Statement Abstract</title>
+<link href=""https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"" rel=""stylesheet""/>
+<style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #000121;
+            color: #ffffff;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 32px;
+            padding: 120px 144px;
+            text-align: center;
+            background-image: url(""https://sfile.ii.inc/slide_templates/assets/slide-4/bg-slide-4.png"");
+            background-size: cover;
+            background-position: center;
+        }
+
+        .slide-container::before,
+        .slide-container::after {
+            content: """";
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            left: -25%;
+            mix-blend-mode: screen;
+            opacity: 0.32;
+        }
+
+        .statement {
+            margin: 0;
+            font-size: 44px;
+            line-height: 1.5;
+            max-width: 940px;
+        }
+
+        .footer {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.75);
+            position: fixed;
+            bottom: 64px;
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <p class=""statement"">
+            Tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+            quis nostrud exercitation ullamco laboris nisi ut aliquip.
+        </p>
+        <p class=""footer"">Sed Do Eiusmod</p>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 5
+**Name:** Neon Center Title
+**Key:** neon_center_title
+**Description:** Clean title and subtitle treatment on a dense field of particle gradients for a mid-deck anchor slide.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Neon Center Title</title>
+<link href=""https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"" rel=""stylesheet""/>
+<style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #000121;
+            color: #ffffff;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 18px;
+            padding: 120px 160px;
+            text-align: center;
+            background-image: url(""https://sfile.ii.inc/slide_templates/assets/slide-4/bg-slide-5.png"");
+            background-size: cover;
+            background-position: center;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 72px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .subtitle {
+            margin: 0;
+            font-size: 36px;
+            font-weight: 400;
+        }
+
+        .footer {
+            margin-top: 24px;
+            font-size: 22px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.78);
+            position: fixed;
+            bottom: 64px;
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <h1 class=""title"">Lorem Ipsum</h1>
+        <p class=""subtitle"">Consectetur Adipiscing Elit</p>
+        <p class=""footer"">Sed Do Eiusmod</p>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 6
+**Name:** Key Metric Highlight
+**Key:** key_metric_highlight
+**Description:** Oversized percentage metric centered on a deep navy background with supporting line.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Key Metric Highlight</title>
+<link href=""https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"" rel=""stylesheet""/>
+<style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #000121;
+            color: #ffffff;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .metric {
+            margin: 0;
+            font-size: 180px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+        }
+
+        .caption {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.8);
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <p class=""metric"">99%</p>
+        <p class=""caption"">Sed Do Eiusmod Ut Enim Ad</p>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 7
+**Name:** Orb Feature With Body Copy
+**Key:** orb_feature_body_copy
+**Description:** Glowing orb illustration on the left with mirrored text layout on the right, ideal for product features.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Orb Feature With Copy</title>
+<link href=""https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"" rel=""stylesheet""/>
+<style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #000121;
+            color: #ffffff;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            padding: 96px 120px;
+            display: grid;
+            grid-template-columns: 0.9fr 1.1fr;
+            gap: 72px;
+            overflow: hidden;
+        }
+
+        .orb-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .orb {
+            width: 340px;
+            height: 340px;
+            border-radius: 50%;
+            background-image: url(""https://sfile.ii.inc/slide_templates/assets/slide-4/bg-slide-2.png"");
+            background-size: cover;
+            position: relative;
+        }
+
+        .caption {
+            position: absolute;
+            bottom: 24px;
+            font-size: 18px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.72);
+        }
+
+        .text-column {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            justify-content: center;
+        }
+
+        .heading {
+            margin: 0;
+            font-size: 60px;
+            font-weight: 700;
+        }
+
+        .subheading {
+            margin: 0;
+            font-size: 30px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.84);
+        }
+
+        .body-copy {
+            margin: 0;
+            font-size: 22px;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.82);
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <div class=""orb-wrapper"">
+            <div class=""orb""></div>
+            <span class=""caption"">Caption</span>
+        </div>
+        <section class=""text-column"">
+            <h1 class=""heading"">Lorem Ipsum</h1>
+            <p class=""subheading"">Consectetur Adipiscing Elit</p>
+            <p class=""body-copy"">
+                Tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.
+            </p>
+        </section>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 8
+**Name:** Copy With Supporting Image
+**Key:** copy_with_supporting_image
+**Description:** Headline and paragraph stack paired with a structural photo on the right to reinforce messaging.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Copy With Supporting Image</title>
+<link href=""https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"" rel=""stylesheet""/>
+<style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #000121;
+            color: #ffffff;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.05fr 0.95fr;
+            gap: 56px;
+        }
+
+        .text-column {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            justify-content: center;
+            padding: 90px 96px;
+        }
+
+        .heading {
+            margin: 0;
+            font-size: 60px;
+            font-weight: 700;
+        }
+
+        .body-copy {
+            margin: 0;
+            font-size: 24px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.84);
+        }
+
+        .photo-panel {
+            width: 100%;
+            background-image: url(""https://sfile.ii.inc/slide_templates/assets/slide-4/bg-slide-3.png"");
+            background-size: cover;
+            background-position: center;
+            border-radius: 20px;
+            box-shadow: 0 30px 60px rgba(17, 14, 40, 0.55);
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <section class=""text-column"">
+            <h1 class=""heading"">Lorem Ipsum</h1>
+            <p class=""body-copy"">
+                Tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+            </p>
+        </section>
+        <section class=""photo-panel""></section>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 9
+**Name:** Quote Over Abstract Field
+**Key:** quote_over_abstract_field
+**Description:** Large format pull quote centered with supporting attribution line.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Quote Abstract Field</title>
+<link href=""https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"" rel=""stylesheet""/>
+<style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #04041a;
+            color: #ffffff;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 32px;
+            padding: 140px 160px;
+            text-align: center;
+            background-image: url(""https://sfile.ii.inc/slide_templates/assets/slide-4/bg-slide-9.png"");
+            background-size: cover;
+            background-position: center;
+        }
+        .quote {
+            margin: 0;
+            font-size: 46px;
+            line-height: 1.55;
+            max-width: 980px;
+        }
+
+        .attribution {
+            margin: 0;
+            font-size: 26px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.78);
+            position: fixed;
+            bottom: 64px;
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <p class=""quote"">
+            Tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+            quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+        </p>
+        <p class=""attribution"">Sed Do Eiusmod</p>
+    </div>
+</body>
+</html>
+```
+","{https://storage.googleapis.com/ii-agent-public/slides/assets/9f864586-94d6-4bfd-8d60-9fbfce63d315/1.png,https://storage.googleapis.com/ii-agent-public/slides/assets/9f864586-94d6-4bfd-8d60-9fbfce63d315/2.png,https://storage.googleapis.com/ii-agent-public/slides/assets/9f864586-94d6-4bfd-8d60-9fbfce63d315/3.png,https://storage.googleapis.com/ii-agent-public/slides/assets/9f864586-94d6-4bfd-8d60-9fbfce63d315/4.png}",2025-10-30 15:56:34.422 +0700,
+"3b2c5d63-3f2c-4fd6-8fb1-2c2d4c418f8f",Minimalistic Nature,"**Template ID:** 3b2c5d63-3f2c-4fd6-8fb1-2c2d4c418f8f
+**Template contains:** 8 slides
+**Resolution:** 1280 x 720
+**Themes:** Nature, Lifestyle, Minimalism
+**Styles:** Clean, Modern, Gradient
+
+# Template details
+
+## Template Page 1
+**Name:** Gradient Title Cover
+**Key:** gradient_title_cover
+**Description:** A centered headline with subtext on a teal to cream gradient background, matching the provided opening slide reference.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Gradient Title Cover</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #09AEA1;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #ffffff;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #09AEA1 0%, #EBEABC 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 24px;
+            padding: 64px;
+            box-sizing: border-box;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 64px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .subtitle {
+            margin: 0;
+            font-size: 32px;
+            line-height: 1.4;
+        }
+
+        .footer {
+            margin: 40px 0 0;
+            font-size: 24px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            position: fixed;
+            bottom: 64px;
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <h1 class=""title"">Lorem Ipsum Dolor Sit Amet</h1>
+        <p class=""subtitle"">Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <p class=""footer"">Lorem Ipsum</p>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 2
+**Name:** Intro Bullets with Feature Image
+**Key:** intro_bullets_feature_image
+**Description:** Two column layout with headline, subtitle, and bullet list on the left balanced by a feature image on the right, styled after the second slide reference.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Intro With Photo</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #09AEA1;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #ffffff;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #09AEA1 0%, #EBEABC 100%);
+            display: grid;
+            grid-template-columns: 0.95fr 1.05fr;
+            gap: 56px;
+            padding: 80px;
+            box-sizing: border-box;
+        }
+
+        .text-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .heading {
+            margin: 0;
+            font-size: 38px;
+        }
+
+        .subheading {
+            margin: 0;
+            font-size: 32px;
+        }
+
+        .bullet-list {
+            margin: 16px 0 0;
+            padding: 0;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            font-size: 24px;
+            line-height: 1.35;
+        }
+
+        .bullet-list li {
+            position: relative;
+            padding-left: 28px;
+        }
+
+        .bullet-list li::before {
+            content: """";
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 12px;
+            height: 12px;
+            background-color: #ffffff;
+            border-radius: 9999px;
+        }
+
+        .image-panel {
+            width: 100%;
+            background-image: url(""https://images.unsplash.com/photo-1484406566174-9da000fda645?auto=format&fit=crop&w=1080&q=80"");
+            background-size: cover;
+            background-position: center;
+            border: 12px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 24px 60px rgba(10, 40, 40, 0.35);
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <section class=""text-column"">
+            <div>
+                <h1 class=""heading"">Lorem Ipsum Dolor Sit Amet</h1>
+                <p class=""subheading"">Ipsum Ipsum Dolor</p>
+            </div>
+            <ul class=""bullet-list"">
+                <li>Lorem ipsum dolor sit amet</li>
+                <li>Consectetur adipiscing elit</li>
+                <li>Sed do eiusmod tempor incididunt ut labore</li>
+                <li>Et dolore magna aliqua</li>
+                <li>Ut enim ad minim veniam</li>
+            </ul>
+        </section>
+        <section class=""image-panel""></section>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 3
+**Name:** Collage Photo Grid
+**Key:** collage_photo_grid
+**Description:** A collage of nature images with one large feature photo and two stacked secondary photos, replicating the third reference slide.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Collage Photo Grid</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #09AEA1;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #09AEA1 0%, #EBEABC 100%);
+            display: grid;
+            grid-template-columns: 1.25fr 0.75fr;
+            gap: 32px;
+            padding: 60px 72px;
+            box-sizing: border-box;
+        }
+
+        .feature-photo {
+            width: 100%;
+            height: 100%;
+            background-image: url(""https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1100&q=80"");
+            background-size: cover;
+            background-position: center;
+            border: 16px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 24px 60px rgba(10, 40, 40, 0.35);
+        }
+
+        .secondary-grid {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .secondary-photo {
+            width: 100%;
+            background-size: cover;
+            background-position: center;
+            border: 16px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 16px 40px rgba(10, 40, 40, 0.35);
+        }
+
+        .photo-top {
+            background-image: url(""https://images.unsplash.com/photo-1452587925148-ce544e77e70d?auto=format&fit=crop&w=640&q=80"");
+        }
+
+        .photo-bottom {
+            background-image: url(""https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=640&q=80"");
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <div class=""feature-photo""></div>
+        <div class=""secondary-grid"">
+            <div class=""secondary-photo photo-top""></div>
+            <div class=""secondary-photo photo-bottom""></div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 4
+**Name:** Full Background Photo
+**Key:** full_background_photo
+**Description:** A single immersive photo filling the slide canvas.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Full Background Photo</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #0f9f98;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            background-image: url(""https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1600&q=80"");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container""></div>
+</body>
+</html>
+```
+
+## Template Page 5
+**Name:** Highlight Statistic
+**Key:** highlight_statistic
+**Description:** A statement slide with a large percentage centered on a gradient field and accented by an abstract circle, mirroring the fourth provided slide.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Highlight Statistic</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #09AEA1;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #ffffff;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #09AEA1 0%, #EBEABC 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide-container::before {
+            content: """";
+            position: absolute;
+            width: 420px;
+            height: 420px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(157, 245, 234, 1), rgba(255, 255, 255, 1));
+            top: -150px;
+            left: -220px;
+        }
+
+        .percentage {
+            margin: 0;
+            font-size: 200px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .caption {
+            margin: 0;
+            font-size: 32px;
+            letter-spacing: 0.04em;
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <h1 class=""percentage"">99.99%</h1>
+        <p class=""caption"">Lorem ipsum dolor sit amet</p>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 6
+**Name:** Simple Center Title
+**Key:** simple_center_title
+**Description:** Minimal slide with centered title over the teal to cream gradient background, matching the fifth reference slide.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Simple Center Title</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #09AEA1;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #ffffff;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #09AEA1 0%, #EBEABC 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 72px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <h1 class=""title"">Lorem Torem</h1>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 7
+**Name:** Agenda List With Accent Shape
+**Key:** agenda_list_accent_shape
+**Description:** Left aligned heading and bullet list with an abstract rounded accent on the right, reflecting the sixth slide reference.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Agenda With Accent</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #09AEA1;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #ffffff;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #09AEA1 0%, #EBEABC 100%);
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 48px;
+            padding: 96px 104px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .text-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .heading {
+            margin: 0;
+            font-size: 64px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .subheading {
+            margin: 0;
+            font-size: 30px;
+            font-weight: 500;
+        }
+
+        .bullet-list {
+            margin: 20px 0 0;
+            padding: 0;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            font-size: 24px;
+            line-height: 1.4;
+        }
+
+        .bullet-list li {
+            position: relative;
+            padding-left: 28px;
+        }
+
+        .bullet-list li::before {
+            content: """";
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 12px;
+            height: 12px;
+            background-color: #ffffff;
+            border-radius: 9999px;
+        }
+
+        .accent-shape {
+            position: absolute;
+            border-radius: 100%;
+            background: linear-gradient(180deg, rgba(157, 245, 234, 1) 75%, rgba(255, 255, 255, 1) 100%);
+            height: 80%;
+            width: 200px;
+            top: 50%;
+            right: -100px;
+            transform: translateY(-50%);
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <section class=""text-column"">
+            <h1 class=""heading"">Lorem Ipsum Dolor Sit Amet</h1>
+            <p class=""subheading"">Torem days</p>
+            <ul class=""bullet-list"">
+                <li>Lorem Torem lorem ipsum dolor sit amet</li>
+                <li>Consectetur adipiscing elit</li>
+                <li>Sed do eiusmod tempor incididunt ut labore</li>
+                <li>Et dolore magna aliqua</li>
+                <li>Ut enim ad minim veniam</li>
+            </ul>
+        </section>
+        <section class=""accent-shape""></section>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 8
+**Name:** Quote Slide With Overlays
+**Key:** quote_slide_overlays
+**Description:** Wide quote treatment with name attribution and soft circular overlays echoing the final reference slide.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+
+<html lang=""en"">
+<head>
+<meta charset=""utf-8""/>
+<meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+<title>Quote Slide</title>
+<link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+<link href=""https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"" rel=""stylesheet""/>
+<style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #09AEA1;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #ffffff;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #09AEA1 0%, #EBEABC 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 28px;
+            padding: 140px 120px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide-container::before,
+        .slide-container::after {
+            content: """";
+            position: absolute;
+            border-radius: 50%;
+        }
+       
+        .slide-container::before {
+            width: 360px;
+            height: 360px;
+            top: -240px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .slide-container::after {
+            width: 420px;
+            height: 420px;
+            bottom: -280px;
+            right: 50%;
+            transform: translateX(50%);
+            background: rgba(57, 234, 213, 1);
+        }
+
+        .quote {
+            margin: 0;
+            font-size: 44px;
+            line-height: 1.4;
+            max-width: 1040px;
+        }
+
+        .attribution {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 500;
+        }
+</style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <p class=""quote"">""Lorem ipsum dolor sit amet -- consectetur adipiscing elit.""</p>
+        <p class=""attribution"">- Mr. Lorem</p>
+    </div>
+</body>
+</html>
+```
+","{https://storage.googleapis.com/ii-agent-public/slides/assets/3b2c5d63-3f2c-4fd6-8fb1-2c2d4c418f8f/1.png,https://storage.googleapis.com/ii-agent-public/slides/assets/3b2c5d63-3f2c-4fd6-8fb1-2c2d4c418f8f/2.png,https://storage.googleapis.com/ii-agent-public/slides/assets/3b2c5d63-3f2c-4fd6-8fb1-2c2d4c418f8f/3.png,https://storage.googleapis.com/ii-agent-public/slides/assets/3b2c5d63-3f2c-4fd6-8fb1-2c2d4c418f8f/4.png}",2025-10-30 01:38:23.676 +0700,
+cabf7bc0-e7ae-4343-88c8-47f46168fd78,Nature Future,"**Template ID:** cabf7bc0-e7ae-4343-88c8-47f46168fd78
+**Template contains:** 9 slides
+**Resolution:** 1280 x 720
+**Themes:** Business, Technology, Marketing
+**Styles:** Professional, Elegant, Minimalist, Modern
+
+# Template details
+
+## Template Page 1
+Title slide with header illustration. Contains: Presentation Title (main heading), Subtitle (brief description), Company name, and Date. Use for opening/cover slide of the presentation.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""utf-8""/>
+    <meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+    <title>Presentation Title</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #E8F4F2;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .illustration-container {
+            width: 100%;
+            height: 280px;
+            background-image: url('https://sfile.ii.inc/slide_templates/assets/slide-2/1.png');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .content-section {
+            padding: 60px 80px;
+            text-align: center;
+            height: calc(100% - 280px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .presentation-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 4.5rem;
+            font-weight: 700;
+            color: #3D5A3D;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+
+        .presentation-subtitle {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 400;
+            color: #111111;
+            margin-bottom: 50px;
+        }
+
+        .company-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: #7A9A7A;
+            margin-bottom: 15px;
+        }
+
+        .date-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 300;
+            color: #9ABAA0;
+        }
+
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Illustration Section -->
+        <div class=""illustration-container""></div>
+
+        <!-- Content Section -->
+        <div class=""content-section"">
+            <h1 class=""presentation-title"">Presentation Title</h1>
+            <p class=""presentation-subtitle"">Subtitle</p>
+            <p class=""company-name"">Company</p>
+            <p class=""date-text"">Date</p>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 2
+Table of contents slide. Contains: 'Contents' title and 8 numbered section items (01-08) in a 2-column grid layout. Each item has a number and section title. Use for agenda/outline of the presentation.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""utf-8""/>
+    <meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+    <title>Contents</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #E8F4E8;
+            position: relative;
+            overflow: hidden;
+            padding: 60px 80px;
+            box-sizing: border-box;
+        }
+
+        .contents-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #3D5A3D;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .contents-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 80px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .content-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #A8C5A8;
+        }
+
+        .item-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            color: #C4956C;
+            min-width: 50px;
+        }
+
+        .item-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            color: #3D5A3D;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <h1 class=""contents-title"">Contents</h1>
+
+        <div class=""contents-grid"">
+            <div class=""content-item"">
+                <span class=""item-number"">01</span>
+                <span class=""item-title"">Section Title</span>
+            </div>
+            <div class=""content-item"">
+                <span class=""item-number"">05</span>
+                <span class=""item-title"">Section Title</span>
+            </div>
+            <div class=""content-item"">
+                <span class=""item-number"">02</span>
+                <span class=""item-title"">Section Title</span>
+            </div>
+            <div class=""content-item"">
+                <span class=""item-number"">06</span>
+                <span class=""item-title"">Section Title</span>
+            </div>
+            <div class=""content-item"">
+                <span class=""item-number"">03</span>
+                <span class=""item-title"">Section Title</span>
+            </div>
+            <div class=""content-item"">
+                <span class=""item-number"">07</span>
+                <span class=""item-title"">Section Title</span>
+            </div>
+            <div class=""content-item"">
+                <span class=""item-number"">04</span>
+                <span class=""item-title"">Section Title</span>
+            </div>
+            <div class=""content-item"">
+                <span class=""item-number"">08</span>
+                <span class=""item-title"">Section Title</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 3
+Two-column layout with image on LEFT (50%) and content on RIGHT (50%). Contains: Slide Title, section heading, descriptive paragraph, and 3 bullet points with labeled items. Use for detailed content with visual support.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""utf-8""/>
+    <meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+    <title>Slide Title</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #E8F4E8;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .image-section {
+            width: 50%;
+            height: 100%;
+            background-image: url('https://sfile.ii.inc/slide_templates/assets/slide-2/2.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .content-section {
+            width: 50%;
+            height: 100%;
+            padding: 80px 60px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .slide-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #3D5A3D;
+            margin-bottom: 60px;
+        }
+
+        .section-heading {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #3D5A3D;
+            margin-bottom: 10px;
+        }
+
+        .section-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #3D5A3D;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .bullet-item {
+            margin-bottom: 15px;
+        }
+
+        .bullet-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #C4956C;
+        }
+
+        .bullet-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #3D5A3D;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Image Section -->
+        <div class=""image-section""></div>
+
+        <!-- Content Section -->
+        <div class=""content-section"">
+            <h1 class=""slide-title"">Slide Title</h1>
+
+            <p class=""section-heading"">Lorem ipsum dolor sit amet</p>
+            <p class=""section-text"">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+
+            <div class=""bullet-item"">
+                <span class=""bullet-label"">Duis</span>
+                <span class=""bullet-text""> – Aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</span>
+            </div>
+
+            <div class=""bullet-item"">
+                <span class=""bullet-label"">Velit</span>
+                <span class=""bullet-text""> – Excepteur sint occaecat cupidatat non proident.</span>
+            </div>
+
+            <div class=""bullet-item"">
+                <span class=""bullet-label"">Nulla</span>
+                <span class=""bullet-text""> – Sunt in culpa qui officia deserunt mollit anim id est.</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 4
+Two-column layout with content on LEFT (50%) and image on RIGHT (50%). Contains: Slide Title, section heading, highlighted subtitle paragraph (green text), and body paragraph. Use for text-heavy content with visual accent.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""utf-8""/>
+    <meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+    <title>Slide Title</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #E8F4E8;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .content-section {
+            width: 50%;
+            height: 100%;
+            padding: 80px 60px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .image-section {
+            width: 50%;
+            height: 100%;
+            background-image: url('https://sfile.ii.inc/slide_templates/assets/slide-2/3.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .slide-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #3D5A3D;
+            margin-bottom: 50px;
+        }
+
+        .section-heading {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #3D5A3D;
+            margin-bottom: 10px;
+        }
+
+        .section-text-green {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: #5A8A5A;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .section-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #3D5A3D;
+            line-height: 1.7;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Content Section -->
+        <div class=""content-section"">
+            <h1 class=""slide-title"">Slide Title</h1>
+
+            <p class=""section-heading"">Lorem ipsum dolor sit amet</p>
+            <p class=""section-text-green"">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.</p>
+
+            <p class=""section-text"">Excepteur sint occaecat cupidatat non proident. Quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+        </div>
+
+        <!-- Image Section -->
+        <div class=""image-section""></div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 5
+Three-column card layout. Contains: centered Slide Title, Subtitle, description text, and 3 cards. Each card has: Section Header, Section subheader, body text, and colored bottom border (yellow/tan, terracotta, light blue). Use for comparing 3 features/options/categories.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""utf-8""/>
+    <meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+    <title>Slide Title</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #E8F4E8;
+            position: relative;
+            overflow: hidden;
+            padding: 50px 60px;
+            box-sizing: border-box;
+        }
+
+        .slide-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #3D5A3D;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .slide-subtitle {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: #9AB89A;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .slide-description {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #9AB89A;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .cards-container {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+        }
+
+        .card {
+            width: 360px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 8px;
+            padding: 30px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .card-header {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #3D5A3D;
+            margin-bottom: 15px;
+        }
+
+        .card-subheader {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #9AB89A;
+            margin-bottom: 15px;
+        }
+
+        .card-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 400;
+            color: #3D5A3D;
+            line-height: 1.7;
+        }
+
+        .card-line {
+            position: absolute;
+            bottom: 0;
+            left: 0; 
+            right: 0;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .card-line-yellow {
+            background-color: #D4B896;
+        }
+
+        .card-line-red {
+            background-color: #C4826C;
+        }
+
+        .card-line-blue {
+            background-color: #96C4D4;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <h1 class=""slide-title"">Slide Title</h1>
+        <p class=""slide-subtitle"">Subtitle</p>
+        <p class=""slide-description"">Quis nostrud exercitation ullamco laboris nisi</p>
+
+        <div class=""cards-container"">
+            <div class=""card"">
+                <h3 class=""card-header"">Section Header</h3>
+                <p class=""card-subheader"">Section subheader</p>
+                <p class=""card-text"">Excepteur sint occaecat cupidatat non proident. Quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure.</p>
+                <div class=""card-line card-line-yellow""></div>
+            </div>
+
+            <div class=""card"">
+                <h3 class=""card-header"">Section Header</h3>
+                <p class=""card-subheader"">Section subheader</p>
+                <p class=""card-text"">Veritatis et quasi architecto beatae vitae dicta inexplicable. Quis exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure.</p>
+                <div class=""card-line card-line-red""></div>
+            </div>
+
+            <div class=""card"">
+                <h3 class=""card-header"">Section Header</h3>
+                <p class=""card-subheader"">Section subheader</p>
+                <p class=""card-text"">In culpa sunt qui officia deserunt mollit anim id dolor in culpa. Quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat</p>
+                <div class=""card-line card-line-blue""></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 6
+Two-column layout with content on LEFT (50%) and image on RIGHT (50%). Contains: Slide Title, section heading, highlighted subtitle (green text), and 3 Subheading sections each with body text. Use for explaining multiple related points with visual support.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""utf-8""/>
+    <meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+    <title>Slide Title</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #E8F4E8;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .content-section {
+            width: 50%;
+            height: 100%;
+            padding: 60px 50px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .image-section {
+            width: 50%;
+            height: 100%;
+            background-image: url('https://sfile.ii.inc/slide_templates/assets/slide-2/4.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .slide-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #3D5A3D;
+            margin-bottom: 40px;
+        }
+
+        .section-heading {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #3D5A3D;
+            margin-bottom: 8px;
+        }
+
+        .section-text-green {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #5A8A5A;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+
+        .subheading {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #3D5A3D;
+            margin-bottom: 8px;
+        }
+
+        .subheading-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 400;
+            color: #3D5A3D;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Content Section -->
+        <div class=""content-section"">
+            <h1 class=""slide-title"">Slide Title</h1>
+
+            <p class=""section-heading"">Lorem ipsum dolor sit amet</p>
+            <p class=""section-text-green"">Ut enim ad minim veniam, quis nostrud exercitation.</p>
+
+            <p class=""subheading"">Subheading</p>
+            <p class=""subheading-text"">Veritatis et quasi architecto beatae vitae dicta dolor inexplicable. Minim veniam, quis nostrud exercitation.</p>
+
+            <p class=""subheading"">Subheading</p>
+            <p class=""subheading-text"">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+
+            <p class=""subheading"">Subheading</p>
+            <p class=""subheading-text"">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+        </div>
+
+        <!-- Image Section -->
+        <div class=""image-section""></div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 7
+Two-column layout with image on LEFT (50%) and content on RIGHT (50%). Contains: Slide Title and 3 Subheading sections each with body text. Simpler layout without intro paragraph. Use for listing 3 key points/features with visual support.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""utf-8""/>
+    <meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+    <title>Slide Title</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #E8F4E8;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .image-section {
+            width: 50%;
+            height: 100%;
+            background-image: url('https://sfile.ii.inc/slide_templates/assets/slide-2/4.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .content-section {
+            width: 50%;
+            height: 100%;
+            padding: 60px 50px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .slide-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #3D5A3D;
+            margin-bottom: 60px;
+        }
+
+        .subheading {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #3D5A3D;
+            margin-bottom: 8px;
+        }
+
+        .subheading-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 400;
+            color: #3D5A3D;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Image Section -->
+        <div class=""image-section""></div>
+
+        <!-- Content Section -->
+        <div class=""content-section"">
+            <h1 class=""slide-title"">Slide Title</h1>
+
+            <p class=""subheading"">Subheading</p>
+            <p class=""subheading-text"">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+
+            <p class=""subheading"">Subheading</p>
+            <p class=""subheading-text"">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+
+            <p class=""subheading"">Subheading</p>
+            <p class=""subheading-text"">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 8
+2x2 grid layout. Contains: centered Slide Title, Subtitle, and 4 grid items. Each item has: Heading, body text, and colored bottom border (yellow/tan, terracotta, sage green, light blue). Use for presenting 4 features/benefits/categories in organized format.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""utf-8""/>
+    <meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+    <title>Slide Title</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #E8F4E8;
+            position: relative;
+            overflow: hidden;
+            padding: 50px 60px;
+            box-sizing: border-box;
+        }
+
+        .slide-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #3D5A3D;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .slide-subtitle {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: #9AB89A;
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px 60px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .grid-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+
+        .grid-item-heading {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #3D5A3D;
+            margin-bottom: 12px;
+        }
+
+        .grid-item-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 400;
+            color: #3D5A3D;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        .grid-item-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .line-yellow {
+            background-color: #D4B896;
+        }
+
+        .line-red {
+            background-color: #C4826C;
+        }
+
+        .line-green {
+            background-color: #8AB88A;
+        }
+
+        .line-blue {
+            background-color: #96C4D4;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <h1 class=""slide-title"">Slide Title</h1>
+        <p class=""slide-subtitle"">Subtitle</p>
+
+        <div class=""grid-container"">
+            <div class=""grid-item"">
+                <h3 class=""grid-item-heading"">Heading</h3>
+                <p class=""grid-item-text"">Excepteur sint occaecat cupidatat non proident. Quis exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                <div class=""grid-item-line line-yellow""></div>
+            </div>
+
+            <div class=""grid-item"">
+                <h3 class=""grid-item-heading"">Heading</h3>
+                <p class=""grid-item-text"">Excepteur sint occaecat cupidatat non proident. Quis exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                <div class=""grid-item-line line-red""></div>
+            </div>
+
+            <div class=""grid-item"">
+                <h3 class=""grid-item-heading"">Heading</h3>
+                <p class=""grid-item-text"">Excepteur sint occaecat cupidatat non proident. Quis exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                <div class=""grid-item-line line-green""></div>
+            </div>
+
+            <div class=""grid-item"">
+                <h3 class=""grid-item-heading"">Heading</h3>
+                <p class=""grid-item-text"">Excepteur sint occaecat cupidatat non proident. Quis exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                <div class=""grid-item-line line-blue""></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+## Template Page 9
+Thank you/closing slide with header illustration. Contains: 'Thank You' title, Company name, Company contact detail, and Website. Use for ending/closing slide of the presentation.
+
+**Raw Html Code:**
+
+```html
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""utf-8""/>
+    <meta content=""width=device-width, initial-scale=1.0"" name=""viewport""/>
+    <title>Thank You</title>
+    <link href=""https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"" rel=""stylesheet""/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #E8F4F2;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .illustration-container {
+            width: 100%;
+            height: 280px;
+            background-image: url('https://sfile.ii.inc/slide_templates/assets/slide-2/1.png');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .content-section {
+            padding: 50px 80px;
+            text-align: center;
+            height: calc(100% - 280px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .thank-you-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 4rem;
+            font-weight: 700;
+            color: #3D5A3D;
+            margin-bottom: 30px;
+        }
+
+        .company-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: #7A9A7A;
+            margin-bottom: 15px;
+        }
+
+        .contact-detail {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: #9ABAA0;
+            margin-bottom: 10px;
+        }
+
+        .website {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 300;
+            color: #9ABAA0;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class=""slide-container"">
+        <!-- Illustration Section -->
+        <div class=""illustration-container""></div>
+
+        <!-- Content Section -->
+        <div class=""content-section"">
+            <h1 class=""thank-you-title"">Thank You</h1>
+            <p class=""company-name"">Company</p>
+            <p class=""contact-detail"">Company contact detail</p>
+            <p class=""website"">Website</p>
+        </div>
+    </div>
+</body>
+</html>
+```
+","{https://storage.googleapis.com/ii-agent-public/slides/assets/cabf7bc0-e7ae-4343-88c8-47f46168fd78/1.png,https://storage.googleapis.com/ii-agent-public/slides/assets/cabf7bc0-e7ae-4343-88c8-47f46168fd78/2.png,https://storage.googleapis.com/ii-agent-public/slides/assets/cabf7bc0-e7ae-4343-88c8-47f46168fd78/3.png,https://storage.googleapis.com/ii-agent-public/slides/assets/cabf7bc0-e7ae-4343-88c8-47f46168fd78/4.png}",2025-12-02 16:42:45.351 +0700,

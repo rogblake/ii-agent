@@ -211,16 +211,6 @@ class TestGetModelFamily:
         result = AgentConfigManager._get_model_family("gemini-1.5-pro")
         assert result == Provider.GOOGLE
 
-    def test_vertex_model_returns_vertex_ai(self):
-        # "vertex" without other provider keywords in the name
-        result = AgentConfigManager._get_model_family("vertex-custom-model")
-        assert result == Provider.VERTEX_AI
-
-    def test_azure_model_returns_azure(self):
-        # "azure" without other provider keywords in the name
-        result = AgentConfigManager._get_model_family("azure-custom-model")
-        assert result == Provider.AZURE
-
     def test_cerebras_model_returns_cerebras(self):
         result = AgentConfigManager._get_model_family("cerebras-llama")
         assert result == Provider.CEREBRAS

@@ -34,12 +34,12 @@ def include_routers(app: FastAPI) -> None:
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(users_router)
+    app.include_router(billing_router)
 
     # ── Versioned API routes (/v1) ───────────────────────────────────────
     v1_router = APIRouter(prefix="/v1")
 
     v1_router.include_router(sessions_router)      # /v1/sessions (includes /pins, /wishlist)
-    v1_router.include_router(billing_router)        # /v1/billing
     v1_router.include_router(credits_router)        # /v1/credits
     v1_router.include_router(chat_router)           # /v1/chat
     v1_router.include_router(files_router)          # /v1/assets/*

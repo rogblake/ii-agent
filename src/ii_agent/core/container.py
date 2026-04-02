@@ -258,11 +258,19 @@ class ApplicationContainer:
             config=cfg,
         )
 
+        file_svc = FileService(
+            file_repo=file_repo,
+            session_repo=session_repo,
+            storage=storage_svc,
+            config=cfg,
+        )
+
         session_svc = SessionService(
             session_repo=session_repo,
             event_repo=event_repo,
             run_task_service=run_task_svc,
             file_store=storage_provider,
+            file_service=file_svc,
             sandbox_repo=sandbox_repo,
             cache=sessions_cache,
             config=cfg,
@@ -305,13 +313,6 @@ class ApplicationContainer:
         session_wishlist_svc = SessionWishlistService(
             wishlist_repo=wishlist_repo,
             session_repo=session_repo,
-            config=cfg,
-        )
-
-        file_svc = FileService(
-            file_repo=file_repo,
-            session_repo=session_repo,
-            storage=storage_svc,
             config=cfg,
         )
 

@@ -6,10 +6,9 @@ import logging
 import uuid
 from typing import AsyncIterator, Dict, List, Any, TYPE_CHECKING
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from ii_agent.chat.application.context_service import ContextWindowManager
 from ii_agent.chat.messages.service import MessageService
+from ii_agent.core.db import get_db_session_local
 from ii_agent.chat.tools.base import ToolCallInput
 from ii_agent.chat.types import (
     ToolCall,
@@ -47,7 +46,6 @@ class LLMTurnLoopService:
 
     async def run(
         self,
-        db: AsyncSession,
         *,
         messages: List,
         provider,
@@ -65,6 +63,9 @@ class LLMTurnLoopService:
     ) -> AsyncIterator[Dict]:
         """Run the LLM turn loop.
 
+        Acquires short-lived DB sessions only for DB operations, never holding
+        a connection during LLM streaming or tool I/O.
+
         Yields SSE events for the frontend.
         """
         run_uuid = uuid.UUID(run_id) if isinstance(run_id, str) else run_id
@@ -72,14 +73,17 @@ class LLMTurnLoopService:
         while True:
             await cancel.raise_if_cancelled(run_id)
 
-            messages = await ContextWindowManager.compress_context_if_needed(
-                db_session=db,
-                messages=messages,
-                session_id=session_id,
-                llm_config=model_config,
-                user_id=user_id,
-            )
+            # Context compression — short-lived DB session
+            async with get_db_session_local() as db:
+                messages = await ContextWindowManager.compress_context_if_needed(
+                    db_session=db,
+                    messages=messages,
+                    session_id=session_id,
+                    llm_config=model_config,
+                    user_id=user_id,
+                )
 
+            # LLM streaming — NO DB connection held
             run_response: RunResponseOutput = None
             file_parts = []
 
@@ -122,20 +126,23 @@ class LLMTurnLoopService:
 
             await cancel.raise_if_cancelled(run_id)
 
-            assistant_message = await self._message_service.create_message(
-                db,
-                session_id=session_id,
-                role=MessageRole.ASSISTANT,
-                parts=run_response.content,
-                model_id=model_id,
-                parent_message_id=user_message.id,
-                usage=run_response.usage,
-                file_ids=[f["id"] for f in file_parts],
-                provider_metadata=run_response.provider_metadata,
-                finish_reason=run_response.finish_reason.value
-                if run_response.finish_reason
-                else None,
-            )
+            # Save assistant message — short-lived DB session
+            async with get_db_session_local() as db:
+                assistant_message = await self._message_service.create_message(
+                    db,
+                    session_id=session_id,
+                    role=MessageRole.ASSISTANT,
+                    parts=run_response.content,
+                    model_id=model_id,
+                    parent_message_id=user_message.id,
+                    usage=run_response.usage,
+                    file_ids=[f["id"] for f in file_parts],
+                    provider_metadata=run_response.provider_metadata,
+                    finish_reason=run_response.finish_reason.value
+                    if run_response.finish_reason
+                    else None,
+                )
+                await db.commit()
 
             await cancel.raise_if_cancelled(run_id)
 
@@ -151,6 +158,7 @@ class LLMTurnLoopService:
                 tool_result_parts = []
                 use_storybook_polling = False
 
+                # Tool execution — NO DB connection held
                 for tool_call in tool_calls_to_execute:
                     tool = tool_registry.get(tool_call.name)
 
@@ -215,14 +223,15 @@ class LLMTurnLoopService:
                     tool_result_parts.append(tool_result)
 
                 if use_storybook_polling:
-                    await ContextWindowManager.check_and_summarize_after_response(
-                        db_session=db,
-                        session_id=session_id,
-                        llm_config=model_config,
-                        user_id=user_id,
-                    )
-
-                    await db.commit()
+                    # Post-response summarization — short-lived DB session
+                    async with get_db_session_local() as db:
+                        await ContextWindowManager.check_and_summarize_after_response(
+                            db_session=db,
+                            session_id=session_id,
+                            llm_config=model_config,
+                            user_id=user_id,
+                        )
+                        await db.commit()
 
                     yield {
                         "type": "complete",
@@ -234,27 +243,30 @@ class LLMTurnLoopService:
                     }
                     break
 
-                tool_results_message = await self._message_service.create_message(
-                    db,
-                    session_id=session_id,
-                    role=MessageRole.TOOL,
-                    parts=tool_result_parts,
-                    parent_message_id=user_message.id,
-                    model_id=chat_request.model_id,
-                )
+                # Save tool results — short-lived DB session
+                async with get_db_session_local() as db:
+                    tool_results_message = await self._message_service.create_message(
+                        db,
+                        session_id=session_id,
+                        role=MessageRole.TOOL,
+                        parts=tool_result_parts,
+                        parent_message_id=user_message.id,
+                        model_id=chat_request.model_id,
+                    )
+                    await db.commit()
 
                 messages.append(tool_results_message)
-                await db.commit()
                 continue
 
-            await ContextWindowManager.check_and_summarize_after_response(
-                db_session=db,
-                session_id=session_id,
-                llm_config=model_config,
-                user_id=user_id,
-            )
-
-            await db.commit()
+            # Post-response summarization — short-lived DB session
+            async with get_db_session_local() as db:
+                await ContextWindowManager.check_and_summarize_after_response(
+                    db_session=db,
+                    session_id=session_id,
+                    llm_config=model_config,
+                    user_id=user_id,
+                )
+                await db.commit()
 
             yield {
                 "type": "complete",

@@ -13,8 +13,25 @@ export interface ValidateApiKeyResponse {
     valid: boolean
 }
 
-/** Must match BE Provider StrEnum values in agents/types.py */
-export type ProviderType = 'OpenAI' | 'Anthropic' | 'Google' | 'VertexAI' | 'Azure' | 'Cerebras' | 'Custom'
+/** Must match BE Provider StrEnum in settings/llm/types.py */
+export type ProviderType = 'OpenAI' | 'Anthropic' | 'Google' | 'Cerebras' | 'Custom'
+
+/** Must match BE ApiType StrEnum in settings/llm/types.py */
+export type ApiType = 'vertex_ai' | 'azure' | 'bedrock'
+
+/** Provider-specific params stored in the `configs` JSONB column. */
+export interface ModelParams {
+    api_type?: ApiType | null
+    max_retries?: number
+    max_message_chars?: number
+    temperature?: number
+    thinking_tokens?: number
+    vertex_region?: string
+    vertex_project_id?: string
+    azure_endpoint?: string
+    azure_api_version?: string
+    cot_model?: boolean
+}
 
 export interface IModel {
     id: string
@@ -24,6 +41,7 @@ export interface IModel {
     base_url?: string
     api_key?: string
     display_name?: string
+    configs?: ModelParams | null
     context_length?: number
     input_price_per_token?: number
     output_price_per_token?: number

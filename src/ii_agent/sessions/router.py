@@ -27,6 +27,7 @@ from ii_agent.sessions.schemas import (
 from ii_agent.sessions.schemas import EventInfo, EventResponse, SessionEventDetail
 from ii_agent.sessions.models import AppKind
 from ii_agent.sessions.pin.router import router as pin_router
+from ii_agent.sessions.wishlist.router import router as wishlist_router
 
 
 def _build_event_info(e: "SessionEventDetail", session_id: uuid.UUID) -> EventInfo:
@@ -40,7 +41,50 @@ def _build_event_info(e: "SessionEventDetail", session_id: uuid.UUID) -> EventIn
         run_id=str(e.run_id) if e.run_id is not None else None,
         session_id=session_id,
     )
-from ii_agent.sessions.wishlist.router import router as wishlist_router
+
+
+def _collect_file_ids(events: list[EventInfo]) -> set[uuid.UUID]:
+    """Extract all file asset IDs referenced in event content."""
+    file_ids: set[uuid.UUID] = set()
+    for event in events:
+        if not event.content:
+            continue
+        # content.files is a list of file ID strings
+        raw_ids = event.content.get("files")
+        if isinstance(raw_ids, list):
+            for raw_id in raw_ids:
+                try:
+                    file_ids.add(uuid.UUID(str(raw_id)))
+                except (ValueError, AttributeError):
+                    continue
+    return file_ids
+
+
+def _inject_signed_urls(
+    events: list[EventInfo],
+    url_map: dict[uuid.UUID, str],
+) -> None:
+    """Inject signed_url into each files_metadata entry that has a matching ID."""
+    if not url_map:
+        return
+    for event in events:
+        if not event.content:
+            continue
+        metadata_list = event.content.get("files_metadata")
+        if not isinstance(metadata_list, list):
+            continue
+        for entry in metadata_list:
+            if not isinstance(entry, dict):
+                continue
+            raw_id = entry.get("id")
+            if raw_id is None:
+                continue
+            try:
+                fid = uuid.UUID(str(raw_id))
+            except (ValueError, AttributeError):
+                continue
+            if fid in url_map:
+                entry["signed_url"] = url_map[fid]
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +159,7 @@ async def get_session_events(
     session_service: SessionServiceDep,
     run_task_service: RunTaskServiceDep,
     chat_message_repo: ChatMessageRepositoryDep,
+    file_service: FileServiceDep,
 ) -> EventResponse:
     """Get all events for a specific session."""
     session_data = await session_service.get_session_details(db, session_id, current_user.id)
@@ -124,6 +169,12 @@ async def get_session_events(
 
     events_raw = await session_service.get_session_events_with_details(db, session_id)
     events = [_build_event_info(e, session_id) for e in events_raw]
+
+    # Resolve fresh signed URLs for file references in event content
+    file_ids = _collect_file_ids(events)
+    if file_ids:
+        url_map = await file_service.resolve_signed_urls(db, list(file_ids))
+        _inject_signed_urls(events, url_map)
 
     run_status = None
     try:
@@ -299,6 +350,7 @@ async def get_public_session_events(
     session_service: SessionServiceDep,
     run_task_service: RunTaskServiceDep,
     chat_message_repo: ChatMessageRepositoryDep,
+    file_service: FileServiceDep,
 ) -> EventResponse:
     """Get all events for a public session without authentication."""
     session_data = await session_service.get_public_session_details(db, session_id)
@@ -308,6 +360,12 @@ async def get_public_session_events(
 
     events_raw = await session_service.get_session_events_with_details(db, session_id)
     events = [_build_event_info(e, session_id) for e in events_raw]
+
+    # Resolve fresh signed URLs for file references in event content
+    file_ids = _collect_file_ids(events)
+    if file_ids:
+        url_map = await file_service.resolve_signed_urls(db, list(file_ids))
+        _inject_signed_urls(events, url_map)
 
     run_status = None
     try:

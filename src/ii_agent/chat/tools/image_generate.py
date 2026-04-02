@@ -18,7 +18,6 @@ from ii_agent.chat.types import (
 )
 from ii_agent.content.media.service import _generate_image
 from ii_agent.core.db import get_db_session_local
-from ii_agent.core.storage.client import get_storage
 
 from .base import BaseTool, ToolCallInput, ToolInfo, ToolResponse
 
@@ -176,16 +175,22 @@ class ImageGenerationTool(BaseTool):
                     seen.add(fid)
                     unique_file_ids.append(fid)
 
-            # Resolve all unique file IDs to URLs
+            # Batch-resolve all unique file IDs to signed URLs via FileService
             resolved_file_urls: list[str] = []
-            for fid in unique_file_ids:
+            if unique_file_ids:
                 try:
-                    url = await self._get_signed_url_from_file_id(fid)
-                    resolved_file_urls.append(url)
+                    async with get_db_session_local() as url_db:
+                        url_map = await self._container.file_service.resolve_signed_urls(
+                            url_db, [uuid.UUID(fid) for fid in unique_file_ids]
+                        )
+                    for fid in unique_file_ids:
+                        url = url_map.get(uuid.UUID(fid))
+                        if url:
+                            resolved_file_urls.append(url)
                 except Exception as e:
-                    logger.warning(f"Failed to resolve file {fid}: {e}")
+                    logger.warning(f"Failed to batch-resolve file URLs: {e}")
 
-            logger.info(f">>>>>>>>Resolved {resolved_file_urls} ")
+            logger.info(f"Resolved {len(resolved_file_urls)} file URLs for image generation")
 
             # Determine background parameter based on mini tool
             background = None
@@ -335,23 +340,23 @@ class ImageGenerationTool(BaseTool):
         """Get all images (generated + uploaded) from the current session."""
         try:
             async with get_db_session_local() as db:
-                from ii_agent.files.repository import FileRepository
-
-                file_repo = FileRepository()
-                all_files = await file_repo.get_by_session_id(db, self.session_id)
+                all_files = await self._container.file_service.get_files_by_session_id(
+                    db, self.session_id
+                )
             if not all_files:
                 return []
 
             # Filter for images only
             image_file_ids = []
-            for file in all_files:
-                # Check if it's an image by content_type or storage_path pattern
-                is_image = (file.content_type and file.content_type.startswith("image/")) or (
-                    file.storage_path
-                    and ("/generated/" in file.storage_path or "/uploads/" in file.storage_path)
+            for file_data in all_files:
+                is_image = (
+                    file_data.content_type and file_data.content_type.startswith("image/")
+                ) or (
+                    file_data.storage_path
+                    and ("/generated/" in file_data.storage_path or "/uploads/" in file_data.storage_path)
                 )
                 if is_image:
-                    image_file_ids.append(str(file.id))
+                    image_file_ids.append(str(file_data.id))
 
             logger.info(f"Found {len(image_file_ids)} images in session {self.session_id}")
             return image_file_ids
@@ -360,32 +365,3 @@ class ImageGenerationTool(BaseTool):
             logger.error(f"Error fetching session images: {e}", exc_info=True)
             return []
 
-    async def _get_signed_url_from_file_id(self, file_id: str) -> str:
-        async with get_db_session_local() as db:
-            from ii_agent.files.repository import FileRepository
-
-            file_repo = FileRepository()
-            file_upload = await file_repo.get_by_id(db, file_id)
-        if not file_upload:
-            raise RuntimeError(f"File with id {file_id} not found")
-        if not file_upload.storage_path:
-            raise RuntimeError(f"File {file_id} is missing storage path")
-
-        # Check if storage_path is already a public URL (for generated images)
-        if file_upload.storage_path.startswith("http://") or file_upload.storage_path.startswith(
-            "https://"
-        ):
-            return file_upload.storage_path
-
-        # All files use unified storage
-        storage_client = get_storage()
-
-        try:
-            url = await storage_client.signed_download_url(
-                file_upload.storage_path, expiry_seconds=300
-            )
-            if not url:
-                raise RuntimeError("Signed URL generation returned empty response")
-            return url
-        except Exception as e:
-            raise RuntimeError(f"Unable to generate signed URL for file {file_id}: {e}")

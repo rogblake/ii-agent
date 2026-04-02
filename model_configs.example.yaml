@@ -7,7 +7,7 @@
 #
 # Required fields:
 #   model_id:      Model identifier for the API (e.g. "gpt-5.2", "claude-sonnet-4-5@20250929")
-#   provider:      OpenAI | Anthropic | Google | VertexAI | Azure | Cerebras | Custom
+#   provider:      OpenAI | Anthropic | Google | Cerebras | Custom
 #
 # Optional fields:
 #   api_key:       API key (omit for Vertex AI service account auth)
@@ -15,14 +15,15 @@
 #   display_name:  Human-readable name shown in the UI
 #   is_default:    true to mark as the default model (only one should be true)
 #   params:        Provider-specific settings (all optional, sensible defaults applied)
+#     api_type:           Hosting platform: vertex_ai | azure | bedrock (null = direct API)
 #     max_retries:        (default: 3)
 #     max_message_chars:  (default: 30000)
 #     temperature:        (default: 0.0)
 #     thinking_tokens:    (default: 16000) Extended thinking budget
-#     vertex_region:      GCP region for VertexAI provider
-#     vertex_project_id:  GCP project for VertexAI provider
-#     azure_endpoint:     Azure OpenAI endpoint
-#     azure_api_version:  Azure API version
+#     vertex_region:      GCP region (when api_type: vertex_ai)
+#     vertex_project_id:  GCP project (when api_type: vertex_ai)
+#     azure_endpoint:     Azure OpenAI endpoint (when api_type: azure)
+#     azure_api_version:  Azure API version (when api_type: azure)
 #     cot_model:          (default: false) Chain-of-thought model flag
 
 # ─── Default Model (pick one, set is_default: true) ──────────────
@@ -48,18 +49,22 @@
 
 # ─── Vertex AI (requires GOOGLE_APPLICATION_CREDENTIALS) ─────────
 
+# Claude on Vertex AI:
 # - model_id: claude-sonnet-4-5@20250929
-#   provider: VertexAI
+#   provider: Anthropic
 #   display_name: Claude Sonnet 4.5 (Vertex)
 #   params:
+#     api_type: vertex_ai
 #     thinking_tokens: 10000
 #     vertex_region: global
 #     vertex_project_id: your-gcp-project-id
 
+# Gemini on Vertex AI:
 # - model_id: gemini-3-pro-preview
-#   provider: VertexAI
+#   provider: Google
 #   display_name: Gemini 3 Pro Preview (Vertex)
 #   params:
+#     api_type: vertex_ai
 #     vertex_region: global
 #     vertex_project_id: your-gcp-project-id
 

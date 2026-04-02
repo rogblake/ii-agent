@@ -88,6 +88,15 @@ class FileRepository(BaseRepository[FileAsset]):
         result = await db.execute(select(FileAsset).where(FileAsset.id.in_(file_ids)))
         return list(result.scalars().all())
 
+    async def get_by_storage_path(
+        self, db: AsyncSession, storage_path: str
+    ) -> FileAsset | None:
+        """Get a single file asset by its storage path."""
+        result = await db.execute(
+            select(FileAsset).where(FileAsset.storage_path == storage_path)
+        )
+        return result.scalar_one_or_none()
+
     # ------------------------------------------------------------------
     # Session-linked queries (via SessionAsset join)
     # ------------------------------------------------------------------

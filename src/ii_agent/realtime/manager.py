@@ -108,7 +108,7 @@ class SocketIOManager:
             await self.sio.save_session(
                 sid,
                 {
-                    "user_id": payload.get("user_id"),
+                    "user_id": uuid.UUID(payload["user_id"]),
                     "session_uuid": auth.get("session_uuid"),
                     "authenticated": True,
                 },
@@ -127,9 +127,10 @@ class SocketIOManager:
         user_id = session_data.get("user_id")
         session_uuid_str = data.get("session_uuid") if data else None
 
+        session_uuid: uuid.UUID | None = None
         if session_uuid_str:
             try:
-                uuid.UUID(session_uuid_str)
+                session_uuid = uuid.UUID(session_uuid_str)
             except ValueError:
                 await self._emit_error(sid, "Invalid session UUID format")
                 return
@@ -138,7 +139,7 @@ class SocketIOManager:
             async with get_db_session_local() as db:
                 session_info: SessionInfo = await self.session_service.get_or_create_session(
                     db,
-                    session_uuid=session_uuid_str,
+                    session_uuid=session_uuid,
                     user_id=user_id,
                     api_version="v1",
                 )

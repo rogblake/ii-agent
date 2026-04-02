@@ -25,6 +25,7 @@ from ii_agent.integrations.connectors.revenuecat import RevenueCatConnector
 from ii_agent.auth.dependencies import CurrentUser, DBSession
 from ii_agent.core.storage.dependencies import StorageServiceDep
 from ii_agent.core.storage.path_resolver import path_resolver
+from ii_agent.files.dependencies import FileServiceDep
 from ii_agent.files.types import AssetType
 
 logger = logging.getLogger(__name__)
@@ -234,6 +235,7 @@ async def download_google_drive_files(
     db: DBSession,
     current_user: CurrentUser,
     storage: StorageServiceDep,
+    file_service: FileServiceDep,
 ):
     """Download selected files from Google Drive.
 
@@ -409,15 +411,16 @@ async def download_google_drive_files(
             )
             file_upload = result.scalar_one()
 
+            url_map = await file_service.resolve_signed_urls(
+                db, [file_upload.id]
+            )
             downloaded_files.append(
                 {
                     "id": str(file_upload.id),
                     "name": file_upload.file_name,
                     "size": file_upload.file_size,
                     "mime_type": file_upload.content_type,
-                    "file_url": await storage.signed_download_url(
-                        file_upload.storage_path
-                    ),
+                    "file_url": url_map.get(file_upload.id),
                     "is_folder": False,
                 }
             )

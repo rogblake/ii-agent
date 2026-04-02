@@ -38,8 +38,9 @@ from ii_agent.sessions.repository import SessionRepository
 
 # Constants
 SEVEN_DAY_SECONDS = 7 * 24 * 3600
-# Re-generate signed URL 5 minutes before it actually expires
-SIGNED_URL_BUFFER_SECONDS = 5 * 60
+# Re-generate signed URL 2 hours before it actually expires so clients
+# always receive a URL that is usable for a reasonable window.
+SIGNED_URL_BUFFER_SECONDS = 2 * 3600
 
 
 class FileService:
@@ -216,6 +217,55 @@ class FileService:
         await self._storage.write_from_url(url, storage_path, content_type)
 
         return await self._to_file_data(asset, db)
+
+    # ==================== URL Resolution ====================
+
+    async def resolve_signed_urls(
+        self,
+        db: AsyncSession,
+        file_ids: list[uuid.UUID],
+    ) -> dict[uuid.UUID, str]:
+        """Return a mapping of file_id → fresh signed URL for the given IDs.
+
+        Skips IDs that don't exist or have no storage path.
+        Caches the newly generated URLs on the FileAsset rows.
+        """
+        if not file_ids:
+            return {}
+
+        assets = await self._file_repo.get_by_ids(db, file_ids)
+        result: dict[uuid.UUID, str] = {}
+        for asset in assets:
+            url = await self._get_file_url(asset, db)
+            if url:
+                result[asset.id] = url
+        return result
+
+    async def resolve_signed_url_by_path(
+        self,
+        db: AsyncSession,
+        storage_path: str,
+    ) -> str | None:
+        """Return a fresh signed URL for an asset identified by its storage path.
+
+        Looks up the FileAsset row, then uses the standard caching logic in
+        ``_get_file_url`` so the signed URL is persisted back to the DB.
+        Falls back to a direct storage call if no matching asset exists.
+        """
+        if not storage_path:
+            return None
+        if storage_path.startswith(("http://", "https://")):
+            return storage_path
+
+        asset = await self._file_repo.get_by_storage_path(db, storage_path)
+        if asset:
+            return await self._get_file_url(asset, db)
+
+        # No asset row — generate without caching
+        return await self._storage.signed_url(
+            storage_path,
+            expiry_seconds=self._config.storage.signed_url_ttl_seconds,
+        )
 
     # ==================== Agent File Helpers ====================
 

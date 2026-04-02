@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ii_agent.core.db import get_db_session_local
 from ii_agent.settings.llm.schemas import ModelConfig
 from ii_agent.chat.types import (
     BinaryContent,
@@ -248,9 +249,12 @@ class ChatService:
         )
 
     async def stream_chat_response(
-        self, db: AsyncSession, *, chat_request: ChatMessageRequest, user_id: uuid.UUID
+        self, *, chat_request: ChatMessageRequest, user_id: uuid.UUID
     ) -> AsyncIterator[Dict]:
         """Stream chat response with tool execution loop.
+
+        Acquires short-lived DB sessions only for DB operations, never holding
+        a connection during LLM streaming or tool I/O.
 
         Orchestrates: context loading, file processing, tool setup, LLM turn loop.
         """
@@ -265,79 +269,87 @@ class ChatService:
         }
         tools = {**default_tools, **(chat_request.tools or {})}
 
-        media_context = None
-        if chat_request.media_preferences and chat_request.media_preferences.enabled:
-            media_context = await MediaOrchestrator.prepare_media_context(
-                db_session=db,
-                session_id=session_id,
-                media_preferences=chat_request.media_preferences,
-                chat_request=chat_request,
-                container=self._container,
+        # Phase 0 (prep): media context, load context, create user message, get model config, check credits
+        async with get_db_session_local() as db:
+            media_context = None
+            if chat_request.media_preferences and chat_request.media_preferences.enabled:
+                media_context = await MediaOrchestrator.prepare_media_context(
+                    db_session=db,
+                    session_id=session_id,
+                    media_preferences=chat_request.media_preferences,
+                    chat_request=chat_request,
+                    container=self._container,
+                )
+                tools[media_context.tool_name] = True
+                logger.info(f"[MEDIA] Prepared media context: tool={media_context.tool_name}")
+
+            model_id = chat_request.model_id
+
+            if media_context and media_context.should_clear_context:
+                messages = []
+                logger.info(f"Media generation (clear context) for session {session_id}")
+            else:
+                messages = await ContextWindowManager.load_context_for_llm(
+                    db_session=db,
+                    session_id=session_id,
+                )
+                logger.info(f"Loaded full context for session {session_id} ({len(messages)} messages)")
+
+            # Build user message content
+            display_content = chat_request.content
+            llm_content = chat_request.content
+
+            if chat_request.github_repository:
+                repo_context = (
+                    f"\n\n[The user has selected GitHub repository: {chat_request.github_repository.full_name} "
+                    f"(default branch: {chat_request.github_repository.default_branch}). "
+                    f"When the user says 'this repository', 'the repository', 'the repo', or similar, "
+                    f"they are referring to this GitHub repository. Use the github tool to access it.]"
+                )
+                llm_content += repo_context
+
+            message_metadata = None
+            if media_context:
+                message_metadata = {
+                    "media": chat_request.media_preferences.model_dump(exclude_none=True)
+                }
+                llm_content += media_context.tool_hint
+
+            display_text_part = TextContent(text=display_content)
+            user_message = await self._message_service.create_message(
+                db,
+                session_id=chat_request.session_id,
+                role=MessageRole.USER,
+                parts=[display_text_part],
+                model_id=chat_request.model_id,
+                file_ids=chat_request.file_ids,
+                tools=tools,
+                metadata=message_metadata,
             )
-            tools[media_context.tool_name] = True
-            logger.info(f"[MEDIA] Prepared media context: tool={media_context.tool_name}")
 
-        model_id = chat_request.model_id
+            await db.commit()
 
-        if media_context and media_context.should_clear_context:
-            messages = []
-            logger.info(f"Media generation (clear context) for session {session_id}")
-        else:
-            messages = await ContextWindowManager.load_context_for_llm(
-                db_session=db,
-                session_id=session_id,
-            )
-            logger.info(f"Loaded full context for session {session_id} ({len(messages)} messages)")
+            model_config = await self.get_model_config(db, model_id=model_id, user_id=user_id)
 
-        # Build user message content
-        display_content = chat_request.content
-        llm_content = chat_request.content
-
-        if chat_request.github_repository:
-            repo_context = (
-                f"\n\n[The user has selected GitHub repository: {chat_request.github_repository.full_name} "
-                f"(default branch: {chat_request.github_repository.default_branch}). "
-                f"When the user says 'this repository', 'the repository', 'the repo', or similar, "
-                f"they are referring to this GitHub repository. Use the github tool to access it.]"
-            )
-            llm_content += repo_context
-
-        message_metadata = None
-        if media_context:
-            message_metadata = {
-                "media": chat_request.media_preferences.model_dump(exclude_none=True)
-            }
-            llm_content += media_context.tool_hint
-
-        display_text_part = TextContent(text=display_content)
-        user_message = await self._message_service.create_message(
-            db,
-            session_id=chat_request.session_id,
-            role=MessageRole.USER,
-            parts=[display_text_part],
-            model_id=chat_request.model_id,
-            file_ids=chat_request.file_ids,
-            tools=tools,
-            metadata=message_metadata,
-        )
-
-        await db.commit()
+            # Pre-run credit check
+            await self._check_credits(db, user_id=user_id, model_config=model_config)
 
         run_id = str(user_message.id)
         await cancel.register_run(run_id)
         logger.info(f"Started chat run {run_id} for session {session_id}")
 
         # Phase 1: Process file uploads
-        vector_store = await self._file_processor.process_uploads(
-            db,
-            user_id=user_id,
-            session_id=session_id,
-            user_message=user_message,
-            llm_content=llm_content,
-            display_content=display_content,
-        )
+        async with get_db_session_local() as db:
+            vector_store = await self._file_processor.process_uploads(
+                db,
+                user_id=user_id,
+                session_id=session_id,
+                user_message=user_message,
+                llm_content=llm_content,
+                display_content=display_content,
+            )
 
-        # Build LLM user message with repo context and media parts
+        # Build LLM user message with repo context and media parts (pure in-memory)
         media_message_parts = media_context.llm_message_parts if media_context else []
 
         llm_parts = [user_message.parts[0]]
@@ -367,27 +379,23 @@ class ChatService:
         messages.append(llm_user_message)
 
         # Phase 2: Build tool registry
-        model_config = await self.get_model_config(db, model_id=model_id, user_id=user_id)
+        async with get_db_session_local() as db:
+            tool_registry, tools_to_pass = await self._tool_service.build_tool_registry(
+                db,
+                user_id=user_id,
+                session_id=session_id,
+                tools=tools,
+                chat_request=chat_request,
+                vector_store=vector_store,
+                media_context=media_context,
+            )
+
         provider = LLMProviderFactory.create_provider(model_config)
         is_code_interpreter_enabled = bool(tools and tools.get("code_interpreter"))
 
-        # Pre-run credit check
-        await self._check_credits(db, user_id=user_id, model_config=model_config)
-
-        tool_registry, tools_to_pass = await self._tool_service.build_tool_registry(
-            db,
-            user_id=user_id,
-            session_id=session_id,
-            tools=tools,
-            chat_request=chat_request,
-            vector_store=vector_store,
-            media_context=media_context,
-        )
-
-        # Phase 3: Run LLM turn loop
+        # Phase 3: Run LLM turn loop (loop manages its own DB sessions)
         try:
             async for event in self._llm_loop.run(
-                db,
                 messages=messages,
                 provider=provider,
                 tool_registry=tool_registry,
@@ -404,8 +412,6 @@ class ChatService:
             ):
                 yield event
 
-            await db.commit()
-
             await cancel.cleanup_run(run_id)
             logger.info(f"Completed chat run {run_id} for session {session_id}")
 
@@ -417,10 +423,13 @@ class ChatService:
             else:
                 logger.error(f"Chat streaming error: {e}", exc_info=True)
 
-            await self._message_service.mark_messages_incomplete(
-                db,
-                parent_message_id=user_message.id,
-            )
+            async with get_db_session_local() as db:
+                await self._message_service.mark_messages_incomplete(
+                    db,
+                    parent_message_id=user_message.id,
+                )
+                await db.commit()
+
             await cancel.cleanup_run(run_id)
 
             error_text = str(e).lower()
@@ -444,9 +453,12 @@ class ChatService:
                 raise
 
     async def stream_council_chat_response(
-        self, db: AsyncSession, *, chat_request: ChatMessageRequest, user_id: uuid.UUID
+        self, *, chat_request: ChatMessageRequest, user_id: uuid.UUID
     ) -> AsyncIterator[Dict]:
         """Stream council response: run multiple LLMs in parallel, then synthesize.
+
+        Acquires short-lived DB sessions only for DB operations, never holding
+        a connection during LLM streaming or tool I/O.
 
         Orchestrates: context loading, file processing, parallel model execution, synthesis.
         """
@@ -458,53 +470,75 @@ class ChatService:
 
         session_id = chat_request.session_id
 
-        # Load context
-        messages = await ContextWindowManager.load_context_for_llm(
-            db_session=db,
-            session_id=session_id,
-        )
-        logger.info(f"Council: loaded context for session {session_id} ({len(messages)} messages)")
-
-        # Build user message content
-        display_content = chat_request.content
-        llm_content = chat_request.content
-
-        if chat_request.github_repository:
-            repo_context = (
-                f"\n\n[The user has selected GitHub repository: {chat_request.github_repository.full_name} "
-                f"(default branch: {chat_request.github_repository.default_branch}). "
-                f"When the user says 'this repository', 'the repository', 'the repo', or similar, "
-                f"they are referring to this GitHub repository. Use the github tool to access it.]"
+        # Prep block: load context, create user message, process file uploads, resolve model configs
+        async with get_db_session_local() as db:
+            # Load context
+            messages = await ContextWindowManager.load_context_for_llm(
+                db_session=db,
+                session_id=session_id,
             )
-            llm_content += repo_context
+            logger.info(f"Council: loaded context for session {session_id} ({len(messages)} messages)")
 
-        display_text_part = TextContent(text=display_content)
-        user_message = await self._message_service.create_message(
-            db,
-            session_id=session_id,
-            role=MessageRole.USER,
-            parts=[display_text_part],
-            model_id=chat_request.model_id,
-            file_ids=chat_request.file_ids,
-        )
+            # Build user message content
+            display_content = chat_request.content
+            llm_content = chat_request.content
 
-        await db.commit()
+            if chat_request.github_repository:
+                repo_context = (
+                    f"\n\n[The user has selected GitHub repository: {chat_request.github_repository.full_name} "
+                    f"(default branch: {chat_request.github_repository.default_branch}). "
+                    f"When the user says 'this repository', 'the repository', 'the repo', or similar, "
+                    f"they are referring to this GitHub repository. Use the github tool to access it.]"
+                )
+                llm_content += repo_context
+
+            display_text_part = TextContent(text=display_content)
+            user_message = await self._message_service.create_message(
+                db,
+                session_id=session_id,
+                role=MessageRole.USER,
+                parts=[display_text_part],
+                model_id=chat_request.model_id,
+                file_ids=chat_request.file_ids,
+            )
+
+            await db.commit()
+
+            # Process file uploads (provider-neutral with provider=None)
+            await self._file_processor.process_uploads(
+                db,
+                user_id=user_id,
+                session_id=session_id,
+                user_message=user_message,
+                llm_content=llm_content,
+                display_content=display_content,
+            )
+
+            # Resolve model configs for all council models + synthesis model
+            all_model_ids = [m.model_id for m in council_prefs.council_models]
+            if council_prefs.synthesis_model_id not in all_model_ids:
+                all_model_ids.append(council_prefs.synthesis_model_id)
+
+            model_configs: Dict[str, ModelConfig] = {}
+            model_names = {}
+            all_models = await self._model_setting_service.get_all_available_models(db, user_id=user_id)
+            failed_models = []
+            for mid in all_model_ids:
+                try:
+                    model_configs[mid] = await self.get_model_config(
+                        db, model_id=mid, user_id=user_id
+                    )
+                    model_info = self._find_model_info(all_models, mid)
+                    model_names[mid] = model_info.model if model_info else mid
+                except Exception as e:
+                    logger.warning(f"Could not resolve config for council model {mid}: {e}")
+                    failed_models.append(mid)
 
         run_id = str(user_message.id)
         await cancel.register_run(run_id)
         logger.info(f"Started council run {run_id} for session {session_id}")
 
-        # Process file uploads (provider-neutral with provider=None)
-        await self._file_processor.process_uploads(
-            db,
-            user_id=user_id,
-            session_id=session_id,
-            user_message=user_message,
-            llm_content=llm_content,
-            display_content=display_content,
-        )
-
-        # Build LLM messages list
+        # Build LLM messages list (pure in-memory)
         # After process_uploads, user_message.parts[0] already contains
         # llm_content (with GitHub repo context) + file info text
         llm_parts = [user_message.parts[0]]
@@ -530,26 +564,6 @@ class ChatService:
         )
         messages.append(llm_user_message)
 
-        # Resolve model configs for all council models + synthesis model
-        all_model_ids = [m.model_id for m in council_prefs.council_models]
-        if council_prefs.synthesis_model_id not in all_model_ids:
-            all_model_ids.append(council_prefs.synthesis_model_id)
-
-        model_configs: Dict[str, ModelConfig] = {}
-        model_names = {}
-        all_models = await self._model_setting_service.get_all_available_models(db, user_id=user_id)
-        failed_models = []
-        for mid in all_model_ids:
-            try:
-                model_configs[mid] = await self.get_model_config(
-                    db, model_id=mid, user_id=user_id
-                )
-                model_info = self._find_model_info(all_models, mid)
-                model_names[mid] = model_info.model if model_info else mid
-            except Exception as e:
-                logger.warning(f"Could not resolve config for council model {mid}: {e}")
-                failed_models.append(mid)
-
         # Fail fast: synthesis model config is required
         if council_prefs.synthesis_model_id not in model_configs:
             await cancel.cleanup_run(run_id)
@@ -573,6 +587,7 @@ class ChatService:
         synthesis_model_id = council_prefs.synthesis_model_id
 
         try:
+            # Council LLM streaming — NO DB connection held
             async for event in CouncilService.stream_council_response(
                 user_id=user_id,
                 messages=messages,
@@ -598,57 +613,59 @@ class ChatService:
 
                 yield event
 
-            # Persist assistant message with council parts
-            assistant_parts = []
-            for mid, content in member_outputs_for_persist.items():
-                assistant_parts.append(
-                    CouncilMemberOutput(
-                        model_id=mid,
-                        model_name=model_names.get(mid, mid),
-                        content=content,
-                        status="completed",
+            # Persist assistant message + post-summarization — short-lived DB session
+            async with get_db_session_local() as db:
+                # Persist assistant message with council parts
+                assistant_parts = []
+                for mid, content in member_outputs_for_persist.items():
+                    assistant_parts.append(
+                        CouncilMemberOutput(
+                            model_id=mid,
+                            model_name=model_names.get(mid, mid),
+                            content=content,
+                            status="completed",
+                        )
                     )
-                )
 
-            if synthesis_content:
-                assistant_parts.append(
-                    CouncilSynthesis(
-                        synthesis_model_id=synthesis_model_id,
-                        content=synthesis_content,
+                if synthesis_content:
+                    assistant_parts.append(
+                        CouncilSynthesis(
+                            synthesis_model_id=synthesis_model_id,
+                            content=synthesis_content,
+                        )
                     )
+
+                # Don't persist an empty assistant message on total failure
+                if not assistant_parts:
+                    assistant_parts.append(
+                        TextContent(text="[Council execution failed - no model produced output]")
+                    )
+
+                assistant_message = await self._message_service.create_message(
+                    db,
+                    session_id=session_id,
+                    role=MessageRole.ASSISTANT,
+                    parts=assistant_parts,
+                    model_id=chat_request.model_id,
                 )
 
-            # Don't persist an empty assistant message on total failure
-            if not assistant_parts:
-                assistant_parts.append(
-                    TextContent(text="[Council execution failed - no model produced output]")
-                )
+                await db.commit()
 
-            assistant_message = await self._message_service.create_message(
-                db,
-                session_id=session_id,
-                role=MessageRole.ASSISTANT,
-                parts=assistant_parts,
-                model_id=chat_request.model_id,
-            )
-
-            await db.commit()
+                # Post-response summarization
+                try:
+                    model_config = await self.get_model_config(
+                        db, model_id=chat_request.model_id, user_id=user_id
+                    )
+                    await ContextWindowManager.check_and_summarize_after_response(
+                        db_session=db,
+                        session_id=session_id,
+                        llm_config=model_config,
+                        user_id=user_id,
+                    )
+                except Exception as e:
+                    logger.warning(f"Post-council summarization failed: {e}")
 
             await cancel.cleanup_run(run_id)
-
-            # Post-response summarization
-            try:
-                model_config = await self.get_model_config(
-                    db, model_id=chat_request.model_id, user_id=user_id
-                )
-                await ContextWindowManager.check_and_summarize_after_response(
-                    db_session=db,
-                    session_id=session_id,
-                    llm_config=model_config,
-                    user_id=user_id,
-                )
-            except Exception as e:
-                logger.warning(f"Post-council summarization failed: {e}")
 
             yield {
                 "type": "complete",
@@ -666,10 +683,13 @@ class ChatService:
             else:
                 logger.error(f"Council streaming error: {e}", exc_info=True)
 
-            await self._message_service.mark_messages_incomplete(
-                db,
-                parent_message_id=user_message.id,
-            )
+            async with get_db_session_local() as db:
+                await self._message_service.mark_messages_incomplete(
+                    db,
+                    parent_message_id=user_message.id,
+                )
+                await db.commit()
+
             await cancel.cleanup_run(run_id)
 
             if is_cancelled:

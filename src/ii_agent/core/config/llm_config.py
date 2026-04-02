@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, SecretStr, SerializationInfo, field_seria
 from pydantic.json import pydantic_encoder
 
 from ii_agent.settings.llm import Provider
+from ii_agent.settings.llm.types import ApiType
 
 DEFAULT_MODEL = "claude-sonnet-4@20250514"
 
@@ -42,6 +43,7 @@ class LLMConfig(BaseModel):
     vertex_region: str | None = Field(default=None)
     vertex_project_id: str | None = Field(default=None)
     provider: Provider = Field(default=Provider.ANTHROPIC)
+    api_type: ApiType | None = Field(default=None)
     thinking_tokens: int = Field(default=16000)
     azure_endpoint: str | None = Field(default=None)
     azure_api_version: str | None = Field(default=None)

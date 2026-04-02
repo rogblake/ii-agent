@@ -237,7 +237,7 @@ class EventInfo(BaseModel):
     content: Optional[Dict[str, Any]] = None
     created_at: Optional[str] = None
     run_id: Optional[str] = None
-    session_id: Optional[str] = None
+    session_id: Optional[UUID] = None
 
 
 class EventResponse(BaseModel):

@@ -168,8 +168,6 @@ class CreditService:
                 balance.credits += amount
                 balance_after = balance.credits
 
-            balance.version += 1
-
             tx = self._build_transaction(
                 user_id=user_id,
                 transaction_type=transaction_type,
@@ -328,8 +326,8 @@ class CreditService:
     def _build_transaction(
         *,
         user_id: uuid.UUID,
-        transaction_type: TransactionType | str,
-        credit_type: CreditType | str,
+        transaction_type: TransactionType,
+        credit_type: CreditType,
         amount: Decimal,
         balance_after: Decimal,
         session_id: uuid.UUID | None = None,
@@ -341,8 +339,8 @@ class CreditService:
     ) -> CreditTransaction:
         return CreditTransaction(
             user_id=user_id,
-            transaction_type=str(transaction_type),
-            credit_type=str(credit_type),
+            transaction_type=transaction_type,
+            credit_type=credit_type,
             amount=amount,
             balance_after=balance_after,
             session_id=session_id,

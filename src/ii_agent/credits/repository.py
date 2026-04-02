@@ -6,7 +6,7 @@ import uuid
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Numeric, cast, desc, func, select
+from sqlalchemy import Numeric, String, cast, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ii_agent.core.db import BaseRepository
@@ -57,7 +57,17 @@ class CreditTransactionRepository(BaseRepository[CreditTransaction]):
         page: int,
         per_page: int,
     ) -> tuple[list[dict], int]:
-        """Aggregate credit usage per session, joined with session title."""
+        """Aggregate credit usage per session, joined with session title.
+
+        Query strategy (index-aware):
+        1. Inner subquery touches only ``credit_transactions`` — scanned via
+           ``idx_credit_tx_user (user_id, created_at)``.  GROUP BY runs on
+           the filtered rows without any join overhead.
+        2. ``COUNT(*) OVER()`` window on the outer query gives the total
+           session count without a separate scan.
+        3. Outer query joins the small grouped result (≤ per_page rows after
+           LIMIT) to ``sessions`` for the title — uses ``sessions.id`` PK.
+        """
 
         base_filter = (
             (CreditTransaction.user_id == user_id)
@@ -65,24 +75,14 @@ class CreditTransactionRepository(BaseRepository[CreditTransaction]):
             & (CreditTransaction.amount < 0)  # Only deductions
         )
 
-        # Count distinct sessions
-        count_q = select(
-            func.count(func.distinct(CreditTransaction.session_id))
-        ).where(base_filter)
-        total = (await db.execute(count_q)).scalar_one()
-
-        # Aggregate per session
+        # ── Inner: aggregate per session (credit_transactions only) ──
         updated_at_col = func.max(CreditTransaction.created_at).label("updated_at")
 
-        # Sum regular deductions
-        regular_sum = func.coalesce(
-            func.sum(
-                cast(CreditTransaction.amount, Numeric(18, 6))
-            ).filter(CreditTransaction.credit_type == CreditType.REGULAR),
+        total_sum = func.coalesce(
+            func.sum(cast(CreditTransaction.amount, Numeric(18, 6))),
             0,
         ).label("credits")
 
-        # Sum bonus deductions
         bonus_sum = func.coalesce(
             func.sum(
                 cast(CreditTransaction.amount, Numeric(18, 6))
@@ -90,34 +90,48 @@ class CreditTransactionRepository(BaseRepository[CreditTransaction]):
             0,
         ).label("bonus_credits")
 
-        q = (
+        inner = (
             select(
-                CreditTransaction.session_id.label("session_id"),
-                func.coalesce(Session.name, CreditTransaction.session_id).label(
-                    "session_title"
-                ),
-                regular_sum,
+                CreditTransaction.session_id,
+                total_sum,
                 bonus_sum,
                 updated_at_col,
             )
-            .outerjoin(
-                Session,
-                Session.id == CreditTransaction.session_id,
-            )
             .where(base_filter)
-            .group_by(CreditTransaction.session_id, Session.name)
-            .order_by(desc(updated_at_col))
+            .group_by(CreditTransaction.session_id)
+            .subquery("per_session")
+        )
+
+        # ── Outer: join for title + window count ──
+        total_count = func.count().over().label("_total")
+
+        q = (
+            select(
+                inner.c.session_id.label("session_id"),
+                func.coalesce(
+                    Session.name,
+                    cast(inner.c.session_id, String),
+                ).label("session_title"),
+                inner.c.credits,
+                inner.c.bonus_credits,
+                inner.c.updated_at,
+                total_count,
+            )
+            .outerjoin(Session, Session.id == inner.c.session_id)
+            .order_by(desc(inner.c.updated_at))
             .offset((page - 1) * per_page)
             .limit(per_page)
         )
         rows = (await db.execute(q)).all()
 
+        total = rows[0]._total if rows else 0
+
         sessions = [
             {
                 "session_id": str(row.session_id),
                 "session_title": row.session_title or str(row.session_id),
-                "credits": float(abs(row.credits)),  # Show as positive
-                "bonus_credits": float(abs(row.bonus_credits)),
+                "credits": float(row.credits),
+                "bonus_credits": float(row.bonus_credits),
                 "updated_at": row.updated_at,
             }
             for row in rows

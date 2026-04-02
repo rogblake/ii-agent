@@ -58,6 +58,11 @@ async def seed_admin_llm_settings() -> None:
                 from ii_agent.core.secrets.encryption import encryption_manager
                 encrypted_api_key = encryption_manager.encrypt(entry["api_key"])
 
+            pricing_raw = entry.get("pricing")
+            pricing_dict = (
+                pricing_raw.model_dump() if hasattr(pricing_raw, "model_dump") else pricing_raw
+            ) if pricing_raw else None
+
             setting = existing.get((model_id, provider))
 
             if setting:
@@ -66,6 +71,7 @@ async def seed_admin_llm_settings() -> None:
                 setting.base_url = entry.get("base_url")
                 setting.display_name = entry.get("display_name")
                 setting.params = params
+                setting.pricing = pricing_dict
                 setting.is_default = entry.get("is_default", False)
                 setting.updated_at = datetime.now(timezone.utc)
                 updated += 1
@@ -79,6 +85,7 @@ async def seed_admin_llm_settings() -> None:
                     base_url=entry.get("base_url"),
                     display_name=entry.get("display_name"),
                     params=params,
+                    pricing=pricing_dict,
                     config_type="system",
                     is_default=entry.get("is_default", False),
                 )

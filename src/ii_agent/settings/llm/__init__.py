@@ -20,10 +20,11 @@ from .schemas import (
     ModelSettingUpdate,
     PricingInfo,
 )
-from .types import ConfigType, Provider
+from .types import ApiType, ConfigType, Provider
 
 __all__ = [
     # Types
+    "ApiType",
     "ConfigType",
     "Provider",
     # Models

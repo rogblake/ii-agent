@@ -1,17 +1,25 @@
-import { IModel, ProviderType } from '@/typings/settings'
+import { ApiType, IModel, ProviderType } from '@/typings/settings'
 
 /**
- * BE Provider enum values (from agents/types.py).
+ * BE Provider enum values (from settings/llm/types.py).
  * FE must send these exact values to the BE.
  */
 export const PROVIDER = {
     OPENAI: 'OpenAI' as ProviderType,
     ANTHROPIC: 'Anthropic' as ProviderType,
     GOOGLE: 'Google' as ProviderType,
-    VERTEX_AI: 'VertexAI' as ProviderType,
-    AZURE: 'Azure' as ProviderType,
     CEREBRAS: 'Cerebras' as ProviderType,
     CUSTOM: 'Custom' as ProviderType,
+} as const
+
+/**
+ * BE ApiType enum values (from settings/llm/types.py).
+ * Hosting platform — set in configs.api_type.
+ */
+export const API_TYPE = {
+    VERTEX_AI: 'vertex_ai' as ApiType,
+    AZURE: 'azure' as ApiType,
+    BEDROCK: 'bedrock' as ApiType,
 } as const
 
 // Define available models for each provider
@@ -109,8 +117,7 @@ export const PROVIDERS_NAME: { [key: string]: string } = {
     anthropic: 'Anthropic',
     openai: 'OpenAI',
     gemini: 'Gemini',
-    vertex: 'Vertex',
-    azure: 'Azure',
+    cerebras: 'Cerebras',
     custom: 'Custom'
 }
 
@@ -122,8 +129,6 @@ const PROVIDER_TO_UI_KEY: Record<string, string> = {
     [PROVIDER.ANTHROPIC]: 'anthropic',
     [PROVIDER.OPENAI]: 'openai',
     [PROVIDER.GOOGLE]: 'gemini',
-    [PROVIDER.VERTEX_AI]: 'vertex',
-    [PROVIDER.AZURE]: 'azure',
     [PROVIDER.CEREBRAS]: 'cerebras',
     [PROVIDER.CUSTOM]: 'custom',
 }

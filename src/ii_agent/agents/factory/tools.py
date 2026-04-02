@@ -602,14 +602,6 @@ class AgentConfigManager:
         if "gemini" in model_lower or "google" in model_lower:
             return Provider.GOOGLE
 
-        # Check for Vertex AI
-        if "vertex" in model_lower:
-            return Provider.VERTEX_AI
-
-        # Check for Azure
-        if "azure" in model_lower:
-            return Provider.AZURE
-
         # Check for Cerebras
         if "cerebras" in model_lower:
             return Provider.CEREBRAS

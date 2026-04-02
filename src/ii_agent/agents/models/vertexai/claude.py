@@ -28,7 +28,7 @@ class Claude(AnthropicClaude):
 
     id: str = "claude-sonnet-4@20250514"
     name: str = "Claude"
-    provider: Provider = Provider.VERTEX_AI
+    provider: Provider = Provider.ANTHROPIC
 
     # Client parameters
     region: Optional[str] = None

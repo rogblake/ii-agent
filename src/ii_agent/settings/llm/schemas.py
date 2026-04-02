@@ -8,7 +8,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from uuid import UUID
 
-from .types import Provider
+from .types import ApiType, Provider
 from ii_agent.settings.llm.types import ConfigType
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,8 @@ class ModelParams(BaseModel):
     max_message_chars: int = Field(default=30000)
     temperature: float = Field(default=0.0)
     thinking_tokens: int = Field(default=16000)
+    # API type — hosting platform (None = direct provider API)
+    api_type: ApiType | None = None
     # Vertex AI
     vertex_region: str | None = None
     vertex_project_id: str | None = None
@@ -163,6 +165,10 @@ class PricingInfo(BaseModel):
                 input_price_per_million=0.5,
                 output_price_per_million=3.0,
             ),
+            "gemini-3.1-pro-preview": cls(
+                input_price_per_million=2.0,
+                output_price_per_million=12.0,
+            ),
             # ===== DeepSeek Models =====
             "deepseek-reasoner": cls(
                 input_price_per_million=0.55,
@@ -283,6 +289,11 @@ class ModelConfig(BaseModel):
     def setting_id(self) -> str:
         """Backward-compatible string ID used by callers that expect ``str``."""
         return str(self.id)
+
+    @property
+    def api_type(self) -> ApiType | None:
+        """Hosting platform for this model (None = direct provider API)."""
+        return self.params.api_type
 
     # Convenience accessors that mirror legacy LLMConfig field names so that
     # consumer code (agent factory, model utils) can migrate incrementally.

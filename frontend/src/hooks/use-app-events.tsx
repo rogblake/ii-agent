@@ -740,12 +740,11 @@ export function useAppEvents() {
                                   file_name: string
                                   file_size: number
                                   content_type: string
+                                  signed_url?: string
                               }>
                             | undefined
 
                         // Build files array for display
-                        // Note: We don't persist signed URLs as they expire
-                        // The uploaded-files-display component will fetch fresh URLs by file ID
                         const files = filesMetadata?.map((f) => ({
                             id: f.id,
                             file_name: f.file_name,
@@ -754,15 +753,25 @@ export function useAppEvents() {
                             created_at: new Date().toISOString()
                         }))
 
+                        // Build fileContents from signed URLs returned by events API
+                        // so uploaded-files-display can render images directly
+                        const fileContents: Record<string, string> = {}
+                        if (filesMetadata) {
+                            for (const f of filesMetadata) {
+                                if (f.signed_url) {
+                                    fileContents[f.file_name] = f.signed_url
+                                }
+                            }
+                        }
+
                         safeDispatch(
                             addMessage({
                                 id: data.id,
                                 role: 'user',
                                 content: messageContent,
                                 timestamp: Date.now(),
-                                ...(files && files.length > 0 ? { files } : {})
-                                // Note: Don't include fileContents with persisted URLs - they expire
-                                // The uploaded-files-display component fetches fresh URLs by file ID
+                                ...(files && files.length > 0 ? { files } : {}),
+                                ...(Object.keys(fileContents).length > 0 ? { fileContents } : {})
                             })
                         )
                     }

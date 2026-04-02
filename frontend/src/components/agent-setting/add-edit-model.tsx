@@ -16,8 +16,7 @@ const UI_KEY_TO_PROVIDER: Record<string, ProviderType> = {
     anthropic: PROVIDER.ANTHROPIC,
     openai: PROVIDER.OPENAI,
     gemini: PROVIDER.GOOGLE,
-    vertex: PROVIDER.VERTEX_AI,
-    azure: PROVIDER.AZURE,
+    cerebras: PROVIDER.CEREBRAS,
     custom: PROVIDER.CUSTOM,
 }
 import {

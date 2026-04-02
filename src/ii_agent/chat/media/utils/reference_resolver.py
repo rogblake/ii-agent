@@ -1,8 +1,10 @@
 """Utility for resolving media references and session images."""
 
+from __future__ import annotations
+
 import logging
 import uuid
-from typing import Any, List
+from typing import Any, List, TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +13,9 @@ from ii_agent.files.models import FileAsset, SessionAsset
 from ii_agent.files.types import AssetSource, AssetType
 from ii_agent.chat.types import MediaReference
 from ii_agent.chat.api.schemas import AdvancedModeReference
-from ii_agent.core.storage.client import get_storage
+
+if TYPE_CHECKING:
+    from ii_agent.files.service import FileService
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +27,17 @@ class ReferenceResolver:
     async def resolve_references(
         db_session: AsyncSession,
         references: list[MediaReference] | list[dict[str, Any]] | None,
+        *,
+        file_service: FileService | None = None,
     ) -> list[AdvancedModeReference]:
         """
-        Attach signed URLs to stored references.
+        Attach signed URLs to stored references via FileService.
 
         Args:
             db_session: Database session
             references: List of MediaReference objects or dicts with file_id and type
+            file_service: FileService instance for cached signed URL resolution.
+                          If not provided, falls back to ``get_app_container().file_service``.
 
         Returns:
             List of AdvancedModeReference with signed URLs attached
@@ -49,31 +57,20 @@ class ReferenceResolver:
         if not file_ids:
             return []
 
-        result = await db_session.execute(
-            select(FileAsset).where(FileAsset.id.in_(file_ids))
-        )
-        uploads = {upload.id: upload for upload in result.scalars().all()}
+        # Resolve FileService if not provided
+        if file_service is None:
+            from ii_agent.core.container import get_app_container
+            file_service = get_app_container().file_service
 
-        all_storage_paths: list[tuple[str, str]] = []
-
-        for ref in references:
-            file_id = ref.file_id if isinstance(ref, MediaReference) else ref.get("file_id")
-            if file_id and file_id in uploads:
-                storage_path = uploads[file_id].storage_path
-                if storage_path:
-                    all_storage_paths.append((file_id, storage_path))
-
-        # Batch generate signed URLs for better performance
+        # Batch-resolve signed URLs via FileService (cached + DB-persisted)
         file_urls: dict[str, str | None] = {}
-
-        if all_storage_paths:
-            try:
-                paths = [path for _, path in all_storage_paths]
-                urls = await get_storage().signed_download_urls_batch(paths)
-                for (file_id, _), url in zip(all_storage_paths, urls):
-                    file_urls[file_id] = url
-            except Exception as e:
-                logger.error("Batch URL generation failed: %s", e, exc_info=True)
+        try:
+            uuid_ids = [uuid.UUID(fid) for fid in file_ids]
+            url_map = await file_service.resolve_signed_urls(db_session, uuid_ids)
+            for fid_uuid, url in url_map.items():
+                file_urls[str(fid_uuid)] = url
+        except Exception as e:
+            logger.error("Batch URL resolution failed: %s", e, exc_info=True)
 
         # Build final resolved references
         resolved: list[AdvancedModeReference] = []

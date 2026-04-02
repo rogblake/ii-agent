@@ -164,8 +164,15 @@ class CreditUsageHandler(EventCallbackHandler):
     # ------------------------------------------------------------------
 
     def _calculate_llm_credits(self, event: ModelUsageEvent) -> Decimal:
-        """Calculate credit cost from token counts using PricingInfo."""
-        pricing = PricingInfo.get_default_pricing(event.model_id)
+        """Calculate credit cost from token counts using PricingInfo.
+
+        Prefers DB-configured pricing from the event (set by the LLM turn loop
+        from model_config.pricing). Falls back to hardcoded defaults only when
+        the event carries no pricing.
+        """
+        pricing = event.pricing or PricingInfo.get_default_pricing(
+            event.model_id, event.provider
+        )
 
         input_cost = (
             Decimal(event.input_tokens)

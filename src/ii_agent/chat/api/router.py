@@ -174,7 +174,13 @@ async def send_chat_message(
             raise InternalError("Failed to create session") from e
 
     async def event_generator():
-        """Generate SSE events from provider stream following new SSE contract."""
+        """Generate SSE events from provider stream following new SSE contract.
+
+        Uses its own DB session (not the FastAPI DI session) so the connection
+        is always returned to the pool — even when the client disconnects
+        mid-stream.  The DI session is only used for the short-lived
+        validation/creation work above.
+        """
         import time
 
         start_time = time.time()
@@ -206,14 +212,13 @@ async def send_chat_message(
                     yield f"event: error\ndata: {json.dumps({'message': 'Council mode requires a synthesis model'})}\n\n"
                     return
 
+            if is_council:
                 stream = chat_service.stream_council_chat_response(
-                    db_session,
                     chat_request=request,
                     user_id=current_user.id,
                 )
             else:
                 stream = chat_service.stream_chat_response(
-                    db_session,
                     chat_request=request,
                     user_id=current_user.id,
                 )
@@ -279,7 +284,6 @@ async def send_chat_message(
                 # Thinking events (delta-only, no start/stop)
                 elif event_type == "thinking_delta":
                     thinking_event = {"status": "delta", "delta": event.get("thinking")}
-                    # Include signature if present (for o1 models)
                     if event.get("signature"):
                         thinking_event["signature"] = event.get("signature")
                     yield f"event: thinking\ndata: {json.dumps(thinking_event)}\n\n"
@@ -306,7 +310,7 @@ async def send_chat_message(
                         "id": tool_call.id if hasattr(tool_call, "id") else tool_call.get("id"),
                         "delta": tool_call.input
                         if hasattr(tool_call, "input")
-                        else tool_call.get("input", ""),  # Partial JSON
+                        else tool_call.get("input", ""),
                     }
                     yield f"event: tool_call\ndata: {json.dumps(tool_event)}\n\n"
 
@@ -320,7 +324,7 @@ async def send_chat_message(
                         else tool_call.get("name"),
                         "input": tool_call.input
                         if hasattr(tool_call, "input")
-                        else tool_call.get("input"),  # Complete JSON
+                        else tool_call.get("input"),
                     }
                     yield f"event: tool_call\ndata: {json.dumps(tool_event)}\n\n"
 
@@ -345,7 +349,6 @@ async def send_chat_message(
                     }
                     yield f"event: tool_progress\ndata: {json.dumps(progress_event)}\n\n"
 
-                # Tool result events (from backend execution)
                 elif event_type == "tool_result":
                     result_event = {
                         "status": "info",

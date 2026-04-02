@@ -27,6 +27,7 @@ from ii_agent.core.storage.providers.base import StorageProvider
 if TYPE_CHECKING:
     from ii_agent.agents.sandboxes.repository import SandboxRepository
     from ii_agent.credits.service import CreditService
+    from ii_agent.files.service import FileService
     from ii_agent.settings.llm.service import ModelSettingService
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,7 @@ class SessionService:
         event_repo: EventRepository,
         run_task_service: RunTaskService,
         file_store: StorageProvider,
+        file_service: FileService,
         sandbox_repo: SandboxRepository,
         cache: EntityCache,
         config: Settings,
@@ -53,6 +55,7 @@ class SessionService:
         self._event_repo = event_repo
         self._run_task_service = run_task_service
         self._file_store = file_store
+        self._file_service = file_service
         self._sandbox_repo = sandbox_repo
         self._cache = cache
 
@@ -246,6 +249,7 @@ class SessionService:
                     content = deepcopy(content)
                     tool_result = content["result"]
                     signed_url = await self._get_signed_tool_result_url(
+                        db,
                         session_id=session_id,
                         tool_result=tool_result,
                     )
@@ -268,6 +272,7 @@ class SessionService:
 
     async def _get_signed_tool_result_url(
         self,
+        db: AsyncSession,
         *,
         session_id: uuid.UUID,
         tool_result: dict,
@@ -277,7 +282,7 @@ class SessionService:
             return tool_result.get("url")
 
         try:
-            return await self._file_store.signed_download_url(storage_path)
+            return await self._file_service.resolve_signed_url_by_path(db, storage_path)
         except FileNotFoundError:
             logger.warning(
                 "Session %s tool result file missing at %s; falling back to stored URL",

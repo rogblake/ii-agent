@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Any, Dict, Literal, Optional
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from ii_agent.core.config.model_configs_source import ModelConfigsYamlSource
+
 from ii_agent.core.config.database import DatabaseSettings
 from ii_agent.core.config.redis import RedisSettings
 from ii_agent.core.config.sandbox import SandboxSettings
@@ -88,6 +90,13 @@ class Settings(BaseSettings):
         env_nested_delimiter="__",
         nested_model_default_partial_update=True,
     )
+
+    @classmethod
+    def settings_customise_sources(cls, settings_cls, **kwargs):
+        """Register custom settings sources including YAML model configs."""
+        default_sources = super().settings_customise_sources(settings_cls, **kwargs)
+        # Append ModelConfigsYamlSource with lower priority than env/dotenv
+        return (*default_sources, ModelConfigsYamlSource(settings_cls))
 
     # ========== Top-level Configuration ==========
 

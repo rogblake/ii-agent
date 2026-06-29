@@ -5,7 +5,7 @@ import { defineConfig, loadEnv } from 'vite'
 import svgr from 'vite-plugin-svgr'
 
 // https://vitejs.dev/config/
-export default defineConfig(({ command, mode }) => {
+export default defineConfig(({ command, mode}) => {
     const env = loadEnv(mode, process.cwd(), '')
     const isSage = env.VITE_THEME?.toLowerCase() === 'sage'
     const disableBuildOptimizations =
@@ -77,6 +77,10 @@ export default defineConfig(({ command, mode }) => {
             watch: {
                 // 3. tell vite to ignore watching `src-tauri`
                 ignored: ['**/src-tauri/**']
+            },
+             headers: {
+                "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+                 "Cross-Origin-Embedder-Policy": "unsafe-none"
             }
         },
 

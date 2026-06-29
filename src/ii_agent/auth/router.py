@@ -411,6 +411,7 @@ async def google_callback(
         settings.oauth.google_client_id or "",
         settings.oauth.google_client_secret or "",
         redirect_uri=(url or settings.oauth.google_redirect_uri),
+        allow_insecure_http=True,
     )
     async with google_sso:
         user_info = await google_sso.verify_and_process(request)

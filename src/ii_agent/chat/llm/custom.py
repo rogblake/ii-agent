@@ -238,12 +238,14 @@ class CustomProvider(LLMClient):
             "model": self.model_name,
             "messages": litellm_messages,
             "stream": False,
+            "max_tokens": 4096,
         }
 
         if self.api_key:
             params["api_key"] = self.api_key
         if self.base_url:
             params["base_url"] = self.base_url
+            params["custom_llm_provider"] = "openai"
         if litellm_tools:
             params["tools"] = litellm_tools
         if self.llm_config.temperature is not None:
@@ -262,6 +264,15 @@ class CustomProvider(LLMClient):
             # Add text content if present
             if hasattr(message, "content") and message.content:
                 content_parts.append(TextContent(text=message.content))
+
+            # Handle reasoning/thinking field (e.g. Ollama thinking models like Qwen3)
+            # When thinking is enabled, the actual response may be in the reasoning field
+            if not content_parts:
+                reasoning = getattr(message, "reasoning", None) or getattr(
+                    message, "reasoning_content", None
+                )
+                if reasoning:
+                    content_parts.append(TextContent(text=reasoning))
 
             # Add tool calls if present
             if hasattr(message, "tool_calls") and message.tool_calls:
@@ -346,6 +357,7 @@ class CustomProvider(LLMClient):
             "model": self.model_name,
             "messages": litellm_messages,
             "stream": True,
+            "max_tokens": 4096,
         }
 
         if self.api_key:
@@ -374,12 +386,24 @@ class CustomProvider(LLMClient):
 
                 delta = chunk.choices[0].delta
 
+                # Handle content delta
                 if hasattr(delta, "content") and delta.content:
                     if not content_started:
                         yield RunResponseEvent(type=EventType.CONTENT_START)
                         content_started = True
                     accumulated_text += delta.content
                     yield RunResponseEvent(type=EventType.CONTENT_DELTA, content=delta.content)
+
+                # Handle reasoning/thinking delta (Ollama thinking models like Qwen3)
+                reasoning_delta = getattr(delta, "reasoning", None) or getattr(
+                    delta, "reasoning_content", None
+                )
+                if reasoning_delta:
+                    if not content_started:
+                        yield RunResponseEvent(type=EventType.CONTENT_START)
+                        content_started = True
+                    accumulated_text += reasoning_delta
+                    yield RunResponseEvent(type=EventType.CONTENT_DELTA, content=reasoning_delta)
 
                 if hasattr(delta, "tool_calls") and delta.tool_calls:
                     for tc_delta in delta.tool_calls:

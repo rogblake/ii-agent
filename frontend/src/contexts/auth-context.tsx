@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             const res = await authService.googleAuth({
                 code,
-                redirect_uri: window.location.origin
+                redirect_uri: 'postmessage'
             })
 
             // Store the access token immediately to trigger WebSocket connection

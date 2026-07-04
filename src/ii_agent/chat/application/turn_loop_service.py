@@ -96,6 +96,11 @@ class LLMTurnLoopService:
             ):
                 if event.type == EventType.COMPLETE:
                     run_response = event.response
+                elif event.type == EventType.ERROR:
+                    if event.error:
+                        raise event.error
+                    else:
+                        raise RuntimeError("Unknown LLM Provider error occurred")
                 else:
                     sse_event = event.to_sse_event()
                     if sse_event is not None:

@@ -104,9 +104,8 @@ def _build_custom(api_key: str | None, llm_config: LLMConfig) -> Model:
         id=llm_config.model,
         max_retries=llm_config.max_retries,
         base_url=llm_config.base_url,
-        max_completion_tokens=64_000,
+        max_tokens=llm_config.max_message_chars,  # Use max_tokens for compatibility
         timeout=600.0,
-        reasoning_effort="high",
     )
 
 

@@ -244,6 +244,7 @@ class CustomProvider(LLMClient):
             params["api_key"] = self.api_key
         if self.base_url:
             params["base_url"] = self.base_url
+            params["custom_llm_provider"] = "openai"
         if litellm_tools:
             params["tools"] = litellm_tools
         if self.llm_config.temperature is not None:

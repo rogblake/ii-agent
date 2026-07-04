@@ -1,0 +1,40 @@
+From 844818aec3ad043a2b66ffd95d4c6bec38854ff5 Mon Sep 17 00:00:00 2001
+From: II Agent <ii-agent@example.com>
+Date: Sat, 4 Jul 2026 10:07:55 +0000
+Subject: [PATCH] fix: Update agent and chat models to support local proxy LLMs
+
+---
+ src/ii_agent/agents/models/utils.py | 3 +--
+ src/ii_agent/chat/llm/custom.py     | 1 +
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/ii_agent/agents/models/utils.py b/src/ii_agent/agents/models/utils.py
+index 36bd7e6..468d0c6 100644
+--- a/src/ii_agent/agents/models/utils.py
++++ b/src/ii_agent/agents/models/utils.py
+@@ -104,9 +104,8 @@ def _build_custom(api_key: str | None, llm_config: LLMConfig) -> Model:
+         id=llm_config.model,
+         max_retries=llm_config.max_retries,
+         base_url=llm_config.base_url,
+-        max_completion_tokens=64_000,
++        max_tokens=llm_config.max_message_chars,  # Use max_tokens for compatibility
+         timeout=600.0,
+-        reasoning_effort="high",
+     )
+ 
+ 
+diff --git a/src/ii_agent/chat/llm/custom.py b/src/ii_agent/chat/llm/custom.py
+index 92ff894..5aaf390 100644
+--- a/src/ii_agent/chat/llm/custom.py
++++ b/src/ii_agent/chat/llm/custom.py
+@@ -244,6 +244,7 @@ class CustomProvider(LLMClient):
+             params["api_key"] = self.api_key
+         if self.base_url:
+             params["base_url"] = self.base_url
++            params["custom_llm_provider"] = "openai"
+         if litellm_tools:
+             params["tools"] = litellm_tools
+         if self.llm_config.temperature is not None:
+-- 
+2.47.3
+

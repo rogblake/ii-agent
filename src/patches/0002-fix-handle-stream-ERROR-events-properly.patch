@@ -1,0 +1,27 @@
+From db7d91c2eb9a389e5cba99341b6dcd0f43bc3be3 Mon Sep 17 00:00:00 2001
+From: II Agent <ii-agent@example.com>
+Date: Sat, 4 Jul 2026 11:20:58 +0000
+Subject: [PATCH] fix: handle stream ERROR events properly
+
+---
+ src/ii_agent/chat/application/turn_loop_service.py | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/ii_agent/chat/application/turn_loop_service.py b/src/ii_agent/chat/application/turn_loop_service.py
+index 6a9c0c8..8fc7daf 100644
+--- a/src/ii_agent/chat/application/turn_loop_service.py
++++ b/src/ii_agent/chat/application/turn_loop_service.py
+@@ -96,6 +96,11 @@ class LLMTurnLoopService:
+             ):
+                 if event.type == EventType.COMPLETE:
+                     run_response = event.response
++                elif event.type == EventType.ERROR:
++                    if event.error:
++                        raise event.error
++                    else:
++                        raise RuntimeError("Unknown LLM Provider error occurred")
+                 else:
+                     sse_event = event.to_sse_event()
+                     if sse_event is not None:
+-- 
+2.47.3
